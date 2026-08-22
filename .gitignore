@@ -1,0 +1,36 @@
+# Build output
+/build/
+/build-*/
+/target/
+
+# Local configuration, logs, caches, and reports
+.env
+.env.*
+!.env.example
+*.log
+/artifacts/
+/cache/
+/reports/
+/runs/
+/tmp/
+
+# Client-derived and extractor output (never commit or distribute)
+/Buildings/
+/cameras/
+/dbc/
+/db2/
+/gt/
+/maps/
+/mmaps/
+/vmaps/
+/CascCache/
+GameObjectModels.dtree
+*.map
+*.mmap
+*.mmtile
+*.vmap
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
