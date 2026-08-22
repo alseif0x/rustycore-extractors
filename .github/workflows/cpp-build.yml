@@ -34,6 +34,13 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_INSTALL_PREFIX="${{ runner.temp }}/rustycore-extractors"
 
+      - name: Fetch pinned vcpkg baseline
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >-
+          git -C "$env:VCPKG_INSTALLATION_ROOT" fetch --depth=1 origin
+          127402f1c75bb3d5ff6bce04b285faa4930a5aca
+
       - name: Configure Windows
         if: runner.os == 'Windows'
         shell: pwsh
