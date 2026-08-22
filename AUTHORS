@@ -1,0 +1,16 @@
+RustyCore Extractors
+====================
+
+Project coordination and original RustyCore Extractors work:
+  alseif0x and contributors to rustycore-extractors
+
+Planned compatibility source is derived from TrinityCoreLegacy/TrinityCore at
+commit 92796557f9b0ba3d2d1c7c770f535153154cf83e. TrinityCore is itself a
+derivation/rewrite with contributions from the WoW Daemon Team, MaNGOS,
+TrinityCore and many individual contributors. Authorship remains with those
+contributors and is recorded in the pinned repository's AUTHORS file and Git
+history. No attribution in this file transfers ownership.
+
+Third-party authors and copyright holders are listed in
+THIRD_PARTY_NOTICES.md and licensing/inventory.json. Copied or derived source
+files must retain their original per-file notices.
