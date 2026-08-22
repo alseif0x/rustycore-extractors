@@ -1,0 +1,23 @@
+// Copyright (C) 2026 rustycore-extractors contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Standalone replacement for TrinityCore's generated revision_data.h.
+
+#pragma once
+
+#define _HASH "@RCE_GIT_COMMIT@"
+#define _DATE "reproducible-build"
+#define _BRANCH "standalone"
+#define _CMAKE_COMMAND "cmake"
+#define _CMAKE_VERSION "@CMAKE_VERSION@"
+#define _CMAKE_HOST_SYSTEM "redacted"
+#define _BUILD_DIRECTORY "<build>"
+#define _SOURCE_DIRECTORY "<source>"
+#define _MYSQL_EXECUTABLE ""
+#define _FULL_DATABASE ""
+#define _HOTFIXES_DATABASE ""
+#define _BUILD_DIRECTIVE "@CMAKE_BUILD_TYPE@"
+
+#define VER_COMPANYNAME_STR "RustyCore contributors"
+#define VER_LEGALCOPYRIGHT_STR "TrinityCore and RustyCore contributors"
+#define VER_FILEVERSION_STR "@PROJECT_VERSION@"
+#define VER_PRODUCTVERSION_STR "@PROJECT_VERSION@"

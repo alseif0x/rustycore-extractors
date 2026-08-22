@@ -1,0 +1,11 @@
+// Copyright (C) 2026 rustycore-extractors contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#pragma once
+
+#define RCE_VERSION "@PROJECT_VERSION@"
+#define RCE_GIT_COMMIT "@RCE_GIT_COMMIT@"
+#define RCE_UPSTREAM_COMMIT "@RCE_UPSTREAM_COMMIT@"
+#define RCE_SUPPORTED_PRODUCT "@RCE_SUPPORTED_PRODUCT@"
+#define RCE_SUPPORTED_VERSION "@RCE_SUPPORTED_VERSION@"
+#define RCE_SUPPORTED_BUILD @RCE_SUPPORTED_BUILD@
