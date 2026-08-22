@@ -3,7 +3,7 @@
 The v0.1 compatibility suite isolates the four fixed TrinityCoreLegacy 3.4.3
 extractors from all server targets. It imports only the 355 paths audited in
 `licensing/source-files.json` from commit
-`92796557f9b0ba3d2d1c7c770f535153154cf83e`. The precise import and nine
+`92796557f9b0ba3d2d1c7c770f535153154cf83e`. The precise import and ten
 isolation edits are recorded in `licensing/import-manifest.json`.
 
 This document describes engineering evidence and distribution mechanics; it is

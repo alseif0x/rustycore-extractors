@@ -13,17 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Modified by rustycore-extractors contributors on 2026-08-22 to use the
+ * public standard chrono header in the standalone build.
  */
 
 #ifndef _DURATION_H_
 #define _DURATION_H_
 
-// HACKS TERRITORY
-#if __has_include(<__msvc_chrono.hpp>)
-#include <__msvc_chrono.hpp> // skip all the formatting/istream/locale/mutex bloat
-#else
 #include <chrono>
-#endif
 
 /// Milliseconds shorthand typedef.
 typedef std::chrono::milliseconds Milliseconds;

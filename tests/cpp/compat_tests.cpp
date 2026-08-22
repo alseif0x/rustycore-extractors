@@ -1,19 +1,18 @@
 // Copyright (C) 2026 rustycore-extractors contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#define __CASCLIB_SELF__
-#include "CascLib.h"
-#include "CascCommon.h"
 #include "CascHandles.h"
 #include "G3D/g3dfnmatch.h"
 #include "hashes/md5.h"
 #include "hashes/sha1.h"
-#include "common/Mime.h"
-#include "common/Sockets.h"
 #include <boost/filesystem/path.hpp>
 #include <array>
 #include <cstdio>
 #include <cstring>
+
+class CASC_SOCKET;
+using PCASC_SOCKET = CASC_SOCKET*;
+PCASC_SOCKET sockets_connect(char const* hostName, unsigned portNum);
 
 namespace
 {
@@ -58,7 +57,7 @@ int main()
     CASC::Storage* remote = CASC::Storage::OpenRemote(boost::filesystem::path("unused"), 0, "wow_classic", "eu");
     ok = ok && remote == nullptr;
     delete remote;
-    ok = ok && sockets_connect("invalid.example", CASC_PORT_HTTP) == nullptr;
+    ok = ok && sockets_connect("invalid.example", 80) == nullptr;
 
     return ok ? 0 : 1;
 }

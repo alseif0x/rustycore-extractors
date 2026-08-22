@@ -24,6 +24,10 @@
       "reason": "replace precompiled-header transitive includes with explicit standard includes"
     },
     {
+      "path": "src/common/Utilities/Duration.h",
+      "reason": "replace the private MSVC chrono implementation header with the public C++ standard header"
+    },
+    {
       "path": "src/tools/extractor_common/CascHandles.cpp",
       "reason": "remove unconditional TACT-key download and reject remote CASC under the empty network lock"
     },
