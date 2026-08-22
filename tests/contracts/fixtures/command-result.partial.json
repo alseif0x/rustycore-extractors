@@ -1,0 +1,47 @@
+{
+  "contract_version": 1,
+  "command": "extract",
+  "status": "partial",
+  "exit_code": 7,
+  "run_id": "fa49042d-d63c-4aec-8529-874e583550be",
+  "manifest": ".rustycore-extractors-incomplete.json",
+  "summary": {
+    "message": "Extraction stopped with resumable output",
+    "completed_units": 1,
+    "total_units": 2
+  },
+  "details": {
+    "client": {
+      "product": "wow_classic",
+      "version": "3.4.3",
+      "build": 51943,
+      "locales": ["enUS"],
+      "support": "supported"
+    },
+    "plan": {
+      "components": ["maps"],
+      "estimated_disk_bytes": null,
+      "estimated_duration_seconds": null,
+      "estimated_work_units": 2,
+      "network_requests": 0,
+      "estimated_download_bytes": 0
+    },
+    "output": {
+      "status": "incomplete",
+      "verified_files": 1,
+      "failed_files": 1
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "EXTRACTION_STAGE_FAILED",
+      "severity": "error",
+      "message": "A synthetic extraction stage failed"
+    },
+    {
+      "code": "RUN_RESUMABLE",
+      "severity": "info",
+      "message": "The incomplete run may be resumed with its run identifier"
+    }
+  ]
+}

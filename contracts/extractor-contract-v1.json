@@ -1,0 +1,87 @@
+{
+  "contract_version": 1,
+  "target": {
+    "product": "wow_classic",
+    "version": "3.4.3",
+    "build": 51943,
+    "supported_locales": [
+      "deDE",
+      "enUS",
+      "esES",
+      "esMX",
+      "frFR",
+      "itIT",
+      "koKR",
+      "ptBR",
+      "ruRU",
+      "zhCN",
+      "zhTW"
+    ]
+  },
+  "compatibility": {
+    "unsupported_build_default": "reject",
+    "experimental_flag": "--experimental-unsupported-build",
+    "experimental_label": "unsupported"
+  },
+  "formats": {
+    "map": {
+      "magic_ascii": "MAPS",
+      "version": 10,
+      "tile_pattern": "maps/{map_id:04}_{grid_x:02}_{grid_y:02}.map"
+    },
+    "vmap": {
+      "magic_ascii": "VMAP_4.B",
+      "raw_magic_ascii": "VMAP04B",
+      "tree_pattern": "vmaps/{map_id:04}.vmtree",
+      "tile_pattern": "vmaps/{map_id:04}_{tile_y:02}_{tile_x:02}.vmtile",
+      "gameobject_models": "vmaps/GameObjectModels.dtree"
+    },
+    "mmap": {
+      "magic_ascii": "MMAP",
+      "version": 15,
+      "detour_navmesh_version": 7,
+      "detour_polyref_bits": 64,
+      "params_pattern": "mmaps/{map_id:04}.mmap",
+      "tile_pattern": "mmaps/{map_id:04}{tile_y:02}{tile_x:02}.mmtile"
+    }
+  },
+  "commands": {
+    "inspect": {
+      "mutates_output": false,
+      "network_default": "offline",
+      "required_options": ["--client"]
+    },
+    "extract": {
+      "mutates_output": true,
+      "network_default": "offline",
+      "required_options": ["--client", "--output"]
+    },
+    "verify": {
+      "mutates_output": false,
+      "network_default": "offline",
+      "required_options": ["--output"]
+    }
+  },
+  "network": {
+    "default_mode": "offline",
+    "allow_network_flag": "--allow-network",
+    "remote_casc_flag": "--remote-casc",
+    "remote_casc_requires": ["--allow-network", "--remote-casc"],
+    "lock_file": "contracts/network-lock-v1.json",
+    "empty_lock_behavior": "reject-network",
+    "uploads_permitted": false
+  },
+  "exit_codes": [
+    { "code": 0, "name": "success" },
+    { "code": 2, "name": "usage" },
+    { "code": 3, "name": "unsupported-client" },
+    { "code": 4, "name": "invalid-client" },
+    { "code": 5, "name": "network-policy" },
+    { "code": 6, "name": "insufficient-resources" },
+    { "code": 7, "name": "extraction-failed" },
+    { "code": 8, "name": "output-incomplete-or-conflict" },
+    { "code": 9, "name": "verification-failed" },
+    { "code": 10, "name": "internal-error" },
+    { "code": 130, "name": "interrupted" }
+  ]
+}

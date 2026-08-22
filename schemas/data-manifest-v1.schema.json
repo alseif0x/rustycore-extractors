@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/data-manifest-v1.schema.json",
+  "title": "RustyCore Extractors data manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "run_id",
+    "status",
+    "compatibility",
+    "client",
+    "extractor",
+    "formats",
+    "options",
+    "network",
+    "outputs",
+    "timestamps",
+    "privacy"
+  ],
+  "properties": {
+    "manifest_version": { "const": 1 },
+    "run_id": { "$ref": "#/$defs/uuid" },
+    "status": { "enum": ["complete", "incomplete", "failed"] },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["support", "target_build"],
+      "properties": {
+        "support": { "enum": ["supported", "experimental"] },
+        "target_build": { "const": 51943 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version", "build", "locales", "install_fingerprint_sha256"],
+      "properties": {
+        "product": { "const": "wow_classic" },
+        "version": { "type": "string", "minLength": 1 },
+        "build": { "type": "integer", "minimum": 1 },
+        "locales": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/locale" }
+        },
+        "install_fingerprint_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "extractor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "commit", "implementation", "compatibility_oracle_commit"],
+      "properties": {
+        "name": { "const": "rustycore-extractors" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+        "commit": { "$ref": "#/$defs/git_commit" },
+        "implementation": { "enum": ["cpp", "rust", "mixed"] },
+        "compatibility_oracle_commit": { "const": "92796557f9b0ba3d2d1c7c770f535153154cf83e" }
+      }
+    },
+    "formats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["map", "vmap", "mmap"],
+      "properties": {
+        "map": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["magic", "version"],
+          "properties": {
+            "magic": { "const": "MAPS" },
+            "version": { "const": 10 }
+          }
+        },
+        "vmap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["magic", "raw_magic"],
+          "properties": {
+            "magic": { "const": "VMAP_4.B" },
+            "raw_magic": { "const": "VMAP04B" }
+          }
+        },
+        "mmap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["magic", "version", "detour_navmesh_version", "detour_polyref_bits"],
+          "properties": {
+            "magic": { "const": "MMAP" },
+            "version": { "const": 15 },
+            "detour_navmesh_version": { "const": 7 },
+            "detour_polyref_bits": { "const": 64 }
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locales", "components", "map_height_encoding", "skip_liquids"],
+      "properties": {
+        "locales": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/locale" }
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["dbc", "gt", "cameras", "maps", "vmaps", "mmaps"] }
+        },
+        "map_height_encoding": { "enum": ["compact", "float32"] },
+        "skip_liquids": { "type": "boolean" },
+        "mmap_threads": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "allow_network", "remote_casc", "lock_sha256"],
+      "properties": {
+        "mode": { "enum": ["local", "metadata", "remote-casc"] },
+        "allow_network": { "type": "boolean" },
+        "remote_casc": { "type": "boolean" },
+        "lock_sha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "downloaded_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "mode": { "const": "local" } }, "required": ["mode"] },
+          "then": {
+            "properties": {
+              "allow_network": { "const": false },
+              "remote_casc": { "const": false },
+              "lock_sha256": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "mode": { "const": "metadata" } }, "required": ["mode"] },
+          "then": {
+            "properties": {
+              "allow_network": { "const": true },
+              "remote_casc": { "const": false },
+              "lock_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "mode": { "const": "remote-casc" } }, "required": ["mode"] },
+          "then": {
+            "properties": {
+              "allow_network": { "const": true },
+              "remote_casc": { "const": true },
+              "lock_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      ]
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "incomplete_marker_present", "artifacts", "integrity"],
+      "properties": {
+        "root": { "const": "." },
+        "incomplete_marker_present": { "type": "boolean" },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "file_count", "total_bytes", "inventory_sha256"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "file_count": { "type": "integer", "minimum": 0 },
+            "total_bytes": { "type": "integer", "minimum": 0 },
+            "inventory_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started_at", "completed_at"],
+      "properties": {
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paths_redacted", "client_data_embedded"],
+      "properties": {
+        "paths_redacted": { "const": true },
+        "client_data_embedded": { "const": false }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "compatibility": {
+            "properties": { "support": { "const": "supported" } },
+            "required": ["support"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "client": {
+            "properties": {
+              "version": { "const": "3.4.3" },
+              "build": { "const": 51943 }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "compatibility": { "required": ["reason"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "complete" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "outputs": {
+            "properties": {
+              "incomplete_marker_present": { "const": false },
+              "artifacts": {
+                "items": {
+                  "allOf": [
+                    { "$ref": "#/$defs/artifact" },
+                    { "properties": { "status": { "const": "complete" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "timestamps": {
+            "properties": { "completed_at": { "type": "string", "format": "date-time" } }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "outputs": {
+            "properties": { "incomplete_marker_present": { "const": true } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "git_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "locale": {
+      "enum": ["deDE", "enUS", "esES", "esMX", "frFR", "itIT", "koKR", "ptBR", "ruRU", "zhCN", "zhTW"]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "relative_path", "status", "file_count", "total_bytes", "inventory_sha256"],
+      "properties": {
+        "category": { "enum": ["dbc", "gt", "cameras", "maps", "vmaps", "mmaps"] },
+        "relative_path": { "type": "string", "pattern": "^(dbc/[A-Za-z]{4}|gt|cameras|maps|vmaps|mmaps)$" },
+        "status": { "enum": ["complete", "incomplete", "failed"] },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "total_bytes": { "type": "integer", "minimum": 0 },
+        "inventory_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

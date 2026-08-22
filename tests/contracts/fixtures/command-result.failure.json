@@ -1,0 +1,32 @@
+{
+  "contract_version": 1,
+  "command": "extract",
+  "status": "failure",
+  "exit_code": 3,
+  "run_id": null,
+  "manifest": null,
+  "summary": {
+    "message": "Unsupported client rejected before extraction",
+    "completed_units": 0,
+    "total_units": 0
+  },
+  "details": {
+    "client": {
+      "product": "wow_classic",
+      "version": "3.4.4",
+      "build": 99999,
+      "locales": ["esES"],
+      "support": "unsupported"
+    },
+    "plan": null,
+    "output": null
+  },
+  "diagnostics": [
+    {
+      "code": "UNSUPPORTED_CLIENT_BUILD",
+      "severity": "error",
+      "message": "Client build is unsupported",
+      "field": "client.build"
+    }
+  ]
+}

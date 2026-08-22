@@ -1,0 +1,83 @@
+{
+  "manifest_version": 1,
+  "run_id": "7bc8d90a-146b-4e76-ae0c-243fc2158953",
+  "status": "complete",
+  "compatibility": {
+    "support": "supported",
+    "target_build": 51943
+  },
+  "client": {
+    "product": "wow_classic",
+    "version": "3.4.3",
+    "build": 51943,
+    "locales": ["enUS"],
+    "install_fingerprint_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "extractor": {
+    "name": "rustycore-extractors",
+    "version": "0.1.0",
+    "commit": "2222222222222222222222222222222222222222",
+    "implementation": "cpp",
+    "compatibility_oracle_commit": "92796557f9b0ba3d2d1c7c770f535153154cf83e"
+  },
+  "formats": {
+    "map": { "magic": "MAPS", "version": 10 },
+    "vmap": { "magic": "VMAP_4.B", "raw_magic": "VMAP04B" },
+    "mmap": {
+      "magic": "MMAP",
+      "version": 15,
+      "detour_navmesh_version": 7,
+      "detour_polyref_bits": 64
+    }
+  },
+  "options": {
+    "locales": ["enUS"],
+    "components": ["dbc", "maps"],
+    "map_height_encoding": "compact",
+    "skip_liquids": false,
+    "mmap_threads": 4
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "lock_sha256": null,
+    "downloaded_bytes": 0
+  },
+  "outputs": {
+    "root": ".",
+    "incomplete_marker_present": false,
+    "artifacts": [
+      {
+        "category": "dbc",
+        "relative_path": "dbc/enUS",
+        "status": "complete",
+        "file_count": 2,
+        "total_bytes": 128,
+        "inventory_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      {
+        "category": "maps",
+        "relative_path": "maps",
+        "status": "complete",
+        "file_count": 1,
+        "total_bytes": 64,
+        "inventory_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    ],
+    "integrity": {
+      "algorithm": "sha256",
+      "file_count": 3,
+      "total_bytes": 192,
+      "inventory_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  },
+  "timestamps": {
+    "started_at": "2026-01-01T00:00:00Z",
+    "completed_at": "2026-01-01T00:01:00Z"
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  }
+}

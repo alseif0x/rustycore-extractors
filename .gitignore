@@ -13,6 +13,8 @@
 /reports/
 /runs/
 /tmp/
+__pycache__/
+*.py[cod]
 
 # Client-derived and extractor output (never commit or distribute)
 /Buildings/

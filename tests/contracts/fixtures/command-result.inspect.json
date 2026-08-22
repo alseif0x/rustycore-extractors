@@ -1,0 +1,31 @@
+{
+  "contract_version": 1,
+  "command": "inspect",
+  "status": "success",
+  "exit_code": 0,
+  "run_id": null,
+  "manifest": null,
+  "summary": {
+    "message": "Supported local client detected",
+    "completed_units": 1,
+    "total_units": 1
+  },
+  "details": {
+    "client": {
+      "product": "wow_classic",
+      "version": "3.4.3",
+      "build": 51943,
+      "locales": ["enUS"],
+      "support": "supported"
+    },
+    "plan": null,
+    "output": null
+  },
+  "diagnostics": [
+    {
+      "code": "CLIENT_SUPPORTED",
+      "severity": "info",
+      "message": "wow_classic build 51943 is supported"
+    }
+  ]
+}
