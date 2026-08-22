@@ -1,0 +1,53 @@
+name: Standalone C++ build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            generator: Ninja
+          - os: windows-2022
+            generator: Visual Studio 17 2022
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Linux prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes libssl-dev ninja-build
+
+      - name: Configure Linux
+        if: runner.os == 'Linux'
+        run: >-
+          cmake -S . -B build -G "${{ matrix.generator }}"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX="${{ runner.temp }}/rustycore-extractors"
+
+      - name: Configure Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >-
+          cmake -S . -B build -G "${{ matrix.generator }}" -A x64
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+          -DCMAKE_INSTALL_PREFIX="$env:RUNNER_TEMP/rustycore-extractors"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Install
+        run: cmake --install build --config Release

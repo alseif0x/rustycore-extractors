@@ -1,11 +1,32 @@
 # rustycore-extractors
 
-Standalone, versioned client-data extraction tools for RustyCore 3.4.3
+Standalone, versioned client-data extraction tools for RustyCore 3.4.3.
 
-The project is currently in private planning/bootstrap. Follow the pinned
+The standalone C++ compatibility suite builds `mapextractor`, `vmap4extractor`,
+`vmap4assembler` and `mmaps_generator` without a TrinityCore checkout. Follow the pinned
 [delivery plan](https://github.com/alseif0x/rustycore-extractors/issues/13) and the
 [development environment](docs/development-environment.md). No Blizzard client-derived data is
 stored or distributed by this repository.
+
+## Build
+
+Requirements are CMake 3.25 or newer, a C++20 compiler, Python 3 and OpenSSL 3
+development files. All other compiled dependencies are pinned in the audited
+source closure.
+
+```bash
+cmake -S . -B /path/outside/repository/build -DCMAKE_BUILD_TYPE=Release
+cmake --build /path/outside/repository/build --parallel
+ctest --test-dir /path/outside/repository/build --output-on-failure
+cmake --install /path/outside/repository/build --prefix /path/to/install
+```
+
+Use `--version` for human-readable metadata or `--version-json` for the fixed
+product, client build, upstream commit and output-format versions. Extraction
+is local-CASC-only: remote CASC and implicit key downloads are disabled.
+
+See [the standalone suite guide](docs/standalone-cpp-suite.md) for Windows,
+dependency boundaries and safe real-client execution.
 
 The project is licensed under GPL-3.0-or-later. See [LICENSE](LICENSE),
 [NOTICE.md](NOTICE.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), the
