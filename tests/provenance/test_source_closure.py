@@ -61,4 +61,10 @@ for forbidden in ("LoadTactKeys", "DownloadFile", "boost/asio", "boost::asio"):
 if "ERROR_NOT_SUPPORTED" not in casc_handles:
     raise SystemExit("remote CASC rejection is missing")
 
+cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+if 'EXCLUDE REGEX "/Sockets\\\\.cpp$"' not in cmake:
+    raise SystemExit("CascLib socket transport is not excluded from the build")
+if "src/compat/CascSocketsDisabled.cpp" not in cmake:
+    raise SystemExit("offline CascLib socket replacement is missing")
+
 print(f"verified {len(actual)} imported paths and {len(modified)} modification notices")

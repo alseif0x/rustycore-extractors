@@ -88,12 +88,14 @@ endif()
 
 file(GLOB RCE_CASC_ROOT_SOURCES CONFIGURE_DEPENDS "${RCE_DEP_ROOT}/CascLib/src/*.cpp")
 file(GLOB RCE_CASC_COMMON_SOURCES CONFIGURE_DEPENDS "${RCE_DEP_ROOT}/CascLib/src/common/*.cpp")
+list(FILTER RCE_CASC_COMMON_SOURCES EXCLUDE REGEX "/Sockets\\.cpp$")
 add_library(rce_casc STATIC
   ${RCE_CASC_ROOT_SOURCES}
   ${RCE_CASC_COMMON_SOURCES}
   "${RCE_DEP_ROOT}/CascLib/src/jenkins/lookup3.c"
   src/compat/CascHashAdapters.cpp
-  src/compat/CascOverwatchDisabled.cpp)
+  src/compat/CascOverwatchDisabled.cpp
+  src/compat/CascSocketsDisabled.cpp)
 target_include_directories(rce_casc
   PUBLIC "${RCE_DEP_ROOT}/CascLib/src"
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat" "${RCE_DEP_ROOT}")
@@ -180,7 +182,8 @@ if(BUILD_TESTING)
   target_include_directories(rce_compat_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/compat"
     "${RCE_TOOLS_ROOT}/extractor_common"
-    "${RCE_DEP_ROOT}/CascLib/src")
+    "${RCE_DEP_ROOT}/CascLib/src"
+    "${RCE_DEP_ROOT}")
   target_link_libraries(rce_compat_tests PRIVATE rce_extractor_common rce_g3d)
   add_test(NAME compat-adapters COMMAND rce_compat_tests)
 

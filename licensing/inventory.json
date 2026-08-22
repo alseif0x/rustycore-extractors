@@ -93,7 +93,7 @@
       "license_expression": "MIT",
       "license_evidence": ["dep/CascLib/LICENSE", "dep/CascLib/src/CascLib.h"],
       "function": "Read the local WoW CASC storage and files addressed by name or file-data ID",
-      "treatment": "copy pinned MIT core; replace MD5/SHA1 with OpenSSL 3; exclude Overwatch handlers; disable implicit network behavior and retain explicit opt-in only",
+      "treatment": "copy pinned MIT core; replace MD5/SHA1 with OpenSSL 3; exclude Overwatch handlers; replace socket transport with an offline stub",
       "included_in_distribution": true,
       "source_obligations": "Retain the copyright and MIT permission notice in substantial source copies.",
       "binary_obligations": "Include the MIT copyright and permission notice with binary materials."

@@ -64,6 +64,11 @@
       "reason": "the fixed WoW product does not use Overwatch handlers and their closure is not accepted"
     },
     {
+      "excluded": "dep/CascLib/src/common/Sockets.cpp from the compiled target",
+      "replacement": "src/compat/CascSocketsDisabled.cpp",
+      "reason": "make remote and CDN transport unavailable at link time while preserving the audited upstream file for provenance"
+    },
+    {
       "excluded": "dep/g3dlite/{include/G3D/g3dfnmatch.h,source/g3dfnmatch.cpp}",
       "replacement": "src/compat/G3D/g3dfnmatch.h and src/compat/g3dfnmatch.cpp",
       "reason": "replace BSD-4-Clause-UC advertising-clause code"
