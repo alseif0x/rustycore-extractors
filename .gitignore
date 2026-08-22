@@ -13,6 +13,11 @@
 /reports/
 /runs/
 /tmp/
+__pycache__/
+*.py[cod]
+/.rustycore-extractors.*.staging/
+/.rustycore-extractors-incomplete.json
+/data-manifest.json
 
 # Client-derived and extractor output (never commit or distribute)
 /Buildings/
@@ -39,7 +44,11 @@ GameObjectModels.dtree
 *.m2
 *.mmap
 *.mmtile
+*.tilelist
 *.vmap
+*.vmo
+*.vmtile
+*.vmtree
 *.wdl
 *.wdt
 *.wmo

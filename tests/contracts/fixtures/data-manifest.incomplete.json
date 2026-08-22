@@ -1,0 +1,75 @@
+{
+  "manifest_version": 1,
+  "run_id": "fa49042d-d63c-4aec-8529-874e583550be",
+  "status": "incomplete",
+  "compatibility": {
+    "support": "experimental",
+    "target_build": 51943,
+    "reason": "Synthetic unsupported-build fixture"
+  },
+  "client": {
+    "product": "wow_classic",
+    "version": "3.4.4",
+    "build": 99999,
+    "locales": ["esES"],
+    "install_fingerprint_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "extractor": {
+    "name": "rustycore-extractors",
+    "version": "0.1.0-test.1",
+    "commit": "7777777777777777777777777777777777777777",
+    "implementation": "cpp",
+    "compatibility_oracle_commit": "92796557f9b0ba3d2d1c7c770f535153154cf83e"
+  },
+  "formats": {
+    "map": { "magic": "MAPS", "version": 10 },
+    "vmap": { "magic": "VMAP_4.B", "raw_magic": "VMAP04B" },
+    "mmap": {
+      "magic": "MMAP",
+      "version": 15,
+      "detour_navmesh_version": 7,
+      "detour_polyref_bits": 64
+    }
+  },
+  "options": {
+    "locales": ["esES"],
+    "components": ["maps"],
+    "map_height_encoding": "float32",
+    "skip_liquids": false
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "lock_sha256": null,
+    "downloaded_bytes": 0
+  },
+  "outputs": {
+    "root": ".",
+    "incomplete_marker_present": true,
+    "artifacts": [
+      {
+        "category": "maps",
+        "relative_path": "maps",
+        "status": "incomplete",
+        "file_count": 1,
+        "total_bytes": 32,
+        "inventory_sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+      }
+    ],
+    "integrity": {
+      "algorithm": "sha256",
+      "file_count": 1,
+      "total_bytes": 32,
+      "inventory_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+    }
+  },
+  "timestamps": {
+    "started_at": "2026-01-01T00:00:00Z",
+    "completed_at": null
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  }
+}

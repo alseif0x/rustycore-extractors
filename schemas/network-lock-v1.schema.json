@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/network-lock-v1.schema.json",
+  "title": "RustyCore Extractors network lock v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lock_version", "target", "metadata_resources", "remote_casc_profiles"],
+  "properties": {
+    "lock_version": { "const": 1 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "build"],
+      "properties": {
+        "product": { "const": "wow_classic" },
+        "build": { "const": 51943 }
+      }
+    },
+    "metadata_resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "url", "sha256", "size_bytes", "cache_key"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "kind": { "enum": ["tact-key", "listfile", "casc-metadata"] },
+          "url": { "type": "string", "pattern": "^https://" },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "size_bytes": { "type": "integer", "minimum": 1 },
+          "cache_key": { "type": "string", "pattern": "^[a-zA-Z0-9._/-]+$" }
+        }
+      }
+    },
+    "remote_casc_profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "region", "build_config_hash", "cdn_config_hash"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "region": { "type": "string", "pattern": "^[a-z]{2}$" },
+          "build_config_hash": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+          "cdn_config_hash": { "type": "string", "pattern": "^[0-9a-f]{32}$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

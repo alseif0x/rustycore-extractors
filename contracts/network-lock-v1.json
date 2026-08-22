@@ -1,0 +1,9 @@
+{
+  "lock_version": 1,
+  "target": {
+    "product": "wow_classic",
+    "build": 51943
+  },
+  "metadata_resources": [],
+  "remote_casc_profiles": []
+}
