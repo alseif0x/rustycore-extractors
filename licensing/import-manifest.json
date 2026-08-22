@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "imported_on": "2026-08-22",
+  "origin": {
+    "repository": "https://github.com/TrinityCoreLegacy/TrinityCore.git",
+    "branch": "3.4.3",
+    "commit": "92796557f9b0ba3d2d1c7c770f535153154cf83e"
+  },
+  "destination_prefix": "vendor/trinitycore-legacy/",
+  "source_allowlist": "licensing/source-files.json",
+  "import_method": "git archive of the pinned commit, restricted to the audited allowlist",
+  "verification": {
+    "imported_path_count": 355,
+    "initial_content_check": "SHA-256 of every imported file matched git-show content before isolation edits",
+    "current_check": "tests/provenance/test_source_closure.py"
+  },
+  "modified_paths": [
+    {
+      "path": "src/common/DataStores/DB2FileLoader.cpp",
+      "reason": "replace precompiled-header transitive includes with explicit standard and formatting includes"
+    },
+    {
+      "path": "src/common/DataStores/DB2FileLoader.h",
+      "reason": "replace precompiled-header transitive includes with explicit standard includes"
+    },
+    {
+      "path": "src/tools/extractor_common/CascHandles.cpp",
+      "reason": "remove unconditional TACT-key download and reject remote CASC under the empty network lock"
+    },
+    {
+      "path": "src/tools/extractor_common/CascHandles.h",
+      "reason": "remove server Asio coupling and use the standalone filesystem compatibility interface"
+    },
+    {
+      "path": "src/tools/map_extractor/System.cpp",
+      "reason": "add standalone metadata command and explicit standard includes"
+    },
+    {
+      "path": "src/tools/mmaps_generator/MapBuilder.cpp",
+      "reason": "replace broad server container utilities with the required map helper"
+    },
+    {
+      "path": "src/tools/mmaps_generator/PathGenerator.cpp",
+      "reason": "add standalone metadata command"
+    },
+    {
+      "path": "src/tools/vmap4_assembler/VMapAssembler.cpp",
+      "reason": "add standalone metadata command"
+    },
+    {
+      "path": "src/tools/vmap4_extractor/vmapexport.cpp",
+      "reason": "add standalone metadata command"
+    }
+  ],
+  "substitutions": [
+    {
+      "excluded": "dep/CascLib/src/hashes/md5.{cpp,h} and sha1.{cpp,h}",
+      "replacement": "src/compat/CascHashAdapters.cpp and src/compat/hashes/",
+      "reason": "use OpenSSL 3 instead of the blocked bundled SHA1 licensing choice"
+    },
+    {
+      "excluded": "dep/CascLib/src/overwatch/**",
+      "replacement": "src/compat/CascOverwatchDisabled.cpp",
+      "reason": "the fixed WoW product does not use Overwatch handlers and their closure is not accepted"
+    },
+    {
+      "excluded": "dep/g3dlite/{include/G3D/g3dfnmatch.h,source/g3dfnmatch.cpp}",
+      "replacement": "src/compat/G3D/g3dfnmatch.h and src/compat/g3dfnmatch.cpp",
+      "reason": "replace BSD-4-Clause-UC advertising-clause code"
+    },
+    {
+      "excluded": "external Boost.Filesystem",
+      "replacement": "src/compat/boost/filesystem/ backed by C++20 std::filesystem",
+      "reason": "remove an unnecessary external runtime and build dependency"
+    },
+    {
+      "excluded": "TrinityCore logging, metrics, utility aggregation and revision generation",
+      "replacement": "src/compat and cmake generated headers",
+      "reason": "remove server-only target coupling"
+    }
+  ]
+}

@@ -67,13 +67,15 @@ the import selector without first updating this inventory.
   generator and fixes the serialized MMap ABI.
 - fmt: the 13 headers and two sources named by `dep/fmt/CMakeLists.txt`.
 - Boost: the upstream CMake asks for system, filesystem, program_options,
-  iostreams, regex and locale. The extractor source directly uses Asio and
-  filesystem; v0.1 pins Boost 1.83.0 until #3 proves a smaller module set.
-- zlib: version 1.3 is bundled at the fixed commit. The CMake target uses the
-  installed zlib on Unix and its named 11-source static target elsewhere.
-- OpenSSL: OpenSSL 3 replaces CascLib's bundled MD5/SHA1 and supports the
-  explicit TACT-key TLS path in CascHandles. The standalone baseline is
-  OpenSSL 3.0.13 under Apache-2.0; no old-OpenSSL-license source is selected.
+  iostreams, regex and locale, but the selected extractor source only needs a
+  narrow Filesystem surface after online CascHandles code is removed. Original
+  GPL-3.0-or-later compatibility headers map that surface to C++20
+  `std::filesystem`; no Boost header or library is compiled or distributed.
+- zlib: version 1.3 is bundled at the fixed commit. The standalone target builds
+  the pinned allowlisted static sources identically on Linux and Windows.
+- OpenSSL: OpenSSL 3 `libcrypto` replaces CascLib's bundled MD5/SHA1. The
+  standalone baseline is OpenSSL 3.0.13 under Apache-2.0; no TLS client and no
+  old-OpenSSL-license source is selected.
 
 ## Excluded upstream target drag
 
@@ -104,9 +106,11 @@ excludes or substitutes every other problematic path.
 
 ## Gate for issue #3 and releases
 
-Before any source import, compare every imported path against
-`licensing/source-files.json`, preserve its header and add a dated modification
-notice when changed. A missing grant, GPL-2.0-only header, incompatible term,
-or path outside the selectors blocks the import. Before binary distribution,
-capture the actual linker dependency list and compare it with this closure;
-any new component reopens the licensing gate.
+The import is recorded by `licensing/import-manifest.json`. Every imported path
+must remain in `licensing/source-files.json`, preserve its header and carry a
+dated modification notice when changed. The `source-closure` CTest enforces the
+exact 355-file set, all declared notices, excluded paths and the remote-CASC
+lock. A missing grant, GPL-2.0-only header, incompatible term, or path outside
+the selectors blocks the import. Before binary distribution, capture the actual
+linker dependency list and compare it with this closure; any new component
+reopens the licensing gate.
