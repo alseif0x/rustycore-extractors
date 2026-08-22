@@ -1,0 +1,11 @@
+Public-domain dedication evidence used by the selected dependency closure
+
+Bob Jenkins, May 2006:
+
+These functions for producing 32-bit hashes are in the public domain. You can
+use them for any purpose. They have no warranty.
+
+This normalized notice records the operative statements in
+`dep/CascLib/src/jenkins/lookup3.c` at TrinityCoreLegacy commit
+92796557f9b0ba3d2d1c7c770f535153154cf83e. The complete original header must
+remain in any copied source file.

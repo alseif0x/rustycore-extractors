@@ -1,0 +1,53 @@
+# Build output
+/build/
+/build-*/
+/target/
+
+# Local configuration, logs, caches, and reports
+.env
+.env.*
+!.env.example
+*.log
+/artifacts/
+/cache/
+/reports/
+/runs/
+/tmp/
+
+# Client-derived and extractor output (never commit or distribute)
+/Buildings/
+/Data/
+/cameras/
+/dbc/
+/db2/
+/gt/
+/maps/
+/mmaps/
+/vmaps/
+/CascCache/
+/Cache/
+/.build.info
+/.build.db
+/.product.db
+GameObjectModels.dtree
+*.adt
+*.blp
+*.casc
+*.dbc
+*.db2
+*.map
+*.m2
+*.mmap
+*.mmtile
+*.vmap
+*.wdl
+*.wdt
+*.wmo
+
+# Only deliberately authored synthetic fixtures may use client-like suffixes
+!tests/fixtures/synthetic/**/*
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/

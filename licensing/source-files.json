@@ -1,0 +1,1827 @@
+{
+  "schema_version": 1,
+  "fixed_upstream_commit": "92796557f9b0ba3d2d1c7c770f535153154cf83e",
+  "description": "Exact source/header allowlist for the planned initial C++ import. Build metadata, notices and license texts are tracked separately. Any additional path reopens issue #1.",
+  "substitution_boundaries": [
+    {
+      "upstream_paths": [
+        "dep/g3dlite/include/G3D/g3dfnmatch.h",
+        "dep/g3dlite/source/g3dfnmatch.cpp"
+      ],
+      "replacement": "new GPL-3.0-or-later portable filename-matching wrapper; excludes BSD-4-Clause advertising-clause code"
+    },
+    {
+      "upstream_paths": [
+        "dep/CascLib/src/hashes/md5.cpp",
+        "dep/CascLib/src/hashes/md5.h",
+        "dep/CascLib/src/hashes/sha1.cpp",
+        "dep/CascLib/src/hashes/sha1.h"
+      ],
+      "replacement": "new GPL-3.0-or-later CascLib hash adapter using pinned OpenSSL 3 APIs"
+    },
+    {
+      "upstream_paths": ["dep/CascLib/src/overwatch/**"],
+      "replacement": "excluded product handlers; v0.1 accepts only wow_classic and does not compile Overwatch APM/CMF support"
+    },
+    {
+      "upstream_paths": [
+        "src/common/Utilities/Util.cpp",
+        "src/common/Utilities/Util.h"
+      ],
+      "replacement": "new GPL-3.0-or-later standalone utility adapter exposing only extractor-used operations"
+    },
+    {
+      "upstream_paths": ["src/common/Logging/**", "src/common/Metric/**"],
+      "replacement": "new GPL-3.0-or-later structured diagnostic adapter"
+    },
+    {
+      "upstream_paths": ["src/genrev/**", "generated revision_data.h"],
+      "replacement": "new GPL-3.0-or-later standalone version metadata generation"
+    },
+    {
+      "upstream_paths": [
+        "src/common/Debugging/WheatyExceptionReport.cpp",
+        "src/common/Debugging/WheatyExceptionReport.h",
+        "src/common/WindowsSettings.manifest"
+      ],
+      "replacement": "platform-native standalone error handling and manifest"
+    }
+  ],
+  "files": [
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/extractor_common/CascHandles.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/extractor_common/CascHandles.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/extractor_common/DB2CascFileSource.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/extractor_common/DB2CascFileSource.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/extractor_common/ExtractorDB2LoadInfo.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/System.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/adt.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/loadlib.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/loadlib/DBFilesClientList.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/loadlib/loadlib.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/map_extractor/wdt.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/IntermediateValues.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/IntermediateValues.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/MapBuilder.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/MapBuilder.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/PathCommon.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/PathGenerator.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/TerrainBuilder.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/mmaps_generator/TerrainBuilder.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_assembler/TileAssembler.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_assembler/TileAssembler.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_assembler/VMapAssembler.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/adtfile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/adtfile.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/cascfile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/cascfile.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/gameobject_extract.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/model.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/model.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/modelheaders.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/vec3d.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/vmapexport.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/vmapexport.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/wdtfile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/wdtfile.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/wmo.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-tools",
+      "path": "src/tools/vmap4_extractor/wmo.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascCommon.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascDecompress.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascDecrypt.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascDumpData.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascFiles.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascFindFile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascIndexFiles.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascLib.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascOpenFile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascOpenStorage.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascPort.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascReadFile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_Diablo3.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_Install.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_MNDX.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_OW.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_TVFS.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_Text.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascRootFile_WoW.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Array.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Common.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Common.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Csv.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Csv.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Directory.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Directory.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/FileStream.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/FileStream.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/FileTree.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/FileTree.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/ListFile.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/ListFile.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Map.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Mime.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Mime.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Path.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/RootHandler.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/RootHandler.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Sockets.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/Sockets.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/jenkins/lookup.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/jenkins/lookup3.c",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/CascStructs.h",
+      "platform": "all"
+    },
+    {
+      "component": "casclib",
+      "path": "dep/CascLib/src/common/ArraySparse.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/AABox.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Any.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/AreaMemoryManager.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Array.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/AtomicInt32.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BIN.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BinaryFormat.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BinaryInput.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BinaryOutput.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BoundsTrait.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Box.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Box2D.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/BumpMapPreprocess.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Capsule.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/CollisionDetection.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Color1.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Color3.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Color4.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Cone.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/ConvexPolyhedron.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/CoordinateFrame.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Crypto.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Cylinder.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/EqualsTrait.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/FileNotFound.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/FileSystem.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Frustum.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/G3D.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/G3DAll.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/G3DGameUnits.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/GMutex.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/GThread.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/GUniqueID.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/HashTrait.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Image1.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Image3.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Image4.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/ImageFormat.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Intersect.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/KDTree.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Line.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/LineSegment.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Log.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Map2D.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Matrix.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Matrix2.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Matrix3.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Matrix4.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/MemoryManager.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/MeshAlg.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/MeshBuilder.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/NetAddress.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/NetworkDevice.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/ParseError.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PhysicsFrame.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PhysicsFrameSpline.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Plane.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PointHashGrid.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PointKDTree.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Pointer.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PositionTrait.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/PrecomputedRandom.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Quat.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Queue.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Random.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Ray.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Rect2D.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/ReferenceCount.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/RegistryUtil.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Set.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/SmallArray.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/SpawnBehavior.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Sphere.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Spline.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/SplineExtrapolationMode.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Stopwatch.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/System.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Table.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/TextInput.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/TextOutput.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/ThreadSet.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Triangle.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/UprightFrame.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector2.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector2int16.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector2int32.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector2unorm16.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector3.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector3int16.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector3int32.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector4.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Vector4int8.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/WeakCache.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/Welder.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/WrapMode.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/XML.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/constants.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/debug.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/debugAssert.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/debugPrintf.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/enumclass.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/fileutils.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/filter.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/format.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/g3dmath.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/netheaders.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/networkHelpers.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/platform.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/prompt.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/serialize.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/splinefunc.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/stringutils.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/uint128.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/units.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/unorm16.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/unorm8.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/include/G3D/vectorMath.h",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/AABox.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Any.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/AnyTableReader.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/BinaryFormat.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/BinaryInput.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/BinaryOutput.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Box.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Capsule.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/CollisionDetection.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/CoordinateFrame.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Crypto.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Cylinder.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/FileSystem.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/GThread.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Line.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/LineSegment.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Log.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Matrix3.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Matrix4.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/MemoryManager.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/PhysicsFrame.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Plane.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Quat.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Random.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Ray.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/RegistryUtil.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Sphere.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/System.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/TextInput.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/TextOutput.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Triangle.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/UprightFrame.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Vector2.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Vector3.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/Vector4.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/debugAssert.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/fileutils.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/format.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/g3dmath.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/prompt.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/stringutils.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "g3d",
+      "path": "dep/g3dlite/source/uint128.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourAlloc.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourAssert.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourCommon.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourMath.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourNavMesh.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourNavMeshBuilder.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourNavMeshQuery.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourNode.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Include/DetourStatus.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourAlloc.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourAssert.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourCommon.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourNavMesh.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourNavMeshQuery.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Detour/Source/DetourNode.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Include/Recast.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Include/RecastAlloc.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Include/RecastAssert.h",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/Recast.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastAlloc.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastArea.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastAssert.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastContour.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastFilter.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastLayers.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastMesh.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastMeshDetail.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastRasterization.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "recast-detour",
+      "path": "dep/recastnavigation/Recast/Source/RecastRegion.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/args.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/chrono.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/color.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/compile.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/core.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/format-inl.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/format.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/os.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/ostream.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/printf.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/ranges.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/std.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/include/fmt/xchar.h",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/src/format.cc",
+      "platform": "all"
+    },
+    {
+      "component": "fmt",
+      "path": "dep/fmt/src/os.cc",
+      "platform": "all"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/adler32.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/compress.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/crc32.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/crc32.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/deflate.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/deflate.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/gzguts.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/infback.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inffast.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inffast.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inffixed.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inflate.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inflate.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inftrees.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/inftrees.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/trees.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/trees.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/uncompr.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/zconf.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/zlib.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/zutil.c",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "zlib",
+      "path": "dep/zlib/zutil.h",
+      "platform": "non-unix-or-static-package"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Asio/AsioHacksFwd.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Asio/IoContext.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Asio/Resolver.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Banner.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Banner.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/BoundingIntervalHierarchy.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/BoundingIntervalHierarchy.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Management/VMapManager2.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Management/VMapManager2.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Maps/MMapDefines.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Maps/MapDefines.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Maps/MapDefines.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Maps/MapTree.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Maps/MapTree.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Models/ModelIgnoreFlags.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Models/ModelInstance.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Models/ModelInstance.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Models/WorldModel.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Models/WorldModel.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/VMapDefinitions.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Common.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Common.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/CompilerDefs.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2FileLoader.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2FileLoader.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2FileSystemSource.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2FileSystemSource.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2Meta.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/DataStores/DB2Meta.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Debugging/Errors.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Debugging/Errors.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Define.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/GitRevision.cpp",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/GitRevision.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Threading/ProducerConsumerQueue.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Time/Timer.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/ByteConverter.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Containers.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/IteratorPair.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Locales.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Memory.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Optional.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/StringFormat.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Types.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Collision/Management/IVMapManager.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Containers/Utilities/MapUtils.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/Duration.h",
+      "platform": "all"
+    },
+    {
+      "component": "trinity-extractor-common",
+      "path": "src/common/Utilities/EnumFlag.h",
+      "platform": "all"
+    }
+  ]
+}
