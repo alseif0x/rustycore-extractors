@@ -187,6 +187,12 @@ if(BUILD_TESTING)
     COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/provenance/test_source_closure.py")
 
+  add_test(
+    NAME conformance-harness
+    COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+      -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/conformance"
+      -p "test_*.py" -v)
+
   add_executable(rce_compat_tests tests/cpp/compat_tests.cpp)
   target_include_directories(rce_compat_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/compat"

@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "default_comparison": "exact-bytes",
+  "semantic_only": [],
+  "rationale": "No nondeterminism is accepted for the pinned Linux oracle/candidate closeout. A future exception requires a reviewed path glob and format-specific semantic parser."
+}
