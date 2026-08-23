@@ -4,12 +4,13 @@
   "title": "RustyCore extractor conformance report v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "status", "compatibility_target", "tools", "policy", "summary", "mismatches", "privacy"],
+  "required": ["schema_version", "status", "compatibility_target", "tools", "reader_acceptance", "policy", "summary", "mismatches", "privacy"],
   "properties": {
     "schema_version": {"const": 1},
     "status": {"enum": ["pass", "fail"]},
     "compatibility_target": {"type": "object"},
     "tools": {"type": "object"},
+    "reader_acceptance": {"type": ["object", "null"]},
     "policy": {"type": "object"},
     "summary": {
       "type": "object",

@@ -61,6 +61,23 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def first_difference(left: Path, right: Path) -> int | None:
+    offset = 0
+    with left.open("rb") as left_file, right.open("rb") as right_file:
+        while True:
+            left_chunk = left_file.read(1024 * 1024)
+            right_chunk = right_file.read(1024 * 1024)
+            common = min(len(left_chunk), len(right_chunk))
+            for index in range(common):
+                if left_chunk[index] != right_chunk[index]:
+                    return offset + index
+            if len(left_chunk) != len(right_chunk):
+                return offset + common
+            if not left_chunk:
+                return None
+            offset += len(left_chunk)
+
+
 def checked_count(count: int, label: str) -> int:
     if count > MAX_COUNT:
         raise FormatError(f"unreasonable {label}: {count}")
@@ -512,7 +529,13 @@ def is_semantic_only(path: str, profile: dict[str, Any]) -> bool:
     return any(fnmatch.fnmatchcase(path, pattern) for pattern in profile.get("semantic_only", []))
 
 
-def compare(reference_root: Path, candidate_root: Path, profile: dict[str, Any], versions: dict[str, Any]) -> dict[str, Any]:
+def compare(
+    reference_root: Path,
+    candidate_root: Path,
+    profile: dict[str, Any],
+    versions: dict[str, Any],
+    reader_acceptance: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     reference, errors = inventory(reference_root, "reference")
     candidate, candidate_errors = inventory(candidate_root, "candidate")
     errors.extend(candidate_errors)
@@ -533,13 +556,16 @@ def compare(reference_root: Path, candidate_root: Path, profile: dict[str, Any],
         elif semantic_equal:
             semantic_count += 1
         if not passed:
-            mismatches.append({
+            mismatch = {
                 "code": "SEMANTIC_MISMATCH" if semantic_only else "BYTE_MISMATCH",
                 "path": path,
                 "comparison": "semantic" if semantic_only else "exact",
                 "reference": left,
                 "candidate": right,
-            })
+            }
+            if not exact_equal:
+                mismatch["first_differing_byte"] = first_difference(reference_root / path, candidate_root / path)
+            mismatches.append(mismatch)
     for path in missing:
         mismatches.append({"code": "FILE_MISSING", "path": path})
     for path in unexpected:
@@ -559,6 +585,7 @@ def compare(reference_root: Path, candidate_root: Path, profile: dict[str, Any],
             "formats": {"map": {"magic": "MAPS", "version": 10}, "vmap": {"magic": "VMAP_4.B"}, "mmap": {"magic": "MMAP", "version": 15, "detour_version": 7, "poly_ref_bits": 64}},
         },
         "tools": versions,
+        "reader_acceptance": reader_acceptance,
         "policy": {"semantic_only": profile.get("semantic_only", []), "default": "exact-bytes"},
         "summary": {
             "reference_file_count": len(reference), "candidate_file_count": len(candidate),
@@ -577,6 +604,16 @@ def parse_version(path: Path | None, role: str) -> dict[str, Any]:
     with path.open(encoding="utf-8") as source:
         value = json.load(source)
     return {"role": role, "metadata": value}
+
+
+def load_optional_json(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    with path.open(encoding="utf-8") as source:
+        value = json.load(source)
+    if not isinstance(value, dict):
+        raise ValueError("reader evidence must be a JSON object")
+    return value
 
 
 def safe_report_path(path: Path, input_roots: tuple[Path, Path]) -> None:
@@ -600,6 +637,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", type=Path, default=Path(__file__).resolve().parents[2] / "contracts" / "conformance-profile-v1.json")
     parser.add_argument("--reference-version-json", type=Path)
     parser.add_argument("--candidate-version-json", type=Path)
+    parser.add_argument("--reader-evidence-json", type=Path)
     arguments = parser.parse_args(argv)
     try:
         profile = load_profile(arguments.profile)
@@ -611,6 +649,7 @@ def main(argv: list[str] | None = None) -> int:
                 "reference": parse_version(arguments.reference_version_json, "reference"),
                 "candidate": parse_version(arguments.candidate_version_json, "candidate"),
             },
+            load_optional_json(arguments.reader_evidence_json),
         )
         safe_report_path(arguments.report, (arguments.reference, arguments.candidate))
         arguments.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -18,6 +18,7 @@ python3 tools/conformance/compare_outputs.py \
   --candidate /home/server/rustycore-extractor-work/runs/candidate/<run-id> \
   --reference-version-json /home/server/rustycore-extractor-work/reports/<run-id>-reference-version.json \
   --candidate-version-json /home/server/rustycore-extractor-work/reports/<run-id>-candidate-version.json \
+  --reader-evidence-json /home/server/rustycore-extractor-work/reports/<run-id>-rustycore-readers.json \
   --report /home/server/rustycore-extractor-work/reports/<run-id>-conformance.json
 ```
 
@@ -25,6 +26,8 @@ Exit `0` means conformance passed, exit `9` means a compatibility mismatch,
 and exit `2` means the harness itself could not run. Input roots are read-only.
 The report is written last and may be retained because it contains hashes and
 structured evidence rather than extracted payloads.
+Reader evidence is an independently produced JSON object; the harness embeds it
+without claiming success for a reader that was not executed.
 
 ## Comparisons
 

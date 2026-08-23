@@ -127,6 +127,7 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(9, report["summary"]["exact_match_count"])
         self.assertEqual(0, report["summary"]["mismatch_count"])
         self.assertFalse(report["privacy"]["absolute_paths_embedded"])
+        self.assertIsNone(report["reader_acceptance"])
 
     def test_altered_header_is_reported(self):
         path = self.candidate / "maps/0000_32_32.map"
@@ -136,6 +137,8 @@ class HarnessTests(unittest.TestCase):
         report = self.run_compare()
         self.assertEqual("fail", report["status"])
         self.assertIn("FORMAT_INVALID", {item["code"] for item in report["mismatches"]})
+        byte_mismatch = next(item for item in report["mismatches"] if item["code"] == "BYTE_MISMATCH")
+        self.assertEqual(4, byte_mismatch["first_differing_byte"])
 
     def test_wrong_client_build_is_reported(self):
         path = self.candidate / "maps/0000_32_32.map"
