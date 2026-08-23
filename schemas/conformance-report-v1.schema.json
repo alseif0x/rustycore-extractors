@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rustycore.dev/schemas/conformance-report-v1.schema.json",
+  "title": "RustyCore extractor conformance report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "compatibility_target", "tools", "policy", "summary", "mismatches", "privacy"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["pass", "fail"]},
+    "compatibility_target": {"type": "object"},
+    "tools": {"type": "object"},
+    "policy": {"type": "object"},
+    "summary": {
+      "type": "object",
+      "required": ["reference_file_count", "candidate_file_count", "common_file_count", "exact_match_count", "allowed_semantic_match_count", "mismatch_count", "candidate_categories"],
+      "properties": {
+        "reference_file_count": {"type": "integer", "minimum": 0},
+        "candidate_file_count": {"type": "integer", "minimum": 0},
+        "common_file_count": {"type": "integer", "minimum": 0},
+        "exact_match_count": {"type": "integer", "minimum": 0},
+        "allowed_semantic_match_count": {"type": "integer", "minimum": 0},
+        "mismatch_count": {"type": "integer", "minimum": 0},
+        "candidate_categories": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+      },
+      "additionalProperties": false
+    },
+    "mismatches": {"type": "array", "items": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string"}}}},
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absolute_paths_embedded", "client_payloads_embedded"],
+      "properties": {
+        "absolute_paths_embedded": {"const": false},
+        "client_payloads_embedded": {"const": false}
+      }
+    }
+  }
+}

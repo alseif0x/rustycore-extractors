@@ -28,6 +28,10 @@ is local-CASC-only: remote CASC and implicit key downloads are disabled.
 See [the standalone suite guide](docs/standalone-cpp-suite.md) for Windows,
 dependency boundaries and safe real-client execution.
 
+Use the [output conformance harness](docs/conformance-harness.md) to compare a
+pinned reference run with a candidate by file set, parsed format semantics and
+deterministic bytes. Its synthetic CI fixtures contain no Blizzard data.
+
 The project is licensed under GPL-3.0-or-later. See [LICENSE](LICENSE),
 [NOTICE.md](NOTICE.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), the
 [source-closure audit](docs/licensing/source-closure.md), and the
