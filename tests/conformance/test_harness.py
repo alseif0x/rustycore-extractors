@@ -21,9 +21,10 @@ def representative_map() -> bytes:
     heights = bytes(index % 256 for index in range(129 * 129 + 128 * 128))
     height = struct.pack("<4sIff", b"MHGT", 4, -12.5, 243.5) + heights
     liquid_types = b"".join(struct.pack("<H", index % 4) for index in range(16 * 16))
+    liquid_cell_flags = bytes([1]) * (16 * 16)
     liquid_heights = struct.pack("<4f", 1.0, 2.0, 3.0, 4.0)
     liquid = struct.pack("<4sBBHBBBBf", b"MLIQ", 0, 1, 7, 3, 4, 2, 2, 4.5)
-    liquid += liquid_types + liquid_heights
+    liquid += liquid_types + liquid_cell_flags + liquid_heights
     holes = bytes([1]) + bytes(16 * 16 * 8 - 1)
     area_offset = 44
     height_offset = area_offset + len(area)

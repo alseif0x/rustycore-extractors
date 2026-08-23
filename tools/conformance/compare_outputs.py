@@ -177,7 +177,7 @@ def parse_map(data: bytes) -> dict[str, Any]:
         finite((level,), "MLIQ level")
         if width > 129 or height > 129 or x + width > 129 or y + height > 129:
             raise FormatError("MLIQ dimensions exceed the 129x129 tile grid")
-        expected = 16 + (0 if flags & 1 else 16 * 16 * 2) + (0 if flags & 2 else width * height * 4)
+        expected = 16 + (0 if flags & 1 else 16 * 16 * 3) + (0 if flags & 2 else width * height * 4)
         if size != expected:
             raise FormatError(f"MLIQ size is {size}, expected {expected}")
         sections["liquid"].update(
