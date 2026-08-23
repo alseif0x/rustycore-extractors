@@ -29,6 +29,22 @@ structured evidence rather than extracted payloads.
 Reader evidence is an independently produced JSON object; the harness embeds it
 without claiming success for a reader that was not executed.
 
+### Reference-oracle isolation
+
+The pinned upstream extractor attempts an unconditional TACT-key download from
+`raw.githubusercontent.com`. A reference run must therefore execute in a network
+namespace that was actually created; a `systemd` warning that it is proceeding
+without `PrivateNetwork` is a failed isolation attempt, not acceptable evidence.
+On this host the verified run used `bwrap --unshare-net` inside the persistent
+user service.
+
+The canonical client remained read-only. CascLib opens `.build.info` and files
+under `Data/config` with `O_RDWR` even for local extraction, so the isolated run
+overlaid private writable copies of only those paths from
+`/home/server/rustycore-extractor-work/cache/`. The client data, indices and
+archives remained under the read-only root bind. Logs, raw VMap intermediates,
+outputs and reports remained under `/home/server/rustycore-extractor-work/`.
+
 ## Comparisons
 
 - The manifest layer reports missing and unexpected relative files.
@@ -47,6 +63,29 @@ without claiming success for a reader that was not executed.
 Malformed structures fail independently of byte comparison, so matching a
 candidate against an equally truncated or corrupted copy is not a pass.
 Symlinks and incomplete-run markers are rejected.
+
+## Local build-51943 acceptance evidence
+
+The 2026-08-23 closeout run used the pinned TrinityCoreLegacy commit
+`92796557f9b0ba3d2d1c7c770f535153154cf83e`, the standalone candidate, client
+build `3.4.3.51943`, product `wow_classic` and locale `esES`. Both sides ran all
+four stages; MMap generation was deliberately limited to the deterministic map
+0 tile `[32,32]` required by issue #4.
+
+The reusable report is stored outside Git at
+`/home/server/rustycore-extractor-work/reports/issue4-51943-conformance-offline.json`.
+It records 17,391 files on each side, 17,391 byte-for-byte matches, no semantic
+exceptions and no mismatches. Its parsed categories comprise 788 DB2 files,
+5,714 map files, 100 VMap trees, 3,074 VMap tiles, 7,543 VMap models, one VMap
+game-object index, one MMap parameter file, one MMap tile and 169 opaque
+contract-listed outputs.
+
+An independent probe at RustyCore commit `14277d92` accepted the synthetic MAP
+and MMap fixtures through `wow-map` and `wow-recastdetour`. RustyCore has no VMap
+file reader at that commit; this is reported as `unsupported`, not as a reader
+pass. VMap evidence for this issue is consequently the harness's structural
+parser plus exact equality with the pinned oracle. The probe evidence is stored
+at `/home/server/rustycore-extractor-work/reports/issue4-rustycore-readers.json`.
 
 ## Synthetic CI coverage
 
