@@ -10,13 +10,23 @@ RustyCore. The first delivery isolates the proven C++ tools; the second replaces
 incrementally with Rust behind the same compatibility contract.
 
 - Repository checkout: `/home/server/rustycore-extractors`
-- Private remote: `git@github.com:alseif0x/rustycore-extractors.git`
+- Public remote: `https://github.com/alseif0x/rustycore-extractors.git`
 - Integration repository: `/home/server/rustycore`
 - C++ reference repository: `/home/server/woltk-trinity-legacy`
 - Fixed initial upstream: `TrinityCoreLegacy/TrinityCore`, branch `3.4.3`, commit
   `92796557f9b0ba3d2d1c7c770f535153154cf83e`
 - Plan/index: `https://github.com/alseif0x/rustycore-extractors/issues/13`
-- Default integration branch: `main`
+- Default development branch: `forever`; legacy version line: `3.4.3`
+
+### Forever branch scope
+
+The operator made this repository public, renamed `main` to `3.4.3`, and selected
+`forever` as default on 2026-10-03. Forever's development target is modern WoW
+`1.60.1.70170` Beta x64. The current implementation is still the C++ 3.4.3 suite;
+neither a Rust-native replacement nor build-70170 compatibility is established.
+The fixed target and issue #13 below describe the legacy suite/programme, not
+an authorization to relabel its formats, metadata or acceptance as Forever.
+Target-specific changes need versioned evidence and reader/output acceptance.
 
 Do not trust an extractor because it builds or finishes. TrinityCoreLegacy output plus
 RustyCore reader/runtime acceptance is the compatibility authority.
@@ -29,7 +39,8 @@ RustyCore reader/runtime acceptance is the compatibility authority.
 - VMap format: `VMAP_4.B` (`VMAP04B` raw intermediate)
 - MMap format: `MMAP`, version `15`, with the exact supported Detour version
 
-Other products, builds and expansions are out of scope until the v1.0 plan is complete.
+On the legacy `3.4.3` line, other products/builds remain outside this fixed contract.
+The separately authorized Forever target does not change that legacy contract.
 
 ## Current-server paths and data boundary
 
@@ -86,8 +97,8 @@ Only synthetic fixtures and hash/structured reports are allowed in Git.
 Follow the numbered order in issue #13 and respect dependency gates.
 
 1. Read this file, the index and the selected issue.
-2. Create the branch linked to the issue with `gh issue develop <N> --base main`.
-3. One issue = one branch = one focused PR into `main` with `Closes #<N>`.
+2. Create issue branches from the version line: `forever` for Forever, `3.4.3` for legacy work.
+3. One issue = one branch = one focused PR into that version line with `Closes #<N>`.
 4. Compare with the fixed C++ reference before changing behavior or formats.
 5. Add focused positive/negative tests and structured diagnostic output.
 6. Run the smallest relevant local check during iteration.
