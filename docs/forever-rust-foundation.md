@@ -182,3 +182,61 @@ network syscall tracing/denial. Executed results are recorded below when known;
 source existence alone does not establish acceptance. Maps/VMaps/MMaps, typed
 record decoding, complete category extraction/manifests/resume and reader/runtime
 conformance remain outstanding. No server-world integration is resumed.
+
+### CASC executed evidence and target-change boundary — 2026-10-03
+
+Tested repaired code SHA: `3a84773f37cb4ec1f52ad55c67a8b559d129f103`.
+The optional native Linux build/test campaign uses Rust 1.98.0, GNU C/C++ 15.2,
+one job, the same external target directory, and the pinned modern reference.
+No source/fixture changes occurred during that candidate's checks.
+
+- Format, native-feature workspace tests/build and Clippy with `-D warnings`:
+  pass. **14 Rust tests** execute (6 CASC library, 1 CASC CLI options, 7 DB2).
+- Real-binary synthetic CLI tests: **10 pass** (5 CASC, 5 DB2).
+- Legacy contract tests: **10 pass**. The source closure check verifies all
+  **355 imported files / 10 modification notices**. Legacy vendor/CMake/adapters
+  and source/import manifests are byte-identical to published `09e70951`.
+- Network-denied `strace` of those 10 synthetic CLI tests: pass, zero network
+  syscalls observed. Trace stays in the external work reports, not Git. This
+  covers synthetic admission/missing-storage cases, not a successful CASC read.
+
+Failures remain recorded: candidate `40e673b` first failed configuration because
+OpenSSL development headers were absent. A local, non-system bootstrap used
+Ubuntu `libssl-dev_3.5.5-1ubuntu3.7_amd64.deb`, 2,936,724 bytes, SHA256
+`d1cf6cafb141490b7020e392964b1f901835d60cb88c3a68ef0f95ef5e930de4`, downloaded
+explicitly from the Ubuntu security repository over HTTPS and extracted outside
+both checkouts. It links the installed OpenSSL 3.5.5 libcrypto. No system package
+was installed. Nonstandard header locations can use `RCE_OPENSSL_INCLUDE`,
+`RCE_OPENSSL_ARCH_INCLUDE` and `RCE_OPENSSL_CRYPTO`; normal development hosts
+can use CMake's discovery. Dependency bootstrap is not extractor runtime network.
+
+Candidate `5bcfe36` compiled/tested Rust but failed the incomplete `.build.info`
+CLI case (no JSON report). Source review found that
+`CascFiles.cpp:607-726::ParseFile_BuildInfo` dereferences exact typed Active
+columns without checking null. `3a84773` adds pre-FFI typed-column, nonempty
+Active/product, hexadecimal config identifier and Tags bounds validation plus
+regression coverage. This is a bounded guard for a trusted local installation,
+not a claim that native CascLib is memory-safe for all adversarial client data.
+
+**Real target acceptance is NOT passing:** during this turn the normal client's
+active Beta row changed from `1.60.1.70170` to `1.60.1.70205`. The explicit
+`--locale esES --file-id 1361031 --compare <prior-ChrClasses.db2>` command rejects
+it with exit **3**, `unsupported_client`, before native access. A pre-existing
+private 70170 metadata snapshot was also inspected; its Data is a symlink to the
+updated installation, not an independent archived client. The same probe against
+that snapshot exits **4**, `native_read_failed`. No old client reconstruction,
+metadata spoof, source/build gate bypass, client downgrade or new-build support
+is performed. No successful BLTE/FileDataID byte-parity, encryption failure or
+real-data budget acceptance is inferred from synthetic checks.
+
+Campaign wall-clock checkpoint: **18:17:52–18:29:25 UTC, 693 seconds**, including
+the two failed attempts, dependency bootstrap, error repair, final local checks,
+real probes and investigation. The 600-second target is **not met**; cold native
+bootstrap and repair are included here, not mislabeled as a warm benchmark.
+The later documentation-only closeout extends that elapsed checkpoint; prior
+tested SHAs are not relabeled. Detailed pure coding/repair duration is unknown.
+
+The pending operator choice is a complete retained 70170 client or separately
+authorized 70205 support. The original server character/world objective stays
+paused. This foundation code is local, unpushed, and the complete extractor is
+unfinished; no release/manual-test readiness is claimed.
