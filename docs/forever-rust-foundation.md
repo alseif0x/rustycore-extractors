@@ -241,3 +241,50 @@ The operator subsequently authorized adding 70205 alongside 70170; this resolves
 the target choice for the bounded read prototype only. The original server character/world objective stays
 paused. This foundation code is local, unpushed, and the complete extractor is
 unfinished; no release/manual-test readiness is claimed.
+
+## Build 70205 read admission — 2026-10-03
+
+The operator approved 70205 support alongside 70170. Production candidate
+`312c654` admits only the two exact versions. `admit` returns the selected build;
+private C ABI v2 takes that expected build, rejects any other build before storage
+access, and matches `CascStorageProduct` against it before opening a FileDataID.
+Reports carry the matched build rather than a fixed 70170 constant. This retains
+the existing pinned source/licensing closure, offline policy and strict reads.
+It does not change the legacy suite or the paused RustyCore server.
+
+Acceptance on Linux x86_64 used the existing external warm target and one Cargo
+job. From 21:44:18 to 21:44:21 UTC, `cargo fmt --all -- --check`, offline locked
+workspace/all-target tests with `forever-casc/native` (15 Rust tests), workspace
+native build, native all-target Clippy with `-D warnings`, ten synthetic Python
+CLI checks, source closure (355 paths / 10 notices), ten legacy contract checks
+and `git diff --check` passed at `312c654`.
+
+Test-only candidate `998858fda71d0514ca8fd667a50cab1cb3aadda8` adds opt-in
+`tests/forever/test_live_casc_cli.py`; production/build inputs are unchanged from
+the Cargo-tested candidate. All 13 Python CLI checks, including the three live
+checks, passed at this candidate in 9.008 seconds. Every live subprocess ran
+under strace network-syscall error injection and the trace showed no network
+attempts. No client files were written and no private rows became fixtures.
+
+Current installed 70205, explicit `esES`:
+
+| FileDataID | Table | Complete bytes | WDC5 records / fields | Result |
+| --- | --- | --- | --- | --- |
+| 1361031 | ChrClasses | 6200 | 9 / 43 | matched build 70205 |
+| 1305311 | ChrRaces | 22095 | 58 / 51 | matched build 70205 |
+
+An additional full-byte comparison of current ChrClasses against the prior
+private **70170** acquisition returned equality. This is cross-build unchanged
+table evidence, not an independent newly acquired 70205 oracle. The one-byte
+budget returns exit 6 / `read_policy_limit`, and absent FileDataID 4294967294
+returns exit 4 / `file_unavailable`; neither exposes partial success.
+
+The complete acceptance interval, including smoke-test authoring, repeated
+Python acceptance, real reads and comparisons, was 21:44:18–21:46:22 UTC
+(124 seconds, within 600 seconds). The earlier failed cold campaign remains
+recorded above. Documentation closeout is outside this measured interval.
+
+70170 remains unit/CLI admitted, but its stale local snapshot still cannot prove
+a current complete 70170 live read. Encrypted sections, typed row decoding,
+table-specific schema conformance and full extraction remain unproven here.
+Changes are committed locally, not pushed or released.
