@@ -23,8 +23,9 @@ incrementally with Rust behind the same compatibility contract.
 The operator made this repository public, renamed `main` to `3.4.3`, and selected
 `forever` as default on 2026-10-03. Forever's development target is modern WoW
 `1.60.1.70170` Beta x64. The extraction implementation is still the C++ 3.4.3
-suite. A separate Rust WDC5 metadata-only inspector is introduced under issue
-#18; no CASC access or record decoder is implied. Neither the full Rust-native
+suite. Issue #18 adds a Rust WDC5 metadata inspector and a separate optional
+Rust/CascLib local-read prototype; neither implies a DB2 record decoder or
+full extraction. Neither the full Rust-native
 replacement nor build-70170 extraction compatibility is established.
 The fixed target and issue #13 below describe the legacy suite/programme, not
 an authorization to relabel its formats, metadata or acceptance as Forever.

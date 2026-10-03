@@ -1,0 +1,23 @@
+[package]
+name = "forever-casc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Offline target-admitted CASC read prototype with a pinned native backend"
+publish = false
+
+[features]
+# Explicit external source/build dependency; pure-Rust CASC is NOT claimed.
+native = []
+
+[dependencies]
+forever-db2 = { path = "../forever-db2" }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[[bin]]
+name = "forever-casc-probe"
+path = "src/main.rs"
+required-features = ["native"]

@@ -36,7 +36,8 @@ preserving the WotLK Classic baseline as a separate version line.
 > **C++ suite for WoW Classic 3.4.3, build 51943**. Its version metadata,
 > formats and compatibility contract still describe that baseline.
 > A first **Rust WDC5 metadata inspector** is now available as a development
-> preview. It does not open CASC or decode records. **The full native extractor
+> preview. A separate opt-in Rust/CascLib local-read prototype is under
+> development; it does not decode DB2 records. **The full native extractor
 > replacement and Forever/70170 extraction compatibility remain pending.**
 
 ## Current status
@@ -44,7 +45,7 @@ preserving the WotLK Classic baseline as a separate version line.
 | Area | What exists today |
 | --- | --- |
 | Version lines | `forever` for 1.60.1.70170 development; `3.4.3` for the legacy baseline |
-| Implementation | Standalone C++20 suite plus a dependency-free Rust WDC5 metadata inspector |
+| Implementation | C++20 legacy suite, Rust WDC5 inspector and optional Rust/CascLib read prototype |
 | Existing client contract | `wow_classic`, 3.4.3.51943 — not a Forever product/build claim |
 | Existing tools | `mapextractor`, `vmap4extractor`, `vmap4assembler`, `mmaps_generator` |
 | Conformance | Legacy build-51943 comparisons; Rust metadata preview has separate bounded acceptance, not full 70170 extraction |
@@ -60,6 +61,10 @@ The first independent Rust step is [`forever-db2-inspect`](docs/forever-rust-fou
 read-only, offline header/section diagnostics for an explicit local WDC5 file.
 It reports metadata, not record contents or verified client provenance, and
 does not depend on the server's architecture refactor.
+
+The same guide documents the optional `forever-casc-probe`: exact
+`wow_classic_beta`/70170 admission, local FileDataID reads and byte comparisons,
+with a pinned C/C++ backend. It is **not** a complete extractor or pure-Rust CASC.
 
 The historical conformance evidence is scoped: the recorded build-51943 run
 compares 17,391 files, but MMap generation covers one deterministic map-0 tile.

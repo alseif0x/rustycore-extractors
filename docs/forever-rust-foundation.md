@@ -27,8 +27,9 @@ acquired `.available.db2` prefix may have readable metadata but unavailable
 record bodies. The report always sets `client_build_verified`,
 `table_schema_validated` and `record_data_validated` to `false`.
 
-No CASC opening, decompression, key download, record decoding, maps, VMaps or
-MMaps are implemented in this Rust delivery. Existing C++ tools and their
+This metadata inspector implements no CASC opening, decompression, key download,
+record decoding, maps, VMaps or MMaps. The separate optional CASC read prototype
+below is a later continuation. Existing C++ tools and their
 3.4.3/51943 acceptance stay unchanged. Legacy issue #8 is not closed by this.
 
 ## Build and use
@@ -129,3 +130,55 @@ Select and prove a **local-only CASC access path** for `wow_classic_beta` build
 BLTE and encrypted-file behavior. A Rust wrapper around C/C++ is a possible
 candidate, not a pure-Rust CASC claim. Typed DB2 decoding and server-reader
 conformance follow that proof; maps/navigation are later responsibilities.
+
+## Optional local CASC read prototype — continuation
+
+The operator authorized continuing after the metadata delivery. `forever-casc`
+adds a Rust-owned local read path behind explicit feature `native`; without it,
+the workspace does not compile/link a native backend. It is **not pure-Rust CASC**.
+Only Linux native-host builds are admitted; no Windows/cross-build claim.
+The [separate licensing/build closure](licensing/forever-casc-prototype.md)
+records the pinned external dependency and why the legacy backend is not reused.
+
+Rust first checks exactly one active `wow_classic_beta` row with version
+`1.60.1.70170` in the explicitly supplied installation root's `.build.info`.
+The native storage then independently reports product/build 70170 before any
+FileDataID read. Locale is explicit (`enUS` or `esES`) and selected at storage
+opening, not by the ignored native file-open locale argument. This is admission
+of installed CASC metadata, not signature verification of a game executable.
+
+The native backend has no socket transport, uses a download-cancelling progress
+callback and opens storage offline. No key file, listfile or remote option is
+accepted. File opens use strict integrity checks and **never**
+`CASC_OVERCOME_ENCRYPTED`. Missing keys/local blocks produce errors; partial
+bytes are not exposed as successful files. The 128 MiB maximum budget is a
+prototype policy, not a CASC format limit. A complete read plus optional byte
+comparison still does not decode/validate DB2 records or a table-specific schema.
+
+```bash
+# External, unchanged checkout at 02245dcd245e7433e524577656177723d3e4992e.
+# No implicit download occurs. Compiler inputs are checked against Git blobs.
+export RCE_FOREVER_CASC_REFERENCE=/path/to/pinned/TrinityCore
+export CARGO_BUILD_JOBS=1
+export CARGO_TARGET_DIR="$(pwd)/../rustycore-extractor-work/builds/rust-forever"
+cargo build --offline --locked -p forever-casc --features native
+
+"$CARGO_TARGET_DIR/debug/forever-casc-probe" \
+  --client /path/to/installation-root --locale esES --file-id 1361031 \
+  --compare /path/to/prior/ChrClasses.db2 --json
+```
+
+Build prerequisites: CMake 3.25+, C/C++20 compiler and OpenSSL 3 development
+files. Native compilation uses the retained zlib vendor but never builds the
+legacy extractor executables. Input/build/output directories stay separate.
+The CLI writes only a single redacted JSON diagnostic (even without `--json`),
+never extracted files or client bytes. `reference_bytes_equal: null` means no
+comparison was requested, not a parity pass. Exit 9 marks unequal comparison
+bytes. Other handled exits use the existing preview meanings (2/3/4/6).
+
+Acceptance adds native-feature tests/build/clippy and `test_casc_cli.py`, then
+explicit real-client byte comparisons and missing-ID/key/budget scenarios under
+network syscall tracing/denial. Executed results are recorded below when known;
+source existence alone does not establish acceptance. Maps/VMaps/MMaps, typed
+record decoding, complete category extraction/manifests/resume and reader/runtime
+conformance remain outstanding. No server-world integration is resumed.
