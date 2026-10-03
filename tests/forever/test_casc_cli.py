@@ -37,12 +37,21 @@ class CascCli(unittest.TestCase):
     def test_valid_metadata_but_missing_storage_fails_without_output(self):
         with tempfile.TemporaryDirectory(prefix="private-casc-") as directory:
             (Path(directory) / ".build.info").write_text(
-                "Product|Active|Version\nwow_classic_beta|1|1.60.1.70170\n")
+                "Product!STRING:0|Active!DEC:1|Version!STRING:0|Build Key!HEX:16|CDN Key!HEX:16|Tags!STRING:0\n"
+                "wow_classic_beta|1|1.60.1.70170|00000000000000000000000000000000|11111111111111111111111111111111|esES\n")
             code, report = self.invoke(["--client", directory, "--locale", "enUS", "--file-id", "1"])
             self.assertEqual(code, 4)
             self.assertEqual(report["status"], "error")
             self.assertNotIn(directory, json.dumps(report))
             self.assertEqual([p.name for p in Path(directory).iterdir()], [".build.info"])
+
+    def test_incomplete_native_metadata_rejected_before_library(self):
+        with tempfile.TemporaryDirectory(prefix="private-casc-") as directory:
+            (Path(directory) / ".build.info").write_text(
+                "Product|Active|Version\nwow_classic_beta|1|1.60.1.70170\n")
+            code, report = self.invoke(["--client", directory, "--locale", "enUS", "--file-id", "1"])
+            self.assertEqual(code, 4)
+            self.assertEqual(report["code"], "invalid_build_metadata")
 
     def test_invalid_options_do_not_echo_values(self):
         for args in [[], ["--private-option", "secret"],

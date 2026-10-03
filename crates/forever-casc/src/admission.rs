@@ -15,7 +15,60 @@ pub fn admit(client: &Path) -> Result<(), Error> {
     if bytes.len() as u64 > MAX_BUILD_INFO {
         return Err(Error::Limit);
     }
-    parse(std::str::from_utf8(&bytes).map_err(|_| Error::Metadata)?)
+    let info = std::str::from_utf8(&bytes).map_err(|_| Error::Metadata)?;
+    parse(info)?;
+    native_shape(info)
+}
+
+// CascFiles.cpp::ParseFile_BuildInfo indexes exact typed columns and calls
+// strcmp on Active without a null check. Reject malformed metadata BEFORE FFI.
+fn native_shape(info: &str) -> Result<(), Error> {
+    if info.contains('\0') {
+        return Err(Error::Metadata);
+    }
+    let mut lines = info.lines();
+    let fields: Vec<_> = lines.next().ok_or(Error::Metadata)?.split('|').collect();
+    if fields.len() > 64 {
+        return Err(Error::Metadata);
+    }
+    let required = [
+        "Product!STRING:0",
+        "Active!DEC:1",
+        "Version!STRING:0",
+        "Build Key!HEX:16",
+        "CDN Key!HEX:16",
+        "Tags!STRING:0",
+    ];
+    let mut indexes = Vec::new();
+    for field in required {
+        indexes.push(
+            fields
+                .iter()
+                .position(|value| *value == field)
+                .ok_or(Error::Metadata)?,
+        );
+    }
+    for line in lines.filter(|line| !line.is_empty()) {
+        let row: Vec<_> = line.split('|').collect();
+        if row.len() != fields.len()
+            || !matches!(row[indexes[1]], "0" | "1")
+            || row[indexes[0]].is_empty()
+        {
+            return Err(Error::Metadata);
+        }
+        if row[indexes[0]] == PRODUCT && row[indexes[1]] == "1" {
+            for index in &indexes[3..5] {
+                let key = row[*index].as_bytes();
+                if key.len() != 32 || !key.iter().all(u8::is_ascii_hexdigit) {
+                    return Err(Error::Metadata);
+                }
+            }
+            if row[indexes[5]].len() < 4 || !row[indexes[5]].is_ascii() {
+                return Err(Error::Metadata);
+            }
+        }
+    }
+    Ok(())
 }
 
 fn parse(info: &str) -> Result<(), Error> {
@@ -99,6 +152,21 @@ mod tests {
             "Product|Active|Version\nmalformed\n",
         ] {
             assert_eq!(parse(info), Err(Error::Metadata));
+        }
+    }
+    #[test]
+    fn native_requires_typed_columns_values_and_nonnull_active() {
+        let good = "Product!STRING:0|Active!DEC:1|Version!STRING:0|Build Key!HEX:16|CDN Key!HEX:16|Tags!STRING:0\n\
+            wow_classic_beta|1|1.60.1.70170|00000000000000000000000000000000|11111111111111111111111111111111|esES\n";
+        assert_eq!(native_shape(good), Ok(()));
+        for bad in [
+            good.replace("Active!DEC:1", "Active"),
+            good.replace("|1|", "||"),
+            good.replace("|esES", "|"),
+            good.replace("11111111111111111111111111111111", "bad"),
+            good.replace("|esES", "|es\0ES"),
+        ] {
+            assert_eq!(native_shape(&bad), Err(Error::Metadata));
         }
     }
 }
