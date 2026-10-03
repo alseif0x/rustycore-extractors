@@ -8,7 +8,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/default%20branch-forever-6f42c1" alt="Default branch: forever">
-  <img src="https://img.shields.io/badge/current%20tools-C%2B%2B20-orange" alt="Current tools: C++20">
+  <img src="https://img.shields.io/badge/tools-C%2B%2B20%20%2B%20Rust-orange" alt="Tools: C++20 plus Rust metadata preview">
   <img src="https://img.shields.io/badge/70170-support%20pending-e09f3e" alt="Build 70170 support pending">
 </p>
 
@@ -35,18 +35,19 @@ preserving the WotLK Classic baseline as a separate version line.
 > does not port the implementation. The code currently builds the existing
 > **C++ suite for WoW Classic 3.4.3, build 51943**. Its version metadata,
 > formats and compatibility contract still describe that baseline.
-> **Neither a Rust-native replacement nor Forever/70170 compatibility is
-> implemented or validated in this repository yet.**
+> A first **Rust WDC5 metadata inspector** is now available as a development
+> preview. It does not open CASC or decode records. **The full native extractor
+> replacement and Forever/70170 extraction compatibility remain pending.**
 
 ## Current status
 
 | Area | What exists today |
 | --- | --- |
 | Version lines | `forever` for 1.60.1.70170 development; `3.4.3` for the legacy baseline |
-| Implementation | Standalone C++20 suite; Rust-native replacement remains planned |
+| Implementation | Standalone C++20 suite plus a dependency-free Rust WDC5 metadata inspector |
 | Existing client contract | `wow_classic`, 3.4.3.51943 — not a Forever product/build claim |
 | Existing tools | `mapextractor`, `vmap4extractor`, `vmap4assembler`, `mmaps_generator` |
-| Conformance | Synthetic fixtures and recorded build-51943 reference comparisons; no 70170 acceptance |
+| Conformance | Legacy build-51943 comparisons; Rust metadata preview has separate bounded acceptance, not full 70170 extraction |
 | Client assets | Never distributed through Git, CI artifacts or releases |
 
 The current tools cover map/client-data extraction, collision geometry and
@@ -54,6 +55,11 @@ navigation generation. They are distinct from the target-specific Rust DB2
 readers and diagnostic probes currently developed in RustyCore itself; those
 components have **not** been migrated into this repository as a native
 extractor suite.
+
+The first independent Rust step is [`forever-db2-inspect`](docs/forever-rust-foundation.md):
+read-only, offline header/section diagnostics for an explicit local WDC5 file.
+It reports metadata, not record contents or verified client provenance, and
+does not depend on the server's architecture refactor.
 
 The historical conformance evidence is scoped: the recorded build-51943 run
 compares 17,391 files, but MMap generation covers one deterministic map-0 tile.
@@ -129,6 +135,7 @@ The following guides describe the **existing 3.4.3 suite**, unless explicitly
 marked otherwise:
 
 - [Development environment](docs/development-environment.md)
+- [Forever Rust metadata preview](docs/forever-rust-foundation.md) — separate from the legacy suite
 - [Standalone C++ suite](docs/standalone-cpp-suite.md)
 - [Output conformance harness](docs/conformance-harness.md)
 - [Versioned compatibility and network contract](docs/compatibility-contract.md)

@@ -1,0 +1,15 @@
+[package]
+name = "forever-db2"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bounded offline WDC5 metadata inspection; not a record decoder or CASC extractor"
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "forever-db2-inspect"
+path = "src/main.rs"
