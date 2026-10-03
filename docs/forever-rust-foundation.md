@@ -89,6 +89,39 @@ section bounds, no body reads, redacted I/O and CLI/report behavior. Real local
 comparison evidence must retain source/command/SHA and scope; never copy client
 files into the checkout or claim this is a full extraction acceptance.
 
+### Executed acceptance — 2026-10-03
+
+Tested code SHA: `b1cb582a249c6efc3aaea345108c0120ad2e061b`, authored by
+`alseif0x`. Local x86_64 Linux, Rust 1.98.0, one Cargo job; target directory
+outside both checkouts under `rustycore-extractor-work/builds/rust-forever`.
+The measured campaign was **14:11:56–14:12:42 UTC (46 seconds)** including
+the initial tiny-crate compilation, checks below and local comparisons. This
+is this tool's acceptance, not a RustyCore warm-workspace benchmark.
+
+- `cargo fmt --all -- --check`: pass.
+- `cargo test --offline --locked --workspace --all-targets`: 7 library tests
+  pass; the binary unit target has zero tests and contributes no test evidence.
+- `cargo build --offline --locked --bin forever-db2-inspect`: pass.
+- `cargo clippy --offline --locked --workspace --all-targets -- -D warnings`: pass.
+- `tests/forever/test_metadata_cli.py`: 5 tests pass against the real binary.
+- Legacy `tests/contracts`: 10 tests pass; no legacy C++ code/contract changed.
+- `compare_local_metadata.py --binary <binary> --file <local-input>` repeated
+  for `ChrClasses`, `ChrRaces`, `Map.available`, `Achievement.available` and
+  `SpellEffect.available`: all 5 pass against independent Python packed-header
+  unpacking. Inputs were prior private build-70170 acquisitions, read in place;
+  no client data was copied into this repository. This is metadata comparison,
+  NOT a C++ runtime oracle, record/body acceptance or fresh CASC acquisition.
+- Linux `strace -f -e trace=network -e inject=socket:error=EPERM` around the
+  five CLI tests: all pass, zero network syscalls observed. Trace stays outside
+  Git under `rustycore-extractor-work/reports/forever-db2-18`. This proves those
+  Linux scenarios, not untested platforms or OS-mounted remote filesystems.
+- `git diff --check`: pass.
+
+No CASC extraction, Windows acceptance, full DB2 record reader, server
+installation/restart or original character/world-goal resumption occurred.
+Subsequent evidence closeout is documentation-only; do not relabel the tested
+SHA above as a later build.
+
 ## Next dependency
 
 Select and prove a **local-only CASC access path** for `wow_classic_beta` build
