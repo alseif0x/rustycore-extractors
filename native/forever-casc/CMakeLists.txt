@@ -7,6 +7,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 find_package(OpenSSL 3.0 REQUIRED COMPONENTS Crypto)
 find_package(Threads REQUIRED)
+# Rust resolves -lcrypto through the same library selected by CMake, including
+# a development-header-only bootstrap with the installed versioned .so.
+file(CREATE_LINK "${OPENSSL_CRYPTO_LIBRARY}" "${CMAKE_BINARY_DIR}/libcrypto.so" SYMBOLIC RESULT link_status)
+if(NOT link_status STREQUAL "0")
+  message(FATAL_ERROR "Cannot link the selected OpenSSL development library")
+endif()
 set(pin 02245dcd245e7433e524577656177723d3e4992e)
 execute_process(COMMAND git --no-replace-objects -C "${RCE_REFERENCE}" rev-parse HEAD
   OUTPUT_VARIABLE actual_sha OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE status)
@@ -65,7 +71,7 @@ target_compile_definitions(forever_zlib PUBLIC ZLIB_CONST)
 add_library(forever_casc_core STATIC ${core_sources} hash_adapter.cpp
   "${repo}/src/compat/CascSocketsDisabled.cpp" "${repo}/src/compat/CascOverwatchDisabled.cpp")
 target_include_directories(forever_casc_core PUBLIC "${source_root}"
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${RCE_OPENSSL_ARCH_INCLUDE})
 target_compile_definitions(forever_casc_core PUBLIC
   CASC_USE_SYSTEM_ZLIB CASCLIB_NO_AUTO_LINK_LIBRARY CASCLIB_NODEBUG)
 target_link_libraries(forever_casc_core PUBLIC forever_zlib OpenSSL::Crypto Threads::Threads)

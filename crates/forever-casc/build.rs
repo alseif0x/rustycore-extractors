@@ -43,7 +43,8 @@ fn main() {
         "cargo:rerun-if-changed={}",
         PathBuf::from(&reference).join("dep/CascLib").display()
     );
-    run(Command::new("cmake")
+    let mut configure = Command::new("cmake");
+    configure
         .arg("-S")
         .arg(root.join("native/forever-casc"))
         .arg("-B")
@@ -52,7 +53,18 @@ fn main() {
         .arg(format!(
             "-DRCE_REFERENCE={}",
             PathBuf::from(reference).display()
-        )));
+        ));
+    for (name, variable) in [
+        ("RCE_OPENSSL_INCLUDE", "OPENSSL_INCLUDE_DIR"),
+        ("RCE_OPENSSL_CRYPTO", "OPENSSL_CRYPTO_LIBRARY"),
+        ("RCE_OPENSSL_ARCH_INCLUDE", "RCE_OPENSSL_ARCH_INCLUDE"),
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+        if let Some(path) = env::var_os(name) {
+            configure.arg(format!("-D{variable}={}", PathBuf::from(path).display()));
+        }
+    }
+    run(&mut configure);
     run(Command::new("cmake")
         .arg("--build")
         .arg(&output)
