@@ -2,7 +2,7 @@
 
 <p align="center">
   Local client data. Versioned tools. Reproducible evidence.<br>
-  Preparing the extraction tooling for <strong>WoW Forever 1.60.1 · build 70170 · Beta x64</strong>.
+  Preparing the extraction tooling for <strong>WoW Forever 1.60.1 · builds 70170 / 70205 · Beta x64</strong>.
 </p>
 
 <p align="center">
@@ -63,7 +63,7 @@ It reports metadata, not record contents or verified client provenance, and
 does not depend on the server's architecture refactor.
 
 The same guide documents the optional `forever-casc-probe`: exact
-`wow_classic_beta`/70170 admission, local FileDataID reads and byte comparisons,
+`wow_classic_beta`/70170 and 70205 admission, local FileDataID reads and byte comparisons,
 with a pinned C/C++ backend. It is **not** a complete extractor or pure-Rust CASC.
 
 The historical conformance evidence is scoped: the recorded build-51943 run

@@ -141,8 +141,9 @@ The [separate licensing/build closure](licensing/forever-casc-prototype.md)
 records the pinned external dependency and why the legacy backend is not reused.
 
 Rust first checks exactly one active `wow_classic_beta` row with version
-`1.60.1.70170` in the explicitly supplied installation root's `.build.info`.
-The native storage then independently reports product/build 70170 before any
+`1.60.1.70170` or `1.60.1.70205` in the explicitly supplied installation root's `.build.info`.
+The private native ABI v2 receives that selected build and independently matches
+the storage's product/build before any
 FileDataID read. Locale is explicit (`enUS` or `esES`) and selected at storage
 opening, not by the ignored native file-open locale argument. This is admission
 of installed CASC metadata, not signature verification of a game executable.
@@ -236,7 +237,7 @@ bootstrap and repair are included here, not mislabeled as a warm benchmark.
 The later documentation-only closeout extends that elapsed checkpoint; prior
 tested SHAs are not relabeled. Detailed pure coding/repair duration is unknown.
 
-The pending operator choice is a complete retained 70170 client or separately
-authorized 70205 support. The original server character/world objective stays
+The operator subsequently authorized adding 70205 alongside 70170; this resolves
+the target choice for the bounded read prototype only. The original server character/world objective stays
 paused. This foundation code is local, unpushed, and the complete extractor is
 unfinished; no release/manual-test readiness is claimed.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Private C ABI v1. Owned storage+file; no C++ layouts/callbacks exposed to Rust.
+// Private C ABI v2. Owned storage+file; no C++ layouts/callbacks exposed to Rust.
 #include "CascLib.h"
 #include <cstdint>
 #include <cstring>
@@ -27,13 +27,14 @@ bool WINAPI Offline(void*, CASC_PROGRESS_MSG message, LPCSTR, DWORD, DWORD) {
 }
 }
 
-extern "C" uint32_t rce_casc_abi() noexcept { return 1; }
+extern "C" uint32_t rce_casc_abi() noexcept { return 2; }
 extern "C" uint32_t rce_casc_open(char const* path, uint32_t locale, uint32_t id,
-    void** output, uint64_t* size) noexcept {
+    uint32_t expected_build, void** output, uint64_t* size) noexcept {
     if (!output || !size) return 1;
     *output = nullptr;
     *size = 0;
     if (!path || !*path || (locale != 2 && locale != 0x80) || id == 0 || id == UINT32_MAX) return 1;
+    if (expected_build != 70170 && expected_build != 70205) return 2;
     try {
         auto handle = std::make_unique<ReadHandle>();
         CASC_OPEN_STORAGE_ARGS args{};
@@ -45,7 +46,7 @@ extern "C" uint32_t rce_casc_open(char const* path, uint32_t locale, uint32_t id
         if (!CascOpenStorageEx(nullptr, &args, false, &handle->storage)) return Failure();
         CASC_STORAGE_PRODUCT product{};
         if (!CascGetStorageInfo(handle->storage, CascStorageProduct, &product, sizeof(product), nullptr)) return Failure();
-        if (product.BuildNumber != 70170 || std::memcmp(product.szCodeName, "wow_classic_beta\0", 17) != 0) return 2;
+        if (product.BuildNumber != expected_build || std::memcmp(product.szCodeName, "wow_classic_beta\0", 17) != 0) return 2;
         // Locale belongs to storage root selection; CascOpenFile ignores its
         // locale parameter. STRICT is intentional; OVERCOME_ENCRYPTED is absent.
         if (!CascOpenFile(handle->storage, CASC_FILE_DATA_ID(id), 0,

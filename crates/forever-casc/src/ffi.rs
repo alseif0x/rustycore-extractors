@@ -16,6 +16,7 @@ unsafe extern "C" {
         path: *const c_char,
         locale: u32,
         id: u32,
+        expected_build: u32,
         handle: *mut *mut c_void,
         size: *mut u64,
     ) -> u32;
@@ -37,6 +38,7 @@ fn status(code: u32) -> Result<(), Error> {
 pub struct CascFile {
     handle: NonNull<c_void>,
     size: u64,
+    build: u32,
     // CascLib handles/error state are not promoted to concurrent ownership.
     _single_thread: PhantomData<Rc<()>>,
 }
@@ -45,7 +47,7 @@ impl CascFile {
         if id == 0 || id == u32::MAX {
             return Err(Error::InvalidId);
         }
-        admit(client)?;
+        let build = admit(client)?;
         let path = CString::new(client.as_os_str().as_bytes()).map_err(|_| Error::Input)?;
         let mut handle = std::ptr::null_mut();
         let mut size = 0;
@@ -53,13 +55,14 @@ impl CascFile {
         // writable out-parameters are valid. Native code checks target and
         // returns ownership of exactly one storage+file object only on success.
         unsafe {
-            if rce_casc_abi() != 1 {
+            if rce_casc_abi() != 2 {
                 return Err(Error::Native);
             }
             status(rce_casc_open(
                 path.as_ptr(),
                 locale.mask(),
                 id,
+                build,
                 &mut handle,
                 &mut size,
             ))?;
@@ -67,11 +70,16 @@ impl CascFile {
         Ok(Self {
             handle: NonNull::new(handle).ok_or(Error::Native)?,
             size,
+            build,
             _single_thread: PhantomData,
         })
     }
     pub fn size(&self) -> u64 {
         self.size
+    }
+    /// Build admitted by Rust and independently matched by native storage.
+    pub fn build(&self) -> u32 {
+        self.build
     }
     /// Complete single read. A missing key/incomplete block is an error, never
     /// zeros or successful partial bytes. The caller supplies a size budget.
@@ -118,7 +126,7 @@ mod tests {
     use super::*;
     #[test]
     fn abi_and_status_codes_are_checked() {
-        assert_eq!(unsafe { rce_casc_abi() }, 1);
+        assert_eq!(unsafe { rce_casc_abi() }, 2);
         assert_eq!(status(4), Err(Error::Encrypted));
         assert_eq!(status(5), Err(Error::MissingFile));
         assert_eq!(status(7), Err(Error::Incomplete));
@@ -128,11 +136,19 @@ mod tests {
     fn invalid_native_arguments_clear_outputs_and_do_not_open_storage() {
         let mut handle = std::ptr::dangling_mut::<c_void>();
         let mut size = 123;
-        // SAFETY: native v1 explicitly admits null input as an error; valid
+        // SAFETY: native v2 explicitly admits null input as an error; valid
         // out-parameters are provided and no opaque handle is dereferenced.
         assert_eq!(
-            unsafe { rce_casc_open(std::ptr::null(), 2, 1, &mut handle, &mut size) },
+            unsafe { rce_casc_open(std::ptr::null(), 2, 1, 70205, &mut handle, &mut size) },
             1
+        );
+        assert!(handle.is_null());
+        assert_eq!(size, 0);
+        let path = CString::new("/nonexistent").unwrap();
+        // SAFETY: valid inputs; unsupported expected build fails before storage access.
+        assert_eq!(
+            unsafe { rce_casc_open(path.as_ptr(), 2, 1, 70206, &mut handle, &mut size) },
+            2
         );
         assert!(handle.is_null());
         assert_eq!(size, 0);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 mod options;
-use forever_casc::{BUILD, CascFile, Error, PRODUCT};
+use forever_casc::{CascFile, Error, PRODUCT};
 use forever_db2::Metadata;
 use std::{
     fs::File,
@@ -38,9 +38,12 @@ fn main() -> ExitCode {
         Ok(Some(options)) => options,
         Err(()) => return fail("invalid_invocation", 2),
     };
-    let bytes = match CascFile::open(&options.client, options.locale, options.id)
-        .and_then(|file| file.read_all(options.max))
-    {
+    let file = match CascFile::open(&options.client, options.locale, options.id) {
+        Ok(file) => file,
+        Err(error) => return fail(error.code(), error.exit_code()),
+    };
+    let build = file.build();
+    let bytes = match file.read_all(options.max) {
         Ok(bytes) => bytes,
         Err(error) => return fail(error.code(), error.exit_code()),
     };
@@ -59,7 +62,7 @@ fn main() -> ExitCode {
     println!(
         "{{\"report_version\":1,\"status\":\"success\",\"scope\":\"casc_read_probe\",\
         \"implementation\":\"rust_with_native_casclib\",\"offline\":true,\"read_only\":true,\
-        \"product\":\"{PRODUCT}\",\"build\":{BUILD},\"client_build_admitted\":true,\
+        \"product\":\"{PRODUCT}\",\"build\":{build},\"client_build_admitted\":true,\
         \"locale\":\"{}\",\"file_id\":{},\"bytes\":{},\"reference_bytes_equal\":{},\
         \"magic\":\"WDC5\",\"version\":5,\"records\":{},\"fields\":{},\
         \"table_hash\":{},\"layout_hash\":{},\"sections\":{},\

@@ -2,11 +2,10 @@
 use crate::Error;
 use std::{fs::File, io::Read, path::Path};
 pub const PRODUCT: &str = "wow_classic_beta";
-pub const VERSION: &str = "1.60.1.70170";
-pub const BUILD: u32 = 70170;
+pub const SUPPORTED_CLIENTS: &[(&str, u32)] = &[("1.60.1.70170", 70170), ("1.60.1.70205", 70205)];
 const MAX_BUILD_INFO: u64 = 256 * 1024;
 
-pub fn admit(client: &Path) -> Result<(), Error> {
+pub fn admit(client: &Path) -> Result<u32, Error> {
     let file = File::open(client.join(".build.info")).map_err(|_| Error::Input)?;
     let mut bytes = Vec::new();
     file.take(MAX_BUILD_INFO + 1)
@@ -16,8 +15,9 @@ pub fn admit(client: &Path) -> Result<(), Error> {
         return Err(Error::Limit);
     }
     let info = std::str::from_utf8(&bytes).map_err(|_| Error::Metadata)?;
-    parse(info)?;
-    native_shape(info)
+    let build = parse(info)?;
+    native_shape(info)?;
+    Ok(build)
 }
 
 // CascFiles.cpp::ParseFile_BuildInfo indexes exact typed columns and calls
@@ -71,7 +71,7 @@ fn native_shape(info: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn parse(info: &str) -> Result<(), Error> {
+fn parse(info: &str) -> Result<u32, Error> {
     let mut lines = info.lines();
     let fields: Vec<_> = lines
         .next()
@@ -104,10 +104,11 @@ fn parse(info: &str) -> Result<(), Error> {
             return Err(Error::AmbiguousClient);
         }
     }
-    if selected != Some(VERSION) {
-        return Err(Error::UnsupportedClient);
-    }
-    Ok(())
+    SUPPORTED_CLIENTS
+        .iter()
+        .find(|(version, _)| Some(*version) == selected)
+        .map(|(_, build)| *build)
+        .ok_or(Error::UnsupportedClient)
 }
 
 #[cfg(test)]
@@ -120,7 +121,28 @@ mod tests {
                 "Product!STRING:0|Active!DEC:1|Version!STRING:0\n\
             wow_classic_era|1|1.15.9.70003\nwow_classic_beta|1|1.60.1.70170\n"
             ),
-            Ok(())
+            Ok(70170)
+        );
+    }
+    #[test]
+    fn admits_each_exact_version_with_its_own_build() {
+        for (version, build) in SUPPORTED_CLIENTS {
+            assert_eq!(
+                parse(&format!(
+                    "Product|Active|Version\nwow_classic_beta|1|{version}\n"
+                )),
+                Ok(*build)
+            );
+        }
+        assert_eq!(
+            parse("Product|Active|Version\nwow_classic_beta|1|1.60.1.70206\n"),
+            Err(Error::UnsupportedClient)
+        );
+        assert_eq!(
+            parse(
+                "Product|Active|Version\nwow_classic_beta|1|1.60.1.70170\nwow_classic_beta|1|1.60.1.70205\n"
+            ),
+            Err(Error::AmbiguousClient)
         );
     }
     #[test]
