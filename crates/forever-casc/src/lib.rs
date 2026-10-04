@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Target-admitted offline CASC read prototype, not a pure-Rust CASC engine.
 mod admission;
+pub mod batch;
+pub mod options;
 pub use admission::{PRODUCT, SUPPORTED_CLIENTS, admit};
 
 #[cfg(feature = "native")]
@@ -55,7 +57,7 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Locale {
     EnUs,
     EsEs,

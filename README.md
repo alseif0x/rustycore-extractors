@@ -35,20 +35,22 @@ preserving the WotLK Classic baseline as a separate version line.
 > does not port the implementation. The code currently builds the existing
 > **C++ suite for WoW Classic 3.4.3, build 51943**. Its version metadata,
 > formats and compatibility contract still describe that baseline.
-> A first **Rust WDC5 metadata inspector** is now available as a development
-> preview. A separate opt-in Rust/CascLib local-read prototype is under
-> development; it does not decode DB2 records. **The full native extractor
-> replacement and Forever/70170 extraction compatibility remain pending.**
+> A Rust **WDC5 metadata inspector** and a bounded **two-table regular-record
+> decoder** (`ChrClasses`/`ChrRaces`, unencrypted single section) are available
+> as development previews, together with an opt-in local batch CLI. A separate
+> opt-in Rust/CascLib local-read prototype is under development. **The full
+> native extractor replacement and Forever/70170 extraction compatibility
+> remain pending**; there is no map/VMap/MMap or global manifest extraction.
 
 ## Current status
 
 | Area | What exists today |
 | --- | --- |
 | Version lines | `forever` for 1.60.1.70170 development; `3.4.3` for the legacy baseline |
-| Implementation | C++20 legacy suite, Rust WDC5 inspector and optional Rust/CascLib read prototype |
+| Implementation | C++20 legacy suite, Rust WDC5 inspector, bounded `ChrClasses`/`ChrRaces` regular-record decoder, opt-in batch CLI and optional Rust/CascLib read prototype |
 | Existing client contract | `wow_classic`, 3.4.3.51943 — not a Forever product/build claim |
 | Existing tools | `mapextractor`, `vmap4extractor`, `vmap4assembler`, `mmaps_generator` |
-| Conformance | Legacy build-51943 comparisons; Rust metadata preview has separate bounded acceptance, not full 70170 extraction |
+| Conformance | Legacy build-51943 comparisons; Rust metadata/decoder previews have separate bounded synthetic acceptance, not full 70170/70205 extraction |
 | Client assets | Never distributed through Git, CI artifacts or releases |
 
 The current tools cover map/client-data extraction, collision geometry and
@@ -61,6 +63,13 @@ The first independent Rust step is [`forever-db2-inspect`](docs/forever-rust-fou
 read-only, offline header/section diagnostics for an explicit local WDC5 file.
 It reports metadata, not record contents or verified client provenance, and
 does not depend on the server's architecture refactor.
+
+The same guide documents the bounded `forever-db2` record decoder and the
+`forever-db2-extract` batch CLI: only `ChrClasses` (1361031) and `ChrRaces`
+(1305311), one unencrypted regular section, explicit offline lists, 16 MiB per
+file / 256 MiB per batch, redacted JSON reports. Reports carry the matched build;
+`table_schema_validated`, `record_data_decoded` and `declared_records` are
+distinct and no full-catalog or encrypted decoding is claimed.
 
 The same guide documents the optional `forever-casc-probe`: exact
 `wow_classic_beta`/70170 and 70205 admission, local FileDataID reads and byte comparisons,

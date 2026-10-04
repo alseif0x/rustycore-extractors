@@ -21,3 +21,8 @@ unsafe_code = "deny"
 name = "forever-casc-probe"
 path = "src/main.rs"
 required-features = ["native"]
+
+[[bin]]
+name = "forever-db2-extract"
+path = "src/extract_main.rs"
+required-features = ["native"]

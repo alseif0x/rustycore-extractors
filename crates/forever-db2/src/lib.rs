@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Read-only WDC5 metadata inspection. No CASC, record decoding or network.
+//! Read-only WDC5 metadata inspection plus a bounded regular-record decoder for
+//! the two character tables (ChrClasses/ChrRaces). No CASC, no network and no
+//! generic or full extraction: other tables, sparse/encrypted/parent-bearing and
+//! multi-section variants are rejected. A successful decode is not format parity.
 //!
 //! Wire evidence: TrinityCore 02245dcd245e7433e524577656177723d3e4992e,
 //! DB2FileLoader.h::DB2Header/DB2SectionHeader and LoadHeaders. This is an
-//! independent bounded metadata implementation, not an imported C++ loader.
+//! independent bounded implementation, not an imported C++ loader.
 use std::io::{self, Read};
+mod records;
+pub use records::{CharacterTable, DecodedTable, RecordError, Value};
 
 pub const HEADER_SIZE: usize = 204;
 pub const SECTION_SIZE: usize = 40;

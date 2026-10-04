@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Bounded offline WDC5 metadata inspection; not a record decoder or CASC extractor"
+description = "Bounded offline WDC5 metadata inspector and two-table (ChrClasses/ChrRaces) regular-record decoder; no CASC and no full extraction"
 publish = false
 
 [lints]

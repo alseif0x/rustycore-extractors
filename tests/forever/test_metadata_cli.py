@@ -48,7 +48,7 @@ class MetadataCli(unittest.TestCase):
         self.assertEqual(report["header"]["record_count"], 0x80000020)
         self.assertTrue(report["sections"][0]["tact_declared"])
         self.assertNotIn("tact_id", report["sections"][0])
-        for field in ("client_build_verified", "table_schema_validated", "record_data_validated"):
+        for field in ("client_build_verified", "table_schema_validated", "record_data_decoded"):
             self.assertFalse(report[field])
         self.assertTrue(report["offline"])
         self.assertTrue(report["read_only"])

@@ -26,7 +26,7 @@ pub fn success(metadata: &Metadata, json: bool) {
     let mut output = format!(
         "{{\"report_version\":1,\"status\":\"success\",\"scope\":\"metadata_only\",\
         \"offline\":true,\"read_only\":true,\"client_build_verified\":false,\
-        \"table_schema_validated\":false,\"record_data_validated\":false,\
+        \"table_schema_validated\":false,\"record_data_decoded\":false,\
         \"header\":{{\"magic\":\"WDC5\",\"version\":5,\"record_count\":{},\
         \"field_count\":{},\"record_size\":{},\"string_table_size\":{},\
         \"table_hash\":{},\"layout_hash\":{},\"min_id\":{},\"max_id\":{},\

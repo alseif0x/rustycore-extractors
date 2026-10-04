@@ -1,0 +1,872 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//! Synthetic, in-memory WDC5 fixtures for the bounded regular-record decoder.
+//! Every byte is generated here; no client file, key or server path is read.
+//! A green test is a self-consistency check, not DB2/format parity evidence.
+use super::CharacterTable;
+use super::schema::Kind;
+use super::{DecodedTable, RecordError, Value};
+
+const HEADER: usize = 204;
+const SECTION: usize = 40;
+/// Offset of the first column entry for a single-section file: 204 header +
+/// 40 section bytes + one 4-byte field-offset word per field.
+const COLUMN_BASE: usize = 244;
+
+fn put32(buf: &mut [u8], at: usize, value: u32) {
+    buf[at..at + 4].copy_from_slice(&value.to_le_bytes());
+}
+fn put16(buf: &mut [u8], at: usize, value: u16) {
+    buf[at..at + 2].copy_from_slice(&value.to_le_bytes());
+}
+
+#[derive(Clone, Copy)]
+struct Col {
+    offset: u16,
+    compression: u32,
+    extra: usize,
+    a: u32,
+    b: u32,
+    c: u32,
+    width: u32,
+    count: usize,
+}
+
+fn default_cols(table: CharacterTable) -> Vec<Col> {
+    let schema = table.schema();
+    let mut bit = 0u32;
+    schema
+        .fields
+        .iter()
+        .map(|kind| {
+            let width = kind.bits();
+            let count = kind.count();
+            let col = Col {
+                offset: bit as u16,
+                compression: 0,
+                extra: 0,
+                a: 0,
+                b: width,
+                c: count as u32,
+                width,
+                count,
+            };
+            bit += width * count as u32;
+            col
+        })
+        .collect()
+}
+
+/// Direct-value columns need `offset + width*count` bits; packed modes read at
+/// most 32 bits from the record start in these fixtures. Keep at least 8 bytes.
+fn record_size(cols: &[Col]) -> usize {
+    let mut bits = 0usize;
+    for col in cols {
+        if col.compression == 0 {
+            bits = bits.max(col.offset as usize + col.width as usize * col.count);
+        }
+    }
+    bits.div_ceil(8).max(8)
+}
+
+struct Spec {
+    cols: Vec<Col>,
+    records: Vec<Vec<u8>>,
+    strings: Vec<u8>,
+    ids: Vec<u32>,
+    copies: Vec<(u32, u32)>,
+    flags: u16,
+    min_id: u32,
+    max_id: u32,
+    pallet: Vec<u8>,
+    common: Vec<u8>,
+    packed_data_offset: u32,
+    h_record_count: Option<u32>,
+    s_record_count: Option<u32>,
+    h_string_size: Option<u32>,
+    s_string_size: Option<u32>,
+    id_table_size: Option<u32>,
+    copy_count: Option<u32>,
+    column_meta_size: Option<u32>,
+    file_offset_delta: i64,
+    extra_sections: u32,
+    extra_tail: usize,
+    truncate: Option<usize>,
+}
+
+fn spec(table: CharacterTable) -> Spec {
+    Spec {
+        cols: default_cols(table),
+        records: Vec::new(),
+        strings: Vec::new(),
+        ids: Vec::new(),
+        copies: Vec::new(),
+        flags: 0,
+        min_id: 1,
+        max_id: 100,
+        pallet: Vec::new(),
+        common: Vec::new(),
+        packed_data_offset: 0,
+        h_record_count: None,
+        s_record_count: None,
+        h_string_size: None,
+        s_string_size: None,
+        id_table_size: None,
+        copy_count: None,
+        column_meta_size: None,
+        file_offset_delta: 0,
+        extra_sections: 0,
+        extra_tail: 0,
+        truncate: None,
+    }
+}
+
+fn classes(count: usize) -> Spec {
+    let mut spec = spec(CharacterTable::Classes);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec
+}
+
+fn races(count: usize) -> Spec {
+    let mut spec = spec(CharacterTable::Races);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec.ids = vec![0; count];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec
+}
+
+fn as_mode(spec: &mut Spec, field: usize, mode: u32, a: u32, b: u32, c: u32, extra: usize) {
+    let col = &mut spec.cols[field];
+    col.compression = mode;
+    col.a = a;
+    col.b = b;
+    col.c = c;
+    col.extra = extra;
+}
+
+fn field_offset(spec: &Spec, field: usize) -> u16 {
+    spec.cols[field].offset
+}
+
+fn write_word(record: &mut [u8], bit_offset: u16, value: u32) {
+    let at = bit_offset as usize / 8;
+    record[at..at + 4].copy_from_slice(&value.to_le_bytes());
+}
+
+fn write_byte(record: &mut [u8], bit_offset: u16, value: u8) {
+    record[bit_offset as usize / 8] = value;
+}
+
+/// Writes the inline index byte of a character-table record (field 29).
+fn write_inline_id(spec: &mut Spec, index: usize, value: u8) {
+    let off = field_offset(spec, 29);
+    write_byte(&mut spec.records[index], off, value);
+}
+
+fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
+    let schema = table.schema();
+    let fields = schema.fields.len();
+    let record_size = record_size(&s.cols);
+    let header_record_count = s.h_record_count.unwrap_or(s.records.len() as u32);
+    let header_string_size = s.h_string_size.unwrap_or(s.strings.len() as u32);
+    let mut out = vec![0u8; HEADER];
+    out[..4].copy_from_slice(b"WDC5");
+    put32(&mut out, 4, 5);
+    put32(&mut out, 136, header_record_count);
+    put32(&mut out, 140, fields as u32);
+    put32(&mut out, 144, record_size as u32);
+    put32(&mut out, 148, header_string_size);
+    put32(&mut out, 152, schema.hash);
+    put32(&mut out, 156, schema.layout);
+    put32(&mut out, 160, s.min_id);
+    put32(&mut out, 164, s.max_id);
+    put32(&mut out, 168, 0);
+    put16(&mut out, 172, s.flags);
+    out[174..176].copy_from_slice(&schema.index.to_le_bytes());
+    put32(&mut out, 176, fields as u32);
+    put32(&mut out, 180, s.packed_data_offset);
+    put32(&mut out, 184, 0);
+    let column_meta_size = s.column_meta_size.unwrap_or((fields * 24) as u32);
+    put32(&mut out, 188, column_meta_size);
+    put32(&mut out, 192, s.common.len() as u32);
+    put32(&mut out, 196, s.pallet.len() as u32);
+    put32(&mut out, 200, 1 + s.extra_sections);
+
+    let section_at = out.len();
+    let sections = 1 + s.extra_sections as usize;
+    out.resize(section_at + SECTION * sections, 0);
+    out.resize(out.len() + fields * 4, 0);
+    for col in &s.cols {
+        let base = out.len();
+        out.resize(base + 24, 0);
+        put16(&mut out, base, col.offset);
+        put32(&mut out, base + 4, col.extra as u32);
+        put32(&mut out, base + 8, col.compression);
+        put32(&mut out, base + 12, col.a);
+        put32(&mut out, base + 16, col.b);
+        put32(&mut out, base + 20, col.c);
+    }
+    out.extend(&s.pallet);
+    out.extend(&s.common);
+    let metadata_end = out.len();
+    for record in &s.records {
+        assert_eq!(record.len(), record_size, "fixture record size");
+        out.extend(record);
+    }
+    out.extend(&s.strings);
+    if schema.index < 0 {
+        for id in &s.ids {
+            out.extend(id.to_le_bytes());
+        }
+    }
+    for (new, source) in &s.copies {
+        out.extend(new.to_le_bytes());
+        out.extend(source.to_le_bytes());
+    }
+
+    let default_id_table = if schema.index < 0 {
+        header_record_count as usize * 4
+    } else {
+        0
+    };
+    let file_offset = (metadata_end as i64 + s.file_offset_delta) as u32;
+    let section_record_count = s.s_record_count.unwrap_or(header_record_count);
+    let section_string_size = s.s_string_size.unwrap_or(header_string_size);
+    let section_id_table = s.id_table_size.unwrap_or(default_id_table as u32);
+    let section_copy_count = s.copy_count.unwrap_or(s.copies.len() as u32);
+    put32(&mut out, section_at + 8, file_offset);
+    put32(&mut out, section_at + 12, section_record_count);
+    put32(&mut out, section_at + 16, section_string_size);
+    put32(&mut out, section_at + 20, 0);
+    put32(&mut out, section_at + 24, section_id_table);
+    put32(&mut out, section_at + 28, 0);
+    put32(&mut out, section_at + 32, 0);
+    put32(&mut out, section_at + 36, section_copy_count);
+
+    out.resize(out.len() + s.extra_tail, 0);
+    if let Some(len) = s.truncate {
+        out.truncate(len);
+    }
+    out
+}
+
+fn decode(table: CharacterTable, bytes: &[u8]) -> Result<DecodedTable, RecordError> {
+    DecodedTable::read(bytes, table)
+}
+
+fn build_classes(spec: &Spec) -> Vec<u8> {
+    assemble(CharacterTable::Classes, spec)
+}
+
+fn build_races(spec: &Spec) -> Vec<u8> {
+    assemble(CharacterTable::Races, spec)
+}
+
+fn decode_classes(spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = build_classes(spec);
+    DecodedTable::read(&bytes, CharacterTable::Classes)
+}
+
+fn decode_races(spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = build_races(spec);
+    DecodedTable::read(&bytes, CharacterTable::Races)
+}
+
+fn expect_err_classes(bytes: &[u8]) -> RecordError {
+    match decode(CharacterTable::Classes, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
+}
+
+fn expect_err_races(bytes: &[u8]) -> RecordError {
+    match decode(CharacterTable::Races, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Positive paths
+// ---------------------------------------------------------------------------
+
+#[test]
+fn mode_zero_direct_unsigned_and_empty_strings() {
+    let mut spec = classes(1);
+    let off = field_offset(&spec, 10);
+    write_word(&mut spec.records[0], off, 0xDEAD_BEEF);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[10][0], Value::Unsigned(0xDEAD_BEEF));
+    assert_eq!(row[0][0], Value::Text(String::new()));
+}
+
+#[test]
+fn mode_one_packed_unsigned() {
+    let mut spec = classes(1);
+    let a = u32::from(field_offset(&spec, 10));
+    as_mode(&mut spec, 10, 1, a, 32, 0, 0);
+    write_word(&mut spec.records[0], a as u16, 0x1122_3344);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[10][0], Value::Unsigned(0x1122_3344));
+}
+
+#[test]
+fn mode_two_constant_default_and_id_common() {
+    let mut spec = classes(1);
+    as_mode(&mut spec, 10, 2, 0xABCD, 0, 0, 0);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[10][0], Value::Unsigned(0xABCD));
+
+    let mut spec = classes(1);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 7);
+    spec.common = [7u32.to_le_bytes(), 0x1234u32.to_le_bytes()].concat();
+    as_mode(&mut spec, 10, 2, 0xFFFF, 0, 0, 8);
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows()[&7][10][0], Value::Unsigned(0x1234));
+}
+
+#[test]
+fn mode_three_scalar_pallet() {
+    let mut spec = classes(1);
+    let a = u32::from(field_offset(&spec, 10));
+    spec.pallet = 0xCAFE_BABEu32.to_le_bytes().to_vec();
+    as_mode(&mut spec, 10, 3, a, 8, 0, 4);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[10][0], Value::Unsigned(0xCAFE_BABE));
+}
+
+#[test]
+fn mode_four_array_pallet() {
+    let mut spec = races(1);
+    spec.ids[0] = 5;
+    let a = u32::from(field_offset(&spec, 23));
+    spec.pallet = [1u32, 2, 3]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect();
+    as_mode(&mut spec, 23, 4, a, 8, 3, 12);
+    let out = decode_races(&spec).unwrap();
+    let expected = vec![Value::Signed(1), Value::Signed(2), Value::Signed(3)];
+    assert_eq!(out.rows()[&5][23], expected);
+}
+
+#[test]
+fn mode_five_signed_packed_sign_extends() {
+    let mut spec = classes(1);
+    let a = u32::from(field_offset(&spec, 14));
+    as_mode(&mut spec, 14, 5, a, 8, 0, 0);
+    write_byte(&mut spec.records[0], a as u16, 0xFE);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[14][0], Value::Signed(-2));
+}
+
+#[test]
+fn signed_eight_bit_direct_value_sign_extends() {
+    let mut spec = classes(1);
+    // ChrClasses Signed(8,1) at index 32 (29-30 are Unsigned(8,1), 31-32 are
+    // Signed(8,1)).
+    let off = field_offset(&spec, 32);
+    write_byte(&mut spec.records[0], off, 0x80);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[32][0], Value::Signed(-128));
+}
+
+#[test]
+fn sixteen_bit_unsigned_is_masked_to_width() {
+    let mut spec = classes(1);
+    // ChrClasses Unsigned(16,1) is at index 28 (27 and 28 are both FT_SHORT).
+    let off = field_offset(&spec, 28);
+    let at = off as usize / 8;
+    spec.records[0][at..at + 2].copy_from_slice(&0xFFFFu16.to_le_bytes());
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[28][0], Value::Unsigned(0xFFFF));
+}
+
+#[test]
+fn float_bits_are_returned_verbatim() {
+    let mut spec = races(1);
+    spec.ids[0] = 5;
+    let off = field_offset(&spec, 31);
+    write_word(&mut spec.records[0], off, 0x3F80_0000);
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows()[&5][31][0], Value::FloatBits(0x3F80_0000));
+}
+
+#[test]
+fn utf8_and_empty_strings_are_decoded() {
+    let mut spec = classes(1);
+    spec.strings = "héllo\0".as_bytes().to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative);
+    let out = decode_classes(&spec).unwrap();
+    let row = out.rows().values().next().unwrap();
+    assert_eq!(row[0][0], Value::Text("héllo".to_owned()));
+    assert_eq!(row[1][0], Value::Text(String::new()));
+}
+
+#[test]
+fn string_offsets_are_relative_to_each_record_not_the_string_table() {
+    // Legacy evidence: vendor/trinitycore-legacy/src/common/DataStores/
+    // DB2FileLoader.cpp:800-806 resolves a string as
+    // record_start + fieldOffset + stored_offset. The alternative
+    // "strings_start + stored_offset" is out of range for record 0 here, so this
+    // test fails if the formula is changed away from the per-record base.
+    let mut spec = classes(2);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 1);
+    write_inline_id(&mut spec, 1, 2);
+    let size = record_size(&spec.cols) as u32;
+    let field = 9;
+    let off = field_offset(&spec, field);
+    let base = u32::from(off) / 8;
+    // Record 0 points at the start of the table; record 1 points 5 bytes in.
+    let stored0 = 2 * size - base;
+    let stored1 = size - base + 5;
+    write_word(&mut spec.records[0], off, stored0);
+    write_word(&mut spec.records[1], off, stored1);
+    spec.strings = b"ZERO\0ONE\0".to_vec();
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows()[&1][field][0], Value::Text("ZERO".to_owned()));
+    assert_eq!(out.rows()[&2][field][0], Value::Text("ONE".to_owned()));
+}
+
+#[test]
+fn inline_id_is_decoded() {
+    let mut spec = classes(1);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 5);
+    let out = decode_classes(&spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![5]);
+}
+
+#[test]
+fn id_table_id_is_decoded() {
+    let mut spec = races(1);
+    spec.ids[0] = 42;
+    let out = decode_races(&spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![42]);
+}
+
+#[test]
+fn id_below_min_is_raw_inline_and_repaired_from_table() {
+    // Inline index field: RecordGetId returns the stored value, so an id below
+    // MinId is used as-is (DB2FileLoader.cpp:747-760).
+    let mut spec = classes(1);
+    spec.min_id = 10;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 3);
+    let out = decode_classes(&spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![3]);
+
+    // Separate id table: DB2FileLoader.cpp:1958-1967 repairs `id <= MinId` to
+    // `MinId + i`, with `i` the single-section record ordinal.
+    let mut spec = races(1);
+    spec.min_id = 10;
+    spec.max_id = 100;
+    spec.ids[0] = 3;
+    let out = decode_races(&spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![10]);
+}
+
+#[test]
+fn inline_index_is_not_repaired_when_below_min_id() {
+    // Negative guard for the inline path: a raw inline id below MinId is not
+    // rewritten, so the row is keyed by the raw value (1), not MinId (50).
+    let mut spec = classes(1);
+    spec.min_id = 50;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 1);
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![1]);
+}
+
+#[test]
+fn copy_skips_source_zero() {
+    let mut spec = classes(1);
+    spec.copies = vec![(50, 0)];
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows().len(), 1);
+    assert!(!out.rows().contains_key(&50));
+}
+
+#[test]
+fn copy_overwrites_destination_and_rewrites_inline_id() {
+    let mut spec = classes(3);
+    spec.min_id = 0;
+    spec.max_id = 1000;
+    let off = field_offset(&spec, 10);
+    write_inline_id(&mut spec, 0, 1);
+    write_word(&mut spec.records[0], off, 0xAAAA);
+    write_inline_id(&mut spec, 1, 2);
+    write_word(&mut spec.records[1], off, 0xBBBB);
+    write_inline_id(&mut spec, 2, 3);
+    // Source row 1 exists and both ordinals are below record_count (3).
+    spec.copies = vec![(2, 1)];
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows()[&2][10][0], Value::Unsigned(0xAAAA));
+    assert_eq!(out.rows()[&2][29][0], Value::Unsigned(2));
+}
+
+#[test]
+fn copy_table_exact_policy_limit_is_accepted() {
+    let mut spec = classes(1);
+    spec.copies = vec![(0, 0); 100_000];
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows().len(), 1);
+}
+
+#[test]
+fn value_count_exact_policy_boundary_is_accepted() {
+    // ChrClasses' inline index field (29) is FT_BYTE, so only 2^8 = 256 distinct
+    // ids fit; a 43-field value at the record_count policy frontier cannot carry
+    // that many distinct inline rows. The value-count limit is table independent,
+    // so exercise the exact boundary with ChrRaces (51 fields, separate u32 id
+    // table): floor(1_000_000 / 51) = 19_607 records is admitted, 19_608 exceeds
+    // it. Distinct ids keep the accepted decode within the id-table path.
+    let mut spec = races(19_607);
+    spec.min_id = 0;
+    spec.max_id = 100_000;
+    spec.ids = (1..=19_607u32).collect();
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().len(), 19_607);
+    assert_eq!(out.rows().keys().next().copied(), Some(1));
+
+    let over = races(19_608);
+    let bytes = build_races(&over);
+    assert_eq!(expect_err_races(&bytes), RecordError::Limit);
+}
+
+// ---------------------------------------------------------------------------
+// Negative paths: exact RecordError::code for every frontier
+// ---------------------------------------------------------------------------
+
+#[test]
+fn truncation_frontiers_map_to_metadata_or_bounds() {
+    let spec = classes(1);
+    let full = build_classes(&spec);
+    let metadata_end = COLUMN_BASE + spec.cols.len() * 4 + spec.cols.len() * 24;
+    assert_eq!(metadata_end, 1448);
+    for len in [0usize, 1, 100, 203, 204, 205, 243] {
+        let err = expect_err_classes(&full[..len]);
+        assert_eq!(err, RecordError::Metadata, "len {len}");
+    }
+    for len in [
+        244usize,
+        300,
+        metadata_end - 1,
+        metadata_end,
+        full.len() - 1,
+    ] {
+        let err = expect_err_classes(&full[..len]);
+        assert_eq!(err, RecordError::Bounds, "len {len}");
+    }
+    assert!(decode_classes(&spec).is_ok());
+}
+
+#[test]
+fn zero_record_size_and_reversed_id_range_are_bounds() {
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 144, 0);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 160, 50);
+    put32(&mut bytes, 164, 10);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+}
+
+#[test]
+fn header_section_record_and_string_count_mismatch_are_bounds() {
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 204 + 12, 2);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 204 + 16, 5);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+}
+
+#[test]
+fn extra_and_missing_tail_bytes_are_bounds() {
+    let mut bytes = build_classes(&classes(1));
+    bytes.push(0);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+
+    let mut spec = classes(1);
+    spec.file_offset_delta = 4;
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
+}
+
+#[test]
+fn sparse_flag_bit_is_unsupported_and_other_flag_bits_are_accepted() {
+    // Reference DB2FileLoader.cpp:1852 discriminates only on bit 0
+    // (`if (!(_header.Flags & 0x1))` regular else sparse); no other bit is
+    // validated. Bit 0 must be rejected, and any value without bit 0 must
+    // still decode normally.
+    for flag in [1u16, 3, 0x8001, u16::MAX] {
+        let mut bytes = build_classes(&classes(1));
+        put16(&mut bytes, 172, flag);
+        let err = expect_err_classes(&bytes);
+        assert_eq!(err, RecordError::Unsupported, "flag {flag:#06x}");
+    }
+    for flag in [2u16, 4, 0x0004, 0x8000, 0xFFFE] {
+        let mut bytes = build_classes(&classes(1));
+        put16(&mut bytes, 172, flag);
+        let out = decode(CharacterTable::Classes, &bytes)
+            .unwrap_or_else(|error| panic!("flag {flag:#06x} rejected as {}", error.code()));
+        assert_eq!(out.rows().len(), 1, "flag {flag:#06x}");
+    }
+}
+
+#[test]
+fn nonzero_nonsparse_flags_decode_like_the_reviewed_schema() {
+    // Real 70205 ChrRaces metadata carries Flags == 4; the reviewed schema must
+    // accept and decode it rather than returning Unsupported.
+    let mut spec = races(1);
+    spec.flags = 4;
+    spec.ids[0] = 42;
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![42]);
+}
+
+#[test]
+fn matches_ignores_the_header_index_field() {
+    // The reference never consults _header.IndexField (DB2FileLoader.cpp:1746
+    // only endian-converts it); inline vs id-table comes from the reviewed
+    // meta. Real 70205 ChrRaces has header IndexField == 0 while the reviewed
+    // meta index is -1, so a Races-like file with header index_field 0 must
+    // still match and decode through the separate id table.
+    let mut spec = races(1);
+    spec.ids[0] = 7;
+    let mut bytes = build_races(&spec);
+    put16(&mut bytes, 174, 0);
+    let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+        .unwrap()
+        .header;
+    assert_eq!(header.index_field, 0);
+    assert!(CharacterTable::Races.matches(&header));
+    let out = decode(CharacterTable::Races, &bytes).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+    // ChrClasses uses inline field 29; a header index_field of 0 (instead of
+    // 29) must not change matching or the inline decode path.
+    let mut spec = classes(1);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 5);
+    let mut bytes = build_classes(&spec);
+    put16(&mut bytes, 174, 0);
+    let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+        .unwrap()
+        .header;
+    assert_eq!(header.index_field, 0);
+    assert!(CharacterTable::Classes.matches(&header));
+    let out = decode(CharacterTable::Classes, &bytes).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![5]);
+}
+
+#[test]
+fn multi_section_tact_parent_and_catalog_variants_are_unsupported() {
+    let mut spec = classes(1);
+    spec.extra_sections = 1;
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 204, 7);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 184, 1);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 204 + 32, 1);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 204 + 28, 1);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+}
+
+#[test]
+fn schema_identity_mismatches_are_schema_errors() {
+    let schema = CharacterTable::Classes.schema();
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 152, schema.hash ^ 1);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 156, schema.layout ^ 1);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 140, 42);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
+
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 176, 42);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
+}
+
+#[test]
+fn column_meta_size_compression_and_stride_are_column_errors() {
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 188, (43 * 24 + 1) as u32);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Column);
+
+    let mut bytes = build_classes(&classes(1));
+    // Column entries begin after the 204-byte header, 40-byte section and the
+    // 4-byte-per-field offset table: 244 + 43*4; entry compression is at +8.
+    put32(&mut bytes, 244 + 43 * 4 + 8, 6);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Column);
+
+    let mut spec = classes(1);
+    as_mode(&mut spec, 10, 3, 0, 8, 0, 6);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Column);
+}
+
+#[test]
+fn duplicate_and_out_of_range_inline_ids_are_id_errors() {
+    let mut spec = classes(2);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    let off = field_offset(&spec, 29);
+    write_byte(&mut spec.records[0], off, 5);
+    write_byte(&mut spec.records[1], off, 5);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Id);
+
+    let mut spec = classes(1);
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id(&mut spec, 0, 200);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Id);
+}
+
+#[test]
+fn id_table_size_mismatch_is_id_error() {
+    let mut spec = races(1);
+    spec.id_table_size = Some(0);
+    let bytes = build_races(&spec);
+    assert_eq!(expect_err_races(&bytes), RecordError::Id);
+}
+
+#[test]
+fn copy_with_new_row_id_at_or_above_record_count_is_skipped() {
+    // AutoProduceRecordCopies requires NewRowId < records; a larger id makes the
+    // entry a silent skip, not an error (DB2FileLoader.cpp:613-634).
+    let mut spec = classes(1);
+    spec.min_id = 0;
+    spec.max_id = 1_000_000;
+    write_inline_id(&mut spec, 0, 1);
+    spec.copies = vec![(70_000, 1)];
+    let out = decode_classes(&spec).unwrap();
+    assert_eq!(out.rows().len(), 1);
+    assert!(!out.rows().contains_key(&70_000));
+}
+
+#[test]
+fn string_range_nul_and_utf8_violations_are_string_errors() {
+    let mut spec = classes(1);
+    spec.strings = b"A\0".to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative + 5);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::String);
+
+    let mut spec = classes(1);
+    spec.strings = b"Hello".to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::String);
+
+    let mut spec = classes(1);
+    spec.strings = vec![0xFF, 0x00];
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::String);
+}
+
+#[test]
+fn policy_limits_are_limit_errors() {
+    let oversized = vec![0u8; 16 * 1024 * 1024 + 1];
+    assert_eq!(expect_err_classes(&oversized), RecordError::Limit);
+
+    let mut spec = classes(0);
+    spec.h_record_count = Some(100_001);
+    spec.s_record_count = Some(100_001);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Limit);
+
+    let mut spec = classes(0);
+    spec.h_record_count = Some(100_000);
+    spec.s_record_count = Some(100_000);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Limit);
+
+    let mut spec = classes(1);
+    spec.copy_count = Some(100_001);
+    let bytes = build_classes(&spec);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Limit);
+}
+
+// ---------------------------------------------------------------------------
+// Schema transcription self-check
+// ---------------------------------------------------------------------------
+
+#[test]
+fn schema_field_counts_match_the_reviewed_reference() {
+    // Verified 2026-10-04 against the pinned checkout
+    // /home/joe/projects/dream/wow/rustycore/target/forever-cpp-reference at
+    // 02245dcd245e7433e524577656177723d3e4992e:
+    //   DB2Metadata.h:3455 `struct ChrClassesMeta` Fields[43],
+    //   DB2Metadata.h:4182 `struct ChrRacesMeta`  Fields[51].
+    // These assertions pin the transcription; a green test is not reader/runtime
+    // parity, only that this vendored schema list matches the cited fields.
+    let classes = CharacterTable::Classes.schema().fields.len();
+    let races = CharacterTable::Races.schema().fields.len();
+    assert_eq!(classes, 43, "ChrClasses transcribed field count");
+    assert_eq!(races, 51, "ChrRaces transcribed field count");
+}
+
+#[test]
+fn classes_index_field_widths_match_the_reviewed_reference() {
+    // Verified 2026-10-04 against DB2Metadata.h:3455 (ChrClassesMeta) at
+    // 02245dcd245e7433e524577656177723d3e4992e: the INT block 18-26 is nine
+    // signed 32-bit fields, 27-28 are two unsigned FT_SHORT, and 29 -- the meta
+    // IndexField -- is one unsigned FT_BYTE (8 bits). An earlier transcription
+    // added a tenth Signed(32,1) at index 27, which shifted the index field to
+    // 16 bits and read 6/9 real ids past max_id (invalid_record_ids).
+    let schema = CharacterTable::Classes.schema();
+    assert_eq!(schema.fields.len(), 43, "ChrClasses field count");
+    assert_eq!(schema.index, 29, "ChrClasses meta index field");
+    assert_eq!(schema.fields[27].bits(), 16, "field 27 width");
+    assert_eq!(schema.fields[28].bits(), 16, "field 28 width");
+    assert_eq!(schema.fields[29].bits(), 8, "field 29 (index) width");
+    assert!(matches!(schema.fields[27], Kind::Unsigned(16, 1)));
+    assert!(matches!(schema.fields[28], Kind::Unsigned(16, 1)));
+    assert!(matches!(schema.fields[29], Kind::Unsigned(8, 1)));
+}

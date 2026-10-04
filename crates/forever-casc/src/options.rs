@@ -1,84 +1,186 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-use forever_casc::Locale;
-use std::{ffi::OsString, path::PathBuf};
+//! Pure argument parsing for `forever-db2-extract`. It performs no I/O, no
+//! build admission and no client access, so it is unit-testable without a
+//! client or the native feature. Errors carry only static, redacted codes.
+use crate::Locale;
+use std::collections::BTreeMap;
+use std::ffi::OsString;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Options {
     pub client: PathBuf,
+    pub output: PathBuf,
     pub locale: Locale,
-    pub id: u32,
-    pub max: u32,
-    pub compare: Option<PathBuf>,
+    pub manifest: Option<PathBuf>,
 }
-pub fn parse(args: Vec<OsString>) -> Result<Option<Options>, ()> {
-    if args.len() == 1 && args[0] == "--help" {
-        return Ok(None);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Parsed {
+    Help,
+    Run(Options),
+}
+
+/// Static code plus process exit. Never contains an argument value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CliError {
+    pub code: &'static str,
+    pub exit: u8,
+}
+
+impl CliError {
+    pub const INVALID_INVOCATION: Self = Self {
+        code: "invalid_invocation",
+        exit: 2,
+    };
+    pub const UNSUPPORTED_LOCALE: Self = Self {
+        code: "unsupported_locale",
+        exit: 2,
+    };
+
+    pub const fn new(code: &'static str, exit: u8) -> Self {
+        Self { code, exit }
     }
-    let mut client = None;
-    let mut locale = None;
-    let mut id = None;
-    let mut max = None;
-    let mut compare = None;
-    let mut json = false;
-    let mut args = args.into_iter();
-    while let Some(arg) = args.next() {
-        if arg == "--json" && !json {
-            json = true;
-            continue;
-        }
-        let value = args.next().ok_or(())?;
-        if value.is_empty() || value.to_string_lossy().starts_with("--") {
-            return Err(());
-        }
-        match arg.to_str().ok_or(())? {
-            "--client" if client.is_none() => client = Some(PathBuf::from(value)),
-            "--locale" if locale.is_none() => {
-                locale = Some(Locale::parse(value.to_str().ok_or(())?).map_err(|_| ())?)
-            }
-            "--file-id" if id.is_none() => {
-                id = Some(value.to_str().ok_or(())?.parse::<u32>().map_err(|_| ())?)
-            }
-            "--max-bytes" if max.is_none() => {
-                max = Some(value.to_str().ok_or(())?.parse::<u32>().map_err(|_| ())?)
-            }
-            "--compare" if compare.is_none() => compare = Some(PathBuf::from(value)),
-            _ => return Err(()),
+}
+
+/// Parses the CLI contract: `--help` alone, or even argument/key-value pairs
+/// drawn from the fixed option set with no duplicates and no empty values.
+pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
+    if args == [OsString::from("--help")] {
+        return Ok(Parsed::Help);
+    }
+    if args.is_empty() || !args.len().is_multiple_of(2) {
+        return Err(CliError::INVALID_INVOCATION);
+    }
+    let mut values: BTreeMap<&str, &OsString> = BTreeMap::new();
+    for pair in args.as_chunks::<2>().0 {
+        let key = pair[0].to_str().ok_or(CliError::INVALID_INVOCATION)?;
+        if !matches!(key, "--client" | "--locale" | "--output" | "--manifest")
+            || pair[1].is_empty()
+            || values.insert(key, &pair[1]).is_some()
+        {
+            return Err(CliError::INVALID_INVOCATION);
         }
     }
-    let id = id.ok_or(())?;
-    let max = max.unwrap_or(128 * 1024 * 1024);
-    if id == 0 || id == u32::MAX || max == 0 || max > 128 * 1024 * 1024 {
-        return Err(());
-    }
-    Ok(Some(Options {
-        client: client.ok_or(())?,
-        locale: locale.ok_or(())?,
-        id,
-        max,
-        compare,
+    let client = PathBuf::from(values.get("--client").ok_or(CliError::INVALID_INVOCATION)?);
+    let output = PathBuf::from(values.get("--output").ok_or(CliError::INVALID_INVOCATION)?);
+    let locale = Locale::parse(
+        values
+            .get("--locale")
+            .and_then(|value| value.to_str())
+            .ok_or(CliError::INVALID_INVOCATION)?,
+    )
+    .map_err(|_| CliError::UNSUPPORTED_LOCALE)?;
+    let manifest = values.get("--manifest").map(PathBuf::from);
+    Ok(Parsed::Run(Options {
+        client,
+        output,
+        locale,
+        manifest,
     }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn args(s: &str) -> Vec<OsString> {
-        s.split_whitespace().map(OsString::from).collect()
+    use crate::Error;
+
+    fn args(values: &[&str]) -> Vec<OsString> {
+        values.iter().map(OsString::from).collect()
     }
+
+    fn run(values: &[&str]) -> Result<Parsed, CliError> {
+        parse(&args(values))
+    }
+
     #[test]
-    fn explicit_input_locale_id_and_budget_required_or_bounded() {
-        let good = "--client local --locale esES --file-id 1361031";
-        assert!(parse(args(good)).is_ok());
+    fn help_is_standalone_and_exclusive() {
+        assert_eq!(run(&["--help"]), Ok(Parsed::Help));
         for bad in [
-            "",
-            "--client local",
-            "--client x --locale zzZZ --file-id 1",
-            "--client x --locale enUS --file-id 0",
-            "--client x --locale enUS --file-id 4294967295",
-            "--client x --locale enUS --file-id 1 --max-bytes 0",
-            "--client x --locale enUS --file-id 1 --max-bytes 134217729",
-            "--client x --locale enUS --file-id 1 --json --json",
-            "--client x --locale enUS --file-id 1 --client y",
+            &["--help", "--json"][..],
+            &["--help", "--client", "x"][..],
+            &[][..],
         ] {
-            assert!(parse(args(bad)).is_err(), "{bad}");
+            assert_eq!(run(bad), Err(CliError::INVALID_INVOCATION));
+        }
+    }
+
+    #[test]
+    fn odd_missing_unknown_and_duplicate_arguments_reject() {
+        for bad in [
+            &["--client"][..],
+            &["--client", "x", "--locale"][..],
+            &["--client", "x", "--locale", "enUS"][..],
+            &["--private-option", "secret"][..],
+            &[
+                "--client", "x", "--locale", "enUS", "--client", "y", "--output", "z",
+            ][..],
+            &["--client", "", "--locale", "enUS", "--output", "z"][..],
+        ] {
+            assert_eq!(run(bad), Err(CliError::INVALID_INVOCATION), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn selects_locale_and_optional_manifest() {
+        let parsed = run(&[
+            "--client",
+            "c",
+            "--locale",
+            "esES",
+            "--output",
+            "o",
+            "--manifest",
+            "m",
+        ])
+        .unwrap();
+        match parsed {
+            Parsed::Run(options) => {
+                assert_eq!(options.locale, Locale::EsEs);
+                assert_eq!(options.client, PathBuf::from("c"));
+                assert_eq!(options.output, PathBuf::from("o"));
+                assert_eq!(options.manifest, Some(PathBuf::from("m")));
+            }
+            Parsed::Help => panic!("expected run"),
+        }
+        assert_eq!(
+            run(&["--client", "c", "--locale", "enUS", "--output", "o"])
+                .unwrap()
+                .locale_name(),
+            "enUS"
+        );
+    }
+
+    #[test]
+    fn invalid_locale_uses_unsupported_locale_exit_two() {
+        assert_eq!(
+            run(&["--client", "c", "--locale", "zzZZ", "--output", "o"]),
+            Err(CliError::UNSUPPORTED_LOCALE)
+        );
+        assert_eq!(CliError::UNSUPPORTED_LOCALE.exit, 2);
+    }
+
+    #[test]
+    fn errors_are_redacted_and_exit_codes_match_the_taxonomy() {
+        let error = run(&["--client", "/private/secret", "--locale", "enUS"]).unwrap_err();
+        assert_eq!(error.code, "invalid_invocation");
+        assert_eq!(error.exit, 2);
+        assert!(!format!("{error:?}").contains("/private/secret"));
+        // Admission/IO taxonomy used by the binary after parsing.
+        assert_eq!(Error::UnsupportedClient.code(), "unsupported_client");
+        assert_eq!(Error::UnsupportedClient.exit_code(), 3);
+        assert_eq!(Error::Input.exit_code(), 4);
+        assert_eq!(Error::InvalidLocale.code(), "unsupported_locale");
+        assert_eq!(Error::InvalidLocale.exit_code(), 2);
+        assert_eq!(error, CliError::new("invalid_invocation", 2));
+    }
+
+    impl Parsed {
+        fn locale_name(&self) -> &'static str {
+            match self {
+                Self::Run(options) => options.locale.name(),
+                Self::Help => "help",
+            }
         }
     }
 }

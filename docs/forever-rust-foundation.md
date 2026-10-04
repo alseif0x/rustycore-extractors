@@ -288,3 +288,187 @@ recorded above. Documentation closeout is outside this measured interval.
 a current complete 70170 live read. Encrypted sections, typed row decoding,
 table-specific schema conformance and full extraction remain unproven here.
 Changes are committed locally, not pushed or released.
+
+## Implementation levels, CLI and report semantics — Rust preview
+
+The Forever Rust preview is deliberately split into three separate levels. Do
+not read success at one level as evidence for a later one.
+
+1. **Header/metadata inspection** — `forever-db2-inspect`. Reads the 204-byte
+   packed header and the ordered 40-byte section headers of one explicit local
+   WDC5 file. It does **not** decode records, column data or strings, and it
+   makes no CASC, key or network access. Output scope is `metadata_only`;
+   `client_build_verified`, `table_schema_validated` and `record_data_decoded`
+   are always `false`.
+2. **Bounded record decoding** — `forever-db2` `DecodedTable`, used by the
+   `forever-db2-extract` batch CLI. Decodes rows for **only** `ChrClasses`
+   (1361031) and `ChrRaces` (1305311), from one unencrypted regular section with
+   an explicit file list. Offline, no keys, per-file budget 16 MiB and per-batch
+   budget 256 MiB, at most 256 explicit entries. Sparse, encrypted,
+   parent-bearing, multi-section and unreviewed tables are rejected explicitly.
+   There is **no** encrypted decoding, no listfile discovery and no complete
+   catalog.
+3. **Full extraction** — **NOT implemented**. There is no map/VMap/MMap output,
+   no complete table catalog and no global v1 `data-manifest`. Level 3 remains
+   future work and must not be inferred from levels 1–2.
+
+### Report semantics
+
+The batch report keeps three independent facts per file, and they are not
+interchangeable:
+
+- `table_schema_validated` — `true` only when the file's `table_hash`,
+  `layout_hash` and `field_count`/`total_field_count` match the reviewed schema
+  identity. It is computed independently of body decoding. The header's signed
+  `IndexField` is **not** part of this check: the pinned reference only
+  endian-converts it (`DB2FileLoader.cpp:1746`) and decides inline vs. id-table
+  from the reviewed metadata `Meta->HasIndexFieldInData()`
+  (`DB2Meta.cpp:22-25`, `Meta->IndexField != -1`), which already disagrees with
+  the real 70205 ChrRaces header word (`0` vs. the reviewed `-1`).
+- `record_data_decoded` — `true` only when every row of a reviewed table decoded
+  successfully (with `decoded_rows` as the count). Unreviewed names are `false`.
+- `declared_records` — the header's declared record count, **not** a verified or
+  fully decoded count.
+
+The metadata-inspector JSON uses the same `record_data_decoded` key for
+consistency; there it is always `false`. Note: `forever-casc-probe` carries the
+build matched by the native storage independently of any fixed constant.
+
+When a file is fully read and its metadata parsed but a reviewed table's
+`DecodedTable::read` fails, the batch emits a `status:error` row that still
+carries `code` **plus** `table_schema_validated`, `declared_records` and `bytes`,
+so schema identity and body decoding stay independent observable facts. The
+partial `*.db2` is not published.
+
+### CLI usage and exit codes
+
+Build and outputs stay outside this checkout and outside the client. Replace the
+`<...>` placeholders with your own local paths; no client path is ever written
+into a report:
+
+```bash
+export CARGO_BUILD_JOBS=1
+export CARGO_TARGET_DIR="$(pwd)/../rustycore-extractor-work/builds/rust-forever"
+cargo build --offline --locked -p forever-db2 --bin forever-db2-inspect
+cargo build --offline --locked -p forever-casc --features native \
+  --bin forever-db2-extract
+
+"$CARGO_TARGET_DIR/debug/forever-db2-inspect" --file <local.db2> --json
+"$CARGO_TARGET_DIR/debug/forever-db2-extract" \
+  --client <client-root> --locale enUS \
+  --output ../rustycore-extractor-work/runs/candidate/<run-id> \
+  [--manifest <name-tab-id.tsv>]
+```
+
+`--manifest` is an explicit `name<TAB>decimal FileDataID` text file (≤ 64 KiB,
+≤ 256 entries, unique non-zero ids, reviewed-name/id consistency); without it the
+default two character tables are used. `forever-db2-extract` prints exactly one
+redacted JSON document (`report_version: 1`). Handled codes/exits:
+
+| Exit | Codes |
+| --- | --- |
+| 0 | run complete |
+| 2 | `invalid_invocation`, `invalid_manifest`, `manifest_policy_limit`, `unsupported_locale` |
+| 3 | `unsupported_client` |
+| 4 | `input_io`, `manifest_input_io`, `native_read_failed`, `file_unavailable`, `encrypted_key_unavailable`, `local_file_incomplete` |
+| 6 | `read_policy_limit` |
+| 8 | `incomplete`: finished but at least one entry failed |
+
+Refusal to create output (`unsafe_output_path`, `output_exists_or_unavailable`)
+never leaves a silently partial directory: no directory is created, or the run
+fails before publishing. If the final `report.json` cannot be published, the run
+returns an error and any already-published `*.db2` files remain without a report
+(an explicit, detectable failure, not a success).
+
+### Verification status
+
+- Schema field counts are transcribed and asserted by synthetic tests, now
+  verified against the pinned C++ reference at `02245dcd`:
+  `ChrRacesMeta` (`DB2Metadata.h:4182`) declares **51** fields and
+  `ChrClassesMeta` (`DB2Metadata.h:3455`) **43**; the transcribed lists match
+  exactly. The earlier **OPEN DISCREPANCY 50 vs 51** is resolved: the missing
+  final `FT_BYTE` signed field was added. A second transcription fix corrected
+  the `ChrClasses` INT block to nine signed 32-bit fields (18-26); an earlier
+  over-counted tenth `Signed(32,1)` widened the meta `IndexField` 29 from
+  `FT_BYTE` (8 bits) to 16 bits and read 6/9 real ids past `max_id`
+  (`invalid_record_ids`). The transcribed index field is now 8 bits, pinned by
+  a synthetic width test. This is schema transcription verification, not
+  format/reader parity.
+- Id handling follows the reference (`DB2FileLoader.cpp`): an inline index field
+  is returned raw (`:747-760`, no repair), while the separate id table alone
+  receives the `id <= MinId -> MinId + record` repair (`:1958-1967`). Record
+  copies skip `source == 0`, an out-of-range source/new ordinal, or a missing
+  source without error (`:613-634`), overwriting a present destination and
+  rewriting only an inline id. The string lookup
+  `record_start + fieldOffset + stored_offset` (`:798-806`) is unchanged.
+- The header `IndexField` word is **not** authoritative: only the reviewed
+  schema's `index` decides inline vs. id-table, and it is not part of table
+  matching. The sole flag validation is sparse rejection, `_header.Flags & 0x1`
+  (`DB2FileLoader.cpp:1852`); other flag bits are ignored as the reference
+  ignores them, so real `Flags == 4` metadata is accepted and decoded.
+- Building, a green synthetic suite or a successful exit is **not** format
+  parity, schema acceptance or a real-client oracle.
+- Build **70170** compatibility is **not** claimed. Its old local snapshot points
+  at the updated installation and cannot serve as evidence; 70170 remains only
+  unit/CLI-admitted, and each report carries the build actually matched.
+- Maps, VMaps, MMaps, encrypted sections, complete catalogs and reader/runtime
+  conformance remain outstanding.
+
+### Executed acceptance — 2026-10-04
+
+Status: **uncommitted working tree** on branch
+`18-forever-rust-wdc5-metadata-inspector-foundation`, based on commit
+`ec73fe61`. No tested SHA is recorded because the work is not committed, and no
+SHA is invented here.
+
+Contract verification against the pinned reference
+`02245dcd245e7433e524577656177723d3e4992e` used `git show` (the on-disk
+reference file is a stub), so it reads the pinned Git object rather than the
+checkout:
+
+- `DB2Metadata.h:3455` `ChrClassesMeta` declares **43** fields (10 `FT_STRING`,
+  17 `FT_INT`, two `FT_SHORT` at 27-28 and fourteen `FT_BYTE` at 29-42;
+  `IndexField = 29` is an 8-bit `FT_BYTE`).
+- `DB2Metadata.h:4182` `ChrRacesMeta` declares **51** fields.
+- `DB2FileLoader.cpp:1746` only endian-converts the header `IndexField` (it is
+  not a gate); `:1852` validates only `Flags & 0x1` (sparse); `:747-760`
+  returns the inline id raw; `:1958-1967` applies the `<= MinId` repair only to
+  the separate id table; `:798-806` resolves a string as
+  `record + fieldOffset + stringOffset`; `:613-634` handles record copies.
+
+Synthetic acceptance (real measured output; no client bytes):
+
+- `fmt-check`: pass.
+- `rust`: pass — `forever-db2` **43** tests, `forever-casc` **22** tests in the
+  default (no `native`) build, and the `forever-db2-inspect` binary target
+  **0** tests. The `forever-casc` `ffi` module's **2** tests compile only with
+  `native`; they are measured as **24** in the `native` row below.
+- `clippy`: pass.
+- `db2`: pass.
+- `synthetic` CLI tests: **18** collected, `OK`; **5** executed (the metadata
+  inspector CLI) and **13** skipped because the native/live binaries and client
+  selectors are unset. A skipped test is not evidence; this mode excludes
+  real-client tests.
+- `contracts`: **10** pass.
+- `provenance`: **355** imported files / **10** modification notices.
+- `native`: **24** `forever-casc` tests plus **3** probe-binary tests (**0**
+  extract-binary tests); the Python CLI suite collects **18**, executes **14**
+  and skips **4**, returning `OK`.
+
+Bounded real 70205 acceptance, locale `esES`, offline and without modifying the
+client:
+
+- `live-extract` run_id `20261004T080604Z-bde949ae`: exit 0 in **4.334 s**,
+  `network_attempted=false`, `client_metadata_unchanged=true`; `ChrClasses`
+  (1361031) **6200 B** / **9** decoded rows and `ChrRaces` (1305311)
+  **22095 B** / **58** decoded rows; `full_client_extraction=false`.
+- `live` run_id `20261004T080617Z-b9fabf75`: **18** Python CLI tests OK in
+  **13.084 s**, including the network-denied cases.
+
+Scope limits, stated explicitly: this covers **2 tables** and one **regular
+unencrypted section**, with **no maps/VMaps/MMaps**, **no global v1
+`data-manifest`** and **no 70170 compatibility claim** (its local snapshot points
+at the updated installation). Reports are redacted; raw client-derived outputs
+stay outside Git. A green process is **not** format parity or a RustyCore
+reader/runtime acceptance. The three implementation levels above are unchanged
+and remain the only source of scope.
