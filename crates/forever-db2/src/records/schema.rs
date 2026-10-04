@@ -39,6 +39,17 @@
 //! 32-bit fields then three floats; `ChrCustomizationReq` is a string, seven
 //! signed 32-bit fields and one signed 32-bit array of two.
 //!
+//! Three further Forever tables were reviewed at DB2Metadata.h:
+//! `Curve` (FileDataId 892585, 3 fields, layout 0xD362535A),
+//! `ContentRestrictionRuleSet` (4281307, 3 fields, layout 0x5774D75A) and
+//! `DataTagInfo` (6652252, 3 fields, layout 0xDB46F772). All three declare
+//! `IndexField >= 0` (0, 0 and 1 respectively), `ParentIndexField = -1` and
+//! `FieldCount == FileFieldCount`, i.e. the record id is read from an inline
+//! column rather than a separate id table. `Curve` is [Unsigned(32,1),
+//! Unsigned(8,1), Signed(32,1)] (the second field is an UNSIGNED FT_BYTE),
+//! `ContentRestrictionRuleSet` is three signed 32-bit fields and `DataTagInfo`
+//! is a string followed by two signed 32-bit fields.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -82,6 +93,15 @@ pub enum CharacterTable {
     /// `ChrCustomizationReq`: one string, seven signed 32-bit fields and one
     /// signed 32-bit array of two.
     CustomizationReq,
+    /// `Curve`: one unsigned 32-bit field (the inline index), one unsigned
+    /// 8-bit field and one signed 32-bit field.
+    Curve,
+    /// `ContentRestrictionRuleSet`: three signed 32-bit fields; the inline
+    /// index is field 0.
+    ContentRestrictionRuleSet,
+    /// `DataTagInfo`: one string plus two signed 32-bit fields; the inline
+    /// index is field 1.
+    DataTagInfo,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -101,6 +121,9 @@ impl CharacterTable {
             "ChrCustomizationElement" => Some(Self::CustomizationElement),
             "ChrCustomizationDisplayInfo" => Some(Self::CustomizationDisplayInfo),
             "ChrCustomizationReq" => Some(Self::CustomizationReq),
+            "Curve" => Some(Self::Curve),
+            "ContentRestrictionRuleSet" => Some(Self::ContentRestrictionRuleSet),
+            "DataTagInfo" => Some(Self::DataTagInfo),
             _ => None,
         }
     }
@@ -121,6 +144,9 @@ impl CharacterTable {
             Self::CustomizationElement => "ChrCustomizationElement",
             Self::CustomizationDisplayInfo => "ChrCustomizationDisplayInfo",
             Self::CustomizationReq => "ChrCustomizationReq",
+            Self::Curve => "Curve",
+            Self::ContentRestrictionRuleSet => "ContentRestrictionRuleSet",
+            Self::DataTagInfo => "DataTagInfo",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -140,6 +166,9 @@ impl CharacterTable {
             Self::CustomizationElement => 3512765,
             Self::CustomizationDisplayInfo => 3593032,
             Self::CustomizationReq => 3450453,
+            Self::Curve => 892585,
+            Self::ContentRestrictionRuleSet => 4281307,
+            Self::DataTagInfo => 6652252,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -383,6 +412,41 @@ impl CharacterTable {
                     Signed(32, 1),
                     Signed(32, 2),
                 ],
+            },
+            // Transcribed from DB2Metadata.h::CurveMeta:
+            // FileDataId 892585, IndexField 0, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xD362535A. The id is read
+            // from the inline field 0 (Unsigned(32,1)); field 1 is an UNSIGNED
+            // FT_BYTE and field 2 a signed 32-bit field.
+            Self::Curve => Schema {
+                hash: None,
+                layout: 0xD362535A,
+                index: 0,
+                parent: -1,
+                fields: &[Unsigned(32, 1), Unsigned(8, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ContentRestrictionRuleSetMeta:
+            // FileDataId 4281307, IndexField 0, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x5774D75A. Three signed
+            // 32-bit fields; the id is read from the inline field 0.
+            Self::ContentRestrictionRuleSet => Schema {
+                hash: None,
+                layout: 0x5774D75A,
+                index: 0,
+                parent: -1,
+                fields: &[Signed(32, 1), Signed(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::DataTagInfoMeta:
+            // FileDataId 6652252, IndexField 1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xDB46F772. One string
+            // plus two signed 32-bit fields; the id is read from the inline
+            // field 1.
+            Self::DataTagInfo => Schema {
+                hash: None,
+                layout: 0xDB46F772,
+                index: 1,
+                parent: -1,
+                fields: &[String, Unsigned(32, 1), Signed(32, 1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),

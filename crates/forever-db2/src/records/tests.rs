@@ -180,6 +180,20 @@ fn write_inline_id(spec: &mut Spec, index: usize, value: u8) {
     write_byte(&mut spec.records[index], off, value);
 }
 
+/// Writes a 32-bit inline id at the column for `field` of record `row`.
+fn write_inline_id_at(spec: &mut Spec, field: usize, value: u32, row: usize) {
+    let off = field_offset(spec, field);
+    write_word(&mut spec.records[row], off, value);
+}
+
+/// Decodes any reviewed table, returning its error code for a negative test.
+fn record_error(table: CharacterTable, bytes: &[u8]) -> RecordError {
+    match decode(table, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
+}
+
 fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
     let schema = table.schema();
     let fields = schema.fields.len();
@@ -1924,6 +1938,334 @@ fn forever_tables_empty_zero_section_and_declared_records_variants() {
         let bytes = build_zero_section_header(table, 1);
         assert_eq!(
             expect_err_idtable(table, &bytes),
+            RecordError::Unsupported,
+            "{} zero sections with records",
+            table.name()
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Forever inline-index tables (No parent, IndexField >= 0)
+// ---------------------------------------------------------------------------
+
+/// The reviewed Forever tables whose id is read from an inline index field.
+/// Identity is (file_id, layout, index, field_count); table hashes are NOT
+/// transcribed because `DB2Meta` does not carry one. All declare
+/// `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
+const FOREVER_INLINE_TABLES: [(CharacterTable, u32, u32, i16, usize); 3] = [
+    (CharacterTable::Curve, 892585, 0xD362535A, 0, 3),
+    (
+        CharacterTable::ContentRestrictionRuleSet,
+        4281307,
+        0x5774D75A,
+        0,
+        3,
+    ),
+    (CharacterTable::DataTagInfo, 6652252, 0xDB46F772, 1, 3),
+];
+
+/// Decode-valid spec for a reviewed inline-index table: zero records of the
+/// right size. There is no separate id table (`assemble` only emits one when
+/// `schema.index < 0`), and the id is read from the inline column.
+fn inline_spec(table: CharacterTable, count: usize) -> Spec {
+    let mut spec = spec(table);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec
+}
+
+fn decode_inline(table: CharacterTable, spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = assemble(table, spec);
+    DecodedTable::read(&bytes, table)
+}
+
+fn expect_err_inline(table: CharacterTable, spec: &Spec) -> RecordError {
+    match decode_inline(table, spec) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
+}
+
+#[test]
+fn forever_inline_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h: `Curve` (892585, layout 0xD362535A,
+    // IndexField 0), `ContentRestrictionRuleSet` (4281307, 0x5774D75A,
+    // IndexField 0) and `DataTagInfo` (6652252, 0xDB46F772, IndexField 1); all
+    // declare ParentIndexField -1 and FieldCount == FileFieldCount.
+    for (table, file_id, layout, index, fields) in FOREVER_INLINE_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, index, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        assert!(
+            schema.index >= 0,
+            "{} must use an inline index field",
+            table.name()
+        );
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn curve_transcription_matches_field_kinds_and_widths() {
+    // Curve: [Unsigned(32,1), Unsigned(8,1), Signed(32,1)]. The second field is
+    // an UNSIGNED FT_BYTE, not signed.
+    let schema = CharacterTable::Curve.schema();
+    assert!(matches!(schema.fields[0], Kind::Unsigned(32, 1)));
+    assert!(matches!(schema.fields[1], Kind::Unsigned(8, 1)));
+    assert!(matches!(schema.fields[2], Kind::Signed(32, 1)));
+}
+
+#[test]
+fn content_restriction_rule_set_transcription_is_three_signed_ints() {
+    let schema = CharacterTable::ContentRestrictionRuleSet.schema();
+    for (index, kind) in schema.fields.iter().enumerate() {
+        assert!(
+            matches!(kind, Kind::Signed(32, 1)),
+            "field {index} is not Signed(32,1)"
+        );
+    }
+}
+
+#[test]
+fn data_tag_info_transcription_is_string_and_two_signed_ints() {
+    let schema = CharacterTable::DataTagInfo.schema();
+    assert!(matches!(schema.fields[0], Kind::String));
+    assert!(matches!(schema.fields[1], Kind::Unsigned(32, 1)));
+    assert!(matches!(schema.fields[2], Kind::Signed(32, 1)));
+}
+
+#[test]
+fn forever_inline_tables_match_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word is accepted
+    // while layout/field/total identity is right (DB2FileLoader.cpp:1763/:1771).
+    // The header's own `IndexField` is not a gate (DB2FileLoader.cpp:1746 only
+    // endian-converts it; inline vs id-table comes from the reviewed meta).
+    for (table, _, layout, _, fields) in FOREVER_INLINE_TABLES {
+        let mut spec = inline_spec(table, 1);
+        write_inline_id_at(&mut spec, table.schema().index as usize, 7, 0);
+        let mut bytes = assemble(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert_eq!(
+            header.total_field_count as usize,
+            fields,
+            "{} total fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_inline_tables_reject_layout_field_and_total_mismatches() {
+    for (table, _, _, _, _) in FOREVER_INLINE_TABLES {
+        let mut bytes = assemble(table, &inline_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        assert_eq!(
+            record_error(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        let mut bytes = assemble(table, &inline_spec(table, 1));
+        put32(&mut bytes, 140, 42);
+        assert_eq!(
+            record_error(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        let mut bytes = assemble(table, &inline_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        assert_eq!(
+            record_error(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn curve_inline_id_is_decoded_from_field_zero() {
+    // Route the row id through the inline index field (field 0, Unsigned(32,1))
+    // rather than a separate id table. Field 1 is the unsigned FT_BYTE id data.
+    let table = CharacterTable::Curve;
+    let mut spec = inline_spec(table, 1);
+    spec.max_id = 100_000;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_word(&mut spec.records[0], off0, 500);
+    write_byte(&mut spec.records[0], off1, 0xFF);
+    write_word(&mut spec.records[0], off2, (-3i32) as u32);
+    let out = decode_inline(table, &spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![500]);
+    let row = &out.rows()[&500];
+    assert_eq!(row[0][0], Value::Unsigned(500));
+    // Unsigned(8,1): 0xFF stays 255, not -1.
+    assert_eq!(row[1][0], Value::Unsigned(255));
+    assert_eq!(row[2][0], Value::Signed(-3));
+}
+
+#[test]
+fn content_restriction_rule_set_inline_id_is_decoded_from_field_zero() {
+    let table = CharacterTable::ContentRestrictionRuleSet;
+    let mut spec = inline_spec(table, 1);
+    spec.max_id = 100_000;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_word(&mut spec.records[0], off0, 12345);
+    write_word(&mut spec.records[0], off1, (-7i32) as u32);
+    write_word(&mut spec.records[0], off2, 9);
+    let out = decode_inline(table, &spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![12345]);
+    let row = &out.rows()[&12345];
+    assert_eq!(row[0][0], Value::Signed(12345));
+    assert_eq!(row[1][0], Value::Signed(-7));
+    assert_eq!(row[2][0], Value::Signed(9));
+}
+
+#[test]
+fn data_tag_info_inline_id_is_decoded_from_field_one() {
+    // The reviewed inline index for DataTagInfo is field 1, so a non-index
+    // field (0) may hold an arbitrary value without affecting the row key.
+    let table = CharacterTable::DataTagInfo;
+    let mut spec = inline_spec(table, 1);
+    spec.max_id = 100_000;
+    spec.strings = b"Tag\0".to_vec();
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    let relative = record_size(&spec.cols) as u32 - u32::from(off0) / 8;
+    write_word(&mut spec.records[0], off0, relative);
+    write_word(&mut spec.records[0], off1, 8080);
+    write_word(&mut spec.records[0], off2, (-42i32) as u32);
+    let out = decode_inline(table, &spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![8080]);
+    let row = &out.rows()[&8080];
+    assert_eq!(row[0][0], Value::Text("Tag".to_owned()));
+    assert_eq!(row[1][0], Value::Unsigned(8080));
+    assert_eq!(row[2][0], Value::Signed(-42));
+}
+
+#[test]
+fn inline_index_is_not_repaired_below_min_id_for_the_forever_tables() {
+    // Inline semantics: a raw inline id below MinId is used as-is, never
+    // repaired (DB2FileLoader.cpp:747-760). Exercise each reviewed inline table.
+    let (table, raw, min) = (CharacterTable::Curve, 4u32, 50u32);
+    let mut spec = inline_spec(table, 1);
+    spec.min_id = min;
+    spec.max_id = 100;
+    let off = field_offset(&spec, 0);
+    write_word(&mut spec.records[0], off, raw);
+    let out = decode_inline(table, &spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![raw]);
+
+    let (table, raw, min) = (CharacterTable::ContentRestrictionRuleSet, 4u32, 50u32);
+    let mut spec = inline_spec(table, 1);
+    spec.min_id = min;
+    spec.max_id = 100;
+    let off = field_offset(&spec, 0);
+    write_word(&mut spec.records[0], off, raw);
+    let out = decode_inline(table, &spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![raw]);
+
+    let (table, raw, min) = (CharacterTable::DataTagInfo, 4u32, 50u32);
+    let mut spec = inline_spec(table, 1);
+    spec.min_id = min;
+    spec.max_id = 100;
+    let off = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], off, raw);
+    let out = decode_inline(table, &spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![raw]);
+}
+
+#[test]
+fn forever_inline_tables_reject_out_of_range_inline_ids() {
+    for (table, _, _, index, _) in FOREVER_INLINE_TABLES {
+        let mut spec = inline_spec(table, 1);
+        spec.min_id = 0;
+        spec.max_id = 100;
+        write_inline_id_at(&mut spec, index as usize, 200, 0);
+        assert_eq!(
+            expect_err_inline(table, &spec),
+            RecordError::Id,
+            "{} out-of-range id",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn forever_inline_copy_table_rewrites_the_inline_id() {
+    // AutoProduceRecordCopies (DB2FileLoader.cpp:613-634) plus the inline-index
+    // rewrite: a copied row's inline index column is set to the new row id.
+    for (table, _, _, index, _) in FOREVER_INLINE_TABLES {
+        let index = index as usize;
+        let mut spec = inline_spec(table, 3);
+        spec.min_id = 0;
+        spec.max_id = 1000;
+        write_inline_id_at(&mut spec, index, 1, 0);
+        write_inline_id_at(&mut spec, index, 2, 1);
+        write_inline_id_at(&mut spec, index, 3, 2);
+        // Copy the row keyed 1 into new row id 2; the destination inline index
+        // column is rewritten to 2 (DB2FileLoader.cpp:613-634).
+        spec.copies = vec![(2, 1)];
+        let out = decode_inline(table, &spec).unwrap();
+        assert!(out.rows().contains_key(&2), "{} copy row", table.name());
+        assert_eq!(
+            out.rows()[&2][index][0],
+            Value::Unsigned(2),
+            "{} rewritten inline id",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn forever_inline_tables_empty_zero_section_and_declared_records_variants() {
+    for (table, _, _, _, _) in FOREVER_INLINE_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+
+        let bytes = build_zero_section_header(table, 1);
+        assert_eq!(
+            record_error(table, &bytes),
             RecordError::Unsupported,
             "{} zero sections with records",
             table.name()

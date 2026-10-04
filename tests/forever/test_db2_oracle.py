@@ -543,6 +543,93 @@ class SyntheticOracle(unittest.TestCase):
             EXPECTED_CHR_CUSTOMIZATION_MATERIAL,
         )
 
+    def test_reviewed_curve_inline_index_dump_matches_golden(self):
+        # `Curve` is [Unsigned(32,1), Unsigned(8,1), Signed(32,1)] with
+        # IndexField 0: the record id comes from the inline field 0, not a
+        # separate u32 id table. The unsigned byte must not sign-extend.
+        schema = db2_oracle.CURVE
+        rows = [{0: 5, 1: 0xFF, 2: 0xFFFFFFF9}]  # id 5, byte 255, -7
+        data = Wdc5Builder(schema, rows, min_id=5, max_id=100).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 Curve\n"
+            "5\tu:5\tu:255\ti:-7\n",
+        )
+
+    def test_reviewed_content_restriction_rule_set_inline_index_dump_matches_golden(self):
+        # `ContentRestrictionRuleSet` is three signed 32-bit fields with
+        # IndexField 0: the inline field 0 (signed) is also the record id.
+        schema = db2_oracle.CONTENT_RESTRICTION_RULE_SET
+        rows = [{0: 0x0000000C, 1: 0xFFFFFFFF, 2: 0x7FFFFFFF}]  # id 12
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 ContentRestrictionRuleSet\n"
+            "12\ti:12\ti:-1\ti:2147483647\n",
+        )
+
+    def test_reviewed_data_tag_info_inline_index_dump_matches_golden(self):
+        # `DataTagInfo` is [String, Unsigned(32,1), Signed(32,1)] with
+        # IndexField 1: the record id comes from the inline field 1 while field
+        # 0 is a per-record relative string offset.
+        schema = db2_oracle.DATA_TAG_INFO
+        rows = [{0: "Tag", 1: 0x0000002A, 2: 0xFFFFFFF5}]  # id 42
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 DataTagInfo\n"
+            "42\tt:Tag\tu:42\ti:-11\n",
+        )
+
+    def test_reviewed_curve_and_restriction_transcriptions_are_present(self):
+        curve = db2_oracle.SCHEMAS["Curve"]
+        self.assertEqual(curve.layout_hash, 0xD362535A)
+        self.assertEqual(curve.index, 0)
+        self.assertEqual(curve.parent, -1)
+        self.assertEqual(len(curve.fields), 3)
+        self.assertEqual(
+            (curve.fields[0].kind, curve.fields[0].bits, curve.fields[0].signed),
+            ("unsigned", 32, False),
+        )
+        self.assertEqual(
+            (curve.fields[1].kind, curve.fields[1].bits, curve.fields[1].signed),
+            ("unsigned", 8, False),
+        )
+        self.assertEqual(
+            (curve.fields[2].kind, curve.fields[2].bits, curve.fields[2].signed),
+            ("signed", 32, True),
+        )
+
+        rule_set = db2_oracle.SCHEMAS["ContentRestrictionRuleSet"]
+        self.assertEqual(rule_set.layout_hash, 0x5774D75A)
+        self.assertEqual(rule_set.index, 0)
+        self.assertEqual(rule_set.parent, -1)
+        self.assertEqual(len(rule_set.fields), 3)
+        for index, field in enumerate(rule_set.fields):
+            self.assertEqual(
+                (field.kind, field.bits, field.signed),
+                ("signed", 32, True),
+                "rule_set %d" % index,
+            )
+
+        tag = db2_oracle.SCHEMAS["DataTagInfo"]
+        self.assertEqual(tag.layout_hash, 0xDB46F772)
+        self.assertEqual(tag.index, 1)
+        self.assertEqual(tag.parent, -1)
+        self.assertEqual(len(tag.fields), 3)
+        self.assertEqual((tag.fields[0].kind, tag.fields[0].bits), ("string", 32))
+        self.assertEqual(
+            (tag.fields[1].kind, tag.fields[1].bits, tag.fields[1].signed),
+            ("unsigned", 32, False),
+        )
+        self.assertEqual(
+            (tag.fields[2].kind, tag.fields[2].bits, tag.fields[2].signed),
+            ("signed", 32, True),
+        )
+
     def test_reviewed_chr_customization_element_dump_matches_golden(self):
         # Thirteen signed 32-bit fields, IndexField -1 (separate u32 id table).
         schema = db2_oracle.CHR_CUSTOMIZATION_ELEMENT

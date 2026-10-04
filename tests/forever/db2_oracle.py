@@ -429,6 +429,51 @@ CHR_CUSTOMIZATION_REQ = Schema(
     ),
 )
 
+# Transcribed from DB2Metadata.h::CurveMeta (FileDataId 892585, IndexField 0,
+# ParentIndexField -1, FieldCount == FileFieldCount, layout 0xD362535A): the
+# record id is read from the inline field 0 (Unsigned(32,1)); field 1 is an
+# UNSIGNED FT_BYTE and field 2 a signed 32-bit field.
+CURVE = Schema(
+    name="Curve",
+    layout_hash=0xD362535A,
+    index=0,
+    fields=(
+        Field("unsigned", 32),  # 0 (inline index)
+        Field("unsigned", 8),  # 1
+        _signed_field(32),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ContentRestrictionRuleSetMeta (FileDataId
+# 4281307, IndexField 0, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0x5774D75A): three signed 32-bit fields; the id is read from the inline
+# field 0.
+CONTENT_RESTRICTION_RULE_SET = Schema(
+    name="ContentRestrictionRuleSet",
+    layout_hash=0x5774D75A,
+    index=0,
+    fields=(
+        _signed_field(32),  # 0 (inline index)
+        _signed_field(32),  # 1
+        _signed_field(32),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h::DataTagInfoMeta (FileDataId 6652252,
+# IndexField 1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xDB46F772): one string plus two signed 32-bit fields; the id is read from the
+# inline field 1.
+DATA_TAG_INFO = Schema(
+    name="DataTagInfo",
+    layout_hash=0xDB46F772,
+    index=1,
+    fields=(
+        Field("string"),  # 0
+        Field("unsigned", 32),  # 1 (inline index)
+        _signed_field(32),  # 2
+    ),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -445,6 +490,9 @@ SCHEMAS = {
     "ChrCustomizationElement": CHR_CUSTOMIZATION_ELEMENT,
     "ChrCustomizationDisplayInfo": CHR_CUSTOMIZATION_DISPLAY_INFO,
     "ChrCustomizationReq": CHR_CUSTOMIZATION_REQ,
+    "Curve": CURVE,
+    "ContentRestrictionRuleSet": CONTENT_RESTRICTION_RULE_SET,
+    "DataTagInfo": DATA_TAG_INFO,
 }
 
 
