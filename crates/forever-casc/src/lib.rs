@@ -2,7 +2,9 @@
 //! Target-admitted offline CASC read prototype, not a pure-Rust CASC engine.
 mod admission;
 pub mod batch;
+pub mod manifest;
 pub mod options;
+mod sha256;
 pub use admission::{PRODUCT, SUPPORTED_CLIENTS, admit};
 
 #[cfg(feature = "native")]

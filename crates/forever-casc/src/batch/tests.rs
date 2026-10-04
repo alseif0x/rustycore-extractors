@@ -440,3 +440,139 @@ fn file_limit_constants_are_the_documented_policy() {
     assert_eq!(super::MAX_BATCH_BYTES, 256 * 1024 * 1024);
     assert_eq!(super::MAX_FILES, 256);
 }
+
+#[test]
+fn complete_batch_publishes_a_v2_manifest_with_matching_invariants() {
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("run");
+    let report = extract(
+        &Plan::character_tables(),
+        &sandbox.client(),
+        &destination,
+        build(),
+        "enUS",
+        |entry, _budget| {
+            let table = CharacterTable::named(&entry.name).unwrap();
+            Ok((build(), decoded_fixture(table)))
+        },
+    )
+    .unwrap();
+    assert!(report.complete);
+
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    assert!(manifest.contains("\"manifest_version\":2"));
+    assert!(manifest.contains("\"status\":\"complete\""));
+    assert!(manifest.contains("\"incomplete_marker_present\":false"));
+    assert!(!manifest.contains("\"reason\""));
+    assert!(!manifest.contains("\"code\""));
+    assert!(manifest.contains("\"extractor\":{\"name\":\"forever-db2-extract\""));
+    assert!(manifest.contains("\"table_selection\":\"default_character_tables\""));
+    assert!(manifest.contains("\"manifest_sha256\":null"));
+
+    // Every published artifact's recorded digest must be the digest of the
+    // bytes that actually landed on disk, and the integrity totals must equal
+    // the sum of those artifacts.
+    let mut total_bytes: u64 = 0;
+    for name in ["ChrClasses", "ChrRaces"] {
+        let bytes = fs::read(destination.join(format!("{name}.db2"))).unwrap();
+        total_bytes += bytes.len() as u64;
+        let digest = crate::sha256::hex(&bytes);
+        let recorded = artifact_field(&manifest, name, "sha256");
+        assert_eq!(recorded, digest, "{name} sha256 mismatch");
+        let recorded_bytes = artifact_field(&manifest, name, "bytes");
+        assert_eq!(
+            recorded_bytes.parse::<u64>().unwrap(),
+            bytes.len() as u64,
+            "{name} byte count mismatch"
+        );
+    }
+    assert_eq!(integrity_field(&manifest, "file_count"), "2");
+    assert_eq!(
+        integrity_field(&manifest, "total_bytes"),
+        total_bytes.to_string()
+    );
+}
+
+#[test]
+fn failed_batch_publishes_a_failed_manifest_with_reason_and_code() {
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("run");
+    let report = extract(
+        &unknown_plan(),
+        &sandbox.client(),
+        &destination,
+        build(),
+        "enUS",
+        |entry, _budget| {
+            if entry.name == "Alpha" {
+                Err(Error::MissingFile)
+            } else {
+                Ok((build(), metadata_fixture()))
+            }
+        },
+    )
+    .unwrap();
+    assert!(!report.complete);
+
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    assert!(manifest.contains("\"status\":\"failed\""));
+    assert!(manifest.contains("\"incomplete_marker_present\":true"));
+    assert!(manifest.contains("\"reason\":\""), "missing failure reason");
+    // The error artifact keeps its static code; the published one carries none.
+    assert_eq!(artifact_field(&manifest, "Alpha", "status"), "error");
+    assert_eq!(
+        artifact_field(&manifest, "Alpha", "code"),
+        "file_unavailable"
+    );
+    assert_eq!(artifact_field(&manifest, "Beta", "status"), "complete");
+    assert_eq!(integrity_field(&manifest, "file_count"), "1");
+    assert!(!destination.join("Alpha.db2").exists());
+    assert!(destination.join("Beta.db2").exists());
+}
+
+/// Returns the JSON value for `key` inside the artifact object that follows the
+/// `"name":"<name>"` anchor within the manifest's `"artifacts":[...]` array.
+/// The manifest is a flat, single-line document with stable key order, so
+/// linear scanning is sufficient and dependency-free.
+fn artifact_field(manifest: &str, name: &str, key: &str) -> String {
+    let array = artifact_section(manifest);
+    let anchor = format!("\"name\":\"{name}\"");
+    let start = array.find(&anchor).expect("artifact anchor");
+    let rest = &array[start..];
+    let end = rest.find("}").expect("artifact end");
+    json_field(&rest[..end], key)
+}
+
+fn artifact_section(manifest: &str) -> &str {
+    let start = manifest.find("\"artifacts\":[").expect("artifacts array");
+    let rest = &manifest[start..];
+    let end = rest.find("],\"integrity\"").expect("artifacts end");
+    &rest[..end]
+}
+
+/// Returns the JSON value for `key` inside the `"integrity":{...}` object.
+fn integrity_field(manifest: &str, key: &str) -> String {
+    let start = manifest.find("\"integrity\":{").expect("integrity object");
+    let rest = &manifest[start..];
+    let end = rest.find('}').expect("integrity end");
+    json_field(&rest[..end], key)
+}
+
+/// Minimal field reader for the manifest's flat `"key":value` members. Values
+/// are unquoted strings/numbers/booleans/null; the manifest contains no nested
+/// objects between an artifact's braces or inside the integrity object.
+fn json_field(object: &str, key: &str) -> String {
+    let needle = format!("\"{key}\":");
+    let start = object
+        .find(&needle)
+        .unwrap_or_else(|| panic!("missing key {key}"))
+        + needle.len();
+    let rest = &object[start..];
+    if let Some(quoted) = rest.strip_prefix('"') {
+        let end = quoted.find('"').expect("string end");
+        quoted[..end].to_owned()
+    } else {
+        let end = rest.find([',', '}']).unwrap_or(rest.len());
+        rest[..end].to_owned()
+    }
+}

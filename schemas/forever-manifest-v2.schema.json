@@ -7,7 +7,6 @@
   "additionalProperties": false,
   "required": [
     "manifest_version",
-    "run_id",
     "status",
     "compatibility",
     "client",
@@ -22,7 +21,10 @@
   ],
   "properties": {
     "manifest_version": { "const": 2 },
-    "run_id": { "$ref": "#/$defs/uuid" },
+    "run_id": {
+      "$comment": "Optional: the local batch has no run-id source; a run that has one may include it.",
+      "$ref": "#/$defs/uuid"
+    },
     "status": { "enum": ["complete", "incomplete", "failed"] },
     "reason": { "type": "string", "minLength": 1 },
     "compatibility": {
@@ -48,13 +50,16 @@
     "client": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["product", "version", "build", "locale", "install_fingerprint_sha256"],
+      "required": ["product", "version", "build", "locale"],
       "properties": {
         "product": { "const": "wow_classic_beta" },
         "version": { "enum": ["1.60.1.70170", "1.60.1.70205"] },
         "build": { "enum": [70170, 70205] },
         "locale": { "enum": ["enUS", "esES"] },
-        "install_fingerprint_sha256": { "$ref": "#/$defs/sha256" }
+        "install_fingerprint_sha256": {
+          "$comment": "Optional: omitted when the batch read no install-fingerprint source.",
+          "$ref": "#/$defs/sha256"
+        }
       },
       "allOf": [
         {
@@ -76,11 +81,14 @@
     "extractor": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "version", "commit", "implementation", "compatibility_oracle_commit"],
+      "required": ["name", "version", "implementation", "compatibility_oracle_commit"],
       "properties": {
-        "name": { "const": "rustycore-extractors" },
+        "name": { "const": "forever-db2-extract" },
         "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
-        "commit": { "$ref": "#/$defs/git_commit" },
+        "commit": {
+          "$comment": "Optional: the batch runtime embeds no git SHA; omitted rather than invented.",
+          "$ref": "#/$defs/git_commit"
+        },
         "implementation": { "const": "rust" },
         "compatibility_oracle_commit": { "const": "02245dcd245e7433e524577656177723d3e4992e" }
       }

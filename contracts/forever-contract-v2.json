@@ -4,6 +4,7 @@
   "description": "Forever 1.60.1 local explicit DB2 batch output contract. Separate from the legacy 3.4.3/51943 v1 extractor contract; it does not re-label or extend it.",
   "manifest": {
     "published_name": "forever-manifest.json",
+    "report_name": "report.json",
     "incomplete_marker_name": ".rustycore-forever-incomplete.json",
     "schema_id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-manifest-v2.schema.json"
   },

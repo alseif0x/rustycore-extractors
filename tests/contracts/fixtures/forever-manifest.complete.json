@@ -14,7 +14,7 @@
     "install_fingerprint_sha256": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
   },
   "extractor": {
-    "name": "rustycore-extractors",
+    "name": "forever-db2-extract",
     "version": "0.2.0-test.1",
     "commit": "2222222222222222222222222222222222222222",
     "implementation": "rust",

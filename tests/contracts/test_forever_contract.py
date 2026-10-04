@@ -226,6 +226,7 @@ class ForeverContractTests(unittest.TestCase):
         self.assertEqual(2, contract["contract_version"])
         self.assertEqual("forever", contract["line"])
         self.assertEqual("forever-manifest.json", contract["manifest"]["published_name"])
+        self.assertEqual("report.json", contract["manifest"]["report_name"])
         self.assertEqual(EXPECTED_SCHEMA_ID, contract["manifest"]["schema_id"])
 
         self.assertEqual("wow_classic_beta", contract["client"]["product"])
@@ -283,6 +284,38 @@ class ForeverContractTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("/home/", text)
             self.assertNotIn("World of Warcraft", text)
+
+    def test_optional_identity_fields_may_be_omitted(self):
+        # run_id, the install fingerprint and the extractor git commit have no
+        # source in the local batch runtime; they are optional, never invented.
+        self.assertNotIn("run_id", self.schema["required"])
+        self.assertNotIn(
+            "install_fingerprint_sha256",
+            self.schema["properties"]["client"]["required"],
+        )
+        self.assertNotIn("commit", self.schema["properties"]["extractor"]["required"])
+
+        checks = [
+            ("run_id", lambda m: m.pop("run_id")),
+            ("install_fingerprint_sha256", lambda m: m["client"].pop("install_fingerprint_sha256")),
+            ("commit", lambda m: m["extractor"].pop("commit")),
+        ]
+        for field, remove in checks:
+            with self.subTest(field=field):
+                manifest = copy.deepcopy(self.complete)
+                remove(manifest)
+                self.assertValid(self.validator, manifest)
+
+        # A present value must still be well formed.
+        manifest = copy.deepcopy(self.complete)
+        manifest["client"]["install_fingerprint_sha256"] = "not-a-hash"
+        self.assertInvalid(self.validator, manifest)
+
+    def test_extractor_name_matches_emitted_document(self):
+        self.assertEqual(
+            "forever-db2-extract",
+            self.schema["properties"]["extractor"]["properties"]["name"]["const"],
+        )
 
     def test_forever_schema_has_no_v1_references(self):
         text = (ROOT / "schemas" / "forever-manifest-v2.schema.json").read_text(encoding="utf-8")

@@ -32,8 +32,12 @@ pub(super) fn create(client: &Path, destination: &Path) -> Result<PathBuf, &'sta
         .map_err(|_| "output_exists_or_unavailable")?;
     Ok(destination)
 }
-pub(super) fn publish(directory: &Path, name: &str, bytes: &[u8]) -> Result<(), &'static str> {
-    let suffix = if name == "report" { "json" } else { "db2" };
+pub(super) fn publish(
+    directory: &Path,
+    name: &str,
+    suffix: &str,
+    bytes: &[u8],
+) -> Result<(), &'static str> {
     let path = directory.join(format!("{name}.{suffix}"));
     let pending = directory.join(format!("{name}.{suffix}.part"));
     let mut file = OpenOptions::new()
