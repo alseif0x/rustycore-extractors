@@ -5,6 +5,7 @@ pub mod batch;
 pub mod manifest;
 pub mod options;
 mod sha256;
+pub mod verify;
 pub use admission::{PRODUCT, SUPPORTED_CLIENTS, admit};
 
 #[cfg(feature = "native")]
