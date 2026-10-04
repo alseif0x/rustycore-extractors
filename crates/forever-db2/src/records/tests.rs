@@ -1547,6 +1547,144 @@ fn xpower_wrong_layout_and_field_counts_are_schema() {
 }
 
 // ---------------------------------------------------------------------------
+// ChrSpecialization (IndexField 3, ParentIndexField 4 in the data block)
+// ---------------------------------------------------------------------------
+
+/// Decode-valid spec for `ChrSpecialization`: zeroed records plus an optional
+/// parent-lookup block. `IndexField 3` is inline, so there is no separate id
+/// table; `ParentIndexField 4` is INSIDE the file field count.
+fn specialization(count: usize) -> Spec {
+    let mut spec = spec(CharacterTable::Specialization);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec
+}
+
+fn decode_specialization(spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = assemble(CharacterTable::Specialization, spec);
+    DecodedTable::read(&bytes, CharacterTable::Specialization)
+}
+
+fn expect_err_specialization(bytes: &[u8]) -> RecordError {
+    match decode(CharacterTable::Specialization, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
+}
+
+#[test]
+fn specialization_schema_has_an_in_data_block_parent() {
+    // Verified 2026-10-04 against DB2Metadata.h::ChrSpecializationMeta at
+    // 02245dcd245e7433e524577656177723d3e4992e: FileDataId 1343390,
+    // IndexField 3, ParentIndexField 4, FieldCount == FileFieldCount == 13,
+    // LayoutHash 0xDAB4CA4B. Field 4 is a SIGNED 8-bit FT_BYTE column that is
+    // also the parent index, so `parent < fields.len()` (in data block).
+    let schema = CharacterTable::Specialization.schema();
+    assert_eq!(CharacterTable::Specialization.file_id(), 1_343_390);
+    assert_eq!(schema.layout, 0xDAB4CA4B);
+    assert_eq!(schema.index, 3);
+    assert_eq!(schema.parent, 4);
+    assert!(schema.parent >= 0);
+    assert!((schema.parent as usize) < schema.fields.len());
+    assert_eq!(schema.fields.len(), 13);
+    for field in [0, 1, 2] {
+        assert!(
+            matches!(schema.fields[field], Kind::String),
+            "field {field}"
+        );
+    }
+    assert!(matches!(schema.fields[3], Kind::Unsigned(32, 1)));
+    assert!(matches!(schema.fields[4], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[5], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[6], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[7], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[8], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[9], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[10], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[11], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[12], Kind::Signed(32, 2)));
+    assert!(schema.hash.is_none(), "must not invent a table hash");
+    assert_eq!(
+        CharacterTable::named("ChrSpecialization"),
+        Some(CharacterTable::Specialization)
+    );
+}
+
+#[test]
+fn specialization_header_gate_uses_total_equal_field_for_in_data_parent() {
+    // DB2FileLoader.cpp:1771: TotalFieldCount + (ParentIndexField >=
+    // TotalFieldCount ? 1 : 0) == Meta->FieldCount. For an in-data-block parent
+    // there is no appended field, so the header carries field_count ==
+    // total_field_count == 13.
+    let mut spec = specialization(1);
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(0, 0)];
+    write_inline_id_at(&mut spec, 3, 11, 0);
+    let bytes = assemble(CharacterTable::Specialization, &spec);
+    let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+        .unwrap()
+        .header;
+    assert_eq!(header.field_count, 13, "file field count");
+    assert_eq!(header.total_field_count, 13, "total field count");
+    assert!(CharacterTable::Specialization.matches(&header));
+}
+
+#[test]
+fn specialization_parent_overwrites_the_in_data_block_byte_column() {
+    // A parent-lookup entry fills the EXISTING signed 8-bit column 4 (not an
+    // appended field). Reference DB2FileLoader.cpp:650-712 writes with the
+    // field's own width and sign-extends. ParentId 200 -> -56 at 8 bits.
+    let mut spec = specialization(1);
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(200, 0)];
+    write_inline_id_at(&mut spec, 3, 11, 0);
+    let off = field_offset(&spec, 4);
+    write_byte(&mut spec.records[0], off, 0x7F);
+    let out = decode_specialization(&spec).unwrap();
+    let row = &out.rows()[&11];
+    assert_eq!(row.len(), 13, "no appended parent field");
+    assert_eq!(row[4][0], Value::Signed(-56));
+    // The parent did not disturb the inline id column.
+    assert_eq!(row[3][0], Value::Unsigned(11));
+}
+
+#[test]
+fn specialization_parent_above_byte_width_is_id_error() {
+    // A ParentId above 255 cannot fit the signed 8-bit FT_BYTE parent column,
+    // so the reference ASSERT maps to invalid_record_ids.
+    let mut spec = specialization(1);
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(256, 0)];
+    write_inline_id_at(&mut spec, 3, 11, 0);
+    let bytes = assemble(CharacterTable::Specialization, &spec);
+    assert_eq!(expect_err_specialization(&bytes), RecordError::Id);
+}
+
+#[test]
+fn specialization_parent_byte_boundary_is_accepted() {
+    // ParentId 255 fits the byte (sign-extends to -1); 256 is the first reject.
+    let mut spec = specialization(1);
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(255, 0)];
+    write_inline_id_at(&mut spec, 3, 11, 0);
+    let out = decode_specialization(&spec).unwrap();
+    assert_eq!(out.rows()[&11][4][0], Value::Signed(-1));
+}
+
+#[test]
+fn specialization_parent_count_zero_but_schema_expects_parent_is_schema() {
+    // The reviewed schema has a parent index field, so a header that declares no
+    // parent-lookup block is a schema mismatch.
+    let mut spec = specialization(1);
+    spec.parent_lookup_count = 0;
+    write_inline_id_at(&mut spec, 3, 11, 0);
+    let bytes = assemble(CharacterTable::Specialization, &spec);
+    assert_eq!(expect_err_specialization(&bytes), RecordError::Schema);
+}
+
+// ---------------------------------------------------------------------------
 // Forever ChrCustomization* / ChrCustItemGeoModify (No parent, IndexField -1)
 // ---------------------------------------------------------------------------
 

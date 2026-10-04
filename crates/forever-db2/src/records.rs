@@ -296,12 +296,16 @@ impl DecodedTable {
                 fields.push(values);
             }
             // Extra field at the end: a parent-bearing table's `ParentIndexField`
-            // is an index into the TOTAL field array. Because it is
+            // is an index into the TOTAL field array. When it is
             // `>= fields.len()` here it sits exactly one past the decoded
             // columns, so grow the row to `schema.parent` and default the append
             // slot to a signed zero. It is later filled from the parent-lookup
             // block at the same ordinal index.
-            if schema.parent >= 0 {
+            //
+            // When instead `0 <= schema.parent < fields.len()` the parent is an
+            // EXISTING decoded column ("in data block"); its already-decoded
+            // value is kept until the parent-lookup block overwrites it below.
+            if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
                 fields.resize(schema.parent as usize + 1, Vec::new());
                 fields[schema.parent as usize] = vec![Value::Signed(0)];
             }
@@ -323,7 +327,19 @@ impl DecodedTable {
                     .get(record_index as usize)
                     .ok_or(RecordError::Id)?;
                 let row = rows.get_mut(&rid).ok_or(RecordError::Id)?;
-                row[schema.parent as usize][0] = Value::Signed(parent_id as i32);
+                // Reference DB2FileLoader.cpp:650-712 `FillParentLookup`: for a
+                // parent index INSIDE the file field count it writes with the
+                // field's own width (FT_BYTE -> u8, FT_SHORT -> u16, FT_INT ->
+                // u32) and asserts the value fits; a too-narrow field is
+                // `invalid_record_ids`. For the extra-field-at-the-end variant
+                // (`parent >= fields.len()`) the value is always a u32 written
+                // into the appended slot.
+                let value = if (schema.parent as usize) < schema.fields.len() {
+                    parent_in_data_value(schema.fields[schema.parent as usize], parent_id)?
+                } else {
+                    Value::Signed(parent_id as i32)
+                };
+                row[schema.parent as usize][0] = value;
             }
         }
         // Source AutoProduceRecordCopies (DB2FileLoader.cpp:613-634): a copy is
@@ -358,4 +374,29 @@ fn u32_at(data: &[u8], at: usize) -> Result<u32, RecordError> {
             .try_into()
             .unwrap(),
     ))
+}
+/// Value to write into a parent index field that lives inside the data block,
+/// mirroring reference `DB2FileLoader.cpp:650-712`: the write uses the field's
+/// own kind/width, and a ParentId that does not fit is `invalid_record_ids`
+/// (the reference `ASSERT`). FT_INT and wider fields carry the u32 unchanged.
+fn parent_in_data_value(kind: Kind, parent_id: u32) -> Result<Value, RecordError> {
+    match kind {
+        Kind::Signed(8, _) => u8::try_from(parent_id)
+            .map(|value| Value::Signed(value as i8 as i32))
+            .map_err(|_| RecordError::Id),
+        Kind::Unsigned(8, _) => u8::try_from(parent_id)
+            .map(|value| Value::Unsigned(u32::from(value)))
+            .map_err(|_| RecordError::Id),
+        Kind::Signed(16, _) => u16::try_from(parent_id)
+            .map(|value| Value::Signed(value as i16 as i32))
+            .map_err(|_| RecordError::Id),
+        Kind::Unsigned(16, _) => u16::try_from(parent_id)
+            .map(|value| Value::Unsigned(u32::from(value)))
+            .map_err(|_| RecordError::Id),
+        Kind::Signed(_, _) => Ok(Value::Signed(parent_id as i32)),
+        Kind::Unsigned(_, _) => Ok(Value::Unsigned(parent_id)),
+        // A string/float parent field is not a reviewed shape; reject rather
+        // than guess a write.
+        Kind::String | Kind::Float(_) => Err(RecordError::Schema),
+    }
 }

@@ -21,6 +21,13 @@
 //! value is an extra row field appended after the single column field and is
 //! filled from the separate parent-lookup block.
 //!
+//! `ChrSpecialization` is the first reviewed table whose parent index lies
+//! INSIDE the file field count: `IndexField 3`, `ParentIndexField 4`,
+//! `FieldCount = FileFieldCount = 13`, FileDataId 1343390 and
+//! `LayoutHash 0xDAB4CA4B`. The parent lookup overwrites the existing signed
+//! 8-bit column 4 in the data block (with the field's own width) instead of an
+//! appended field; a ParentId that does not fit that width is rejected.
+//!
 //! Five further Forever tables were reviewed at DB2Metadata.h:
 //! `ChrCustomizationCategory` (FileDataId 3526439, 8 fields, layout 0x1605B68A),
 //! `ChrCustItemGeoModify` (3952714, 3 fields, layout 0x2986E1F3),
@@ -137,6 +144,12 @@ pub enum CharacterTable {
     /// `BankTab`: one unsigned 64-bit field, two 8-bit fields and six signed
     /// 32-bit fields, separate u32 id table.
     BankTab,
+    /// `ChrSpecialization`: the first reviewed table whose parent index field
+    /// lies INSIDE the file field count (`ParentIndexField 4 < FileFieldCount
+    /// 13`), so the parent value overwrites the existing signed 8-bit column 4
+    /// rather than an appended field. FileDataId 1343390, IndexField 3,
+    /// layout 0xDAB4CA4B.
+    Specialization,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -165,6 +178,7 @@ impl CharacterTable {
             "ItemExtendedCost" => Some(Self::ItemExtendedCost),
             "TransmogOutfitEntry" => Some(Self::TransmogOutfitEntry),
             "BankTab" => Some(Self::BankTab),
+            "ChrSpecialization" => Some(Self::Specialization),
             _ => None,
         }
     }
@@ -194,6 +208,7 @@ impl CharacterTable {
             Self::ItemExtendedCost => "ItemExtendedCost",
             Self::TransmogOutfitEntry => "TransmogOutfitEntry",
             Self::BankTab => "BankTab",
+            Self::Specialization => "ChrSpecialization",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -222,6 +237,7 @@ impl CharacterTable {
             Self::ItemExtendedCost => 801681,
             Self::TransmogOutfitEntry => 7320164,
             Self::BankTab => 5242411,
+            Self::Specialization => 1343390,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -266,10 +282,13 @@ impl CharacterTable {
         // DB2FileLoader.cpp:1771: the gate is
         //   TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
         //   == Meta->FieldCount.
-        // For the reviewed extra-field-at-the-end variant this is
-        //   total_field_count + 1 == fields.len() + 1,
-        // so `total_field_count` must equal the column count. No-parent tables
-        // keep `total_field_count == field_count`.
+        // Case (a) no parent (`parent == -1`): `total_field_count == field_count`.
+        // Case (b) parent in the data block (`0 <= parent < fields.len()`): the
+        //   parent is an existing decoded column, so there is no appended field
+        //   and `total_field_count == field_count` (both == fields.len()).
+        // Case (c) extra field at the end (`parent >= fields.len()`): the
+        //   reviewed `Meta->FieldCount` is one past the columns, so
+        //   `total_field_count + 1 == fields.len() + 1`, i.e. total == columns.
         let total_field_count_matches =
             if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
                 header.total_field_count as usize + 1 == schema.fields.len() + 1
@@ -601,6 +620,33 @@ impl CharacterTable {
                     Signed(32, 1),
                     Signed(32, 1),
                     Signed(32, 1),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::ChrSpecializationMeta: FileDataId
+            // 1343390, IndexField 3, ParentIndexField 4, FieldCount ==
+            // FileFieldCount == 13, layout 0xDAB4CA4B. Field 3 is the inline
+            // (Unsigned(32,1)) id; field 4 is a SIGNED 8-bit column that is ALSO
+            // the reviewed parent index, so the parent lookup overwrites column
+            // 4 in the data block rather than an appended field.
+            Self::Specialization => Schema {
+                hash: None,
+                layout: 0xDAB4CA4B,
+                index: 3,
+                parent: 4,
+                fields: &[
+                    String,
+                    String,
+                    String,
+                    Unsigned(32, 1),
+                    Signed(8, 1),
+                    Signed(8, 1),
+                    Signed(8, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 2),
                 ],
             },
             Self::Classes => Schema {

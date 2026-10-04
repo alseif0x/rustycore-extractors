@@ -397,6 +397,97 @@ EXPECTED_CHR_CLASSES_X_POWER_TYPES = (
 )
 
 
+def _chr_specialization_file(ids, parents, rows=None):
+    """Minimal synthetic WDC5 file for the reviewed ``ChrSpecialization``.
+
+    Schema: three strings, the inline unsigned 32-bit id at field 3, a signed
+    8-bit parent column at field 4, then further signed fields. ``IndexField 3``
+    means the record id comes from the inline field 3; ``ParentIndexField 4`` is
+    INSIDE the file field count, so the parent lookup overwrites the existing
+    column 4 with the field's own width while the header keeps
+    ``field_count == total_field_count == 13`` and ``parent_lookup_count = 1``.
+    ``parents`` is a list of ``(ParentId, RecordIndex)`` entries.
+
+    ``rows`` optionally supplies per-record inline field values keyed by field
+    index (mode 0 direct values). Strings are omitted (empty) for simplicity.
+    """
+    schema = db2_oracle.CHR_SPECIALIZATION
+    record_count = len(ids)
+    field_count = len(schema.fields)
+    # Mode-0 direct layout: sum of field widths in bytes, 8-byte aligned per
+    # field only where the oracle's mode-0 read is byte-aligned; field 12 is an
+    # array of two signed 32-bit values read as two consecutive bytes groups.
+    offsets = []
+    bit = 0
+    for field in schema.fields:
+        offsets.append(bit)
+        bit += field.bits * field.count
+    packed_data_offset = (bit + 7) // 8
+    record_size = packed_data_offset
+    out = bytearray(HEADER_SIZE)
+    out[0:4] = b"WDC5"
+    _put32(out, 4, 5)
+    _put32(out, 136, record_count)
+    _put32(out, 140, field_count)
+    _put32(out, 144, record_size)
+    _put32(out, 148, 0)  # string table size (no strings)
+    _put32(out, 152, 0)  # table hash is not gated
+    _put32(out, 156, schema.layout_hash)
+    _put32(out, 160, 0)
+    _put32(out, 164, max(ids) if ids else 0)
+    _put32(out, 176, field_count)  # total_field_count == field_count
+    _put32(out, 180, packed_data_offset)
+    _put32(out, 184, 1)  # parent lookup count
+    _put32(out, 188, field_count * 24)
+    _put_i16(out, 174, schema.index)
+    _put32(out, 200, 1)  # one section
+    section_at = len(out)
+    out += bytearray(SECTION_SIZE)
+    for offset in offsets:
+        out += (0).to_bytes(2, "little") + (offset).to_bytes(2, "little")
+    for offset in offsets:
+        entry = bytearray(24)
+        _put16(entry, 0, offset)
+        _put32(entry, 8, 0)  # compression mode 0 (direct value)
+        out += entry
+    metadata_end = len(out)
+    for row_index in range(record_count):
+        record = bytearray(record_size)
+        values = (rows or [{}] * record_count)[row_index]
+        for field_index, field in enumerate(schema.fields):
+            value = values.get(field_index)
+            if value is None or field.kind == "string":
+                continue
+            at = offsets[field_index] // 8
+            if field.count > 1:
+                for array, item in enumerate(value):
+                    byte_width = field.bits // 8
+                    record[at + array * byte_width : at + (array + 1) * byte_width] = (
+                        item & ((1 << field.bits) - 1)
+                    ).to_bytes(byte_width, "little")
+            else:
+                byte_width = field.bits // 8
+                record[at : at + byte_width] = (
+                    value & ((1 << field.bits) - 1)
+                ).to_bytes(byte_width, "little")
+        out += record
+    # No separate id table: IndexField 3 is inline.
+    parent_bytes = 12 + len(parents) * 8
+    out += (len(parents) & 0xFFFFFFFF).to_bytes(4, "little")  # NumEntries
+    out += (0).to_bytes(4, "little")  # MinId
+    out += (max(ids) if ids else 0).to_bytes(4, "little")  # MaxId
+    for parent_id, record_index in parents:
+        out += (parent_id & 0xFFFFFFFF).to_bytes(4, "little")
+        out += (record_index & 0xFFFFFFFF).to_bytes(4, "little")
+    _put32(out, section_at + 8, metadata_end)
+    _put32(out, section_at + 12, record_count)
+    _put32(out, section_at + 16, 0)
+    _put32(out, section_at + 20, 0)
+    _put32(out, section_at + 24, 0)
+    _put32(out, section_at + 28, parent_bytes)
+    return bytes(out)
+
+
 def _chr_customization_category_file():
     """One synthetic row of the reviewed ``ChrCustomizationCategory``.
 
@@ -520,6 +611,72 @@ class SyntheticOracle(unittest.TestCase):
         data = _xpower_file([11, 22], [(7, 2)])
         with self.assertRaises(db2_oracle.OracleError) as caught:
             db2_oracle.decode(data, db2_oracle.CHR_CLASSES_X_POWER_TYPES)
+        self.assertEqual(caught.exception.code, "invalid_record_ids")
+
+    def test_reviewed_chr_specialization_transcription(self):
+        # ChrSpecialization: FileDataId 1343390, IndexField 3, ParentIndexField 4
+        # (INSIDE the file field count), FieldCount == FileFieldCount == 13,
+        # layout 0xDAB4CA4B. Field 4 is a signed 8-bit FT_BYTE.
+        schema = db2_oracle.SCHEMAS["ChrSpecialization"]
+        self.assertEqual(schema.layout_hash, 0xDAB4CA4B)
+        self.assertEqual(schema.index, 3)
+        self.assertEqual(schema.parent, 4)
+        self.assertEqual(len(schema.fields), 13)
+        self.assertLess(schema.parent, len(schema.fields), "in-data-block parent")
+        for index in (0, 1, 2):
+            self.assertEqual(
+                (schema.fields[index].kind, schema.fields[index].bits),
+                ("string", 32),
+                "spec %d" % index,
+            )
+        self.assertEqual(
+            (schema.fields[3].kind, schema.fields[3].bits), ("unsigned", 32)
+        )
+        for index in (4, 5, 6, 7, 10):
+            self.assertEqual(
+                (schema.fields[index].kind, schema.fields[index].bits),
+                ("signed", 8),
+                "spec %d" % index,
+            )
+        for index in (8, 9, 11):
+            self.assertEqual(
+                (schema.fields[index].kind, schema.fields[index].bits),
+                ("signed", 32),
+                "spec %d" % index,
+            )
+        self.assertEqual(
+            (schema.fields[12].kind, schema.fields[12].bits, schema.fields[12].count),
+            ("signed", 32, 2),
+        )
+
+    def test_reviewed_chr_specialization_in_data_block_dump_matches_golden(self):
+        # The parent lookup overwrites the EXISTING signed 8-bit column 4, with
+        # its own width and sign extension, and no appended field is added. Two
+        # rows keyed by the inline field 3.
+        data = _chr_specialization_file(
+            [11, 22],
+            [(0, 0), (200, 1)],
+            rows=[
+                {3: 11, 4: 0x7F, 8: 0xFFFFFFFF, 10: 0xFF, 12: [0, 0xFFFFFFFF]},
+                {3: 22, 4: 0x05, 8: 0x0000002A, 10: 0x02, 12: [7, 8]},
+            ],
+        )
+        rows = db2_oracle.decode(data, db2_oracle.CHR_SPECIALIZATION)
+        self.assertEqual(
+            db2_oracle.render(rows, db2_oracle.CHR_SPECIALIZATION.name),
+            "forever-db2-dump v1 ChrSpecialization\n"
+            # ParentId 0 -> i:0, overwriting the inline 0x7F.
+            "11\tt:\tt:\tt:\tu:11\ti:0\ti:0\ti:0\ti:0\ti:-1\ti:0\ti:-1\ti:0\ti:0,i:-1\n"
+            # ParentId 200 sign-extends at 8 bits to -56, overwriting 0x05.
+            "22\tt:\tt:\tt:\tu:22\ti:-56\ti:0\ti:0\ti:0\ti:42\ti:0\ti:2\ti:0\ti:7,i:8\n",
+        )
+
+    def test_reviewed_chr_specialization_parent_over_byte_is_rejected(self):
+        # A ParentId above 255 cannot fit the signed 8-bit FT_BYTE parent column,
+        # so it is an invalid_record_ids error (the reference ASSERT).
+        data = _chr_specialization_file([11], [(256, 0)], rows=[{3: 11}])
+        with self.assertRaises(db2_oracle.OracleError) as caught:
+            db2_oracle.decode(data, db2_oracle.CHR_SPECIALIZATION)
         self.assertEqual(caught.exception.code, "invalid_record_ids")
 
     def test_reviewed_chr_customization_category_dump_matches_golden(self):

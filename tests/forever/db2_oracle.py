@@ -314,6 +314,36 @@ CHR_CLASSES_X_POWER_TYPES = Schema(
     fields=(_signed_field(8),),
 )
 
+# Transcribed from DB2Metadata.h::ChrSpecializationMeta (FileDataId 1343390,
+# IndexField 3, ParentIndexField 4, FieldCount == FileFieldCount == 13, layout
+# 0xDAB4CA4B): three strings, the inline unsigned 32-bit id at field 3 and field
+# 4 is a signed 8-bit column that is ALSO the parent index. Because
+# `parent = 4 < len(fields) = 13` the parent lives INSIDE the data block: the
+# parent lookup overwrites the existing column 4 (with the field's own width)
+# instead of appending a field, and the header keeps
+# `total_field_count == field_count`.
+CHR_SPECIALIZATION = Schema(
+    name="ChrSpecialization",
+    layout_hash=0xDAB4CA4B,
+    index=3,
+    parent=4,
+    fields=(
+        Field("string"),  # 0
+        Field("string"),  # 1
+        Field("string"),  # 2
+        Field("unsigned", 32),  # 3 (inline index)
+        _signed_field(8),  # 4 (parent index, FT_BYTE)
+        _signed_field(8),  # 5
+        _signed_field(8),  # 6
+        _signed_field(8),  # 7
+        _signed_field(32),  # 8
+        _signed_field(32),  # 9
+        _signed_field(8),  # 10
+        _signed_field(32),  # 11
+        _signed_field(32, 2),  # 12 array of two
+    ),
+)
+
 # Transcribed from DB2Metadata.h::ChrCustomizationCategoryMeta (FileDataId
 # 3526439, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
 # layout 0x1605B68A): one string, six signed 32-bit fields and a float.
@@ -586,6 +616,7 @@ SCHEMAS = {
     "ChrClassUIChrModelInfo": CHR_CLASS_UI_CHR_MODEL_INFO,
     "ChrClassVillain": CHR_CLASS_VILLAIN,
     "ChrClassesXPowerTypes": CHR_CLASSES_X_POWER_TYPES,
+    "ChrSpecialization": CHR_SPECIALIZATION,
     "ChrCustomizationCategory": CHR_CUSTOMIZATION_CATEGORY,
     "ChrCustItemGeoModify": CHR_CUST_ITEM_GEO_MODIFY,
     "ChrCustomizationGeoset": CHR_CUSTOMIZATION_GEOSET,
@@ -874,6 +905,38 @@ class _Value:
     text: str = ""
 
 
+def _parent_in_data_value(field, parent_id):
+    """Value written into a parent index field that lives inside the data block.
+
+    Mirrors the Rust ``parent_in_data_value`` / reference
+    ``DB2FileLoader.cpp:650-712``: the write uses the field's own kind/width and
+    a ParentId that does not fit is ``invalid_record_ids`` (the reference
+    ``ASSERT``). FT_INT and wider carry the u32 unchanged.
+    """
+    if field.kind == "signed":
+        if field.bits == 8:
+            if parent_id > 0xFF:
+                raise OracleError("invalid_record_ids")
+            return _Value("signed", number=_signed_value(parent_id, 8))
+        if field.bits == 16:
+            if parent_id > 0xFFFF:
+                raise OracleError("invalid_record_ids")
+            return _Value("signed", number=_signed_value(parent_id, 16))
+        return _Value("signed", number=parent_id)
+    if field.kind == "unsigned":
+        if field.bits == 8:
+            if parent_id > 0xFF:
+                raise OracleError("invalid_record_ids")
+            return _Value("unsigned", number=parent_id)
+        if field.bits == 16:
+            if parent_id > 0xFFFF:
+                raise OracleError("invalid_record_ids")
+            return _Value("unsigned", number=parent_id)
+        return _Value("unsigned", number=parent_id)
+    # A string/float parent field is not a reviewed shape.
+    raise OracleError("unsupported_table_schema")
+
+
 def _decode_parsed(data, header, sections, schema):
     if header.flags & SPARSE_FLAG:
         raise OracleError("unsupported_record_variant")
@@ -1004,7 +1067,10 @@ def _decode_parsed(data, header, sections, schema):
             fields.append(values)
         # Extra field at the end: grow the row to `parent` and default the
         # appended slot to a signed zero; filled from the parent block below.
-        if schema.parent >= 0:
+        # When instead `parent < len(schema.fields)` the parent is an EXISTING
+        # decoded column ("in data block"); its already-decoded value is kept
+        # until the parent block overwrites it below.
+        if schema.parent >= 0 and schema.parent >= len(schema.fields):
             while len(fields) <= schema.parent:
                 fields.append([])
             fields[schema.parent] = [_Value("signed", number=0)]
@@ -1024,7 +1090,17 @@ def _decode_parsed(data, header, sections, schema):
             rid = ordinal_ids[record_index]
             if rid not in rows:
                 raise OracleError("invalid_record_ids")
-            rows[rid][schema.parent][0] = _Value("signed", number=parent_id)
+            # Reference DB2FileLoader.cpp:650-712 `FillParentLookup`: when the
+            # parent index lies INSIDE the file field count the value is written
+            # with the field's own width (FT_BYTE -> u8, FT_SHORT -> u16,
+            # FT_INT -> u32); a too-narrow field is `invalid_record_ids`. For the
+            # extra-field-at-the-end variant the value is always a u32.
+            if schema.parent < len(schema.fields):
+                rows[rid][schema.parent][0] = _parent_in_data_value(
+                    schema.fields[schema.parent], parent_id
+                )
+            else:
+                rows[rid][schema.parent][0] = _Value("signed", number=parent_id)
 
     # AutoProduceRecordCopies (DB2FileLoader.cpp:613-634).
     for index in range(section.copy_table_count):
