@@ -1,0 +1,104 @@
+{
+  "manifest_version": 2,
+  "run_id": "4f2c9e6a-7b31-4d0e-9a55-1c6f0b2d8e47",
+  "status": "complete",
+  "compatibility": {
+    "support": "admitted",
+    "target_build": 70205
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "version": "1.60.1.70205",
+    "build": 70205,
+    "locale": "esES",
+    "install_fingerprint_sha256": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+  },
+  "extractor": {
+    "name": "rustycore-extractors",
+    "version": "0.2.0-test.1",
+    "commit": "2222222222222222222222222222222222222222",
+    "implementation": "rust",
+    "compatibility_oracle_commit": "02245dcd245e7433e524577656177723d3e4992e"
+  },
+  "scope": "explicit_db2_batch",
+  "formats": {
+    "db2": { "magic": "WDC5", "version": 5 },
+    "tables": [
+      {
+        "name": "ChrClasses",
+        "file_id": 1361031,
+        "table_hash": 4119371148,
+        "layout_hash": 2949230786,
+        "meta_index_field": 29,
+        "field_count": 43
+      },
+      {
+        "name": "ChrRaces",
+        "file_id": 1305311,
+        "table_hash": 1408333884,
+        "layout_hash": 1329907606,
+        "meta_index_field": -1,
+        "field_count": 51
+      }
+    ]
+  },
+  "options": {
+    "locale": "esES",
+    "table_selection": "default_character_tables",
+    "manifest_sha256": null,
+    "entry_count": 2,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "lock_sha256": null,
+    "downloaded_bytes": 0
+  },
+  "outputs": {
+    "root": ".",
+    "incomplete_marker_present": false,
+    "artifacts": [
+      {
+        "name": "ChrClasses",
+        "file_id": 1361031,
+        "relative_path": "ChrClasses.db2",
+        "status": "complete",
+        "bytes": 6200,
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "declared_records": 9,
+        "table_schema_validated": true,
+        "record_data_decoded": true,
+        "decoded_rows": 9
+      },
+      {
+        "name": "ChrRaces",
+        "file_id": 1305311,
+        "relative_path": "ChrRaces.db2",
+        "status": "complete",
+        "bytes": 22095,
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "declared_records": 58,
+        "table_schema_validated": true,
+        "record_data_decoded": true,
+        "decoded_rows": 58
+      }
+    ],
+    "integrity": {
+      "algorithm": "sha256",
+      "file_count": 2,
+      "total_bytes": 28295,
+      "inventory_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  },
+  "timestamps": {
+    "started_at": "2026-10-04T10:00:00Z",
+    "completed_at": "2026-10-04T10:00:02Z"
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "contract_version": 2,
+  "line": "forever",
+  "description": "Forever 1.60.1 local explicit DB2 batch output contract. Separate from the legacy 3.4.3/51943 v1 extractor contract; it does not re-label or extend it.",
+  "manifest": {
+    "published_name": "forever-manifest.json",
+    "incomplete_marker_name": ".rustycore-forever-incomplete.json",
+    "schema_id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-manifest-v2.schema.json"
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "admitted_builds": [
+      { "build": 70170, "version": "1.60.1.70170" },
+      { "build": 70205, "version": "1.60.1.70205" }
+    ],
+    "supported_locales": ["enUS", "esES"]
+  },
+  "scope": {
+    "batch_scope": "explicit_db2_batch",
+    "full_client_extraction": false,
+    "db2": { "magic": "WDC5", "version": 5 },
+    "default_tables": ["ChrClasses", "ChrRaces"]
+  },
+  "limits": {
+    "max_entries": 256,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "upload_permitted": false
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  },
+  "verification": {
+    "exit_codes": [
+      { "code": 0, "name": "verified" },
+      { "code": 2, "name": "invalid_invocation" },
+      { "code": 3, "name": "unsupported_client" },
+      { "code": 4, "name": "input_io" },
+      { "code": 8, "name": "incomplete" },
+      { "code": 9, "name": "verification_failed" },
+      { "code": 10, "name": "internal" }
+    ],
+    "failure_codes": [
+      "MANIFEST_SCHEMA_INVALID",
+      "INVENTORY_MISMATCH",
+      "TABLE_IDENTITY_MISMATCH",
+      "UNSAFE_PATH",
+      "INCOMPLETE_RUN",
+      "ROW_DECODE_MISMATCH"
+    ],
+    "code_bindings": [
+      { "code": "MANIFEST_SCHEMA_INVALID", "exit": 2 },
+      { "code": "INVENTORY_MISMATCH", "exit": 9 },
+      { "code": "TABLE_IDENTITY_MISMATCH", "exit": 9 },
+      { "code": "UNSAFE_PATH", "exit": 9 },
+      { "code": "INCOMPLETE_RUN", "exit": 8 },
+      { "code": "ROW_DECODE_MISMATCH", "exit": 9 }
+    ]
+  }
+}
