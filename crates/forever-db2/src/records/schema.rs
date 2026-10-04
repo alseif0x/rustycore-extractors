@@ -51,6 +51,16 @@
 //! followed by two signed 32-bit fields and `DataTagInfo`
 //! is a string followed by two signed 32-bit fields.
 //!
+//! Three further Forever tables were reviewed at DB2Metadata.h:
+//! `AnimKitBoneSetAlias` (FileDataId 1266937, 2 fields, layout 0x19A6986C),
+//! `AnimKitPriority` (1266540, 1 field, layout 0xCCF889D8) and
+//! `AnimReplacementSet` (1284817, 1 field, layout 0x7C047695). All three declare
+//! `IndexField = -1`, `ParentIndexField = -1` and `FieldCount == FileFieldCount`,
+//! i.e. a separate id table and no appended parent field. `AnimKitBoneSetAlias`
+//! is two unsigned FT_BYTE fields; the other two are each a single unsigned
+//! FT_BYTE field. These are the first reviewed tables with a one-field file
+//! field count.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -103,6 +113,12 @@ pub enum CharacterTable {
     /// `DataTagInfo`: one string plus two signed 32-bit fields; the inline
     /// index is field 1.
     DataTagInfo,
+    /// `AnimKitBoneSetAlias`: two unsigned 8-bit fields, separate u32 id table.
+    AnimKitBoneSetAlias,
+    /// `AnimKitPriority`: one unsigned 8-bit field, separate u32 id table.
+    AnimKitPriority,
+    /// `AnimReplacementSet`: one unsigned 8-bit field, separate u32 id table.
+    AnimReplacementSet,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -125,6 +141,9 @@ impl CharacterTable {
             "Curve" => Some(Self::Curve),
             "ContentRestrictionRuleSet" => Some(Self::ContentRestrictionRuleSet),
             "DataTagInfo" => Some(Self::DataTagInfo),
+            "AnimKitBoneSetAlias" => Some(Self::AnimKitBoneSetAlias),
+            "AnimKitPriority" => Some(Self::AnimKitPriority),
+            "AnimReplacementSet" => Some(Self::AnimReplacementSet),
             _ => None,
         }
     }
@@ -148,6 +167,9 @@ impl CharacterTable {
             Self::Curve => "Curve",
             Self::ContentRestrictionRuleSet => "ContentRestrictionRuleSet",
             Self::DataTagInfo => "DataTagInfo",
+            Self::AnimKitBoneSetAlias => "AnimKitBoneSetAlias",
+            Self::AnimKitPriority => "AnimKitPriority",
+            Self::AnimReplacementSet => "AnimReplacementSet",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -170,6 +192,9 @@ impl CharacterTable {
             Self::Curve => 892585,
             Self::ContentRestrictionRuleSet => 4281307,
             Self::DataTagInfo => 6652252,
+            Self::AnimKitBoneSetAlias => 1266937,
+            Self::AnimKitPriority => 1266540,
+            Self::AnimReplacementSet => 1284817,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -449,6 +474,39 @@ impl CharacterTable {
                 index: 1,
                 parent: -1,
                 fields: &[String, Unsigned(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::AnimKitBoneSetAliasMeta:
+            // FileDataId 1266937, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x19A6986C. Two unsigned
+            // 8-bit fields.
+            Self::AnimKitBoneSetAlias => Schema {
+                hash: None,
+                layout: 0x19A6986C,
+                index: -1,
+                parent: -1,
+                fields: &[Unsigned(8, 1), Unsigned(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::AnimKitPriorityMeta:
+            // FileDataId 1266540, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xCCF889D8. One unsigned
+            // 8-bit field.
+            Self::AnimKitPriority => Schema {
+                hash: None,
+                layout: 0xCCF889D8,
+                index: -1,
+                parent: -1,
+                fields: &[Unsigned(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::AnimReplacementSetMeta:
+            // FileDataId 1284817, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x7C047695. One unsigned
+            // 8-bit field.
+            Self::AnimReplacementSet => Schema {
+                hash: None,
+                layout: 0x7C047695,
+                index: -1,
+                parent: -1,
+                fields: &[Unsigned(8, 1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),

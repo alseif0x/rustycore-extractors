@@ -778,6 +778,69 @@ class SyntheticOracle(unittest.TestCase):
             )
         self.assertEqual((req.fields[8].kind, req.fields[8].bits, req.fields[8].count), ("signed", 32, 2))
 
+    def test_reviewed_anim_byte_table_transcriptions_are_present(self):
+        # The three reviewed Forever `Anim*` byte tables: each declares
+        # IndexField -1 (separate u32 id table), ParentIndexField -1 and
+        # FieldCount == FileFieldCount. `AnimKitBoneSetAlias` is two unsigned
+        # 8-bit fields; the other two are each a single unsigned 8-bit field.
+        alias = db2_oracle.SCHEMAS["AnimKitBoneSetAlias"]
+        self.assertEqual(alias.layout_hash, 0x19A6986C)
+        self.assertEqual(alias.index, -1)
+        self.assertEqual(alias.parent, -1)
+        self.assertEqual(len(alias.fields), 2)
+        for index in range(2):
+            self.assertEqual(
+                (alias.fields[index].kind, alias.fields[index].bits, alias.fields[index].signed),
+                ("unsigned", 8, False),
+                "alias %d" % index,
+            )
+
+        for name, layout in (
+            ("AnimKitPriority", 0xCCF889D8),
+            ("AnimReplacementSet", 0x7C047695),
+        ):
+            schema = db2_oracle.SCHEMAS[name]
+            self.assertEqual(schema.layout_hash, layout, name)
+            self.assertEqual(schema.index, -1, name)
+            self.assertEqual(schema.parent, -1, name)
+            self.assertEqual(len(schema.fields), 1, name)
+            self.assertEqual(
+                (
+                    schema.fields[0].kind,
+                    schema.fields[0].bits,
+                    schema.fields[0].signed,
+                ),
+                ("unsigned", 8, False),
+                name,
+            )
+
+    def test_reviewed_anim_kit_bone_set_alias_dump_matches_golden(self):
+        # `AnimKitBoneSetAlias` is [Unsigned(8,1), Unsigned(8,1)] with
+        # IndexField -1: the record id comes from the separate u32 id table and
+        # neither byte is signed.
+        schema = db2_oracle.ANIM_KIT_BONE_SET_ALIAS
+        rows = [{0: 0xFF, 1: 0x01}]  # 255, 1
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[3]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 AnimKitBoneSetAlias\n"
+            "3\tu:255\tu:1\n",
+        )
+
+    def test_reviewed_anim_kit_priority_dump_matches_golden(self):
+        # A one-field file field count: `AnimKitPriority` has a single unsigned
+        # 8-bit column and a separate u32 id table. 0x80 stays 128, not -128.
+        schema = db2_oracle.ANIM_KIT_PRIORITY
+        rows = [{0: 0x80}]
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[9]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 AnimKitPriority\n"
+            "9\tu:128\n",
+        )
+
     def test_reviewed_chr_class_transcriptions_are_present(self):
         title = db2_oracle.SCHEMAS["ChrClassTitle"]
         model = db2_oracle.SCHEMAS["ChrClassUIChrModelInfo"]

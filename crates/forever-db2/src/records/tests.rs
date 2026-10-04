@@ -2271,3 +2271,213 @@ fn forever_inline_tables_empty_zero_section_and_declared_records_variants() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Forever Anim* byte tables (No parent, IndexField -1, 1 or 2 byte fields)
+// ---------------------------------------------------------------------------
+
+/// The reviewed Forever `Anim*` tables, the first with a one-field file field
+/// count. Identity is (file_id, layout, field_count); table hashes are NOT
+/// transcribed because `DB2Meta` does not carry one. All declare
+/// `IndexField = -1`, `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
+const FOREVER_BYTE_TABLES: [(CharacterTable, u32, u32, usize); 3] = [
+    (CharacterTable::AnimKitBoneSetAlias, 1266937, 0x19A6986C, 2),
+    (CharacterTable::AnimKitPriority, 1266540, 0xCCF889D8, 1),
+    (CharacterTable::AnimReplacementSet, 1284817, 0x7C047695, 1),
+];
+
+#[test]
+fn forever_byte_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h: each declares FileDataId, IndexField = -1,
+    // ParentIndexField = -1 and a LayoutHash; FieldCount == FileFieldCount.
+    for (table, file_id, layout, fields) in FOREVER_BYTE_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, -1, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn anim_kit_bone_set_alias_transcription_is_two_unsigned_bytes() {
+    let schema = CharacterTable::AnimKitBoneSetAlias.schema();
+    assert_eq!(schema.fields.len(), 2);
+    assert!(matches!(schema.fields[0], Kind::Unsigned(8, 1)));
+    assert!(matches!(schema.fields[1], Kind::Unsigned(8, 1)));
+}
+
+#[test]
+fn anim_kit_priority_and_replacement_set_are_single_unsigned_bytes() {
+    // The first reviewed one-field file field counts: each has exactly one
+    // unsigned 8-bit column and a separate u32 id table.
+    for table in [
+        CharacterTable::AnimKitPriority,
+        CharacterTable::AnimReplacementSet,
+    ] {
+        let schema = table.schema();
+        assert_eq!(schema.fields.len(), 1, "{} field count", table.name());
+        assert!(
+            matches!(schema.fields[0], Kind::Unsigned(8, 1)),
+            "{} single field",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn forever_byte_table_matches_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word must be
+    // accepted while layout/field/total identity is right (DB2FileLoader.cpp
+    // validates LayoutHash at :1763 and the field count at :1771).
+    for (table, _, layout, fields) in FOREVER_BYTE_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert_eq!(
+            header.total_field_count as usize,
+            fields,
+            "{} total fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode_idtable(table, &spec).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_byte_table_matches_rejects_layout_field_and_total_mismatches() {
+    for (table, _, _, _) in FOREVER_BYTE_TABLES {
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 140, 42);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn anim_kit_bone_set_alias_decodes_two_unsigned_bytes() {
+    let table = CharacterTable::AnimKitBoneSetAlias;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 3;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    write_byte(&mut spec.records[0], off0, 0xFF);
+    write_byte(&mut spec.records[0], off1, 0x01);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&3];
+    // Unsigned(8,1): 0xFF stays 255, not -1.
+    assert_eq!(row[0][0], Value::Unsigned(255));
+    assert_eq!(row[1][0], Value::Unsigned(1));
+}
+
+#[test]
+fn anim_kit_priority_decodes_one_unsigned_byte() {
+    // A one-field table: the decoded row has exactly one field group.
+    let table = CharacterTable::AnimKitPriority;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 9;
+    let off = field_offset(&spec, 0);
+    write_byte(&mut spec.records[0], off, 0x80);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&9];
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0][0], Value::Unsigned(128));
+}
+
+#[test]
+fn anim_replacement_set_decodes_one_unsigned_byte() {
+    let table = CharacterTable::AnimReplacementSet;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 42;
+    let off = field_offset(&spec, 0);
+    write_byte(&mut spec.records[0], off, 0x7F);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&42];
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0][0], Value::Unsigned(127));
+}
+
+#[test]
+fn forever_byte_table_id_table_repair_matches_the_separate_id_path() {
+    // IndexField -1 uses the separate u32 id-table path: DB2FileLoader.cpp:1958
+    // repairs `id <= MinId` to `MinId + i` for the single-section ordinal.
+    for (table, _, _, _) in FOREVER_BYTE_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.min_id = 50;
+        spec.max_id = 100;
+        spec.ids[0] = 3;
+        let out = decode_idtable(table, &spec).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![50],
+            "{} repair",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn forever_byte_tables_empty_zero_section_and_declared_records_variants() {
+    for (table, _, _, _) in FOREVER_BYTE_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+
+        let bytes = build_zero_section_header(table, 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Unsupported,
+            "{} zero sections with records",
+            table.name()
+        );
+    }
+}

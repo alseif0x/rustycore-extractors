@@ -28,7 +28,11 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   13 fields, layout ``0x6483C37E``), ``ChrCustomizationDisplayInfoMeta``
   (3593032, 5 fields, layout ``0xB24CE54F``) and ``ChrCustomizationReqMeta``
   (3450453, 9 fields, layout ``0xCA154412``); ``ChrCustomizationReq`` carries a
-  signed 32-bit array of two.
+  signed 32-bit array of two. The reviewed Forever ``Anim*`` tables add
+  ``AnimKitBoneSetAliasMeta`` (1266937, 2 fields, layout ``0x19A6986C``),
+  ``AnimKitPriorityMeta`` (1266540, 1 field, layout ``0xCCF889D8``) and
+  ``AnimReplacementSetMeta`` (1284817, 1 field, layout ``0x7C047695``); all three
+  declare ``IndexField = -1`` and a separate u32 id table.
 * ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
   loader's identity gate is LayoutHash (:1763) plus the field-count check
   (:1771); ``_header.TableHash`` is never validated against the metadata.
@@ -474,6 +478,39 @@ DATA_TAG_INFO = Schema(
     ),
 )
 
+# Transcribed from DB2Metadata.h::AnimKitBoneSetAliasMeta (FileDataId 1266937,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x19A6986C): two unsigned 8-bit fields, separate u32 id table.
+ANIM_KIT_BONE_SET_ALIAS = Schema(
+    name="AnimKitBoneSetAlias",
+    layout_hash=0x19A6986C,
+    index=-1,
+    fields=(
+        Field("unsigned", 8),  # 0
+        Field("unsigned", 8),  # 1
+    ),
+)
+
+# Transcribed from DB2Metadata.h::AnimKitPriorityMeta (FileDataId 1266540,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xCCF889D8): a single unsigned 8-bit field, separate u32 id table.
+ANIM_KIT_PRIORITY = Schema(
+    name="AnimKitPriority",
+    layout_hash=0xCCF889D8,
+    index=-1,
+    fields=(Field("unsigned", 8),),
+)
+
+# Transcribed from DB2Metadata.h::AnimReplacementSetMeta (FileDataId 1284817,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x7C047695): a single unsigned 8-bit field, separate u32 id table.
+ANIM_REPLACEMENT_SET = Schema(
+    name="AnimReplacementSet",
+    layout_hash=0x7C047695,
+    index=-1,
+    fields=(Field("unsigned", 8),),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -493,6 +530,9 @@ SCHEMAS = {
     "Curve": CURVE,
     "ContentRestrictionRuleSet": CONTENT_RESTRICTION_RULE_SET,
     "DataTagInfo": DATA_TAG_INFO,
+    "AnimKitBoneSetAlias": ANIM_KIT_BONE_SET_ALIAS,
+    "AnimKitPriority": ANIM_KIT_PRIORITY,
+    "AnimReplacementSet": ANIM_REPLACEMENT_SET,
 }
 
 
