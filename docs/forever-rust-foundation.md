@@ -675,6 +675,40 @@ del decoder, **NO paridad de formato completa** ni aceptación reader/runtime de
 RustyCore. Reproducción con placeholders propios (`<client-root>`, `<run-id>`);
 ninguna ruta de cliente real se escribe en un reporte.
 
+### Evidencia real persistida — `anim-tables-anim3-accept-1791114040`
+
+Reporte redactado
+`rustycore-extractor-work/reports/acceptance/anim-tables-anim3-accept-1791114040.json`:
+`extract_exit 0`, `network_attempted: false`, `paths_redacted: true`,
+`client_metadata_sha256_after` registrado (el cliente queda intacto) y
+`full_client_extraction: false`. Tres tablas Forever decodificadas contra un
+oráculo independiente con paridad byte a byte (`oracle_equal: true`):
+
+| Tabla | FileDataID | Filas | Paridad |
+| --- | --- | --- | --- |
+| `AnimKitBoneSet` | 1375433 | 18 | `oracle_equal: true` |
+| `AnimationData` | 1375431 | 1806 | `oracle_equal: true` |
+| `AnimKitConfig` | 1300872 | 40 | `oracle_equal: true` |
+
+**Regla de copias (`AutoProduceRecordCopies`).** El conteo `rows` es el resultado
+**post-copia**, no el conteo crudo del header. Por cada entrada de la sección
+`copy_table` (`{NewRowId, SourceRowId}`, 8 bytes LE) la copia se intenta solo si
+`source != 0`, `source < record_count` y `new < record_count`; cualquier otra
+entrada —source 0 o fuera de rango, o destino fuera de rango— se **omite sin
+error**. Al copiar, la fila destino sobreescribe cualquier fila presente y solo
+se reescribe el id inline si el esquema tiene campo de índice inline
+(`DB2FileLoader.cpp:613-634`).
+
+**Desglose `AnimKitConfig`.** La sección declara `copy_table_count: 170`, de las
+cuales **6** entradas tienen source/new válidos; por tanto sus **40 filas** son
+**34 registros directos + 6 copias efectivas**. El campo `declared_records` del
+reporte es **solo el conteo del header**, no el total de filas; la diferencia
+entre ambos no es un error.
+
+Límites: es comparación de valores del decoder sobre tres tablas, **NO paridad de
+formato completa** ni aceptación reader/runtime de RustyCore. Sin rutas de cliente
+en el reporte; los artefactos crudos derivados del cliente quedan fuera de Git.
+
 ## RustyCore reader conformance (bounded)
 
 AGENTS.md names **TrinityCoreLegacy output plus RustyCore reader/runtime
