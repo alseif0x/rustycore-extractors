@@ -2853,3 +2853,227 @@ fn forever_long_tables_empty_zero_section_variant() {
         assert_eq!(out.rows().len(), 0, "{} rows", table.name());
     }
 }
+
+// ---------------------------------------------------------------------------
+// Forever AnimKit/Animation metadata tables (No parent, IndexField -1)
+// ---------------------------------------------------------------------------
+
+/// The three reviewed Forever animation tables with their pinned identity. No
+/// table hash is transcribed (`DB2Meta` carries none), so the trustworthy
+/// identity is (layout_hash, field_count, index, file_id). All declare
+/// `IndexField = -1`, `ParentIndexField = -1` and
+/// `FieldCount == FileFieldCount`.
+const FOREVER_ANIM_TABLES: [(CharacterTable, u32, u32, usize); 3] = [
+    (CharacterTable::AnimKitBoneSet, 1375433, 0x43E7736F, 5),
+    (CharacterTable::AnimationData, 1375431, 0xBBF66A3C, 4),
+    (CharacterTable::AnimKitConfig, 1300872, 0x140718EF, 1),
+];
+
+#[test]
+fn forever_anim_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h: `AnimKitBoneSet` (1375433, 5 fields,
+    // layout 0x43E7736F), `AnimationData` (1375431, 4 fields, 0xBBF66A3C) and
+    // `AnimKitConfig` (1300872, 1 field, 0x140718EF); each declares
+    // IndexField -1, ParentIndexField -1 and FieldCount == FileFieldCount.
+    for (table, file_id, layout, fields) in FOREVER_ANIM_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, -1, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn anim_kit_bone_set_transcription_is_string_signed_scalars_and_int() {
+    // AnimKitBoneSet: [String, Signed(32,1), Signed(8,1), Signed(8,1),
+    // Signed(32,1)]. The leading FT_STRING_NOT_LOCALIZED field maps to the same
+    // `Kind::String` as ordinary text.
+    let schema = CharacterTable::AnimKitBoneSet.schema();
+    assert_eq!(schema.fields.len(), 5);
+    assert!(matches!(schema.fields[0], Kind::String));
+    assert!(matches!(schema.fields[1], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[2], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[3], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[4], Kind::Signed(32, 1)));
+}
+
+#[test]
+fn animation_data_transcription_has_a_signed_array_of_two() {
+    // AnimationData: [Unsigned(16,1), Signed(8,1), Signed(16,1), Signed(32,2)].
+    let schema = CharacterTable::AnimationData.schema();
+    assert_eq!(schema.fields.len(), 4);
+    assert!(matches!(schema.fields[0], Kind::Unsigned(16, 1)));
+    assert!(matches!(schema.fields[1], Kind::Signed(8, 1)));
+    assert!(matches!(schema.fields[2], Kind::Signed(16, 1)));
+    assert!(matches!(schema.fields[3], Kind::Signed(32, 2)));
+}
+
+#[test]
+fn anim_kit_config_transcription_is_one_signed_int() {
+    let schema = CharacterTable::AnimKitConfig.schema();
+    assert_eq!(schema.fields.len(), 1);
+    assert!(matches!(schema.fields[0], Kind::Signed(32, 1)));
+}
+
+#[test]
+fn forever_anim_tables_match_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word must be
+    // accepted while layout/field/total identity is right (DB2FileLoader.cpp
+    // validates LayoutHash at :1763 and the field count at :1771).
+    for (table, _, layout, fields) in FOREVER_ANIM_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert_eq!(
+            header.total_field_count as usize,
+            fields,
+            "{} total fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_anim_tables_reject_layout_field_and_total_mismatches() {
+    for (table, _, _, _) in FOREVER_ANIM_TABLES {
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 140, 42);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn anim_kit_bone_set_decodes_string_signed_scalars_and_int() {
+    // AnimKitBoneSet is an id-table table (IndexField -1). Field 0 is the
+    // string (FT_STRING_NOT_LOCALIZED decodes identically), fields 1/4 are
+    // signed 32-bit and fields 2/3 signed 8-bit.
+    let table = CharacterTable::AnimKitBoneSet;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 100;
+    spec.strings = b"BoneSet\0".to_vec();
+    let string_off = field_offset(&spec, 0);
+    let relative = record_size(&spec.cols) as u32 - u32::from(string_off) / 8;
+    write_word(&mut spec.records[0], string_off, relative);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    let off3 = field_offset(&spec, 3);
+    let off4 = field_offset(&spec, 4);
+    write_word(&mut spec.records[0], off1, (-7i32) as u32);
+    write_byte(&mut spec.records[0], off2, 0x80);
+    write_byte(&mut spec.records[0], off3, 0x7F);
+    write_word(&mut spec.records[0], off4, 42);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&100];
+    assert_eq!(row[0][0], Value::Text("BoneSet".to_owned()));
+    assert_eq!(row[1][0], Value::Signed(-7));
+    assert_eq!(row[2][0], Value::Signed(-128));
+    assert_eq!(row[3][0], Value::Signed(127));
+    assert_eq!(row[4][0], Value::Signed(42));
+}
+
+#[test]
+fn animation_data_decodes_unsigned_short_and_signed_array_of_two() {
+    // AnimationData is an id-table table (IndexField -1). Field 0 is an
+    // UNSIGNED 16-bit value (0xFFFF stays 65535), field 1 a signed byte, field
+    // 2 a signed 16-bit value (-32768 sign-extends) and field 3 a Signed(32,2)
+    // array of two 32-bit words per row.
+    let table = CharacterTable::AnimationData;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 12;
+    let off0 = field_offset(&spec, 0);
+    let at0 = off0 as usize / 8;
+    spec.records[0][at0..at0 + 2].copy_from_slice(&0xFFFFu16.to_le_bytes());
+    let off1 = field_offset(&spec, 1);
+    write_byte(&mut spec.records[0], off1, 0x80);
+    let off2 = field_offset(&spec, 2);
+    let at2 = off2 as usize / 8;
+    spec.records[0][at2..at2 + 2].copy_from_slice(&0x8000u16.to_le_bytes());
+    let array_off = field_offset(&spec, 3);
+    let at3 = array_off as usize / 8;
+    spec.records[0][at3..at3 + 4].copy_from_slice(&(-11i32).to_le_bytes());
+    spec.records[0][at3 + 4..at3 + 8].copy_from_slice(&2_000_000_001u32.to_le_bytes());
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&12];
+    assert_eq!(row[0][0], Value::Unsigned(0xFFFF));
+    assert_eq!(row[1][0], Value::Signed(-128));
+    assert_eq!(row[2][0], Value::Signed(-32768));
+    // Exactly two values for the array field.
+    assert_eq!(row[3].len(), 2);
+    assert_eq!(row[3][0], Value::Signed(-11));
+    assert_eq!(row[3][1], Value::Signed(2_000_000_001));
+}
+
+#[test]
+fn anim_kit_config_decodes_one_signed_int() {
+    // A one-field table: the decoded row has exactly one signed 32-bit group.
+    let table = CharacterTable::AnimKitConfig;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 34;
+    let off0 = field_offset(&spec, 0);
+    write_word(&mut spec.records[0], off0, (-42i32) as u32);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&34];
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0][0], Value::Signed(-42));
+}
+
+#[test]
+fn forever_anim_tables_empty_zero_section_variant() {
+    for (table, _, _, _) in FOREVER_ANIM_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+    }
+}

@@ -68,6 +68,18 @@
 //! FT_BYTE field. These are the first reviewed tables with a one-field file
 //! field count.
 //!
+//! Three further Forever tables were reviewed at DB2Metadata.h:
+//! `AnimKitBoneSet` (FileDataId 1375433, 5 fields, layout 0x43E7736F),
+//! `AnimationData` (1375431, 4 fields, layout 0xBBF66A3C) and
+//! `AnimKitConfig` (1300872, 1 field, layout 0x140718EF). All three declare
+//! `IndexField = -1`, `ParentIndexField = -1` and `FieldCount ==
+//! FileFieldCount`, i.e. a separate id table and no appended parent field.
+//! `AnimKitBoneSet` is [String, Signed(32,1), Signed(8,1), Signed(8,1),
+//! Signed(32,1)] (its leading field is `FT_STRING_NOT_LOCALIZED`, which decodes
+//! as ordinary text); `AnimationData` is [Unsigned(16,1), Signed(8,1),
+//! Signed(16,1), Signed(32,2)], adding a signed 16-bit field and a signed 32-bit
+//! array of two; `AnimKitConfig` is a single signed 32-bit field.
+//!
 //! Three further Forever tables were reviewed at DB2Metadata.h and are the first
 //! to use an UNSIGNED 64-bit `FT_LONG` field (read as 8 little-endian bytes in
 //! compression 0): `ItemExtendedCost` (FileDataId 801681, 11 fields, layout
@@ -134,6 +146,16 @@ pub enum CharacterTable {
     AnimKitPriority,
     /// `AnimReplacementSet`: one unsigned 8-bit field, separate u32 id table.
     AnimReplacementSet,
+    /// `AnimKitBoneSet`: one string, three signed 8/32-bit scalars and a signed
+    /// 32-bit field, separate u32 id table. Its leading `FT_STRING_NOT_LOCALIZED`
+    /// field decodes as ordinary text.
+    AnimKitBoneSet,
+    /// `AnimationData`: one unsigned 16-bit field, a signed 8-bit field, a
+    /// signed 16-bit field and a signed 32-bit array of two; separate u32 id
+    /// table.
+    AnimationData,
+    /// `AnimKitConfig`: a single signed 32-bit field, separate u32 id table.
+    AnimKitConfig,
     /// `ItemExtendedCost`: one unsigned 64-bit field followed by ten further
     /// scalar/array fields, separate u32 id table. First reviewed table with a
     /// 64-bit (`FT_LONG`) unsigned field.
@@ -175,6 +197,9 @@ impl CharacterTable {
             "AnimKitBoneSetAlias" => Some(Self::AnimKitBoneSetAlias),
             "AnimKitPriority" => Some(Self::AnimKitPriority),
             "AnimReplacementSet" => Some(Self::AnimReplacementSet),
+            "AnimKitBoneSet" => Some(Self::AnimKitBoneSet),
+            "AnimationData" => Some(Self::AnimationData),
+            "AnimKitConfig" => Some(Self::AnimKitConfig),
             "ItemExtendedCost" => Some(Self::ItemExtendedCost),
             "TransmogOutfitEntry" => Some(Self::TransmogOutfitEntry),
             "BankTab" => Some(Self::BankTab),
@@ -205,6 +230,9 @@ impl CharacterTable {
             Self::AnimKitBoneSetAlias => "AnimKitBoneSetAlias",
             Self::AnimKitPriority => "AnimKitPriority",
             Self::AnimReplacementSet => "AnimReplacementSet",
+            Self::AnimKitBoneSet => "AnimKitBoneSet",
+            Self::AnimationData => "AnimationData",
+            Self::AnimKitConfig => "AnimKitConfig",
             Self::ItemExtendedCost => "ItemExtendedCost",
             Self::TransmogOutfitEntry => "TransmogOutfitEntry",
             Self::BankTab => "BankTab",
@@ -234,6 +262,9 @@ impl CharacterTable {
             Self::AnimKitBoneSetAlias => 1266937,
             Self::AnimKitPriority => 1266540,
             Self::AnimReplacementSet => 1284817,
+            Self::AnimKitBoneSet => 1375433,
+            Self::AnimationData => 1375431,
+            Self::AnimKitConfig => 1300872,
             Self::ItemExtendedCost => 801681,
             Self::TransmogOutfitEntry => 7320164,
             Self::BankTab => 5242411,
@@ -553,6 +584,47 @@ impl CharacterTable {
                 index: -1,
                 parent: -1,
                 fields: &[Unsigned(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::AnimKitBoneSetMeta:
+            // FileDataId 1375433, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x43E7736F. One string
+            // (FT_STRING_NOT_LOCALIZED, decoded as ordinary text) plus three
+            // signed scalar fields and a signed 32-bit field.
+            Self::AnimKitBoneSet => Schema {
+                hash: None,
+                layout: 0x43E7736F,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    String,
+                    Signed(32, 1),
+                    Signed(8, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::AnimationDataMeta:
+            // FileDataId 1375431, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xBBF66A3C. One unsigned
+            // 16-bit field, a signed 8-bit field, a signed 16-bit field and a
+            // signed 32-bit array of two.
+            Self::AnimationData => Schema {
+                hash: None,
+                layout: 0xBBF66A3C,
+                index: -1,
+                parent: -1,
+                fields: &[Unsigned(16, 1), Signed(8, 1), Signed(16, 1), Signed(32, 2)],
+            },
+            // Transcribed from DB2Metadata.h::AnimKitConfigMeta:
+            // FileDataId 1300872, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x140718EF. A single
+            // signed 32-bit field.
+            Self::AnimKitConfig => Schema {
+                hash: None,
+                layout: 0x140718EF,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ItemExtendedCostMeta:
             // FileDataId 801681, IndexField -1, ParentIndexField -1,

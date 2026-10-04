@@ -985,6 +985,111 @@ class SyntheticOracle(unittest.TestCase):
             "3\tu:255\tu:1\n",
         )
 
+    def test_reviewed_anim_tables_transcriptions_are_present(self):
+        # The three reviewed Forever animation tables: each declares IndexField
+        # -1 (separate u32 id table), ParentIndexField -1 and FieldCount ==
+        # FileFieldCount. `AnimKitBoneSet` is a non-localized string plus signed
+        # scalars; `AnimationData` adds an unsigned 16-bit field and a signed
+        # 32-bit array of two; `AnimKitConfig` is a single signed 32-bit field.
+        bone_set = db2_oracle.SCHEMAS["AnimKitBoneSet"]
+        self.assertEqual(bone_set.layout_hash, 0x43E7736F)
+        self.assertEqual(bone_set.index, -1)
+        self.assertEqual(bone_set.parent, -1)
+        self.assertEqual(len(bone_set.fields), 5)
+        self.assertEqual((bone_set.fields[0].kind, bone_set.fields[0].bits), ("string", 32))
+        for index in (1, 4):
+            self.assertEqual(
+                (bone_set.fields[index].kind, bone_set.fields[index].bits, bone_set.fields[index].signed),
+                ("signed", 32, True),
+                "bone_set %d" % index,
+            )
+        for index in (2, 3):
+            self.assertEqual(
+                (bone_set.fields[index].kind, bone_set.fields[index].bits, bone_set.fields[index].signed),
+                ("signed", 8, True),
+                "bone_set %d" % index,
+            )
+
+        animation = db2_oracle.SCHEMAS["AnimationData"]
+        self.assertEqual(animation.layout_hash, 0xBBF66A3C)
+        self.assertEqual(animation.index, -1)
+        self.assertEqual(animation.parent, -1)
+        self.assertEqual(len(animation.fields), 4)
+        self.assertEqual(
+            (animation.fields[0].kind, animation.fields[0].bits, animation.fields[0].signed),
+            ("unsigned", 16, False),
+        )
+        self.assertEqual(
+            (animation.fields[1].kind, animation.fields[1].bits, animation.fields[1].signed),
+            ("signed", 8, True),
+        )
+        self.assertEqual(
+            (animation.fields[2].kind, animation.fields[2].bits, animation.fields[2].signed),
+            ("signed", 16, True),
+        )
+        self.assertEqual(
+            (animation.fields[3].kind, animation.fields[3].bits, animation.fields[3].count),
+            ("signed", 32, 2),
+        )
+
+        config = db2_oracle.SCHEMAS["AnimKitConfig"]
+        self.assertEqual(config.layout_hash, 0x140718EF)
+        self.assertEqual(config.index, -1)
+        self.assertEqual(config.parent, -1)
+        self.assertEqual(len(config.fields), 1)
+        self.assertEqual(
+            (config.fields[0].kind, config.fields[0].bits, config.fields[0].signed),
+            ("signed", 32, True),
+        )
+
+    def test_reviewed_anim_kit_bone_set_dump_matches_golden(self):
+        # A non-localized string plus short signed fields: 0x80 sign-extends at 8
+        # bits to -128 while the string decodes as ordinary text. The signed
+        # 32-bit fields keep full-width values.
+        schema = db2_oracle.ANIM_KIT_BONE_SET
+        rows = [{0: "BoneSet", 1: 0xFFFFFFF9, 2: 0x80, 3: 0x7F, 4: 0x0000002A}]  # -7, -128, 127, 42
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[100]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 AnimKitBoneSet\n"
+            "100\tt:BoneSet\ti:-7\ti:-128\ti:127\ti:42\n",
+        )
+
+    def test_reviewed_animation_data_dump_matches_golden_with_array_of_two(self):
+        # `AnimationData` is [Unsigned(16,1), Signed(8,1), Signed(16,1),
+        # Signed(32,2)]: the unsigned 16-bit 0xFFFF stays 65535, the signed
+        # 16-bit 0x8000 sign-extends to -32768 and the array prints both values
+        # comma-joined.
+        schema = db2_oracle.ANIMATION_DATA
+        rows = [
+            {
+                0: 0xFFFF,  # 65535 (unsigned)
+                1: 0x80,  # -128
+                2: 0x8000,  # -32768
+                3: [0xFFFFFFF5, 0x77359401],  # [-11, 2000000001]
+            }
+        ]
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[12]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 AnimationData\n"
+            "12\tu:65535\ti:-128\ti:-32768\ti:-11,i:2000000001\n",
+        )
+
+    def test_reviewed_anim_kit_config_dump_matches_golden(self):
+        # A single signed 32-bit field with a separate u32 id table.
+        schema = db2_oracle.ANIM_KIT_CONFIG
+        rows = [{0: 0xFFFFFFD6}]  # -42
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[34]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 AnimKitConfig\n"
+            "34\ti:-42\n",
+        )
+
     def test_reviewed_anim_kit_priority_dump_matches_golden(self):
         # A one-field file field count: `AnimKitPriority` has a single unsigned
         # 8-bit column and a separate u32 id table. 0x80 stays 128, not -128.

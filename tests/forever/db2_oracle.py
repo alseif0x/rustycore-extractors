@@ -32,7 +32,13 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   ``AnimKitBoneSetAliasMeta`` (1266937, 2 fields, layout ``0x19A6986C``),
   ``AnimKitPriorityMeta`` (1266540, 1 field, layout ``0xCCF889D8``) and
   ``AnimReplacementSetMeta`` (1284817, 1 field, layout ``0x7C047695``); all three
-  declare ``IndexField = -1`` and a separate u32 id table.
+  declare ``IndexField = -1`` and a separate u32 id table. The reviewed Forever
+  ``AnimKitBoneSetMeta`` (1375433, 5 fields, layout ``0x43E7736F``),
+  ``AnimationDataMeta`` (1375431, 4 fields, layout ``0xBBF66A3C``) and
+  ``AnimKitConfigMeta`` (1300872, 1 field, layout ``0x140718EF``) likewise declare
+  ``IndexField = -1``, ``ParentIndexField = -1`` and a separate u32 id table;
+  ``AnimKitBoneSet`` carries a ``FT_STRING_NOT_LOCALIZED`` leading field that
+  decodes as ordinary text, and ``AnimationData`` a signed 32-bit array of two.
 * ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
   loader's identity gate is LayoutHash (:1763) plus the field-count check
   (:1771); ``_header.TableHash`` is never validated against the metadata.
@@ -542,6 +548,49 @@ ANIM_REPLACEMENT_SET = Schema(
     fields=(Field("unsigned", 8),),
 )
 
+# Transcribed from DB2Metadata.h::AnimKitBoneSetMeta (FileDataId 1375433,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x43E7736F): one FT_STRING_NOT_LOCALIZED string (decoded as ordinary text),
+# two signed 32-bit fields and two signed 8-bit fields.
+ANIM_KIT_BONE_SET = Schema(
+    name="AnimKitBoneSet",
+    layout_hash=0x43E7736F,
+    index=-1,
+    fields=(
+        Field("string"),  # 0
+        _signed_field(32),  # 1
+        _signed_field(8),  # 2
+        _signed_field(8),  # 3
+        _signed_field(32),  # 4
+    ),
+)
+
+# Transcribed from DB2Metadata.h::AnimationDataMeta (FileDataId 1375431,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xBBF66A3C): an unsigned 16-bit field, a signed 8-bit field, a signed 16-bit
+# field and a signed 32-bit array of two.
+ANIMATION_DATA = Schema(
+    name="AnimationData",
+    layout_hash=0xBBF66A3C,
+    index=-1,
+    fields=(
+        Field("unsigned", 16),  # 0
+        _signed_field(8),  # 1
+        _signed_field(16),  # 2
+        _signed_field(32, 2),  # 3 array of two
+    ),
+)
+
+# Transcribed from DB2Metadata.h::AnimKitConfigMeta (FileDataId 1300872,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x140718EF): a single signed 32-bit field, separate u32 id table.
+ANIM_KIT_CONFIG = Schema(
+    name="AnimKitConfig",
+    layout_hash=0x140718EF,
+    index=-1,
+    fields=(_signed_field(32),),
+)
+
 # Transcribed from DB2Metadata.h::ItemExtendedCostMeta (FileDataId 801681,
 # IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
 # 0x22331DAB): an unsigned 64-bit (FT_LONG) field then ten further scalar and
@@ -631,6 +680,9 @@ SCHEMAS = {
     "AnimKitBoneSetAlias": ANIM_KIT_BONE_SET_ALIAS,
     "AnimKitPriority": ANIM_KIT_PRIORITY,
     "AnimReplacementSet": ANIM_REPLACEMENT_SET,
+    "AnimKitBoneSet": ANIM_KIT_BONE_SET,
+    "AnimationData": ANIMATION_DATA,
+    "AnimKitConfig": ANIM_KIT_CONFIG,
     "ItemExtendedCost": ITEM_EXTENDED_COST,
     "TransmogOutfitEntry": TRANSMOG_OUTFIT_ENTRY,
     "BankTab": BANK_TAB,
