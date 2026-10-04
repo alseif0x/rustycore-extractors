@@ -88,6 +88,16 @@
 //! 0x5B2F9B36, IndexField -1). All declare `ParentIndexField = -1` and
 //! `FieldCount == FileFieldCount`.
 //!
+//! Four further Forever tables were reviewed at DB2Metadata.h and are the first
+//! to exercise float arrays: `ArmorLocation` (FileDataId 1284818, 5 fields,
+//! layout 0xFB67352F), `BoneWindModifiers` (1416756, 2 fields, layout
+//! 0x2CD1770E), `AreaTriggerSphere` (1315630, 1 field, layout 0xB851EBF6) and
+//! `DurabilityQuality` (1130268, 1 field, layout 0x08763C54). All four declare
+//! `IndexField = -1`, `ParentIndexField = -1` and
+//! `FieldCount == FileFieldCount`. `ArmorLocation` is five floats;
+//! `BoneWindModifiers` is a float array of three (`Float(3)`) followed by one
+//! float; `AreaTriggerSphere` and `DurabilityQuality` are each a single float.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -172,6 +182,17 @@ pub enum CharacterTable {
     /// rather than an appended field. FileDataId 1343390, IndexField 3,
     /// layout 0xDAB4CA4B.
     Specialization,
+    /// `ArmorLocation`: five floats, separate u32 id table. The first reviewed
+    /// all-float table.
+    ArmorLocation,
+    /// `BoneWindModifiers`: a float array of three followed by one float,
+    /// separate u32 id table. First reviewed table whose leading column is a
+    /// float array.
+    BoneWindModifiers,
+    /// `AreaTriggerSphere`: a single float, separate u32 id table.
+    AreaTriggerSphere,
+    /// `DurabilityQuality`: a single float, separate u32 id table.
+    DurabilityQuality,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -204,6 +225,10 @@ impl CharacterTable {
             "TransmogOutfitEntry" => Some(Self::TransmogOutfitEntry),
             "BankTab" => Some(Self::BankTab),
             "ChrSpecialization" => Some(Self::Specialization),
+            "ArmorLocation" => Some(Self::ArmorLocation),
+            "BoneWindModifiers" => Some(Self::BoneWindModifiers),
+            "AreaTriggerSphere" => Some(Self::AreaTriggerSphere),
+            "DurabilityQuality" => Some(Self::DurabilityQuality),
             _ => None,
         }
     }
@@ -237,6 +262,10 @@ impl CharacterTable {
             Self::TransmogOutfitEntry => "TransmogOutfitEntry",
             Self::BankTab => "BankTab",
             Self::Specialization => "ChrSpecialization",
+            Self::ArmorLocation => "ArmorLocation",
+            Self::BoneWindModifiers => "BoneWindModifiers",
+            Self::AreaTriggerSphere => "AreaTriggerSphere",
+            Self::DurabilityQuality => "DurabilityQuality",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -269,6 +298,10 @@ impl CharacterTable {
             Self::TransmogOutfitEntry => 7320164,
             Self::BankTab => 5242411,
             Self::Specialization => 1343390,
+            Self::ArmorLocation => 1284818,
+            Self::BoneWindModifiers => 1416756,
+            Self::AreaTriggerSphere => 1315630,
+            Self::DurabilityQuality => 1130268,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -720,6 +753,48 @@ impl CharacterTable {
                     Signed(32, 1),
                     Signed(32, 2),
                 ],
+            },
+            // Transcribed from DB2Metadata.h::ArmorLocationMeta: FileDataId
+            // 1284818, IndexField -1, ParentIndexField -1, FieldCount ==
+            // FileFieldCount, LayoutHash 0xFB67352F. Five floats. The first
+            // reviewed all-float table.
+            Self::ArmorLocation => Schema {
+                hash: None,
+                layout: 0xFB67352F,
+                index: -1,
+                parent: -1,
+                fields: &[Float(1), Float(1), Float(1), Float(1), Float(1)],
+            },
+            // Transcribed from DB2Metadata.h::BoneWindModifiersMeta: FileDataId
+            // 1416756, IndexField -1, ParentIndexField -1, FieldCount ==
+            // FileFieldCount, LayoutHash 0x2CD1770E. A float array of three
+            // followed by one float; first reviewed float-array column.
+            Self::BoneWindModifiers => Schema {
+                hash: None,
+                layout: 0x2CD1770E,
+                index: -1,
+                parent: -1,
+                fields: &[Float(3), Float(1)],
+            },
+            // Transcribed from DB2Metadata.h::AreaTriggerSphereMeta: FileDataId
+            // 1315630, IndexField -1, ParentIndexField -1, FieldCount ==
+            // FileFieldCount, LayoutHash 0xB851EBF6. A single float.
+            Self::AreaTriggerSphere => Schema {
+                hash: None,
+                layout: 0xB851EBF6,
+                index: -1,
+                parent: -1,
+                fields: &[Float(1)],
+            },
+            // Transcribed from DB2Metadata.h::DurabilityQualityMeta: FileDataId
+            // 1130268, IndexField -1, ParentIndexField -1, FieldCount ==
+            // FileFieldCount, LayoutHash 0x08763C54. A single float.
+            Self::DurabilityQuality => Schema {
+                hash: None,
+                layout: 0x08763C54,
+                index: -1,
+                parent: -1,
+                fields: &[Float(1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),

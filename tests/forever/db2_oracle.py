@@ -39,6 +39,12 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   ``IndexField = -1``, ``ParentIndexField = -1`` and a separate u32 id table;
   ``AnimKitBoneSet`` carries a ``FT_STRING_NOT_LOCALIZED`` leading field that
   decodes as ordinary text, and ``AnimationData`` a signed 32-bit array of two.
+  The first reviewed float tables are ``ArmorLocationMeta`` (1284818, 5 fields,
+  layout ``0xFB67352F``), ``BoneWindModifiersMeta`` (1416756, 2 fields, layout
+  ``0x2CD1770E``, a ``Float(3)`` arm), ``AreaTriggerSphereMeta`` (1315630,
+  1 field, ``0xB851EBF6``) and ``DurabilityQualityMeta`` (1130268, 1 field,
+  ``0x08763C54``); all four declare ``IndexField = -1`` and
+  ``ParentIndexField = -1``.
 * ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
   loader's identity gate is LayoutHash (:1763) plus the field-count check
   (:1771); ``_header.TableHash`` is never validated against the metadata.
@@ -657,6 +663,57 @@ BANK_TAB = Schema(
     ),
 )
 
+# Transcribed from DB2Metadata.h::ArmorLocationMeta (FileDataId 1284818,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xFB67352F): five floats, separate u32 id table. First reviewed all-float
+# table.
+ARMOR_LOCATION = Schema(
+    name="ArmorLocation",
+    layout_hash=0xFB67352F,
+    index=-1,
+    fields=(
+        Field("float", 32, 1),  # 0
+        Field("float", 32, 1),  # 1
+        Field("float", 32, 1),  # 2
+        Field("float", 32, 1),  # 3
+        Field("float", 32, 1),  # 4
+    ),
+)
+
+# Transcribed from DB2Metadata.h::BoneWindModifiersMeta (FileDataId 1416756,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x2CD1770E): a float array of three followed by one float, separate u32 id
+# table. First reviewed float-array column.
+BONE_WIND_MODIFIERS = Schema(
+    name="BoneWindModifiers",
+    layout_hash=0x2CD1770E,
+    index=-1,
+    fields=(
+        Field("float", 32, 3),  # 0 array of three
+        Field("float", 32, 1),  # 1
+    ),
+)
+
+# Transcribed from DB2Metadata.h::AreaTriggerSphereMeta (FileDataId 1315630,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xB851EBF6): a single float, separate u32 id table.
+AREA_TRIGGER_SPHERE = Schema(
+    name="AreaTriggerSphere",
+    layout_hash=0xB851EBF6,
+    index=-1,
+    fields=(Field("float", 32, 1),),
+)
+
+# Transcribed from DB2Metadata.h::DurabilityQualityMeta (FileDataId 1130268,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x08763C54): a single float, separate u32 id table.
+DURABILITY_QUALITY = Schema(
+    name="DurabilityQuality",
+    layout_hash=0x08763C54,
+    index=-1,
+    fields=(Field("float", 32, 1),),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -686,6 +743,10 @@ SCHEMAS = {
     "ItemExtendedCost": ITEM_EXTENDED_COST,
     "TransmogOutfitEntry": TRANSMOG_OUTFIT_ENTRY,
     "BankTab": BANK_TAB,
+    "ArmorLocation": ARMOR_LOCATION,
+    "BoneWindModifiers": BONE_WIND_MODIFIERS,
+    "AreaTriggerSphere": AREA_TRIGGER_SPHERE,
+    "DurabilityQuality": DURABILITY_QUALITY,
 }
 
 

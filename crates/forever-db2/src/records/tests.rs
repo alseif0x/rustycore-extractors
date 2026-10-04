@@ -352,8 +352,13 @@ fn idtable_spec(table: CharacterTable, count: usize) -> Spec {
     let len = record_size(&spec.cols);
     spec.records = vec![vec![0u8; len]; count];
     spec.ids = vec![0; count];
-    spec.min_id = 0;
-    spec.max_id = 100;
+    spec.max_id = u32::MAX;
+    // The separate id-table path applies the reference `id <= MinId` repair
+    // (DB2FileLoader.cpp:1958-1967), so a fixture id is only preserved verbatim
+    // when it is strictly above `MinId`. A default min of 0 rewrites a small
+    // chosen id to the record ordinal and hides that. Callers that set an
+    // explicit `id` must keep it above this default (or override min/max), which
+    // the value-assertion decode tests rely on.
     spec
 }
 
@@ -3071,6 +3076,264 @@ fn anim_kit_config_decodes_one_signed_int() {
 #[test]
 fn forever_anim_tables_empty_zero_section_variant() {
     for (table, _, _, _) in FOREVER_ANIM_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Forever float tables (No parent, IndexField -1): ArmorLocation /
+// BoneWindModifiers / AreaTriggerSphere / DurabilityQuality
+// ---------------------------------------------------------------------------
+
+/// The four reviewed Forever float tables with their pinned identity. No table
+/// hash is transcribed (`DB2Meta` carries none), so the trustworthy identity is
+/// (layout_hash, field_count, index, file_id). All declare `IndexField = -1`,
+/// `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
+const FOREVER_FLOAT_TABLES: [(CharacterTable, u32, u32, usize); 4] = [
+    (CharacterTable::ArmorLocation, 1284818, 0xFB67352F, 5),
+    (CharacterTable::BoneWindModifiers, 1416756, 0x2CD1770E, 2),
+    (CharacterTable::AreaTriggerSphere, 1315630, 0xB851EBF6, 1),
+    (CharacterTable::DurabilityQuality, 1130268, 0x08763C54, 1),
+];
+
+#[test]
+fn forever_float_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h: each declares FileDataId, IndexField = -1,
+    // ParentIndexField = -1 and a LayoutHash; FieldCount == FileFieldCount.
+    for (table, file_id, layout, fields) in FOREVER_FLOAT_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, -1, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn armor_location_transcription_is_five_floats() {
+    // ArmorLocation: [Float(1) x5], separate u32 id table.
+    let schema = CharacterTable::ArmorLocation.schema();
+    assert_eq!(schema.fields.len(), 5);
+    for (index, kind) in schema.fields.iter().enumerate() {
+        assert!(matches!(kind, Kind::Float(1)), "field {index}");
+        assert_eq!(kind.bits(), 32, "field {index} width");
+        assert_eq!(kind.count(), 1, "field {index} count");
+    }
+}
+
+#[test]
+fn bone_wind_modifiers_transcription_is_float_array_of_three_then_one() {
+    // BoneWindModifiers: [Float(3), Float(1)]; the leading column is the first
+    // reviewed float array.
+    let schema = CharacterTable::BoneWindModifiers.schema();
+    assert_eq!(schema.fields.len(), 2);
+    assert!(matches!(schema.fields[0], Kind::Float(3)));
+    assert_eq!(schema.fields[0].bits(), 32);
+    assert_eq!(schema.fields[0].count(), 3);
+    assert!(matches!(schema.fields[1], Kind::Float(1)));
+    assert_eq!(schema.fields[1].count(), 1);
+}
+
+#[test]
+fn area_trigger_sphere_and_durability_quality_are_single_floats() {
+    // Two reviewed one-field float tables, each with a separate u32 id table.
+    for table in [
+        CharacterTable::AreaTriggerSphere,
+        CharacterTable::DurabilityQuality,
+    ] {
+        let schema = table.schema();
+        assert_eq!(schema.fields.len(), 1, "{} field count", table.name());
+        assert!(
+            matches!(schema.fields[0], Kind::Float(1)),
+            "{} single field",
+            table.name()
+        );
+        assert_eq!(schema.fields[0].count(), 1, "{} count", table.name());
+    }
+}
+
+#[test]
+fn forever_float_tables_match_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word must be
+    // accepted while layout/field/total identity is right (DB2FileLoader.cpp
+    // validates LayoutHash at :1763 and the field count at :1771).
+    for (table, _, layout, fields) in FOREVER_FLOAT_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert_eq!(
+            header.total_field_count as usize,
+            fields,
+            "{} total fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_float_tables_reject_layout_field_and_total_mismatches() {
+    for (table, _, _, _) in FOREVER_FLOAT_TABLES {
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 140, 42);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn armor_location_decodes_five_floats() {
+    // ArmorLocation is an id-table table (IndexField -1) with five Float(1)
+    // columns: each 32-bit word is returned verbatim as float bits.
+    let table = CharacterTable::ArmorLocation;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 4242;
+    let bits = [
+        0x3F80_0000u32,
+        0x4000_0000,
+        0xC000_0000,
+        0x0000_0000,
+        0x7F80_0000,
+    ];
+    for (field, value) in bits.into_iter().enumerate() {
+        let off = field_offset(&spec, field);
+        write_word(&mut spec.records[0], off, value);
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&4242];
+    assert_eq!(row.len(), 5);
+    for (field, value) in bits.into_iter().enumerate() {
+        assert_eq!(row[field][0], Value::FloatBits(value), "field {field}");
+    }
+}
+
+#[test]
+fn bone_wind_modifiers_decodes_float_array_of_three_and_one() {
+    // BoneWindModifiers is an id-table table (IndexField -1). Field 0 is a
+    // Float(3) array of three distinct 32-bit float words; field 1 is a single
+    // float. A dropped array element or a shared value would change the
+    // assertions below.
+    let table = CharacterTable::BoneWindModifiers;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 900;
+    let array_bits = [0x3F80_0000u32, 0x4000_0000, 0x4040_0000];
+    let array_off = field_offset(&spec, 0);
+    let at = array_off as usize / 8;
+    for (element, value) in array_bits.into_iter().enumerate() {
+        spec.records[0][at + element * 4..at + element * 4 + 4]
+            .copy_from_slice(&value.to_le_bytes());
+    }
+    let off1 = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], off1, 0x3F00_0000);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&900];
+    assert_eq!(row.len(), 2);
+    assert_eq!(row[0].len(), 3, "array of three");
+    assert_eq!(row[0][0], Value::FloatBits(0x3F80_0000));
+    assert_eq!(row[0][1], Value::FloatBits(0x4000_0000));
+    assert_eq!(row[0][2], Value::FloatBits(0x4040_0000));
+    assert_eq!(row[1][0], Value::FloatBits(0x3F00_0000));
+}
+
+#[test]
+fn area_trigger_sphere_decodes_one_float() {
+    let table = CharacterTable::AreaTriggerSphere;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 11;
+    let off = field_offset(&spec, 0);
+    write_word(&mut spec.records[0], off, 0x40A0_0000);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&11];
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0][0], Value::FloatBits(0x40A0_0000));
+}
+
+#[test]
+fn durability_quality_decodes_one_float() {
+    let table = CharacterTable::DurabilityQuality;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 34;
+    let off = field_offset(&spec, 0);
+    write_word(&mut spec.records[0], off, 0xC2C8_0000);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&34];
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0][0], Value::FloatBits(0xC2C8_0000));
+}
+
+#[test]
+fn forever_float_table_id_table_repair_matches_the_separate_id_path() {
+    // IndexField -1 uses the separate u32 id-table path: DB2FileLoader.cpp:1958
+    // repairs `id <= MinId` to `MinId + i` for the single-section ordinal.
+    for (table, _, _, _) in FOREVER_FLOAT_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.min_id = 50;
+        spec.max_id = 100;
+        spec.ids[0] = 3;
+        let out = decode_idtable(table, &spec).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![50],
+            "{} repair",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn forever_float_tables_empty_zero_section_variant() {
+    for (table, _, _, _) in FOREVER_FLOAT_TABLES {
         let bytes = build_zero_section_header(table, 0);
         let out = decode(table, &bytes)
             .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
