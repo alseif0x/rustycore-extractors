@@ -628,3 +628,49 @@ done
 
 The dumps are client-derived and stay inside the external run directory; only
 equality/line-index evidence is reported.
+
+## Soporte de parent lookup y evidencia real
+
+El decoder admite como máximo una sección de parent lookup. La comprobación sigue
+a `DB2FileLoader.cpp:1771`: `ParentLookupCount` debe ser `1` o `0`, y un fichero
+que declare un bloque parent mientras el esquema revisado no tiene campo de
+índice parent (o al revés) se rechaza como `Schema`, no como error de datos.
+
+La semántica de la tabla con parent es **campo extra al final**. El array de
+campos que se publica tiene `FieldCount` posiciones del esquema total, pero solo
+`FileFieldCount` columnas se leen del fichero:
+
+- `fields` son las columnas reales de fichero (`FileFieldCount`);
+- `parent` es el índice dentro del array total (`ParentIndexField`), que es
+  exactamente una posición más allá de las columnas decodificadas y **se rellena
+  desde el bloque parent**, no desde column meta.
+
+El único caso revisado es `ChrClassesXPowerTypes`: `FieldCount 2`,
+`FileFieldCount 1`, `ParentIndexField 1` y `LayoutHash 0x70DA1F8C`
+(`DB2Metadata.h::ChrClassesXPowerTypesMeta`). El valor parent se escribe al
+final, después de que existan todas las filas y antes de la copy-table, con
+entradas `{ParentId, RecordIndex}` de 8 bytes LE; un duplicado posterior para el
+mismo `RecordIndex` gana.
+
+El manifiesto v2 toma `meta_index_field` del **esquema revisado**, no del header
+crudo (`IndexField`). En ficheros reales los dos discrepan: el header declara `0`
+mientras la meta revisada es `-1`, por lo que el word del header nunca se publica
+como `meta_index_field`.
+
+### Evidencia real persistida — `xpower-accept-1791109553`
+
+Reporte redactado
+`rustycore-extractor-work/reports/acceptance/xpower-parent-lookup-xpower-accept-1791109553.json`:
+`extract_exit 0`, `verify_exit 0`, `network_attempted: false`, `paths_redacted:
+true`; el cliente no fue modificado (se conserva su `client_metadata_sha256`).
+`ChrClassesXPowerTypes` (FileDataID 1121420) decodifica **15 filas**
+(`meta_index_field: -1`, `field_count: 1`, `table_schema_validated: true`,
+`record_data_decoded: true`). La paridad Rust vs oráculo independiente es
+`equal: true` sobre **16 líneas** (una cabecera más 15 filas), y `verify` reporta
+`status: verified` con `artifacts_verified: 1`.
+
+Límites: una sección **no cifrada**, sin maps/VMaps/MMaps y **sin claim de
+70170**. Esta evidencia demuestra coherencia de salida y comparación de valores
+del decoder, **NO paridad de formato completa** ni aceptación reader/runtime de
+RustyCore. Reproducción con placeholders propios (`<client-root>`, `<run-id>`);
+ninguna ruta de cliente real se escribe en un reporte.
