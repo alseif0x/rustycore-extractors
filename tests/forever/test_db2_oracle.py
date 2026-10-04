@@ -543,6 +543,83 @@ class SyntheticOracle(unittest.TestCase):
             EXPECTED_CHR_CUSTOMIZATION_MATERIAL,
         )
 
+    def test_reviewed_chr_customization_element_dump_matches_golden(self):
+        # Thirteen signed 32-bit fields, IndexField -1 (separate u32 id table).
+        schema = db2_oracle.CHR_CUSTOMIZATION_ELEMENT
+        rows = [
+            {
+                0: 0xFFFFFFFF,
+                1: 0x00000007,
+                2: 0x80000000,
+                3: 0x7FFFFFFF,
+                4: 0xFFFFFFFE,
+                5: 0x00000000,
+                6: 0xFFFFFFF9,
+                7: 123456,
+                8: 0x0000000A,
+                9: 0xFFFFFFF6,
+                10: 0x00000001,
+                11: 0x00000002,
+                12: 0x00000003,
+            }
+        ]
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[77]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 ChrCustomizationElement\n"
+            "77\ti:-1\ti:7\ti:-2147483648\ti:2147483647\ti:-2\ti:0\ti:-7"
+            "\ti:123456\ti:10\ti:-10\ti:1\ti:2\ti:3\n",
+        )
+
+    def test_reviewed_chr_customization_display_info_dump_matches_golden(self):
+        # Two signed 32-bit fields then three floats, IndexField -1.
+        schema = db2_oracle.CHR_CUSTOMIZATION_DISPLAY_INFO
+        rows = [
+            {
+                0: 0xFFFFFFF9,  # -7
+                1: 0x000003E8,  # 1000
+                2: 0x3F800000,  # float 1.0
+                3: 0x40000000,  # float 2.0
+                4: 0xC0000000,  # float -2.0
+            }
+        ]
+        data = Wdc5Builder(schema, rows, min_id=0, max_id=100, ids=[12]).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 ChrCustomizationDisplayInfo\n"
+            "12\ti:-7\ti:1000\tf:0x3f800000\tf:0x40000000\tf:0xc0000000\n",
+        )
+
+    def test_reviewed_chr_customization_req_dump_matches_golden(self):
+        # String + seven signed 32-bit fields + one Signed(32,2) array;
+        # IndexField -1. The array prints both values comma-joined.
+        schema = db2_oracle.CHR_CUSTOMIZATION_REQ
+        rows = [
+            {
+                0: "Req",
+                1: 0xFFFFFFFF,  # -1
+                2: 0x00000000,  # 0
+                3: 0x00000007,  # 7
+                4: 0x80000000,  # -2147483648
+                5: 0x7FFFFFFF,  # 2147483647
+                6: 0xFFFFFFF8,  # -8
+                7: 0x0000002A,  # 42
+                8: [0xFFFFFFF5, 0x77359401],  # [-11, 2000000001]
+            }
+        ]
+        data = Wdc5Builder(
+            schema, rows, min_id=0, max_id=1000, ids=[345]
+        ).build()
+        decoded = db2_oracle.decode(data, schema)
+        self.assertEqual(
+            db2_oracle.render(decoded, schema.name),
+            "forever-db2-dump v1 ChrCustomizationReq\n"
+            "345\tt:Req\ti:-1\ti:0\ti:7\ti:-2147483648\ti:2147483647"
+            "\ti:-8\ti:42\ti:-11,i:2000000001\n",
+        )
+
     def test_reviewed_forever_transcriptions_are_present(self):
         category = db2_oracle.SCHEMAS["ChrCustomizationCategory"]
         self.assertEqual(category.layout_hash, 0x1605B68A)
@@ -570,6 +647,40 @@ class SyntheticOracle(unittest.TestCase):
             self.assertEqual(len(schema.fields), fields, name)
             self.assertEqual(schema.fields[0].kind, "signed", name)
             self.assertTrue(schema.fields[0].signed, name)
+
+        element = db2_oracle.SCHEMAS["ChrCustomizationElement"]
+        self.assertEqual(element.layout_hash, 0x6483C37E)
+        self.assertEqual(element.index, -1)
+        self.assertEqual(element.parent, -1)
+        self.assertEqual(len(element.fields), 13)
+        for index, field in enumerate(element.fields):
+            self.assertEqual(
+                (field.kind, field.bits, field.signed), ("signed", 32, True), "element %d" % index
+            )
+
+        display = db2_oracle.SCHEMAS["ChrCustomizationDisplayInfo"]
+        self.assertEqual(display.layout_hash, 0xB24CE54F)
+        self.assertEqual(display.index, -1)
+        self.assertEqual(display.parent, -1)
+        self.assertEqual(len(display.fields), 5)
+        self.assertEqual((display.fields[0].kind, display.fields[0].bits, display.fields[0].signed), ("signed", 32, True))
+        self.assertEqual((display.fields[1].kind, display.fields[1].bits, display.fields[1].signed), ("signed", 32, True))
+        for index in range(2, 5):
+            self.assertEqual((display.fields[index].kind, display.fields[index].count), ("float", 1), "display %d" % index)
+
+        req = db2_oracle.SCHEMAS["ChrCustomizationReq"]
+        self.assertEqual(req.layout_hash, 0xCA154412)
+        self.assertEqual(req.index, -1)
+        self.assertEqual(req.parent, -1)
+        self.assertEqual(len(req.fields), 9)
+        self.assertEqual((req.fields[0].kind, req.fields[0].bits), ("string", 32))
+        for index in range(1, 8):
+            self.assertEqual(
+                (req.fields[index].kind, req.fields[index].bits, req.fields[index].signed),
+                ("signed", 32, True),
+                "req %d" % index,
+            )
+        self.assertEqual((req.fields[8].kind, req.fields[8].bits, req.fields[8].count), ("signed", 32, 2))
 
     def test_reviewed_chr_class_transcriptions_are_present(self):
         title = db2_oracle.SCHEMAS["ChrClassTitle"]

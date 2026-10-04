@@ -23,7 +23,12 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   ``ChrClassUIChrModelInfoMeta`` (:3390, 5 fields, layout ``0x26E5E322``),
   ``ChrClassUIDisplayMeta`` (:3413, 3 fields, layout ``0x50F5AD66``) and
   ``ChrClassVillainMeta`` (:3434, 3 fields, layout ``0x46041630``); each
-  ``ChrClass*`` declares ``IndexField = -1``.
+  ``ChrClass*`` declares ``IndexField = -1``. The reviewed Forever
+  ``ChrCustomization*`` tables add ``ChrCustomizationElementMeta`` (3512765,
+  13 fields, layout ``0x6483C37E``), ``ChrCustomizationDisplayInfoMeta``
+  (3593032, 5 fields, layout ``0xB24CE54F``) and ``ChrCustomizationReqMeta``
+  (3450453, 9 fields, layout ``0xCA154412``); ``ChrCustomizationReq`` carries a
+  signed 32-bit array of two.
 * ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
   loader's identity gate is LayoutHash (:1763) plus the field-count check
   (:1771); ``_header.TableHash`` is never validated against the metadata.
@@ -377,6 +382,53 @@ CHR_CUSTOMIZATION_BONE_SET = Schema(
     ),
 )
 
+# Transcribed from DB2Metadata.h::ChrCustomizationElementMeta (FileDataId
+# 3512765, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0x6483C37E): thirteen signed 32-bit fields.
+CHR_CUSTOMIZATION_ELEMENT = Schema(
+    name="ChrCustomizationElement",
+    layout_hash=0x6483C37E,
+    index=-1,
+    fields=tuple(_signed_field(32) for _ in range(13)),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustomizationDisplayInfoMeta (FileDataId
+# 3593032, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0xB24CE54F): two signed 32-bit fields then three floats.
+CHR_CUSTOMIZATION_DISPLAY_INFO = Schema(
+    name="ChrCustomizationDisplayInfo",
+    layout_hash=0xB24CE54F,
+    index=-1,
+    fields=(
+        _signed_field(32),  # 0
+        _signed_field(32),  # 1
+        Field("float", 32, 1),  # 2
+        Field("float", 32, 1),  # 3
+        Field("float", 32, 1),  # 4
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustomizationReqMeta (FileDataId 3450453,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0xCA154412): one string, seven signed 32-bit fields and one signed 32-bit
+# array of two.
+CHR_CUSTOMIZATION_REQ = Schema(
+    name="ChrCustomizationReq",
+    layout_hash=0xCA154412,
+    index=-1,
+    fields=(
+        Field("string"),  # 0
+        _signed_field(32),  # 1
+        _signed_field(32),  # 2
+        _signed_field(32),  # 3
+        _signed_field(32),  # 4
+        _signed_field(32),  # 5
+        _signed_field(32),  # 6
+        _signed_field(32),  # 7
+        _signed_field(32, 2),  # 8 array of two
+    ),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -390,6 +442,9 @@ SCHEMAS = {
     "ChrCustomizationGeoset": CHR_CUSTOMIZATION_GEOSET,
     "ChrCustomizationMaterial": CHR_CUSTOMIZATION_MATERIAL,
     "ChrCustomizationBoneSet": CHR_CUSTOMIZATION_BONE_SET,
+    "ChrCustomizationElement": CHR_CUSTOMIZATION_ELEMENT,
+    "ChrCustomizationDisplayInfo": CHR_CUSTOMIZATION_DISPLAY_INFO,
+    "ChrCustomizationReq": CHR_CUSTOMIZATION_REQ,
 }
 
 

@@ -1530,11 +1530,11 @@ fn xpower_wrong_layout_and_field_counts_are_schema() {
 // Forever ChrCustomization* / ChrCustItemGeoModify (No parent, IndexField -1)
 // ---------------------------------------------------------------------------
 
-/// The five reviewed Forever tables with their pinned identity. Their table
+/// The reviewed Forever tables with their pinned identity. Their table
 /// hashes are NOT transcribed because `DB2Meta` does not carry one, so the only
 /// trustworthy identity is (layout_hash, field_count, index=-1, file_id). All
-/// five declare `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
-const FOREVER_TABLES: [(CharacterTable, u32, u32, usize); 5] = [
+/// declare `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
+const FOREVER_TABLES: [(CharacterTable, u32, u32, usize); 8] = [
     (
         CharacterTable::CustomizationCategory,
         3526439,
@@ -1550,6 +1550,19 @@ const FOREVER_TABLES: [(CharacterTable, u32, u32, usize); 5] = [
         2,
     ),
     (CharacterTable::CustomizationBoneSet, 3460181, 0xCC2CFF6E, 2),
+    (
+        CharacterTable::CustomizationElement,
+        3512765,
+        0x6483C37E,
+        13,
+    ),
+    (
+        CharacterTable::CustomizationDisplayInfo,
+        3593032,
+        0xB24CE54F,
+        5,
+    ),
+    (CharacterTable::CustomizationReq, 3450453, 0xCA154412, 9),
 ];
 
 #[test]
@@ -1755,6 +1768,149 @@ fn chr_customization_bone_set_decodes_two_signed_ints() {
     let row = &out.rows()[&5];
     assert_eq!(row[0][0], Value::Signed(11));
     assert_eq!(row[1][0], Value::Signed(-42));
+}
+
+#[test]
+fn chr_customization_element_transcription_is_thirteen_signed_ints() {
+    // ChrCustomizationElement: 13 x Signed(32,1), no parent, IndexField -1.
+    let schema = CharacterTable::CustomizationElement.schema();
+    assert_eq!(schema.layout, 0x6483C37E);
+    assert_eq!(schema.index, -1);
+    assert_eq!(schema.parent, -1);
+    assert_eq!(schema.fields.len(), 13);
+    for (index, kind) in schema.fields.iter().enumerate() {
+        assert!(
+            matches!(kind, Kind::Signed(32, 1)),
+            "field {index} is not Signed(32,1)"
+        );
+    }
+}
+
+#[test]
+fn chr_customization_element_decodes_thirteen_signed_ints() {
+    let table = CharacterTable::CustomizationElement;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 77;
+    let values = [
+        -1i32,
+        0,
+        7,
+        -2_000_000_000,
+        2_000_000_000,
+        42,
+        -123_456,
+        123_456,
+        i32::MIN,
+        i32::MAX,
+        9,
+        -9,
+        0,
+    ];
+    for (field, value) in values.into_iter().enumerate() {
+        let off = field_offset(&spec, field);
+        write_word(&mut spec.records[0], off, value as u32);
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&77];
+    assert_eq!(row.len(), 13);
+    for (field, value) in values.into_iter().enumerate() {
+        assert_eq!(row[field][0], Value::Signed(value), "field {field}");
+    }
+}
+
+#[test]
+fn chr_customization_display_info_transcription_is_two_signed_and_three_floats() {
+    // ChrCustomizationDisplayInfo: Signed(32,1), Signed(32,1), Float(1) x3.
+    let schema = CharacterTable::CustomizationDisplayInfo.schema();
+    assert_eq!(schema.layout, 0xB24CE54F);
+    assert_eq!(schema.index, -1);
+    assert_eq!(schema.parent, -1);
+    assert_eq!(schema.fields.len(), 5);
+    assert!(matches!(schema.fields[0], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[1], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[2], Kind::Float(1)));
+    assert!(matches!(schema.fields[3], Kind::Float(1)));
+    assert!(matches!(schema.fields[4], Kind::Float(1)));
+}
+
+#[test]
+fn chr_customization_display_info_decodes_signed_ints_and_floats() {
+    let table = CharacterTable::CustomizationDisplayInfo;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 12;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    let off3 = field_offset(&spec, 3);
+    let off4 = field_offset(&spec, 4);
+    write_word(&mut spec.records[0], off0, (-7i32) as u32);
+    write_word(&mut spec.records[0], off1, 1_000);
+    write_word(&mut spec.records[0], off2, 0x3F80_0000);
+    write_word(&mut spec.records[0], off3, 0x4000_0000);
+    write_word(&mut spec.records[0], off4, 0x4040_0000);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&12];
+    assert_eq!(row[0][0], Value::Signed(-7));
+    assert_eq!(row[1][0], Value::Signed(1_000));
+    assert_eq!(row[2][0], Value::FloatBits(0x3F80_0000));
+    assert_eq!(row[3][0], Value::FloatBits(0x4000_0000));
+    assert_eq!(row[4][0], Value::FloatBits(0x4040_0000));
+}
+
+#[test]
+fn chr_customization_req_transcription_has_a_signed_array_of_two() {
+    // ChrCustomizationReq: String, Signed(32,1) x7, Signed(32,2).
+    let schema = CharacterTable::CustomizationReq.schema();
+    assert_eq!(schema.layout, 0xCA154412);
+    assert_eq!(schema.index, -1);
+    assert_eq!(schema.parent, -1);
+    assert_eq!(schema.fields.len(), 9);
+    assert!(matches!(schema.fields[0], Kind::String));
+    for index in 1..8 {
+        assert!(
+            matches!(schema.fields[index], Kind::Signed(32, 1)),
+            "field {index} is not Signed(32,1)"
+        );
+    }
+    // The last field is the reviewed array variant: two signed 32-bit values.
+    assert!(matches!(schema.fields[8], Kind::Signed(32, 2)));
+}
+
+#[test]
+fn chr_customization_req_decodes_string_signed_ints_and_array_of_two() {
+    let table = CharacterTable::CustomizationReq;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 345;
+    spec.max_id = 1000;
+    spec.strings = b"Req\0".to_vec();
+    let string_off = field_offset(&spec, 0);
+    let relative = record_size(&spec.cols) as u32 - u32::from(string_off) / 8;
+    write_word(&mut spec.records[0], string_off, relative);
+    let scalars = [-1i32, 0, 7, -2_000_000_000, 2_000_000_000, 42, -8];
+    for (field, value) in scalars.into_iter().enumerate() {
+        let off = field_offset(&spec, field + 1);
+        write_word(&mut spec.records[0], off, value as u32);
+    }
+    // Field 8 is Signed(32,2): two consecutive 32-bit words per row.
+    let array_off = field_offset(&spec, 8);
+    let at = array_off as usize / 8;
+    spec.records[0][at..at + 4].copy_from_slice(&(-11i32).to_le_bytes());
+    spec.records[0][at + 4..at + 8].copy_from_slice(&2_000_000_001u32.to_le_bytes());
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&345];
+    assert_eq!(row[0][0], Value::Text("Req".to_owned()));
+    for (field, value) in scalars.into_iter().enumerate() {
+        assert_eq!(
+            row[field + 1][0],
+            Value::Signed(value),
+            "field {}",
+            field + 1
+        );
+    }
+    // Exactly two values decoded for the array field.
+    assert_eq!(row[8].len(), 2);
+    assert_eq!(row[8][0], Value::Signed(-11));
+    assert_eq!(row[8][1], Value::Signed(2_000_000_001));
 }
 
 #[test]

@@ -30,6 +30,15 @@
 //! declare `IndexField = -1`, `ParentIndexField = -1` and
 //! `FieldCount == FileFieldCount` (no appended parent field).
 //!
+//! Three further Forever tables were reviewed at DB2Metadata.h:
+//! `ChrCustomizationElement` (FileDataId 3512765, 13 fields, layout 0x6483C37E),
+//! `ChrCustomizationDisplayInfo` (3593032, 5 fields, layout 0xB24CE54F) and
+//! `ChrCustomizationReq` (3450453, 9 fields, layout 0xCA154412). All three
+//! declare `IndexField = -1`, `ParentIndexField = -1` and
+//! `FieldCount == FileFieldCount`. `ChrCustomizationDisplayInfo` has two signed
+//! 32-bit fields then three floats; `ChrCustomizationReq` is a string, seven
+//! signed 32-bit fields and one signed 32-bit array of two.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -65,6 +74,14 @@ pub enum CharacterTable {
     CustomizationMaterial,
     /// `ChrCustomizationBoneSet`: two signed 32-bit fields.
     CustomizationBoneSet,
+    /// `ChrCustomizationElement`: thirteen signed 32-bit fields.
+    CustomizationElement,
+    /// `ChrCustomizationDisplayInfo`: two signed 32-bit fields followed by
+    /// three floats.
+    CustomizationDisplayInfo,
+    /// `ChrCustomizationReq`: one string, seven signed 32-bit fields and one
+    /// signed 32-bit array of two.
+    CustomizationReq,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -81,6 +98,9 @@ impl CharacterTable {
             "ChrCustomizationGeoset" => Some(Self::CustomizationGeoset),
             "ChrCustomizationMaterial" => Some(Self::CustomizationMaterial),
             "ChrCustomizationBoneSet" => Some(Self::CustomizationBoneSet),
+            "ChrCustomizationElement" => Some(Self::CustomizationElement),
+            "ChrCustomizationDisplayInfo" => Some(Self::CustomizationDisplayInfo),
+            "ChrCustomizationReq" => Some(Self::CustomizationReq),
             _ => None,
         }
     }
@@ -98,6 +118,9 @@ impl CharacterTable {
             Self::CustomizationGeoset => "ChrCustomizationGeoset",
             Self::CustomizationMaterial => "ChrCustomizationMaterial",
             Self::CustomizationBoneSet => "ChrCustomizationBoneSet",
+            Self::CustomizationElement => "ChrCustomizationElement",
+            Self::CustomizationDisplayInfo => "ChrCustomizationDisplayInfo",
+            Self::CustomizationReq => "ChrCustomizationReq",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -114,6 +137,9 @@ impl CharacterTable {
             Self::CustomizationGeoset => 3456171,
             Self::CustomizationMaterial => 3459652,
             Self::CustomizationBoneSet => 3460181,
+            Self::CustomizationElement => 3512765,
+            Self::CustomizationDisplayInfo => 3593032,
+            Self::CustomizationReq => 3450453,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -300,6 +326,63 @@ impl CharacterTable {
                 index: -1,
                 parent: -1,
                 fields: &[Signed(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationElementMeta:
+            // FileDataId 3512765, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x6483C37E. Thirteen
+            // signed 32-bit fields.
+            Self::CustomizationElement => Schema {
+                hash: None,
+                layout: 0x6483C37E,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationDisplayInfoMeta:
+            // FileDataId 3593032, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xB24CE54F. Two signed
+            // 32-bit fields then three floats.
+            Self::CustomizationDisplayInfo => Schema {
+                hash: None,
+                layout: 0xB24CE54F,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(32, 1), Signed(32, 1), Float(1), Float(1), Float(1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationReqMeta:
+            // FileDataId 3450453, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xCA154412. One string,
+            // seven signed 32-bit fields and a signed 32-bit array of two.
+            Self::CustomizationReq => Schema {
+                hash: None,
+                layout: 0xCA154412,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    String,
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 2),
+                ],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),
