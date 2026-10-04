@@ -103,6 +103,7 @@ fn write_values(out: &mut impl Write, values: &[Value]) -> io::Result<()> {
         }
         match value {
             Value::Unsigned(number) => write!(out, "u:{number}")?,
+            Value::Unsigned64(number) => write!(out, "u:{number}")?,
             Value::Signed(number) => write!(out, "i:{number}")?,
             Value::FloatBits(bits) => write!(out, "f:0x{bits:08x}")?,
             Value::Text(text) => {

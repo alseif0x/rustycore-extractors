@@ -51,6 +51,10 @@ impl RecordError {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Unsigned(u32),
+    /// An unsigned 64-bit (`FT_LONG`) value, read as 8 little-endian bytes in
+    /// compression 0. A separate variant from `Unsigned` so a >32-bit value is
+    /// never silently truncated.
+    Unsigned64(u64),
     Signed(i32),
     FloatBits(u32),
     Text(String),
@@ -206,14 +210,17 @@ impl DecodedTable {
                 // DB2FileLoader.cpp:1958-1967 is applied to the separate id table
                 // only, so it is deliberately not used on this path.
                 let field = schema.index as usize;
-                cols[field].bits(
+                let bits = cols[field].bits(
                     raw,
                     h.packed_data_offset,
                     0,
                     0,
                     schema.fields[field].bits(),
                     1,
-                )?
+                )?;
+                // An inline index field must fit the u32 row key; the reviewed
+                // inline index fields are all 32-bit or narrower.
+                u32::try_from(bits).map_err(|_| RecordError::Id)?
             } else {
                 // Separate id table: DB2FileLoader.cpp:1958-1967 repairs every
                 // entry with `id <= MinId` to `MinId + i`. This decoder permits a
@@ -273,13 +280,16 @@ impl DecodedTable {
                                 )
                             }
                         }
-                        Kind::Float(_) => Value::FloatBits(bits),
+                        Kind::Float(_) => Value::FloatBits(bits as u32),
                         Kind::Signed(width, _) => Value::Signed(match width {
                             8 => bits as u8 as i8 as i32,
                             16 => bits as u16 as i16 as i32,
                             _ => bits as i32,
                         }),
-                        Kind::Unsigned(_, _) => Value::Unsigned(bits),
+                        // 64-bit unsigned fields carry the whole value; every
+                        // narrower unsigned field stays in `Value::Unsigned`.
+                        Kind::Unsigned(64, _) => Value::Unsigned64(bits),
+                        Kind::Unsigned(_, _) => Value::Unsigned(bits as u32),
                     };
                     values.push(value);
                 }

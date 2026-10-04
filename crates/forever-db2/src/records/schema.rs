@@ -61,6 +61,14 @@
 //! FT_BYTE field. These are the first reviewed tables with a one-field file
 //! field count.
 //!
+//! Three further Forever tables were reviewed at DB2Metadata.h and are the first
+//! to use an UNSIGNED 64-bit `FT_LONG` field (read as 8 little-endian bytes in
+//! compression 0): `ItemExtendedCost` (FileDataId 801681, 11 fields, layout
+//! 0x22331DAB, IndexField -1), `TransmogOutfitEntry` (7320164, 9 fields, layout
+//! 0x91D51304, IndexField 2) and `BankTab` (5242411, 9 fields, layout
+//! 0x5B2F9B36, IndexField -1). All declare `ParentIndexField = -1` and
+//! `FieldCount == FileFieldCount`.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -119,6 +127,16 @@ pub enum CharacterTable {
     AnimKitPriority,
     /// `AnimReplacementSet`: one unsigned 8-bit field, separate u32 id table.
     AnimReplacementSet,
+    /// `ItemExtendedCost`: one unsigned 64-bit field followed by ten further
+    /// scalar/array fields, separate u32 id table. First reviewed table with a
+    /// 64-bit (`FT_LONG`) unsigned field.
+    ItemExtendedCost,
+    /// `TransmogOutfitEntry`: one unsigned 64-bit field, a string and seven
+    /// further fields; the id is read from the inline field 2.
+    TransmogOutfitEntry,
+    /// `BankTab`: one unsigned 64-bit field, two 8-bit fields and six signed
+    /// 32-bit fields, separate u32 id table.
+    BankTab,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -144,6 +162,9 @@ impl CharacterTable {
             "AnimKitBoneSetAlias" => Some(Self::AnimKitBoneSetAlias),
             "AnimKitPriority" => Some(Self::AnimKitPriority),
             "AnimReplacementSet" => Some(Self::AnimReplacementSet),
+            "ItemExtendedCost" => Some(Self::ItemExtendedCost),
+            "TransmogOutfitEntry" => Some(Self::TransmogOutfitEntry),
+            "BankTab" => Some(Self::BankTab),
             _ => None,
         }
     }
@@ -170,6 +191,9 @@ impl CharacterTable {
             Self::AnimKitBoneSetAlias => "AnimKitBoneSetAlias",
             Self::AnimKitPriority => "AnimKitPriority",
             Self::AnimReplacementSet => "AnimReplacementSet",
+            Self::ItemExtendedCost => "ItemExtendedCost",
+            Self::TransmogOutfitEntry => "TransmogOutfitEntry",
+            Self::BankTab => "BankTab",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -195,6 +219,9 @@ impl CharacterTable {
             Self::AnimKitBoneSetAlias => 1266937,
             Self::AnimKitPriority => 1266540,
             Self::AnimReplacementSet => 1284817,
+            Self::ItemExtendedCost => 801681,
+            Self::TransmogOutfitEntry => 7320164,
+            Self::BankTab => 5242411,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -507,6 +534,74 @@ impl CharacterTable {
                 index: -1,
                 parent: -1,
                 fields: &[Unsigned(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ItemExtendedCostMeta:
+            // FileDataId 801681, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x22331DAB. The leading
+            // field is an UNSIGNED FT_LONG (64-bit) read as 8 little-endian
+            // bytes in compression 0; the 5-count arrays follow.
+            Self::ItemExtendedCost => Schema {
+                hash: None,
+                layout: 0x22331DAB,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    Unsigned(64, 1),
+                    Unsigned(16, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Unsigned(8, 1),
+                    Signed(32, 1),
+                    Unsigned(8, 1),
+                    Signed(32, 5),
+                    Unsigned(16, 5),
+                    Unsigned(16, 5),
+                    Unsigned(32, 5),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::TransmogOutfitEntryMeta:
+            // FileDataId 7320164, IndexField 2, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x91D51304. The leading
+            // field is an UNSIGNED FT_LONG (64-bit); the id is read from the
+            // inline field 2 (Unsigned(32,1)).
+            Self::TransmogOutfitEntry => Schema {
+                hash: None,
+                layout: 0x91D51304,
+                index: 2,
+                parent: -1,
+                fields: &[
+                    Unsigned(64, 1),
+                    String,
+                    Unsigned(32, 1),
+                    Signed(32, 1),
+                    Unsigned(8, 1),
+                    Signed(32, 1),
+                    Unsigned(8, 1),
+                    Float(1),
+                    Signed(32, 1),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::BankTabMeta: FileDataId 5242411,
+            // IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+            // LayoutHash 0x5B2F9B36. The leading field is an UNSIGNED FT_LONG
+            // (64-bit); the remaining fields are one unsigned byte, one signed
+            // byte and six signed 32-bit fields.
+            Self::BankTab => Schema {
+                hash: None,
+                layout: 0x5B2F9B36,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    Unsigned(64, 1),
+                    Unsigned(8, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                ],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),

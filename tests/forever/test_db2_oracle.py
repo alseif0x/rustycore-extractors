@@ -859,6 +859,181 @@ class SyntheticOracle(unittest.TestCase):
         self.assertEqual((model.fields[3].kind, model.fields[3].count), ("float", 1))
         self.assertEqual((model.fields[4].kind, model.fields[4].bits, model.fields[4].signed), ("signed", 32, True))
 
+    def test_reviewed_long_tables_decode_u64_and_five_count_arrays(self):
+        # The three reviewed FT_LONG tables: a >32-bit field 0 must survive as a
+        # full unsigned 64-bit value, and the 5-count arrays must print all five
+        # comma-joined values. A u32 truncation or a dropped array element would
+        # change the golden text below.
+        item = db2_oracle.ITEM_EXTENDED_COST
+        item_rows = [
+            {
+                0: 0x1_0000_0001,
+                1: 0xFFFF,
+                2: 0x80,  # -128
+                3: 0xFFFFFFFF,  # -1
+                4: 0xFF,  # 255
+                5: 0x7FFFFFFF,  # 2147483647
+                6: 0x00,
+                7: [0xFFFFFFFF, 0x00000000, 0x00000007, 0x80000000, 0x7FFFFFFF],
+                8: [1, 2, 3, 4, 5],
+                9: [6, 7, 8, 9, 10],
+                10: [11, 12, 13, 14, 15],
+            }
+        ]
+        data = Wdc5Builder(item, item_rows, min_id=0, max_id=100, ids=[12]).build()
+        self.assertEqual(
+            db2_oracle.render(db2_oracle.decode(data, item), item.name),
+            "forever-db2-dump v1 ItemExtendedCost\n"
+            "12\tu:4294967297\tu:65535\ti:-128\ti:-1\tu:255\ti:2147483647"
+            "\tu:0\ti:-1,i:0,i:7,i:-2147483648,i:2147483647"
+            "\tu:1,u:2,u:3,u:4,u:5\tu:6,u:7,u:8,u:9,u:10"
+            "\tu:11,u:12,u:13,u:14,u:15\n",
+        )
+
+        transmog = db2_oracle.TRANSMOG_OUTFIT_ENTRY
+        transmog_rows = [
+            {
+                0: 0x1_0000_0001,
+                1: "Outfit",
+                2: 42,  # inline id
+                3: 0xFFFFFFFF,  # -1
+                4: 0xFF,  # 255
+                5: 0x00000007,
+                6: 0x80,  # 128 (unsigned)
+                7: 0x3F800000,  # float 1.0
+                8: 0x7FFFFFFF,
+            }
+        ]
+        data = Wdc5Builder(transmog, transmog_rows, min_id=0, max_id=100).build()
+        self.assertEqual(
+            db2_oracle.render(db2_oracle.decode(data, transmog), transmog.name),
+            "forever-db2-dump v1 TransmogOutfitEntry\n"
+            "42\tu:4294967297\tt:Outfit\tu:42\ti:-1\tu:255\ti:7\tu:128"
+            "\tf:0x3f800000\ti:2147483647\n",
+        )
+
+        bank = db2_oracle.BANK_TAB
+        bank_rows = [
+            {
+                0: 0x1_0000_0001,
+                1: 0xFF,  # 255 (unsigned)
+                2: 0x80,  # -128
+                3: 0xFFFFFFFF,  # -1
+                4: 0x00000000,
+                5: 0x00000007,
+                6: 0x80000000,  # -2147483648
+                7: 0x7FFFFFFF,  # 2147483647
+                8: 0x0000002A,  # 42
+            }
+        ]
+        data = Wdc5Builder(bank, bank_rows, min_id=0, max_id=100, ids=[3]).build()
+        self.assertEqual(
+            db2_oracle.render(db2_oracle.decode(data, bank), bank.name),
+            "forever-db2-dump v1 BankTab\n"
+            "3\tu:4294967297\tu:255\ti:-128\ti:-1\ti:0\ti:7\ti:-2147483648"
+            "\ti:2147483647\ti:42\n",
+        )
+
+    def test_reviewed_long_table_transcriptions_are_present(self):
+        # Layout/index/parent plus the exact field list for the three reviewed
+        # FT_LONG tables, transcribed from DB2Metadata.h and mirrored in the Rust
+        # `schema.rs` transcription.
+        item = db2_oracle.SCHEMAS["ItemExtendedCost"]
+        self.assertEqual(item.layout_hash, 0x22331DAB)
+        self.assertEqual(item.index, -1)
+        self.assertEqual(item.parent, -1)
+        self.assertEqual(len(item.fields), 11)
+        self.assertEqual(
+            (item.fields[0].kind, item.fields[0].bits, item.fields[0].count),
+            ("unsigned", 64, 1),
+        )
+        self.assertEqual((item.fields[1].kind, item.fields[1].bits), ("unsigned", 16))
+        self.assertEqual(
+            (item.fields[2].kind, item.fields[2].bits, item.fields[2].signed),
+            ("signed", 8, True),
+        )
+        self.assertEqual(
+            (item.fields[3].kind, item.fields[3].bits, item.fields[3].signed),
+            ("signed", 32, True),
+        )
+        self.assertEqual((item.fields[4].kind, item.fields[4].bits), ("unsigned", 8))
+        self.assertEqual(
+            (item.fields[5].kind, item.fields[5].bits, item.fields[5].signed),
+            ("signed", 32, True),
+        )
+        self.assertEqual((item.fields[6].kind, item.fields[6].bits), ("unsigned", 8))
+        self.assertEqual(
+            (item.fields[7].kind, item.fields[7].bits, item.fields[7].count),
+            ("signed", 32, 5),
+        )
+        self.assertEqual(
+            (item.fields[8].kind, item.fields[8].bits, item.fields[8].count),
+            ("unsigned", 16, 5),
+        )
+        self.assertEqual(
+            (item.fields[9].kind, item.fields[9].bits, item.fields[9].count),
+            ("unsigned", 16, 5),
+        )
+        self.assertEqual(
+            (item.fields[10].kind, item.fields[10].bits, item.fields[10].count),
+            ("unsigned", 32, 5),
+        )
+
+        transmog = db2_oracle.SCHEMAS["TransmogOutfitEntry"]
+        self.assertEqual(transmog.layout_hash, 0x91D51304)
+        self.assertEqual(transmog.index, 2)
+        self.assertEqual(transmog.parent, -1)
+        self.assertEqual(len(transmog.fields), 9)
+        self.assertEqual(
+            (transmog.fields[0].kind, transmog.fields[0].bits),
+            ("unsigned", 64),
+        )
+        self.assertEqual(
+            (transmog.fields[1].kind, transmog.fields[1].bits), ("string", 32)
+        )
+        self.assertEqual(
+            (transmog.fields[2].kind, transmog.fields[2].bits),
+            ("unsigned", 32),
+        )
+        for index in (3, 5, 8):
+            self.assertEqual(
+                (
+                    transmog.fields[index].kind,
+                    transmog.fields[index].bits,
+                    transmog.fields[index].signed,
+                ),
+                ("signed", 32, True),
+                "transmog %d" % index,
+            )
+        self.assertEqual(
+            (transmog.fields[4].kind, transmog.fields[4].bits), ("unsigned", 8)
+        )
+        self.assertEqual(
+            (transmog.fields[6].kind, transmog.fields[6].bits), ("unsigned", 8)
+        )
+        self.assertEqual(
+            (transmog.fields[7].kind, transmog.fields[7].bits),
+            ("float", 32),
+        )
+
+        bank = db2_oracle.SCHEMAS["BankTab"]
+        self.assertEqual(bank.layout_hash, 0x5B2F9B36)
+        self.assertEqual(bank.index, -1)
+        self.assertEqual(bank.parent, -1)
+        self.assertEqual(len(bank.fields), 9)
+        self.assertEqual((bank.fields[0].kind, bank.fields[0].bits), ("unsigned", 64))
+        self.assertEqual((bank.fields[1].kind, bank.fields[1].bits), ("unsigned", 8))
+        self.assertEqual(
+            (bank.fields[2].kind, bank.fields[2].bits, bank.fields[2].signed),
+            ("signed", 8, True),
+        )
+        for index in range(3, 9):
+            self.assertEqual(
+                (bank.fields[index].kind, bank.fields[index].bits, bank.fields[index].signed),
+                ("signed", 32, True),
+                "bank %d" % index,
+            )
+
     def test_reviewed_schema_transcription(self):
         classes = db2_oracle.SCHEMAS["ChrClasses"]
         races = db2_oracle.SCHEMAS["ChrRaces"]

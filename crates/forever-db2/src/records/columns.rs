@@ -113,6 +113,10 @@ pub(super) fn columns(data: &[u8], h: &Header) -> Result<(Vec<Column>, usize), R
     Ok((cols, at))
 }
 impl Column {
+    /// Returns the raw masked value. The width may be up to 64 bits: compression
+    /// 0 reads `width / 8` little-endian bytes into a `u64`, so an unsigned
+    /// 64-bit (`FT_LONG`) field is returned whole. Packed/pallet modes stay
+    /// bounded to 32 bits because their storage is a single 32-bit word.
     pub fn bits(
         &self,
         record: &[u8],
@@ -121,14 +125,14 @@ impl Column {
         array: usize,
         width: u32,
         count: usize,
-    ) -> Result<u32, RecordError> {
-        if array >= count || width == 0 || width > 32 {
+    ) -> Result<u64, RecordError> {
+        if array >= count || width == 0 || width > 64 {
             return Err(RecordError::Column);
         }
-        let mask = if width == 32 {
-            u32::MAX
+        let mask = if width == 64 {
+            u64::MAX
         } else {
-            (1u32 << width) - 1
+            (1u64 << width) - 1
         };
         let value = match self.compression {
             0 => {
@@ -145,18 +149,21 @@ impl Column {
                 let bytes = record
                     .get(at..at.checked_add(byte_width).ok_or(RecordError::Bounds)?)
                     .ok_or(RecordError::Bounds)?;
-                let mut word = [0u8; 4];
+                let mut word = [0u8; 8];
                 word[..byte_width].copy_from_slice(bytes);
-                u32::from_le_bytes(word)
+                u64::from_le_bytes(word)
             }
             2 => {
                 if count != 1 {
                     return Err(RecordError::Column);
                 }
-                *self.common.get(&id).unwrap_or(&self.a)
+                u64::from(*self.common.get(&id).unwrap_or(&self.a))
             }
             mode => {
-                if self.b == 0 || self.b > 32 || (mode != 4 && count != 1) {
+                // `b` and the bit accumulator are 32-bit: a width above 32 has
+                // no defined packed storage here, so reject rather than shift
+                // out of range.
+                if width > 32 || self.b == 0 || self.b > 32 || (mode != 4 && count != 1) {
                     return Err(RecordError::Column);
                 }
                 let bit = (packed as usize)
@@ -177,12 +184,12 @@ impl Column {
                     value |= u32::from((byte >> (pos % 8)) & 1) << index;
                 }
                 match mode {
-                    1 => value,
+                    1 => u64::from(value),
                     5 => {
                         let sign = 1u32 << (self.b - 1);
-                        (value ^ sign).wrapping_sub(sign)
+                        u64::from((value ^ sign).wrapping_sub(sign))
                     }
-                    3 => *self.pallet.get(value as usize).ok_or(RecordError::Column)?,
+                    3 => u64::from(*self.pallet.get(value as usize).ok_or(RecordError::Column)?),
                     4 => {
                         if self.c as usize != count {
                             return Err(RecordError::Column);
@@ -191,12 +198,59 @@ impl Column {
                             .checked_mul(count)
                             .and_then(|index| index.checked_add(array))
                             .ok_or(RecordError::Column)?;
-                        *self.pallet.get(index).ok_or(RecordError::Column)?
+                        u64::from(*self.pallet.get(index).ok_or(RecordError::Column)?)
                     }
                     _ => return Err(RecordError::Column),
                 }
             }
         };
         Ok(value & mask)
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::Column;
+    use crate::records::RecordError;
+    use std::collections::BTreeMap;
+    fn direct(offset: u16) -> Column {
+        Column {
+            offset,
+            compression: 0,
+            extra: 0,
+            a: 0,
+            b: 0,
+            c: 0,
+            pallet: Vec::new(),
+            common: BTreeMap::new(),
+        }
+    }
+    #[test]
+    fn wide_unsigned_reads_eight_little_endian_bytes() {
+        // compression 0 at offset 0 reads `width / 8` whole bytes: a 64-bit
+        // field must return all eight bytes and never a 32-bit truncation.
+        let mut record = [0u8; 16];
+        record[..8].copy_from_slice(&0x1_0000_0001u64.to_le_bytes());
+        let value = direct(0).bits(&record, 0, 0, 0, 64, 1).unwrap();
+        assert_eq!(value, 0x1_0000_0001);
+    }
+    #[test]
+    fn direct_thirty_three_bit_width_is_rejected() {
+        // A non-multiple-of-8 width has no defined direct storage, so it is a
+        // column error instead of silently reading an empty slice.
+        let record = [0u8; 8];
+        assert_eq!(
+            direct(0).bits(&record, 0, 0, 0, 33, 1),
+            Err(RecordError::Column)
+        );
+    }
+    #[test]
+    fn direct_offset_must_be_a_multiple_of_eight() {
+        // A byte-aligned read starts at `offset / 8`, so an offset that is not
+        // a multiple of eight would point into the middle of a word.
+        let record = [0u8; 8];
+        assert_eq!(
+            direct(4).bits(&record, 0, 0, 0, 32, 1),
+            Err(RecordError::Column)
+        );
     }
 }

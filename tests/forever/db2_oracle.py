@@ -43,9 +43,10 @@ Canonical dump format, identical to ``db2_dump.rs``::
     <id>\t<field0>\t<field1>...
 
 Every field prints its array values comma-joined; a value is ``u:<dec>``
-(unsigned), ``i:<dec>`` (signed), ``f:0x<8 lowercase hex>`` (raw float bits) or
-``t:<text>`` where ``\\`` -> ``\\\\``, tab -> ``\\t``, CR -> ``\\r`` and
-LF -> ``\\n``. Output is UTF-8 with LF, terminated by a single trailing newline.
+(unsigned, including a full 64-bit ``FT_LONG``), ``i:<dec>`` (signed),
+``f:0x<8 lowercase hex>`` (raw float bits) or ``t:<text>`` where ``\\`` ->
+``\\\\``, tab -> ``\\t``, CR -> ``\\r`` and LF -> ``\\n``. Output is UTF-8 with
+LF, terminated by a single trailing newline.
 """
 from __future__ import annotations
 
@@ -511,6 +512,72 @@ ANIM_REPLACEMENT_SET = Schema(
     fields=(Field("unsigned", 8),),
 )
 
+# Transcribed from DB2Metadata.h::ItemExtendedCostMeta (FileDataId 801681,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x22331DAB): an unsigned 64-bit (FT_LONG) field then ten further scalar and
+# array fields; separate u32 id table. The 64-bit field is read as 8
+# little-endian bytes in compression 0.
+ITEM_EXTENDED_COST = Schema(
+    name="ItemExtendedCost",
+    layout_hash=0x22331DAB,
+    index=-1,
+    fields=(
+        Field("unsigned", 64),  # 0
+        Field("unsigned", 16),  # 1
+        _signed_field(8),  # 2
+        _signed_field(32),  # 3
+        Field("unsigned", 8),  # 4
+        _signed_field(32),  # 5
+        Field("unsigned", 8),  # 6
+        _signed_field(32, 5),  # 7
+        Field("unsigned", 16, 5),  # 8
+        Field("unsigned", 16, 5),  # 9
+        Field("unsigned", 32, 5),  # 10
+    ),
+)
+
+# Transcribed from DB2Metadata.h::TransmogOutfitEntryMeta (FileDataId 7320164,
+# IndexField 2, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x91D51304): an unsigned 64-bit (FT_LONG) field, a string and seven further
+# fields; the record id comes from the inline field 2.
+TRANSMOG_OUTFIT_ENTRY = Schema(
+    name="TransmogOutfitEntry",
+    layout_hash=0x91D51304,
+    index=2,
+    fields=(
+        Field("unsigned", 64),  # 0
+        Field("string"),  # 1
+        Field("unsigned", 32),  # 2 (inline index)
+        _signed_field(32),  # 3
+        Field("unsigned", 8),  # 4
+        _signed_field(32),  # 5
+        Field("unsigned", 8),  # 6
+        Field("float", 32, 1),  # 7
+        _signed_field(32),  # 8
+    ),
+)
+
+# Transcribed from DB2Metadata.h::BankTabMeta (FileDataId 5242411, IndexField -1,
+# ParentIndexField -1, FieldCount == FileFieldCount, layout 0x5B2F9B36): an
+# unsigned 64-bit (FT_LONG) field, an unsigned byte, a signed byte and six
+# signed 32-bit fields; separate u32 id table.
+BANK_TAB = Schema(
+    name="BankTab",
+    layout_hash=0x5B2F9B36,
+    index=-1,
+    fields=(
+        Field("unsigned", 64),  # 0
+        Field("unsigned", 8),  # 1
+        _signed_field(8),  # 2
+        _signed_field(32),  # 3
+        _signed_field(32),  # 4
+        _signed_field(32),  # 5
+        _signed_field(32),  # 6
+        _signed_field(32),  # 7
+        _signed_field(32),  # 8
+    ),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -533,6 +600,9 @@ SCHEMAS = {
     "AnimKitBoneSetAlias": ANIM_KIT_BONE_SET_ALIAS,
     "AnimKitPriority": ANIM_KIT_PRIORITY,
     "AnimReplacementSet": ANIM_REPLACEMENT_SET,
+    "ItemExtendedCost": ITEM_EXTENDED_COST,
+    "TransmogOutfitEntry": TRANSMOG_OUTFIT_ENTRY,
+    "BankTab": BANK_TAB,
 }
 
 
@@ -657,10 +727,15 @@ class _Column:
     common: dict = dataclasses.field(default_factory=dict)
 
     def bits(self, record, packed_data_offset, record_id, array, width, count):
-        """Mode 0..5 value extraction (DB2FileLoader.cpp:808-905)."""
-        if array >= count or width == 0 or width > 32:
+        """Mode 0..5 value extraction (DB2FileLoader.cpp:808-905).
+
+        Compression 0 reads ``width // 8`` little-endian bytes, so an unsigned
+        64-bit (``FT_LONG``) field is returned whole. Packed/pallet modes stay
+        bounded to 32 bits because their storage is a single 32-bit word.
+        """
+        if array >= count or width == 0 or width > 64:
             raise OracleError("invalid_column_data")
-        mask = 0xFFFFFFFF if width == 32 else (1 << width) - 1
+        mask = (1 << width) - 1
         mode = self.compression
         if mode == 0:
             # Direct-value storage requires whole-byte widths and offsets.
@@ -674,7 +749,7 @@ class _Column:
                 raise OracleError("invalid_column_data")
             value = self.common.get(record_id, self.a)
         else:
-            if self.b == 0 or self.b > 32 or (mode != 4 and count != 1):
+            if width > 32 or self.b == 0 or self.b > 32 or (mode != 4 and count != 1):
                 raise OracleError("invalid_column_data")
             bit = packed_data_offset * 8 + self.a
             value = 0

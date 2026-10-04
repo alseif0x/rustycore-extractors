@@ -174,6 +174,12 @@ fn write_byte(record: &mut [u8], bit_offset: u16, value: u8) {
     record[bit_offset as usize / 8] = value;
 }
 
+/// Writes an unsigned 64-bit (`FT_LONG`) direct value at a column bit offset.
+fn write_u64(record: &mut [u8], bit_offset: u16, value: u64) {
+    let at = bit_offset as usize / 8;
+    record[at..at + 8].copy_from_slice(&value.to_le_bytes());
+}
+
 /// Writes the inline index byte of a character-table record (field 29).
 fn write_inline_id(spec: &mut Spec, index: usize, value: u8) {
     let off = field_offset(spec, 29);
@@ -2479,5 +2485,233 @@ fn forever_byte_tables_empty_zero_section_and_declared_records_variants() {
             "{} zero sections with records",
             table.name()
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FT_LONG (unsigned 64-bit) tables: ItemExtendedCost / TransmogOutfitEntry /
+// BankTab (No parent; first reviewed tables with a 64-bit field)
+// ---------------------------------------------------------------------------
+
+/// The three reviewed Forever `FT_LONG` tables with their pinned identity. No
+/// table hash is transcribed (`DB2Meta` carries none), so the trustworthy
+/// identity is (layout_hash, field_count, index, file_id).
+const FOREVER_LONG_TABLES: [(CharacterTable, u32, u32, i16, usize); 3] = [
+    (CharacterTable::ItemExtendedCost, 801681, 0x22331DAB, -1, 11),
+    (
+        CharacterTable::TransmogOutfitEntry,
+        7320164,
+        0x91D51304,
+        2,
+        9,
+    ),
+    (CharacterTable::BankTab, 5242411, 0x5B2F9B36, -1, 9),
+];
+
+#[test]
+fn forever_long_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h at 02245dcd: each table declares
+    // FileDataId, IndexField, ParentIndexField = -1 and a LayoutHash;
+    // FieldCount == FileFieldCount for all three.
+    for (table, file_id, layout, index, fields) in FOREVER_LONG_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, index, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn forever_long_tables_transcribe_their_64_bit_leading_field() {
+    // Every reviewed FT_LONG table starts with exactly one Unsigned(64,1) field
+    // whose `bits()` reports width 64.
+    for (table, _, _, _, _) in FOREVER_LONG_TABLES {
+        let schema = table.schema();
+        assert!(
+            matches!(schema.fields[0], Kind::Unsigned(64, 1)),
+            "{} leading field",
+            table.name()
+        );
+        assert_eq!(schema.fields[0].bits(), 64, "{} width", table.name());
+        assert_eq!(schema.fields[0].count(), 1, "{} count", table.name());
+    }
+    // The transcribed per-table field shapes.
+    let item = CharacterTable::ItemExtendedCost.schema();
+    assert!(matches!(item.fields[7], Kind::Signed(32, 5)));
+    assert!(matches!(item.fields[8], Kind::Unsigned(16, 5)));
+    assert!(matches!(item.fields[9], Kind::Unsigned(16, 5)));
+    assert!(matches!(item.fields[10], Kind::Unsigned(32, 5)));
+
+    let transmog = CharacterTable::TransmogOutfitEntry.schema();
+    assert!(matches!(transmog.fields[1], Kind::String));
+    assert!(matches!(transmog.fields[2], Kind::Unsigned(32, 1)));
+    assert!(matches!(transmog.fields[7], Kind::Float(1)));
+
+    let bank = CharacterTable::BankTab.schema();
+    assert!(matches!(bank.fields[1], Kind::Unsigned(8, 1)));
+    assert!(matches!(bank.fields[2], Kind::Signed(8, 1)));
+    for field in 3..9 {
+        assert!(
+            matches!(bank.fields[field], Kind::Signed(32, 1)),
+            "bank {field}"
+        );
+    }
+}
+
+#[test]
+fn item_extended_cost_decodes_u64_and_arrays() {
+    // ItemExtendedCost is an id-table table (IndexField -1). Field 0 is the
+    // 64-bit FT_LONG; field 7 is a Signed(32,5) array and fields 8/9/10 are
+    // Unsigned(16,5)/Unsigned(16,5)/Unsigned(32,5) arrays.
+    let table = CharacterTable::ItemExtendedCost;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 12;
+    // A value above u32::MAX, so truncation to 32 bits would be caught.
+    let big = 0x1_0000_0001u64;
+    let off = field_offset(&spec, 0);
+    write_u64(&mut spec.records[0], off, big);
+    for (array, value) in [-1i32, 0, 7, -2_000_000_000, 2_000_000_000]
+        .into_iter()
+        .enumerate()
+    {
+        let off = field_offset(&spec, 7);
+        let at = off as usize / 8 + array * 4;
+        spec.records[0][at..at + 4].copy_from_slice(&(value as u32).to_le_bytes());
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&12];
+    assert_eq!(row[0][0], Value::Unsigned64(big));
+    assert_eq!(
+        row[7],
+        vec![
+            Value::Signed(-1),
+            Value::Signed(0),
+            Value::Signed(7),
+            Value::Signed(-2_000_000_000),
+            Value::Signed(2_000_000_000),
+        ]
+    );
+    // Unsigned 16-bit array at field 8.
+    let off = field_offset(&spec, 8);
+    let at = off as usize / 8;
+    spec.records[0][at..at + 2].copy_from_slice(&0xFFFFu16.to_le_bytes());
+    let out = decode_idtable(table, &spec).unwrap();
+    assert_eq!(out.rows()[&12][8][0], Value::Unsigned(0xFFFF));
+}
+
+#[test]
+fn transmog_outfit_entry_uses_inline_field_two_id() {
+    // TransmogOutfitEntry declares IndexField 2, so no separate id table is
+    // present and the row key is the inline unsigned 32-bit field 2.
+    let table = CharacterTable::TransmogOutfitEntry;
+    let mut spec = spec(table);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    write_inline_id_at(&mut spec, 2, 42, 0);
+    let off = field_offset(&spec, 0);
+    write_u64(&mut spec.records[0], off, 0xFFFF_FFFF_FFFF_FFFF);
+    let out = decode_idtable(table, &spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![42]);
+    assert_eq!(
+        out.rows()[&42][0][0],
+        Value::Unsigned64(0xFFFF_FFFF_FFFF_FFFF)
+    );
+    // The inline id field itself decodes as an ordinary unsigned 32-bit value.
+    assert_eq!(out.rows()[&42][2][0], Value::Unsigned(42));
+}
+
+#[test]
+fn bank_tab_decodes_u64_byte_signed_and_six_int_fields() {
+    // BankTab is an id-table table (IndexField -1): leading Unsigned(64,1), then
+    // Unsigned(8,1), Signed(8,1) and six Signed(32,1) fields.
+    let table = CharacterTable::BankTab;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 3;
+    let off0 = field_offset(&spec, 0);
+    write_u64(&mut spec.records[0], off0, 0x1_0000_0001);
+    let off1 = field_offset(&spec, 1);
+    write_byte(&mut spec.records[0], off1, 0xFF);
+    let off2 = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], off2, 0x80);
+    let values = [-1i32, 0, 7, -2_000_000_000, 2_000_000_000, 42];
+    for (field, value) in values.into_iter().enumerate() {
+        let off = field_offset(&spec, field + 3);
+        write_word(&mut spec.records[0], off, value as u32);
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&3];
+    assert_eq!(row[0][0], Value::Unsigned64(0x1_0000_0001));
+    assert_eq!(row[1][0], Value::Unsigned(255));
+    assert_eq!(row[2][0], Value::Signed(-128));
+    for (field, value) in values.into_iter().enumerate() {
+        assert_eq!(
+            row[field + 3][0],
+            Value::Signed(value),
+            "bank field {field}"
+        );
+    }
+}
+
+#[test]
+fn forever_long_table_matches_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word must be
+    // accepted while layout/field/total identity is right.
+    for (table, _, layout, _, fields) in FOREVER_LONG_TABLES {
+        let mut spec = if table.schema().index < 0 {
+            idtable_spec(table, 1)
+        } else {
+            let mut spec = spec(table);
+            let len = record_size(&spec.cols);
+            spec.records = vec![vec![0u8; len]];
+            spec.min_id = 0;
+            spec.max_id = 100;
+            spec
+        };
+        if table.schema().index < 0 {
+            spec.ids[0] = 7;
+        } else {
+            write_inline_id_at(&mut spec, table.schema().index as usize, 7, 0);
+        }
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_long_tables_empty_zero_section_variant() {
+    for (table, _, _, _, _) in FOREVER_LONG_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
     }
 }
