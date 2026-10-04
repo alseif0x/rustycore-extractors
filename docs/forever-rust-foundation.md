@@ -380,6 +380,84 @@ fails before publishing. If the final `report.json` cannot be published, the run
 returns an error and any already-published `*.db2` files remain without a report
 (an explicit, detectable failure, not a success).
 
+### Forever v2 output contract and manifest
+
+The batch publishes a **separate version-2 output contract line** for the Forever
+target, kept distinct from the legacy 3.4.3/51943 v1 contracts and never
+re-labelling them:
+
+- `contracts/forever-contract-v2.json` — the Forever contract: only `wow_classic_beta`
+  builds `70170`/`70205`, locales `enUS`/`esES`, `scope: explicit_db2_batch`,
+  `full_client_extraction: false`, `WDC5` version 5, local-offline network and the
+  shared inventory/privacy rules.
+- `schemas/forever-manifest-v2.schema.json` — the JSON Schema that rejects the v1
+  shape, so the two lines cannot be relabelled into each other. Its synthetic
+  fixtures are checked by `tests/contracts/test_forever_contract.py`, and each
+  schema is asserted to reject the other version line.
+- `forever-manifest.json` — the manifest the `forever-db2-extract` batch now emits
+  **alongside** `<Name>.db2` and `report.json`. It records the admitted build and
+  locale, the reviewed per-table identity read from the real WDC5 header
+  (`table_hash`, `layout_hash`, `field_count`, `meta_index_field`), each artifact's
+  independent `table_schema_validated`/`record_data_decoded`/`decoded_rows`
+  facts, a sorted inventory with its SHA-256 digest and the local/redacted
+  constants. Identity fields with no runtime source (`run_id`, install
+  fingerprint, git commit) stay optional and are omitted rather than invented.
+
+This is a second output contract for the local batch; it is **not** the legacy v1
+`data-manifest` nor a unified `extract` command/promotion manifest, and it does not
+change the legacy suite.
+
+### Output verification — `forever-db2-verify`
+
+`forever-db2-verify --output <existing-directory>` is a dependency-free,
+offline, read-only check of a directory already published by the batch. It opens
+**no** client, CASC or remote listfile and never writes to the output; it only
+reads the published `forever-manifest.json` and `.db2` files and recomputes them.
+For a complete run it validates, in order (first failure wins):
+
+1. the manifest exists, is a real non-symlink file, parses and satisfies the v2
+   schema, and its admitted build is one of the supported clients;
+2. the run is complete — no `.part` file, no incomplete marker and no
+   `incomplete`/`failed` status;
+3. every published relative path is a simple name and never a symlink;
+4. the recomputed per-file `sha256`, `bytes`, sorted inventory digest,
+   `file_count`/`total_bytes` and the set of published `.db2` files match the
+   manifest's `integrity`;
+5. each `.db2` re-reads as WDC5 and its header identity matches the pinned table
+   entry (and the reviewed `ChrClasses`/`ChrRaces` identity);
+6. any claimed `record_data_decoded` body re-decodes and the row count equals
+   `decoded_rows`;
+7. the declared network/privacy/scope constants, and the companion `report.json`
+   still declares `full_client_extraction: false`.
+
+```bash
+export CARGO_BUILD_JOBS=1
+export CARGO_TARGET_DIR="$(pwd)/../rustycore-extractor-work/builds/rust-forever"
+cargo build --offline --locked -p forever-casc --features native --bin forever-db2-verify
+
+"$CARGO_TARGET_DIR/debug/forever-db2-verify" \
+  --output ../rustycore-extractor-work/runs/candidate/<run-id>/tables
+```
+
+It prints exactly one path-free JSON document
+(`scope: forever_output_verification`, `offline: true`, `read_only: true`). Exit
+codes and their stable failure codes:
+
+| Exit | Codes |
+| --- | --- |
+| 0 | `verified` |
+| 2 | `invalid_invocation`, `MANIFEST_SCHEMA_INVALID` |
+| 3 | `unsupported_client` |
+| 4 | `input_io` |
+| 8 | `INCOMPLETE_RUN` |
+| 9 | `INVENTORY_MISMATCH`, `TABLE_IDENTITY_MISMATCH`, `UNSAFE_PATH`, `ROW_DECODE_MISMATCH` |
+| 10 | `internal` |
+
+A green exit proves the published directory is **self-consistent with the v2
+contract**. It is **not** format parity, a table-schema oracle, a RustyCore
+reader/runtime acceptance, or proof that the bytes match an independent
+extractor; see the scope limits in the acceptance below.
+
 ### Verification status
 
 - Schema field counts are transcribed and asserted by synthetic tests, now
@@ -465,13 +543,33 @@ client:
 - `live` run_id `20261004T080617Z-b9fabf75`: **18** Python CLI tests OK in
   **13.084 s**, including the network-denied cases.
 
+Forever v2 output contract and verification (local, **not pushed**): commit
+`52ae57c` emits the v2 manifest from the batch and commit `85e31e5` adds
+`forever-db2-verify`. Measured on build **70205**, locale `esES`, offline, with
+the client left unmodified and `forever-manifest.json` published alongside the
+two artifacts and `report.json`:
+
+- batch `forever-db2-extract` exit **0**; `ChrClasses` (1361031) **9** decoded
+  rows and `ChrRaces` (1305311) **58** decoded rows — the same two tables as the
+  literal evidence above.
+- `forever-db2-verify --output <run-root>/<run-id>/tables` (the batch was run
+  with `--client <client-root>`) exit
+  **0**, `status: verified`, `code: verified`, `build: 70205`,
+  `artifacts_verified: 2`, `offline: true`, `read_only: true`.
+- manifest `integrity`: `file_count: 2`, `total_bytes: 28295` (6200 + 22095),
+  `algorithm: sha256`; `scope: explicit_db2_batch`, `full_client_extraction:
+  false`, `paths_redacted: true`.
+
 Scope limits, stated explicitly: this covers **2 tables** and one **regular
-unencrypted section**, with **no maps/VMaps/MMaps**, **no global v1
-`data-manifest`** and **no 70170 compatibility claim** (its local snapshot points
-at the updated installation). Reports are redacted; raw client-derived outputs
-stay outside Git. A green process is **not** format parity or a RustyCore
-reader/runtime acceptance. The three implementation levels above are unchanged
-and remain the only source of scope.
+unencrypted section**, with **no maps/VMaps/MMaps**, **no 70170 compatibility
+claim** (its local snapshot points at the updated installation) and no complete
+table catalog. Reports and the manifest are redacted; raw client-derived outputs
+stay outside Git. `forever-db2-verify` succeeds only by confirming **output
+coherence** — the published manifest, inventory digests and WDC5 identities agree
+with the bytes on disk — and a green exit is **not** complete format parity,
+table-schema conformance, a RustyCore reader/runtime acceptance, or proof of
+equality against an independent extractor. The three implementation levels above
+are unchanged and remain the only source of scope.
 
 ### Independent dump oracle — value comparison only
 
