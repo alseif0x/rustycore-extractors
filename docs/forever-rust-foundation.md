@@ -540,8 +540,10 @@ client:
   `network_attempted=false`, `client_metadata_unchanged=true`; `ChrClasses`
   (1361031) **6200 B** / **9** decoded rows and `ChrRaces` (1305311)
   **22095 B** / **58** decoded rows; `full_client_extraction=false`.
-- `live` run_id `20261004T080617Z-b9fabf75`: **18** Python CLI tests OK in
-  **13.084 s**, including the network-denied cases.
+- `live` run_id `20261004T094947Z-d8c600da`: **24** Python CLI tests
+  collected, `OK (skipped=1)` (the skipped comparator is the gated real-dump
+  oracle), including the network-denied cases. Earlier run
+  `20261004T080617Z-b9fabf75` measured **18** tests in **13.084 s**.
 
 Forever v2 output contract and verification (local, **not pushed**): commit
 `52ae57c` emits the v2 manifest from the batch and commit `85e31e5` adds
@@ -559,6 +561,17 @@ two artifacts and `report.json`:
 - manifest `integrity`: `file_count: 2`, `total_bytes: 28295` (6200 + 22095),
   `algorithm: sha256`; `scope: explicit_db2_batch`, `full_client_extraction:
   false`, `paths_redacted: true`.
+- Persisted redacted report of the batch+verify integration:
+  `rustycore-extractor-work/reports/acceptance/manifest-v2-verify-manifest-v2-accept-1791107644.json`.
+  `extract_exit: 0`, `verify_exit: 0`, `network_attempted: false`,
+  `paths_redacted: true`, `full_client_extraction: false`. The batch reports
+  `ChrClasses` **6200 B** / **9** rows and `ChrRaces` **22095 B** / **58** rows,
+  each with `table_schema_validated: true` and `record_data_decoded: true`. Its
+  `verify_report` carries `status: "verified"`, `artifacts_verified: 2`,
+  `build: 70205`. This confirms `forever-db2-verify` was executed against the
+  real batch output and returned exit **0**; per the scope limits below it proves
+  **output coherence only**, not complete format parity or reader/runtime
+  acceptance.
 
 Scope limits, stated explicitly: this covers **2 tables** and one **regular
 unencrypted section**, with **no maps/VMaps/MMaps**, **no 70170 compatibility
