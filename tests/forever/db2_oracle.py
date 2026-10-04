@@ -446,14 +446,14 @@ CURVE = Schema(
 
 # Transcribed from DB2Metadata.h::ContentRestrictionRuleSetMeta (FileDataId
 # 4281307, IndexField 0, ParentIndexField -1, FieldCount == FileFieldCount,
-# layout 0x5774D75A): three signed 32-bit fields; the id is read from the inline
-# field 0.
+# layout 0x5774D75A): one unsigned 32-bit field and two signed 32-bit fields;
+# the id is read from the inline field 0 (FT_INT IsSigned = false).
 CONTENT_RESTRICTION_RULE_SET = Schema(
     name="ContentRestrictionRuleSet",
     layout_hash=0x5774D75A,
     index=0,
     fields=(
-        _signed_field(32),  # 0 (inline index)
+        Field("unsigned", 32),  # 0 (inline index)
         _signed_field(32),  # 1
         _signed_field(32),  # 2
     ),

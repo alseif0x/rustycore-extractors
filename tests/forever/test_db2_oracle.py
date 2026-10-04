@@ -558,8 +558,9 @@ class SyntheticOracle(unittest.TestCase):
         )
 
     def test_reviewed_content_restriction_rule_set_inline_index_dump_matches_golden(self):
-        # `ContentRestrictionRuleSet` is three signed 32-bit fields with
-        # IndexField 0: the inline field 0 (signed) is also the record id.
+        # `ContentRestrictionRuleSet` is [Unsigned(32,1), Signed(32,1),
+        # Signed(32,1)] with IndexField 0: the inline field 0 (unsigned) is also
+        # the record id.
         schema = db2_oracle.CONTENT_RESTRICTION_RULE_SET
         rows = [{0: 0x0000000C, 1: 0xFFFFFFFF, 2: 0x7FFFFFFF}]  # id 12
         data = Wdc5Builder(schema, rows, min_id=0, max_id=100).build()
@@ -567,7 +568,7 @@ class SyntheticOracle(unittest.TestCase):
         self.assertEqual(
             db2_oracle.render(decoded, schema.name),
             "forever-db2-dump v1 ContentRestrictionRuleSet\n"
-            "12\ti:12\ti:-1\ti:2147483647\n",
+            "12\tu:12\ti:-1\ti:2147483647\n",
         )
 
     def test_reviewed_data_tag_info_inline_index_dump_matches_golden(self):
@@ -608,7 +609,15 @@ class SyntheticOracle(unittest.TestCase):
         self.assertEqual(rule_set.index, 0)
         self.assertEqual(rule_set.parent, -1)
         self.assertEqual(len(rule_set.fields), 3)
-        for index, field in enumerate(rule_set.fields):
+        self.assertEqual(
+            (
+                rule_set.fields[0].kind,
+                rule_set.fields[0].bits,
+                rule_set.fields[0].signed,
+            ),
+            ("unsigned", 32, False),
+        )
+        for index, field in enumerate(rule_set.fields[1:], start=1):
             self.assertEqual(
                 (field.kind, field.bits, field.signed),
                 ("signed", 32, True),

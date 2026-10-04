@@ -47,7 +47,8 @@
 //! `FieldCount == FileFieldCount`, i.e. the record id is read from an inline
 //! column rather than a separate id table. `Curve` is [Unsigned(32,1),
 //! Unsigned(8,1), Signed(32,1)] (the second field is an UNSIGNED FT_BYTE),
-//! `ContentRestrictionRuleSet` is three signed 32-bit fields and `DataTagInfo`
+//! `ContentRestrictionRuleSet` is one unsigned 32-bit field (the inline index)
+//! followed by two signed 32-bit fields and `DataTagInfo`
 //! is a string followed by two signed 32-bit fields.
 //!
 //! `Schema` separates the two counts the reference distinguishes:
@@ -96,8 +97,8 @@ pub enum CharacterTable {
     /// `Curve`: one unsigned 32-bit field (the inline index), one unsigned
     /// 8-bit field and one signed 32-bit field.
     Curve,
-    /// `ContentRestrictionRuleSet`: three signed 32-bit fields; the inline
-    /// index is field 0.
+    /// `ContentRestrictionRuleSet`: one unsigned 32-bit field (the inline
+    /// index) and two signed 32-bit fields.
     ContentRestrictionRuleSet,
     /// `DataTagInfo`: one string plus two signed 32-bit fields; the inline
     /// index is field 1.
@@ -427,14 +428,15 @@ impl CharacterTable {
             },
             // Transcribed from DB2Metadata.h::ContentRestrictionRuleSetMeta:
             // FileDataId 4281307, IndexField 0, ParentIndexField -1,
-            // FieldCount == FileFieldCount, LayoutHash 0x5774D75A. Three signed
-            // 32-bit fields; the id is read from the inline field 0.
+            // FieldCount == FileFieldCount, LayoutHash 0x5774D75A. One unsigned
+            // 32-bit field and two signed 32-bit fields; the id is read from the
+            // inline field 0 (FT_INT IsSigned = false).
             Self::ContentRestrictionRuleSet => Schema {
                 hash: None,
                 layout: 0x5774D75A,
                 index: 0,
                 parent: -1,
-                fields: &[Signed(32, 1), Signed(32, 1), Signed(32, 1)],
+                fields: &[Unsigned(32, 1), Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::DataTagInfoMeta:
             // FileDataId 6652252, IndexField 1, ParentIndexField -1,

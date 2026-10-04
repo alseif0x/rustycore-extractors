@@ -2027,14 +2027,13 @@ fn curve_transcription_matches_field_kinds_and_widths() {
 }
 
 #[test]
-fn content_restriction_rule_set_transcription_is_three_signed_ints() {
+fn content_restriction_rule_set_transcription_is_unsigned_then_two_signed_ints() {
+    // Field 0 is an UNSIGNED FT_INT in the fixed meta (IsSigned = false); fields
+    // 1 and 2 are signed 32-bit fields.
     let schema = CharacterTable::ContentRestrictionRuleSet.schema();
-    for (index, kind) in schema.fields.iter().enumerate() {
-        assert!(
-            matches!(kind, Kind::Signed(32, 1)),
-            "field {index} is not Signed(32,1)"
-        );
-    }
+    assert!(matches!(schema.fields[0], Kind::Unsigned(32, 1)));
+    assert!(matches!(schema.fields[1], Kind::Signed(32, 1)));
+    assert!(matches!(schema.fields[2], Kind::Signed(32, 1)));
 }
 
 #[test]
@@ -2152,7 +2151,7 @@ fn content_restriction_rule_set_inline_id_is_decoded_from_field_zero() {
     let keys = out.rows().keys().copied().collect::<Vec<_>>();
     assert_eq!(keys, vec![12345]);
     let row = &out.rows()[&12345];
-    assert_eq!(row[0][0], Value::Signed(12345));
+    assert_eq!(row[0][0], Value::Unsigned(12345));
     assert_eq!(row[1][0], Value::Signed(-7));
     assert_eq!(row[2][0], Value::Signed(9));
 }
