@@ -724,3 +724,31 @@ false`, `client_bytes_in_report: false`, `hashes_not_values: true`,
 persisted; **no raw record bytes or client values are ever written into the
 report**. A green result here is bounded reader conformance on **2 tables** and
 is not complete format parity or a full reader/runtime acceptance.
+
+**Typed variant is not executable today — verified boundary.** The above covers
+RustyCore's **generic reader** (`wow_data::wdc4::Wdc4Reader`). RustyCore's
+**typed** creation path is `wow_data::forever_initialization::InitializationRecords::load`,
+the only public API that loads all seven creation tables together, and it cannot
+run against our current 70205 output. The concrete, reviewed reasons:
+
+- `MapBaseline::AvailablePrefix` routes to `CreationDb2::open_initial_map_prefix`
+  → `Wdc4Reader::open_available_initial_map`, whose `validate_initial_map`
+  (`crates/wow-data/src/wdc4/available.rs`) demands an **exact 70170/esES pin**:
+  `format_version` 5, `table_hash` `0xBD84CD62`, `layout_hash` `0xD43AFAC3`,
+  `field_count`/`total_field_count` 26, `record_size` 48, `record_count` 79,
+  `flags` 4, `id_index` 0, `parent_lookup_count` 0, `section_count` **4**,
+  `bytes == 9574` exactly, and per-section `tact_key_hash`/`record_count`/`file_offset`/`string_table_size`
+  (`71,2,5,1` / `2292,9574,9720,10103` / `3590,42,123,26`) with zero copy/relationship/offset-map counts.
+- Our extractor does not produce that artifact: the `Map` 70205 acquisition is
+  `local_file_incomplete` and its `.available` variant does not match this pin,
+  so the typed load fails closed.
+- Even isolating ChrClasses/ChrRaces is not publicly available:
+  `CreationDb2` is `pub(crate)` (`crates/wow-data/src/wdc4/creation.rs`) and
+  `identity::load` is `pub(super)` (`crates/wow-data/src/forever_initialization/identity.rs`),
+  so there is no public entry point to validate only those two tables.
+
+This is a **scope limit imposed by RustyCore's exact-baseline gate**, not a
+failure of our WDC5 decoder: the generic-reader conformance above is green and
+persisted (**9/9** and **58/58** digests, redacted hashes/counts only). Until an
+exact pinned baseline is reproducible, **no typed creation acceptance and no
+RustyCore runtime acceptance is claimed** for Forever.
