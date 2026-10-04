@@ -494,6 +494,70 @@ fn complete_batch_publishes_a_v2_manifest_with_matching_invariants() {
 }
 
 #[test]
+fn manifest_meta_index_field_comes_from_the_reviewed_schema_not_the_header() {
+    // Real 70205 evidence: `ChrRaces` carries header `IndexField == 0` while the
+    // reviewed metadata index is `-1`. The manifest's `meta_index_field` is the
+    // reviewed authority for inline vs id-table decoding, so it must be `-1` and
+    // never the raw header word.
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("run");
+    let plan = Plan::parse("ChrRaces\t1305311\n").unwrap();
+    let report = extract(
+        &plan,
+        &sandbox.client(),
+        &destination,
+        build(),
+        "enUS",
+        |_entry, _budget| {
+            let mut bytes = decoded_fixture(CharacterTable::Races);
+            // Overwrite the header `IndexField` word only (bytes 174..176); the
+            // decoder consults the reviewed schema index, not this word.
+            bytes[174..176].copy_from_slice(&0i16.to_le_bytes());
+            Ok((build(), bytes))
+        },
+    )
+    .unwrap();
+    assert!(report.complete, "{}", report.json);
+
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    assert_eq!(
+        table_field(&manifest, "ChrRaces", "meta_index_field"),
+        "-1",
+        "manifest must publish the reviewed meta index, not the header word"
+    );
+}
+
+#[test]
+fn unreviewed_table_publishes_the_meta_index_sentinel() {
+    // No reviewed authority exists for an unknown table, so the honest sentinel
+    // is `0` even when the raw header declares another value.
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("run");
+    let report = extract(
+        &unknown_plan(),
+        &sandbox.client(),
+        &destination,
+        build(),
+        "enUS",
+        |_entry, _budget| {
+            let mut bytes = metadata_fixture();
+            bytes[174..176].copy_from_slice(&7i16.to_le_bytes());
+            Ok((build(), bytes))
+        },
+    )
+    .unwrap();
+    assert!(report.complete);
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    for name in ["Alpha", "Beta"] {
+        assert_eq!(
+            table_field(&manifest, name, "meta_index_field"),
+            "0",
+            "{name}"
+        );
+    }
+}
+
+#[test]
 fn failed_batch_publishes_a_failed_manifest_with_reason_and_code() {
     let sandbox = Sandbox::new();
     let destination = sandbox.destination("run");
@@ -548,6 +612,21 @@ fn artifact_section(manifest: &str) -> &str {
     let rest = &manifest[start..];
     let end = rest.find("],\"integrity\"").expect("artifacts end");
     &rest[..end]
+}
+
+/// Returns the JSON value for `key` inside the table object that follows the
+/// `"name":"<name>"` anchor within the manifest's `"formats":{"tables":[...]}`
+/// array. Same linear-scan assumption as `artifact_field`.
+fn table_field(manifest: &str, name: &str, key: &str) -> String {
+    let start = manifest.find("\"tables\":[").expect("tables array");
+    let rest = &manifest[start..];
+    let end = rest.find("]}").expect("tables end");
+    let array = &rest[..end];
+    let anchor = format!("\"name\":\"{name}\"");
+    let anchor_start = array.find(&anchor).expect("table anchor");
+    let after = &array[anchor_start..];
+    let obj_end = after.find("}").expect("table end");
+    json_field(&after[..obj_end], key)
 }
 
 /// Returns the JSON value for `key` inside the `"integrity":{...}` object.

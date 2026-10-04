@@ -206,6 +206,13 @@ impl Outcome {
 
 /// Header identity for one entry; `field_count >= 1` even when metadata never
 /// parsed, because the schema requires a positive field count.
+///
+/// `meta_index_field` is the reviewed metadata authority for inline vs id-table
+/// decoding, NOT the native header `IndexField` word. Real 70205 evidence shows
+/// the two disagree (e.g. `ChrClassesXPowerTypes` header `index_field == 0`
+/// while the reviewed meta index is `-1`), so the header word must never be
+/// published as `meta_index_field`. When the table is not reviewed there is no
+/// reviewed authority and the honest sentinel is `0`.
 #[derive(Clone, Copy)]
 struct FactIdentity {
     table_hash: u32,
@@ -222,11 +229,14 @@ impl FactIdentity {
             field_count: 1,
         }
     }
-    fn from(metadata: &Metadata) -> Self {
+    /// Header identity plus the reviewed `meta_index_field`. The header supplies
+    /// table/layout hash and field count; the reviewed schema supplies the meta
+    /// index (sentinel `0` when `known` is `None`).
+    fn from(known: Option<CharacterTable>, metadata: &Metadata) -> Self {
         Self {
             table_hash: metadata.header.table_hash,
             layout_hash: metadata.header.layout_hash,
-            meta_index_field: metadata.header.index_field,
+            meta_index_field: known.map_or(0, |table| table.schema_identity().2),
             field_count: metadata.header.field_count,
         }
     }
@@ -277,7 +287,7 @@ pub fn extract(
                         match Metadata::read(&mut Cursor::new(&bytes)) {
                             Err(error) => Outcome::failed(error.code()),
                             Ok(metadata) => {
-                                identity.set(FactIdentity::from(&metadata));
+                                identity.set(FactIdentity::from(known, &metadata));
                                 // Schema identity is independent of body decode: it
                                 // stays true even when records cannot be decoded.
                                 let schema_validated =
