@@ -21,6 +21,15 @@
 //! value is an extra row field appended after the single column field and is
 //! filled from the separate parent-lookup block.
 //!
+//! Five further Forever tables were reviewed at DB2Metadata.h:
+//! `ChrCustomizationCategory` (FileDataId 3526439, 8 fields, layout 0x1605B68A),
+//! `ChrCustItemGeoModify` (3952714, 3 fields, layout 0x2986E1F3),
+//! `ChrCustomizationGeoset` (3456171, 3 fields, layout 0xBF55F2FB),
+//! `ChrCustomizationMaterial` (3459652, 2 fields, layout 0xBE9767E9) and
+//! `ChrCustomizationBoneSet` (3460181, 2 fields, layout 0xCC2CFF6E). All five
+//! declare `IndexField = -1`, `ParentIndexField = -1` and
+//! `FieldCount == FileFieldCount` (no appended parent field).
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -45,6 +54,17 @@ pub enum CharacterTable {
     /// "extra field at the end": NOT a column entry in the record body, filled
     /// from the separate parent-lookup block after the copy table.
     ClassXPowerTypes,
+    /// `ChrCustomizationCategory`: one string plus six signed 32-bit fields and
+    /// one float. No parent (`ParentIndexField == -1`), separate u32 id table.
+    CustomizationCategory,
+    /// `ChrCustItemGeoModify`: one signed byte plus two signed 32-bit fields.
+    CustItemGeoModify,
+    /// `ChrCustomizationGeoset`: one signed byte plus two signed 32-bit fields.
+    CustomizationGeoset,
+    /// `ChrCustomizationMaterial`: two signed 32-bit fields.
+    CustomizationMaterial,
+    /// `ChrCustomizationBoneSet`: two signed 32-bit fields.
+    CustomizationBoneSet,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -56,6 +76,11 @@ impl CharacterTable {
             "ChrClassUIChrModelInfo" => Some(Self::ClassUIChrModelInfo),
             "ChrClassVillain" => Some(Self::ClassVillain),
             "ChrClassesXPowerTypes" => Some(Self::ClassXPowerTypes),
+            "ChrCustomizationCategory" => Some(Self::CustomizationCategory),
+            "ChrCustItemGeoModify" => Some(Self::CustItemGeoModify),
+            "ChrCustomizationGeoset" => Some(Self::CustomizationGeoset),
+            "ChrCustomizationMaterial" => Some(Self::CustomizationMaterial),
+            "ChrCustomizationBoneSet" => Some(Self::CustomizationBoneSet),
             _ => None,
         }
     }
@@ -68,6 +93,11 @@ impl CharacterTable {
             Self::ClassUIChrModelInfo => "ChrClassUIChrModelInfo",
             Self::ClassVillain => "ChrClassVillain",
             Self::ClassXPowerTypes => "ChrClassesXPowerTypes",
+            Self::CustomizationCategory => "ChrCustomizationCategory",
+            Self::CustItemGeoModify => "ChrCustItemGeoModify",
+            Self::CustomizationGeoset => "ChrCustomizationGeoset",
+            Self::CustomizationMaterial => "ChrCustomizationMaterial",
+            Self::CustomizationBoneSet => "ChrCustomizationBoneSet",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -79,6 +109,11 @@ impl CharacterTable {
             Self::ClassUIChrModelInfo => 3754770,
             Self::ClassVillain => 1267498,
             Self::ClassXPowerTypes => 1121420,
+            Self::CustomizationCategory => 3526439,
+            Self::CustItemGeoModify => 3952714,
+            Self::CustomizationGeoset => 3456171,
+            Self::CustomizationMaterial => 3459652,
+            Self::CustomizationBoneSet => 3460181,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -201,6 +236,70 @@ impl CharacterTable {
                 index: -1,
                 parent: 1,
                 fields: &[Signed(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationCategoryMeta:
+            // FileDataId 3526439, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x1605B68A. One string
+            // and six signed 32-bit fields plus a float.
+            Self::CustomizationCategory => Schema {
+                hash: None,
+                layout: 0x1605B68A,
+                index: -1,
+                parent: -1,
+                fields: &[
+                    String,
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Float(1),
+                ],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustItemGeoModifyMeta:
+            // FileDataId 3952714, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0x2986E1F3. One signed
+            // byte plus two signed 32-bit fields.
+            Self::CustItemGeoModify => Schema {
+                hash: None,
+                layout: 0x2986E1F3,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(8, 1), Signed(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationGeosetMeta:
+            // FileDataId 3456171, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xBF55F2FB. One signed
+            // byte plus two signed 32-bit fields.
+            Self::CustomizationGeoset => Schema {
+                hash: None,
+                layout: 0xBF55F2FB,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(8, 1), Signed(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationMaterialMeta:
+            // FileDataId 3459652, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xBE9767E9. Two signed
+            // 32-bit fields.
+            Self::CustomizationMaterial => Schema {
+                hash: None,
+                layout: 0xBE9767E9,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(32, 1), Signed(32, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrCustomizationBoneSetMeta:
+            // FileDataId 3460181, IndexField -1, ParentIndexField -1,
+            // FieldCount == FileFieldCount, LayoutHash 0xCC2CFF6E. Two signed
+            // 32-bit fields.
+            Self::CustomizationBoneSet => Schema {
+                hash: None,
+                layout: 0xCC2CFF6E,
+                index: -1,
+                parent: -1,
+                fields: &[Signed(32, 1), Signed(32, 1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),

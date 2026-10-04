@@ -304,6 +304,79 @@ CHR_CLASSES_X_POWER_TYPES = Schema(
     fields=(_signed_field(8),),
 )
 
+# Transcribed from DB2Metadata.h::ChrCustomizationCategoryMeta (FileDataId
+# 3526439, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0x1605B68A): one string, six signed 32-bit fields and a float.
+CHR_CUSTOMIZATION_CATEGORY = Schema(
+    name="ChrCustomizationCategory",
+    layout_hash=0x1605B68A,
+    index=-1,
+    fields=(
+        Field("string"),  # 0
+        _signed_field(32),  # 1
+        _signed_field(32),  # 2
+        _signed_field(32),  # 3
+        _signed_field(32),  # 4
+        _signed_field(32),  # 5
+        _signed_field(32),  # 6
+        Field("float", 32, 1),  # 7
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustItemGeoModifyMeta (FileDataId 3952714,
+# IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount, layout
+# 0x2986E1F3): one signed byte plus two signed 32-bit fields.
+CHR_CUST_ITEM_GEO_MODIFY = Schema(
+    name="ChrCustItemGeoModify",
+    layout_hash=0x2986E1F3,
+    index=-1,
+    fields=(
+        _signed_field(8),  # 0
+        _signed_field(32),  # 1
+        _signed_field(32),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustomizationGeosetMeta (FileDataId
+# 3456171, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0xBF55F2FB): one signed byte plus two signed 32-bit fields.
+CHR_CUSTOMIZATION_GEOSET = Schema(
+    name="ChrCustomizationGeoset",
+    layout_hash=0xBF55F2FB,
+    index=-1,
+    fields=(
+        _signed_field(8),  # 0
+        _signed_field(32),  # 1
+        _signed_field(32),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustomizationMaterialMeta (FileDataId
+# 3459652, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0xBE9767E9): two signed 32-bit fields.
+CHR_CUSTOMIZATION_MATERIAL = Schema(
+    name="ChrCustomizationMaterial",
+    layout_hash=0xBE9767E9,
+    index=-1,
+    fields=(
+        _signed_field(32),  # 0
+        _signed_field(32),  # 1
+    ),
+)
+
+# Transcribed from DB2Metadata.h::ChrCustomizationBoneSetMeta (FileDataId
+# 3460181, IndexField -1, ParentIndexField -1, FieldCount == FileFieldCount,
+# layout 0xCC2CFF6E): two signed 32-bit fields.
+CHR_CUSTOMIZATION_BONE_SET = Schema(
+    name="ChrCustomizationBoneSet",
+    layout_hash=0xCC2CFF6E,
+    index=-1,
+    fields=(
+        _signed_field(32),  # 0
+        _signed_field(32),  # 1
+    ),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -312,6 +385,11 @@ SCHEMAS = {
     "ChrClassUIChrModelInfo": CHR_CLASS_UI_CHR_MODEL_INFO,
     "ChrClassVillain": CHR_CLASS_VILLAIN,
     "ChrClassesXPowerTypes": CHR_CLASSES_X_POWER_TYPES,
+    "ChrCustomizationCategory": CHR_CUSTOMIZATION_CATEGORY,
+    "ChrCustItemGeoModify": CHR_CUST_ITEM_GEO_MODIFY,
+    "ChrCustomizationGeoset": CHR_CUSTOMIZATION_GEOSET,
+    "ChrCustomizationMaterial": CHR_CUSTOMIZATION_MATERIAL,
+    "ChrCustomizationBoneSet": CHR_CUSTOMIZATION_BONE_SET,
 }
 
 

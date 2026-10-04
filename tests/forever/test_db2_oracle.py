@@ -397,6 +397,65 @@ EXPECTED_CHR_CLASSES_X_POWER_TYPES = (
 )
 
 
+def _chr_customization_category_file():
+    """One synthetic row of the reviewed ``ChrCustomizationCategory``.
+
+    Schema: String, Signed(32,1) x6, Float(1), with ``IndexField -1`` so the
+    record id comes from the separate u32 id table (DB2Metadata.h, layout
+    0x1605B68A).
+    """
+    rows = [
+        {
+            0: "Category",
+            1: 0xFFFFFFFF,  # -1
+            2: 0x00000007,  # 7
+            3: 0x80000000,  # -2147483648
+            4: 0x7FFFFFFF,  # 2147483647
+            5: 0xFFFFFFFE,  # -2
+            6: 0x00000000,  # 0
+            7: 0x3F800000,  # float 1.0
+        }
+    ]
+    builder = Wdc5Builder(
+        db2_oracle.CHR_CUSTOMIZATION_CATEGORY,
+        rows,
+        min_id=0,
+        max_id=100,
+        ids=[100],
+    )
+    return builder.build()
+
+
+EXPECTED_CHR_CUSTOMIZATION_CATEGORY = (
+    "forever-db2-dump v1 ChrCustomizationCategory\n"
+    "100\tt:Category\ti:-1\ti:7\ti:-2147483648\ti:2147483647"
+    "\ti:-2\ti:0\tf:0x3f800000\n"
+)
+
+
+def _chr_customization_material_file():
+    """One synthetic row of the reviewed ``ChrCustomizationMaterial``.
+
+    Schema: Signed(32,1) x2 with ``IndexField -1`` (separate u32 id table),
+    layout 0xBE9767E9.
+    """
+    rows = [{0: 0xFFFFFFF9, 1: 0x000003E7}]  # -7, 999
+    builder = Wdc5Builder(
+        db2_oracle.CHR_CUSTOMIZATION_MATERIAL,
+        rows,
+        min_id=0,
+        max_id=100,
+        ids=[42],
+    )
+    return builder.build()
+
+
+EXPECTED_CHR_CUSTOMIZATION_MATERIAL = (
+    "forever-db2-dump v1 ChrCustomizationMaterial\n"
+    "42\ti:-7\ti:999\n"
+)
+
+
 def _zero_section_file(schema, record_count):
     """A header-only WDC5 file with ``section_count == 0`` (204 bytes).
 
@@ -462,6 +521,55 @@ class SyntheticOracle(unittest.TestCase):
         with self.assertRaises(db2_oracle.OracleError) as caught:
             db2_oracle.decode(data, db2_oracle.CHR_CLASSES_X_POWER_TYPES)
         self.assertEqual(caught.exception.code, "invalid_record_ids")
+
+    def test_reviewed_chr_customization_category_dump_matches_golden(self):
+        # String + six signed 32-bit fields + float, IndexField -1 (separate u32
+        # id table), no parent. The string offset is per-record relative and the
+        # signed words sign-extend.
+        data = _chr_customization_category_file()
+        rows = db2_oracle.decode(data, db2_oracle.CHR_CUSTOMIZATION_CATEGORY)
+        self.assertEqual(
+            db2_oracle.render(rows, db2_oracle.CHR_CUSTOMIZATION_CATEGORY.name),
+            EXPECTED_CHR_CUSTOMIZATION_CATEGORY,
+        )
+
+    def test_reviewed_chr_customization_material_dump_matches_golden(self):
+        # A signed-only reviewed table (Signed(32,1) x2), no parent and a
+        # separate u32 id table.
+        data = _chr_customization_material_file()
+        rows = db2_oracle.decode(data, db2_oracle.CHR_CUSTOMIZATION_MATERIAL)
+        self.assertEqual(
+            db2_oracle.render(rows, db2_oracle.CHR_CUSTOMIZATION_MATERIAL.name),
+            EXPECTED_CHR_CUSTOMIZATION_MATERIAL,
+        )
+
+    def test_reviewed_forever_transcriptions_are_present(self):
+        category = db2_oracle.SCHEMAS["ChrCustomizationCategory"]
+        self.assertEqual(category.layout_hash, 0x1605B68A)
+        self.assertEqual(category.index, -1)
+        self.assertEqual(category.parent, -1)
+        self.assertEqual(len(category.fields), 8)
+        self.assertEqual((category.fields[0].kind, category.fields[0].bits), ("string", 32))
+        for index in range(1, 7):
+            self.assertEqual(
+                (category.fields[index].kind, category.fields[index].bits, category.fields[index].signed),
+                ("signed", 32, True),
+                "field %d" % index,
+            )
+        self.assertEqual((category.fields[7].kind, category.fields[7].count), ("float", 1))
+        for name, layout, fields in (
+            ("ChrCustItemGeoModify", 0x2986E1F3, 3),
+            ("ChrCustomizationGeoset", 0xBF55F2FB, 3),
+            ("ChrCustomizationMaterial", 0xBE9767E9, 2),
+            ("ChrCustomizationBoneSet", 0xCC2CFF6E, 2),
+        ):
+            schema = db2_oracle.SCHEMAS[name]
+            self.assertEqual(schema.layout_hash, layout, name)
+            self.assertEqual(schema.index, -1, name)
+            self.assertEqual(schema.parent, -1, name)
+            self.assertEqual(len(schema.fields), fields, name)
+            self.assertEqual(schema.fields[0].kind, "signed", name)
+            self.assertTrue(schema.fields[0].signed, name)
 
     def test_reviewed_chr_class_transcriptions_are_present(self):
         title = db2_oracle.SCHEMAS["ChrClassTitle"]

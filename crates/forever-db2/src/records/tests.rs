@@ -1525,3 +1525,252 @@ fn xpower_wrong_layout_and_field_counts_are_schema() {
     put32(&mut bytes, 176, 2);
     assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
 }
+
+// ---------------------------------------------------------------------------
+// Forever ChrCustomization* / ChrCustItemGeoModify (No parent, IndexField -1)
+// ---------------------------------------------------------------------------
+
+/// The five reviewed Forever tables with their pinned identity. Their table
+/// hashes are NOT transcribed because `DB2Meta` does not carry one, so the only
+/// trustworthy identity is (layout_hash, field_count, index=-1, file_id). All
+/// five declare `ParentIndexField = -1` and `FieldCount == FileFieldCount`.
+const FOREVER_TABLES: [(CharacterTable, u32, u32, usize); 5] = [
+    (
+        CharacterTable::CustomizationCategory,
+        3526439,
+        0x1605B68A,
+        8,
+    ),
+    (CharacterTable::CustItemGeoModify, 3952714, 0x2986E1F3, 3),
+    (CharacterTable::CustomizationGeoset, 3456171, 0xBF55F2FB, 3),
+    (
+        CharacterTable::CustomizationMaterial,
+        3459652,
+        0xBE9767E9,
+        2,
+    ),
+    (CharacterTable::CustomizationBoneSet, 3460181, 0xCC2CFF6E, 2),
+];
+
+#[test]
+fn forever_table_identity_and_transcription_match_the_reference() {
+    // Verified against DB2Metadata.h at 02245dcd: each of the five tables
+    // declares FileDataId, IndexField = -1, ParentIndexField = -1 and a
+    // LayoutHash; FieldCount == FileFieldCount for all five.
+    for (table, file_id, layout, fields) in FOREVER_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, -1, "{} index", table.name());
+        assert_eq!(schema.parent, -1, "{} parent", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        // No `DB2Meta` member supplies a table hash, so none is transcribed.
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+}
+
+#[test]
+fn forever_table_matches_gates_on_known_identity_not_a_table_hash() {
+    // No table hash is transcribed, so any header `TableHash` word must be
+    // accepted while layout/field/total identity is right (the reference checks
+    // LayoutHash at DB2FileLoader.cpp:1763 and the field count at :1771).
+    for (table, _, layout, fields) in FOREVER_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert_eq!(
+            header.total_field_count as usize,
+            fields,
+            "{} total fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn forever_table_matches_rejects_layout_field_and_total_mismatches() {
+    for (table, _, _, _) in FOREVER_TABLES {
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(!table.matches(&header), "{} layout mismatch", table.name());
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 140, 42);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(!table.matches(&header), "{} field_count", table.name());
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(
+            !table.matches(&header),
+            "{} total_field_count",
+            table.name()
+        );
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn chr_customization_category_decodes_string_signed_ints_and_float() {
+    // ChrCustomizationCategory: [String, Signed(32,1)x6, Float(1)].
+    let table = CharacterTable::CustomizationCategory;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 100;
+    spec.strings = b"Category\0".to_vec();
+    let string_off = field_offset(&spec, 0);
+    let relative = record_size(&spec.cols) as u32 - u32::from(string_off) / 8;
+    write_word(&mut spec.records[0], string_off, relative);
+    let signed = [-1i32, 0, 7, -2_000_000_000, 2_000_000_000, 42];
+    for (field, value) in signed.into_iter().enumerate() {
+        let off = field_offset(&spec, field + 1);
+        write_word(&mut spec.records[0], off, value as u32);
+    }
+    let off_float = field_offset(&spec, 7);
+    write_word(&mut spec.records[0], off_float, 0x3F80_0000);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&100];
+    assert_eq!(row[0][0], Value::Text("Category".to_owned()));
+    for (field, value) in signed.into_iter().enumerate() {
+        assert_eq!(
+            row[field + 1][0],
+            Value::Signed(value),
+            "field {}",
+            field + 1
+        );
+    }
+    assert_eq!(row[7][0], Value::FloatBits(0x3F80_0000));
+}
+
+#[test]
+fn chr_cust_item_geo_modify_decodes_signed_byte_and_two_signed_ints() {
+    let table = CharacterTable::CustItemGeoModify;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 7;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], off0, 0x9C);
+    write_word(&mut spec.records[0], off1, (-5i32) as u32);
+    write_word(&mut spec.records[0], off2, 123_456);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&7];
+    assert_eq!(row[0][0], Value::Signed(-100));
+    assert_eq!(row[1][0], Value::Signed(-5));
+    assert_eq!(row[2][0], Value::Signed(123_456));
+}
+
+#[test]
+fn chr_customization_geoset_decodes_signed_byte_and_two_signed_ints() {
+    let table = CharacterTable::CustomizationGeoset;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 3;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], off0, 0x7F);
+    write_word(&mut spec.records[0], off1, (-1i32) as u32);
+    write_word(&mut spec.records[0], off2, 8);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&3];
+    assert_eq!(row[0][0], Value::Signed(127));
+    assert_eq!(row[1][0], Value::Signed(-1));
+    assert_eq!(row[2][0], Value::Signed(8));
+}
+
+#[test]
+fn chr_customization_material_decodes_two_signed_ints() {
+    let table = CharacterTable::CustomizationMaterial;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 42;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], off0, (-7i32) as u32);
+    write_word(&mut spec.records[0], off1, 999);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&42];
+    assert_eq!(row[0][0], Value::Signed(-7));
+    assert_eq!(row[1][0], Value::Signed(999));
+}
+
+#[test]
+fn chr_customization_bone_set_decodes_two_signed_ints() {
+    let table = CharacterTable::CustomizationBoneSet;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 5;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], off0, 11);
+    write_word(&mut spec.records[0], off1, (-42i32) as u32);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&5];
+    assert_eq!(row[0][0], Value::Signed(11));
+    assert_eq!(row[1][0], Value::Signed(-42));
+}
+
+#[test]
+fn forever_tables_empty_zero_section_and_declared_records_variants() {
+    for (table, _, _, _) in FOREVER_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+
+        let bytes = build_zero_section_header(table, 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Unsupported,
+            "{} zero sections with records",
+            table.name()
+        );
+    }
+}
