@@ -91,6 +91,16 @@ struct Spec {
     extra_sections: u32,
     extra_tail: usize,
     truncate: Option<usize>,
+    /// Header `ParentLookupCount` (`0` or `1`).
+    parent_lookup_count: u32,
+    /// `{ParentId, RecordIndex}` entries of the parent-lookup block.
+    parent_entries: Vec<(u32, u32)>,
+    /// Overrides the header's declared `NumEntries` when `parent_lookup_count == 1`.
+    parent_count_override: Option<u32>,
+    /// Overrides the section's declared `parent_lookup_data_size`.
+    parent_lookup_size: Option<u32>,
+    /// Extra bytes appended after the parent-lookup block.
+    parent_tail: usize,
 }
 
 fn spec(table: CharacterTable) -> Spec {
@@ -117,6 +127,11 @@ fn spec(table: CharacterTable) -> Spec {
         extra_sections: 0,
         extra_tail: 0,
         truncate: None,
+        parent_lookup_count: 0,
+        parent_entries: Vec::new(),
+        parent_count_override: None,
+        parent_lookup_size: None,
+        parent_tail: 0,
     }
 }
 
@@ -175,6 +190,7 @@ fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
     out[..4].copy_from_slice(b"WDC5");
     put32(&mut out, 4, 5);
     put32(&mut out, 136, header_record_count);
+    // `field_count` is the column count (FileFieldCount == schema.fields.len()).
     put32(&mut out, 140, fields as u32);
     put32(&mut out, 144, record_size as u32);
     put32(&mut out, 148, header_string_size);
@@ -187,9 +203,17 @@ fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
     put32(&mut out, 168, 0);
     put16(&mut out, 172, s.flags);
     out[174..176].copy_from_slice(&schema.index.to_le_bytes());
+    // Reference DB2FileLoader.cpp:1771 gate:
+    //   TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
+    //   == Meta->FieldCount
+    // with Meta->FieldCount == columns + 1 == fields.len() + 1 for the reviewed
+    // extra-field-at-the-end parent variant. With ParentIndexField == fields.len()
+    // (1) and TotalFieldCount == 1 this is `1 + 1 == 2`, so the fixture writes
+    // total_field_count == fields.len() for that variant. No-parent tables keep
+    // total == field == fields.len().
     put32(&mut out, 176, fields as u32);
     put32(&mut out, 180, s.packed_data_offset);
-    put32(&mut out, 184, 0);
+    put32(&mut out, 184, s.parent_lookup_count);
     let column_meta_size = s.column_meta_size.unwrap_or((fields * 24) as u32);
     put32(&mut out, 188, column_meta_size);
     put32(&mut out, 192, s.common.len() as u32);
@@ -227,6 +251,21 @@ fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
         out.extend(new.to_le_bytes());
         out.extend(source.to_le_bytes());
     }
+    // Parent-lookup block: 12-byte header (`NumEntries`, `MinId`, `MaxId`) then
+    // `NumEntries` 8-byte `{ParentId, RecordIndex}` entries, after the copy table.
+    if s.parent_lookup_count == 1 {
+        let declared = s
+            .parent_count_override
+            .unwrap_or(s.parent_entries.len() as u32);
+        out.extend(declared.to_le_bytes());
+        out.extend(0u32.to_le_bytes());
+        out.extend(0u32.to_le_bytes());
+        for (parent_id, record_index) in &s.parent_entries {
+            out.extend(parent_id.to_le_bytes());
+            out.extend(record_index.to_le_bytes());
+        }
+    }
+    out.resize(out.len() + s.parent_tail, 0);
 
     let default_id_table = if schema.index < 0 {
         header_record_count as usize * 4
@@ -238,12 +277,21 @@ fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
     let section_string_size = s.s_string_size.unwrap_or(header_string_size);
     let section_id_table = s.id_table_size.unwrap_or(default_id_table as u32);
     let section_copy_count = s.copy_count.unwrap_or(s.copies.len() as u32);
+    let default_parent_size = if s.parent_lookup_count == 1 {
+        let declared = s
+            .parent_count_override
+            .unwrap_or(s.parent_entries.len() as u32);
+        12 + declared as usize * 8
+    } else {
+        0
+    };
+    let section_parent_size = s.parent_lookup_size.unwrap_or(default_parent_size as u32);
     put32(&mut out, section_at + 8, file_offset);
     put32(&mut out, section_at + 12, section_record_count);
     put32(&mut out, section_at + 16, section_string_size);
     put32(&mut out, section_at + 20, 0);
     put32(&mut out, section_at + 24, section_id_table);
-    put32(&mut out, section_at + 28, 0);
+    put32(&mut out, section_at + 28, section_parent_size);
     put32(&mut out, section_at + 32, 0);
     put32(&mut out, section_at + 36, section_copy_count);
 
@@ -291,6 +339,30 @@ fn idtable_spec(table: CharacterTable, count: usize) -> Spec {
 
 fn build_idtable(table: CharacterTable, spec: &Spec) -> Vec<u8> {
     assemble(table, spec)
+}
+
+/// Decode-valid spec for `ChrClassesXPowerTypes`: two zeroed records, a separate
+/// u32 id table (IndexField -1) and an optional parent-lookup block.
+fn xpower(count: usize) -> Spec {
+    let mut spec = spec(CharacterTable::ClassXPowerTypes);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec.ids = vec![0; count];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec
+}
+
+fn decode_xpower(spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, spec);
+    DecodedTable::read(&bytes, CharacterTable::ClassXPowerTypes)
+}
+
+fn expect_err_xpower(bytes: &[u8]) -> RecordError {
+    match decode(CharacterTable::ClassXPowerTypes, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
 }
 
 /// A minimal header-only WDC5 file with `section_count == 0` (204 bytes). Used
@@ -755,17 +827,31 @@ fn multi_section_tact_parent_and_catalog_variants_are_unsupported() {
     put32(&mut bytes, 204, 7);
     assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
 
+    // A parent-lookup count above 1 is rejected while the header is parsed:
+    // lib.rs Header::parse returns Error::ParentLookupCount (mapped to
+    // RecordError::Metadata) before this decoder can classify it as a variant,
+    // mirroring DB2FileLoader.cpp:1767.
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 184, 2);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Metadata);
+
+    // A parent-lookup count of 1 on a table whose reviewed metadata has no
+    // parent index field is a schema mismatch (DB2FileLoader.cpp:1773).
     let mut bytes = build_classes(&classes(1));
     put32(&mut bytes, 184, 1);
-    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
 
     let mut bytes = build_classes(&classes(1));
     put32(&mut bytes, 204 + 32, 1);
     assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
 
+    // A section that declares parent-lookup data while the header declares no
+    // parent block (and the reviewed meta has no parent field) cannot be
+    // reconciled: the trailing bytes have no accounted reader, so it is a
+    // record_data_bounds mismatch rather than an unsupported variant.
     let mut bytes = build_classes(&classes(1));
     put32(&mut bytes, 204 + 28, 1);
-    assert_eq!(expect_err_classes(&bytes), RecordError::Unsupported);
+    assert_eq!(expect_err_classes(&bytes), RecordError::Bounds);
 }
 
 #[test]
@@ -1255,4 +1341,187 @@ fn zero_sections_with_declared_records_is_rejected() {
             table.name()
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// ChrClassesXPowerTypes (IndexField -1, ParentIndexField 1, FileFieldCount 1)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn xpower_schema_has_one_file_field_and_an_appended_parent() {
+    // Verified 2026-10-04 against DB2Metadata.h::ChrClassesXPowerTypesMeta at
+    // 02245dcd245e7433e524577656177723d3e4992e: FileDataId 1121420,
+    // IndexField -1, ParentIndexField 1, FieldCount 2, FileFieldCount 1,
+    // LayoutHash 0x70DA1F8C. `fields` is the single decoded column; `parent`
+    // indexes the total array (>= fields.len() => extra field at the end).
+    let schema = CharacterTable::ClassXPowerTypes.schema();
+    assert_eq!(CharacterTable::ClassXPowerTypes.file_id(), 1_121_420);
+    assert_eq!(schema.layout, 0x70DA1F8C);
+    assert_eq!(schema.index, -1);
+    assert_eq!(schema.parent, 1);
+    assert_eq!(schema.fields.len(), 1, "one file field");
+    assert!(matches!(schema.fields[0], Kind::Signed(8, 1)));
+    assert!(schema.parent as usize >= schema.fields.len());
+    assert!(schema.hash.is_none(), "must not invent a table hash");
+}
+
+#[test]
+fn xpower_header_gate_uses_total_plus_one_for_the_appended_parent() {
+    // DB2FileLoader.cpp:1771: TotalFieldCount + (ParentIndexField >=
+    // TotalFieldCount ? 1 : 0) == Meta->FieldCount. For this table the reviewed
+    // Meta->FieldCount is 2 (1 column + appended parent). A conforming header
+    // therefore carries field_count = 1 and total_field_count = 1.
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(0, 0)];
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+        .unwrap()
+        .header;
+    assert_eq!(header.field_count, 1, "file field count");
+    assert_eq!(header.total_field_count, 1, "total field count");
+    assert!(CharacterTable::ClassXPowerTypes.matches(&header));
+    let out = decode_xpower(&spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![11]);
+}
+
+#[test]
+fn xpower_decodes_two_entries_and_fills_parent_ids() {
+    // Two records keyed by the separate id table; parent-lookup entries
+    // `{ParentId, RecordIndex}` fill the appended field of the addressed
+    // ordinal. Reference DB2FileLoader.cpp:1877 fills the extra field from the
+    // parent block at the record ordinal.
+    let mut spec = xpower(2);
+    spec.ids = vec![11, 22];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(0, 0), (1, 1)];
+    let out = decode_xpower(&spec).unwrap();
+    let keys = out.rows().keys().copied().collect::<Vec<_>>();
+    assert_eq!(keys, vec![11, 22]);
+    // Column 0 is the single signed byte (zero in these fixtures); index 1 is
+    // the appended parent field.
+    assert_eq!(out.rows()[&11].len(), 2);
+    assert_eq!(out.rows()[&11][0][0], Value::Signed(0));
+    assert_eq!(out.rows()[&11][1][0], Value::Signed(0));
+    assert_eq!(out.rows()[&22][1][0], Value::Signed(1));
+    assert_eq!(spec.parent_entries.len(), 2, "two parent entries");
+}
+
+#[test]
+fn xpower_zero_parent_entries_still_gets_the_default_parent_field() {
+    // A parent block with NumEntries = 0 is admitted; every row keeps the
+    // default appended parent field of signed zero.
+    let mut spec = xpower(2);
+    spec.ids = vec![11, 22];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = Vec::new();
+    let out = decode_xpower(&spec).unwrap();
+    assert_eq!(out.rows()[&11].len(), 2);
+    assert_eq!(out.rows()[&11][1][0], Value::Signed(0));
+    assert_eq!(out.rows()[&22][1][0], Value::Signed(0));
+}
+
+#[test]
+fn xpower_duplicate_parent_entry_last_wins() {
+    // Two parent entries addressing the same record ordinal: the later entry is
+    // applied last and wins.
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(7, 0), (9, 0)];
+    let out = decode_xpower(&spec).unwrap();
+    assert_eq!(out.rows()[&11][1][0], Value::Signed(9));
+}
+
+#[test]
+fn xpower_parent_record_index_at_or_above_record_count_is_id_error() {
+    // A parent entry whose RecordIndex addresses no decoded ordinal is an
+    // invalid_record_ids error, not a silent skip.
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(5, 1)];
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Id);
+}
+
+#[test]
+fn xpower_parent_lookup_size_inconsistency_is_bounds() {
+    // The section's declared parent_lookup_data_size must equal
+    // 12 + NumEntries * 8; a mismatch is record_data_bounds.
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(5, 0)];
+    spec.parent_lookup_size = Some(0);
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Bounds);
+}
+
+#[test]
+fn xpower_extra_bytes_after_the_parent_block_are_bounds() {
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(5, 0)];
+    spec.parent_tail = 1;
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Bounds);
+}
+
+#[test]
+fn xpower_parent_count_zero_but_schema_expects_parent_is_schema() {
+    // The reviewed schema has a parent index field, so a header that declares no
+    // parent-lookup block is a schema mismatch (the `==` in
+    // `(parent_lookup_count == 1) != (schema.parent >= 0)`), reported as
+    // unsupported_table_schema before any data bounds are checked.
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 0;
+    spec.parent_entries = Vec::new();
+    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
+}
+
+#[test]
+fn xpower_wrong_layout_and_field_counts_are_schema() {
+    let mut spec = xpower(1);
+    spec.ids[0] = 11;
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(5, 0)];
+
+    // Wrong layout hash.
+    let mut bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    put32(&mut bytes, 156, 0);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
+
+    // Header field_count must equal the single file field.
+    let mut bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    put32(&mut bytes, 140, 2);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
+
+    // Header total_field_count must satisfy total + 1 == FieldCount (2), i.e.
+    // total == 1; a total of 2 fails the gate.
+    let mut bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
+    put32(&mut bytes, 176, 2);
+    assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
 }

@@ -104,12 +104,21 @@ class Field:
 
 @dataclasses.dataclass(frozen=True)
 class Schema:
-    """Reviewed schema identity plus the transcribed field list."""
+    """Reviewed schema identity plus the transcribed field list.
+
+    ``fields`` is the decoded column list (one column per ``FileFieldCount``);
+    the header's ``field_count`` equals ``len(fields)``. ``parent`` is the
+    reviewed ``ParentIndexField``, an index into the TOTAL field array (columns
+    plus any appended parent) and ``-1`` when the table has no parent. When
+    ``parent >= len(fields)`` the parent is the "extra field at the end"
+    variant, filled from the separate parent-lookup block.
+    """
 
     name: str
     layout_hash: int
     index: int
     fields: tuple
+    parent: int = -1
 
 
 def _signed_field(bits, count=1):
@@ -282,6 +291,19 @@ CHR_CLASS_VILLAIN = Schema(
     ),
 )
 
+# Transcribed from DB2Metadata.h::ChrClassesXPowerTypesMeta (FileDataId
+# 1121420, IndexField -1, ParentIndexField 1, FieldCount 2, FileFieldCount 1,
+# layout 0x70DA1F8C). `fields` is the single decoded column; `parent = 1` sits
+# at the total-array index just past it (the "extra field at the end" variant),
+# so the header carries field_count = 1 and total_field_count = 1.
+CHR_CLASSES_X_POWER_TYPES = Schema(
+    name="ChrClassesXPowerTypes",
+    layout_hash=0x70DA1F8C,
+    index=-1,
+    parent=1,
+    fields=(_signed_field(8),),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -289,6 +311,7 @@ SCHEMAS = {
     "ChrClassUIDisplay": CHR_CLASS_UI_DISPLAY,
     "ChrClassUIChrModelInfo": CHR_CLASS_UI_CHR_MODEL_INFO,
     "ChrClassVillain": CHR_CLASS_VILLAIN,
+    "ChrClassesXPowerTypes": CHR_CLASSES_X_POWER_TYPES,
 }
 
 
@@ -556,8 +579,14 @@ class _Value:
 
 
 def _decode_parsed(data, header, sections, schema):
-    if header.flags & SPARSE_FLAG or header.parent_lookup_count != 0:
+    if header.flags & SPARSE_FLAG:
         raise OracleError("unsupported_record_variant")
+    # DB2FileLoader.cpp:1767 rejects ParentLookupCount > 1; :1773 then requires
+    # the reviewed metadata to agree on whether the table has a parent field.
+    if header.parent_lookup_count > 1:
+        raise OracleError("unsupported_record_variant")
+    if (header.parent_lookup_count == 1) != (schema.parent >= 0):
+        raise OracleError("unsupported_table_schema")
     if len(sections) == 0:
         # DB2FileLoader.cpp:1778-1779 admits a zero-section header and
         # DB2FileLoader.cpp:1877 then assigns an empty record map: no sections
@@ -569,11 +598,7 @@ def _decode_parsed(data, header, sections, schema):
     if len(sections) > 1:
         raise OracleError("unsupported_record_variant")
     section = sections[0]
-    if (
-        section.tact
-        or section.parent_lookup_data_size != 0
-        or section.catalog_data_count != 0
-    ):
+    if section.tact or section.catalog_data_count != 0:
         raise OracleError("unsupported_record_variant")
     value_count = header.record_count * len(schema.fields)
     if (
@@ -600,12 +625,31 @@ def _decode_parsed(data, header, sections, schema):
     if section.id_table_size != id_bytes:
         raise OracleError("invalid_record_ids")
     copy_start = strings_end + id_bytes
-    if copy_start + section.copy_table_count * 8 != len(data):
+    end = copy_start + section.copy_table_count * 8
+    # Parent-lookup block: 12-byte header (NumEntries, MinId, MaxId) then
+    # NumEntries 8-byte {ParentId, RecordIndex} entries, after the copy table.
+    parent_start = 0
+    parent_entries = 0
+    if header.parent_lookup_count == 1:
+        declared = _u32(data, end)
+        if declared > RECORD_POLICY_LIMIT:
+            raise OracleError("record_policy_limit")
+        parent_bytes = 12 + declared * 8
+        if section.parent_lookup_data_size != parent_bytes:
+            raise OracleError("record_data_bounds")
+        if end + parent_bytes != len(data):
+            raise OracleError("record_data_bounds")
+        parent_start = end
+        parent_entries = declared
+    elif section.parent_lookup_data_size != 0 or end != len(data):
         raise OracleError("record_data_bounds")
     if schema.index >= 0 and columns[schema.index].compression not in (0, 1, 5):
         raise OracleError("invalid_column_data")
 
     rows = {}
+    # Record ordinal -> row id, so the parent block can address a row by its
+    # ordinal (DB2FileLoader.cpp:1877 fills the appended field from the block).
+    ordinal_ids = []
     for record in range(header.record_count):
         record_start = records_start + record * record_size
         raw = _slice(data, record_start, record_size)
@@ -662,7 +706,29 @@ def _decode_parsed(data, header, sections, schema):
                 else:
                     values.append(_Value("unsigned", number=bits))
             fields.append(values)
+        # Extra field at the end: grow the row to `parent` and default the
+        # appended slot to a signed zero; filled from the parent block below.
+        if schema.parent >= 0:
+            while len(fields) <= schema.parent:
+                fields.append([])
+            fields[schema.parent] = [_Value("signed", number=0)]
+        ordinal_ids.append(record_id)
         rows[record_id] = fields
+
+    # Apply the parent lookup before the copy table so a copied row carries its
+    # source's parent value. A later duplicate for the same RecordIndex wins.
+    if header.parent_lookup_count == 1:
+        entries_at = parent_start + 12
+        for entry in range(parent_entries):
+            at = entries_at + entry * 8
+            parent_id = _u32(data, at)
+            record_index = _u32(data, at + 4)
+            if record_index >= len(ordinal_ids):
+                raise OracleError("invalid_record_ids")
+            rid = ordinal_ids[record_index]
+            if rid not in rows:
+                raise OracleError("invalid_record_ids")
+            rows[rid][schema.parent][0] = _Value("signed", number=parent_id)
 
     # AutoProduceRecordCopies (DB2FileLoader.cpp:613-634).
     for index in range(section.copy_table_count):
@@ -730,10 +796,21 @@ def dump_file(path, table_name):
     except OSError:
         raise OracleError("input_io")
     header, sections = parse(data)
+    # DB2FileLoader.cpp:1763 validates LayoutHash; :1771 gates the field counts:
+    #   TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
+    #   == Meta->FieldCount
+    # with Meta->FieldCount == len(fields) + 1 for the reviewed
+    # extra-field-at-the-end parent variant (so total_field_count == fields),
+    # and total_field_count == field_count otherwise.
+    field_count_ok = header.field_count == len(schema.fields)
+    if schema.parent >= 0 and schema.parent >= len(schema.fields):
+        total_field_count_ok = header.total_field_count + 1 == len(schema.fields) + 1
+    else:
+        total_field_count_ok = header.total_field_count == header.field_count
     if (
         header.layout_hash != schema.layout_hash
-        or header.field_count != len(schema.fields)
-        or header.total_field_count != header.field_count
+        or not field_count_ok
+        or not total_field_count_ok
     ):
         raise OracleError("unsupported_table_schema")
     rows = _decode_parsed(data, header, sections, schema)

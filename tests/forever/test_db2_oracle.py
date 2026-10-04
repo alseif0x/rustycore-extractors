@@ -332,6 +332,71 @@ EXPECTED_CHR_CLASS_UI_CHR_MODEL_INFO = (
 )
 
 
+def _xpower_file(ids, parents):
+    """Minimal synthetic WDC5 file for the reviewed ``ChrClassesXPowerTypes``.
+
+    Schema: one signed 8-bit decoded column, ``IndexField -1`` so the record id
+    comes from the separate u32 id table, and ``ParentIndexField 1`` as the
+    extra field at the end. Header carries ``field_count = total_field_count =
+    1`` and ``parent_lookup_count = 1``; ``parents`` is a list of
+    ``(ParentId, RecordIndex)`` entries in the trailing parent-lookup block.
+    """
+    schema = db2_oracle.CHR_CLASSES_X_POWER_TYPES
+    record_count = len(ids)
+    record_size = 1
+    out = bytearray(HEADER_SIZE)
+    out[0:4] = b"WDC5"
+    _put32(out, 4, 5)
+    _put32(out, 136, record_count)
+    _put32(out, 140, 1)  # FileFieldCount: the single decoded column
+    _put32(out, 144, record_size)
+    _put32(out, 148, 0)  # string table size
+    _put32(out, 152, 0)  # table hash is not gated for this table
+    _put32(out, 156, schema.layout_hash)
+    _put32(out, 160, 0)
+    _put32(out, 164, max(ids) if ids else 0)
+    _put32(out, 176, 1)  # total_field_count
+    _put32(out, 180, 0)  # packed data offset
+    _put32(out, 184, 1)  # parent lookup count
+    _put32(out, 188, 24)  # column meta size = fields * 24
+    _put_i16(out, 174, schema.index)
+    _put32(out, 200, 1)  # one section
+    section_at = len(out)
+    out += bytearray(SECTION_SIZE)
+    out += (0).to_bytes(2, "little") + (0).to_bytes(2, "little")  # field offset 0
+    column = bytearray(24)
+    _put16(column, 0, 0)  # field offset
+    _put32(column, 8, 0)  # compression mode 0 (direct value)
+    out += column
+    metadata_end = len(out)
+    out += bytes(record_count)  # zeroed records (single signed byte each)
+    for record_id in ids:
+        out += (record_id & 0xFFFFFFFF).to_bytes(4, "little")
+    parent_bytes = 12 + len(parents) * 8
+    # Parent-lookup block: 12-byte {NumEntries, MinId, MaxId} header then
+    # NumEntries 8-byte {ParentId, RecordIndex} entries.
+    out += (len(parents) & 0xFFFFFFFF).to_bytes(4, "little")  # NumEntries
+    out += (0).to_bytes(4, "little")  # MinId
+    out += (max(ids) if ids else 0).to_bytes(4, "little")  # MaxId
+    for parent_id, record_index in parents:
+        out += (parent_id & 0xFFFFFFFF).to_bytes(4, "little")
+        out += (record_index & 0xFFFFFFFF).to_bytes(4, "little")
+    _put32(out, section_at + 8, metadata_end)
+    _put32(out, section_at + 12, record_count)
+    _put32(out, section_at + 16, 0)
+    _put32(out, section_at + 20, 0)
+    _put32(out, section_at + 24, record_count * 4)
+    _put32(out, section_at + 28, parent_bytes)
+    return bytes(out)
+
+
+EXPECTED_CHR_CLASSES_X_POWER_TYPES = (
+    "forever-db2-dump v1 ChrClassesXPowerTypes\n"
+    "11\ti:0\ti:7\n"
+    "22\ti:0\ti:9\n"
+)
+
+
 def _zero_section_file(schema, record_count):
     """A header-only WDC5 file with ``section_count == 0`` (204 bytes).
 
@@ -378,6 +443,25 @@ class SyntheticOracle(unittest.TestCase):
             db2_oracle.render(rows, db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO.name),
             EXPECTED_CHR_CLASS_UI_CHR_MODEL_INFO,
         )
+
+    def test_reviewed_chr_classes_x_power_types_dump_matches_golden(self):
+        # Extra-field-at-the-end parent variant: 1 file field (signed 8),
+        # IndexField -1 (separate u32 id table) and ParentIndexField 1 filled
+        # from the trailing parent-lookup block (DB2FileLoader.cpp:1877).
+        data = _xpower_file([11, 22], [(7, 0), (9, 1)])
+        rows = db2_oracle.decode(data, db2_oracle.CHR_CLASSES_X_POWER_TYPES)
+        self.assertEqual(
+            db2_oracle.render(rows, "ChrClassesXPowerTypes"),
+            EXPECTED_CHR_CLASSES_X_POWER_TYPES,
+        )
+
+    def test_reviewed_chr_classes_x_power_types_parent_index_out_of_range(self):
+        # A parent entry whose RecordIndex addresses no decoded ordinal is an
+        # invalid_record_ids error, not a silent skip.
+        data = _xpower_file([11, 22], [(7, 2)])
+        with self.assertRaises(db2_oracle.OracleError) as caught:
+            db2_oracle.decode(data, db2_oracle.CHR_CLASSES_X_POWER_TYPES)
+        self.assertEqual(caught.exception.code, "invalid_record_ids")
 
     def test_reviewed_chr_class_transcriptions_are_present(self):
         title = db2_oracle.SCHEMAS["ChrClassTitle"]
@@ -436,7 +520,10 @@ class SyntheticOracle(unittest.TestCase):
         base = _inline_file()
         mutations = [
             ("sparse flag", 172, 2, 1, "unsupported_record_variant"),
-            ("parent lookup", 184, 4, 1, "unsupported_record_variant"),
+            # The reviewed SYNTHETIC_INLINE schema has no parent index field, so
+            # declaring a parent-lookup block is a schema mismatch, not an
+            # unsupported record variant (DB2FileLoader.cpp:1773).
+            ("parent lookup", 184, 4, 1, "unsupported_table_schema"),
             ("nonzero tact", 204, 1, 1, "unsupported_record_variant"),
             ("catalog count", 204 + 32, 4, 1, "unsupported_record_variant"),
         ]

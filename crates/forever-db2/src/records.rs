@@ -2,7 +2,9 @@
 //! Independent checked implementation of the bounded regular WDC5 operation.
 //! Evidence: TrinityCore 02245dcd DB2FileLoader.cpp::LoadHeaders/Load,
 //! DB2FileLoaderRegularImpl::{RecordGetVarInt,RecordGetString,AutoProduceRecordCopies}.
-//! Sparse, encrypted, parent-bearing and multi-section variants fail explicitly.
+//! Sparse, encrypted and multi-section variants fail explicitly; at most one
+//! parent-lookup block is admitted and only for a table whose reviewed metadata
+//! declares a parent index field.
 mod columns;
 mod schema;
 #[cfg(test)]
@@ -74,8 +76,19 @@ impl DecodedTable {
         if !table.matches(&h) {
             return Err(RecordError::Schema);
         }
-        if h.flags & SPARSE_FLAG != 0 || h.parent_lookup_count != 0 {
+        if h.flags & SPARSE_FLAG != 0 {
             return Err(RecordError::Unsupported);
+        }
+        // DB2FileLoader.cpp:1767 rejects `ParentLookupCount > 1`; at most one
+        // parent-lookup table is admitted. DB2FileLoader.cpp:1773 then requires
+        // the reviewed metadata to agree: a parent-bearing table has a parent
+        // index field, so a section that declares a parent block but a schema
+        // without one (or vice versa) is a schema mismatch, not a data error.
+        if h.parent_lookup_count > 1 {
+            return Err(RecordError::Unsupported);
+        }
+        if (h.parent_lookup_count == 1) != (schema.parent >= 0) {
+            return Err(RecordError::Schema);
         }
         if meta.sections.is_empty() {
             // DB2FileLoader.cpp:1778-1779 admits a zero-section header and
@@ -94,7 +107,7 @@ impl DecodedTable {
             return Err(RecordError::Unsupported);
         }
         let s = meta.sections[0];
-        if s.tact_declared || s.parent_lookup_data_size != 0 || s.catalog_data_count != 0 {
+        if s.tact_declared || s.catalog_data_count != 0 {
             return Err(RecordError::Unsupported);
         }
         // Bound every raw count before it is multiplied: record_count, value
@@ -144,13 +157,44 @@ impl DecodedTable {
         let end = copy_start
             .checked_add(copy_bytes)
             .ok_or(RecordError::Bounds)?;
-        if end != data.len() {
+        // Parent lookup block: reference DB2FileLoader.cpp:1767-1776 admits at
+        // most one parent-lookup table and DB2FileLoader.cpp:1877 fills the
+        // appended parent field from a header of 12 bytes (`NumEntries`,
+        // `MinId`, `MaxId`) followed by `NumEntries` 8-byte `{ParentId,
+        // RecordIndex}` entries. Only NumEntries is needed here; it bounds the
+        // block size, so the remaining header words are only availability
+        // checked by the size equality below.
+        let mut parent_start = 0usize;
+        let mut parent_entries = 0u32;
+        if h.parent_lookup_count == 1 {
+            let declared = u32_at(data, end)?;
+            if declared > 100_000 {
+                return Err(RecordError::Limit);
+            }
+            let parent_bytes = (declared as usize)
+                .checked_mul(8)
+                .and_then(|bytes| bytes.checked_add(12))
+                .ok_or(RecordError::Bounds)?;
+            if s.parent_lookup_data_size as usize != parent_bytes {
+                return Err(RecordError::Bounds);
+            }
+            let parent_end = end.checked_add(parent_bytes).ok_or(RecordError::Bounds)?;
+            if parent_end != data.len() {
+                return Err(RecordError::Bounds);
+            }
+            parent_start = end;
+            parent_entries = declared;
+        } else if s.parent_lookup_data_size != 0 || end != data.len() {
             return Err(RecordError::Bounds);
         }
         if schema.index >= 0 && !matches!(cols[schema.index as usize].compression, 0 | 1 | 5) {
             return Err(RecordError::Column);
         }
         let mut rows = BTreeMap::new();
+        // Record ordinal -> row id, so the parent-lookup block, whose entries
+        // address rows by ordinal, can find the id key the row was inserted
+        // under (inline or repaired id-table value).
+        let mut ordinal_ids = Vec::with_capacity(h.record_count as usize);
         for record in 0..h.record_count as usize {
             let record_at = record.checked_mul(record_size).ok_or(RecordError::Bounds)?;
             let offset = start.checked_add(record_at).ok_or(RecordError::Bounds)?;
@@ -188,7 +232,8 @@ impl DecodedTable {
             if id > h.max_id || rows.contains_key(&id) {
                 return Err(RecordError::Id);
             }
-            let mut fields = Vec::with_capacity(schema.fields.len());
+            let mut fields =
+                Vec::with_capacity(schema.fields.len() + usize::from(schema.parent >= 0));
             for (field, kind) in schema.fields.iter().enumerate() {
                 let count = kind.count();
                 let mut values = Vec::with_capacity(count);
@@ -240,7 +285,36 @@ impl DecodedTable {
                 }
                 fields.push(values);
             }
+            // Extra field at the end: a parent-bearing table's `ParentIndexField`
+            // is an index into the TOTAL field array. Because it is
+            // `>= fields.len()` here it sits exactly one past the decoded
+            // columns, so grow the row to `schema.parent` and default the append
+            // slot to a signed zero. It is later filled from the parent-lookup
+            // block at the same ordinal index.
+            if schema.parent >= 0 {
+                fields.resize(schema.parent as usize + 1, Vec::new());
+                fields[schema.parent as usize] = vec![Value::Signed(0)];
+            }
+            ordinal_ids.push(id);
             rows.insert(id, fields);
+        }
+        // Apply the parent lookup after every row exists and before the copy
+        // table, so a copied row carries its source's parent value. Entries are
+        // `{ParentId, RecordIndex}` (8 bytes, LE); a later duplicate for the
+        // same RecordIndex is applied last and wins.
+        if h.parent_lookup_count == 1 {
+            let entries_at = parent_start.checked_add(12).ok_or(RecordError::Bounds)?;
+            for entry in 0..parent_entries as usize {
+                let base = entry.checked_mul(8).ok_or(RecordError::Bounds)?;
+                let at = entries_at.checked_add(base).ok_or(RecordError::Bounds)?;
+                let parent_id = u32_at(data, at)?;
+                let record_index = u32_at(data, at.checked_add(4).ok_or(RecordError::Bounds)?)?;
+                let rid = *ordinal_ids
+                    .get(record_index as usize)
+                    .ok_or(RecordError::Id)?;
+                let row = rows.get_mut(&rid).ok_or(RecordError::Id)?;
+                row[schema.parent as usize][0] = Value::Signed(parent_id as i32);
+            }
         }
         // Source AutoProduceRecordCopies (DB2FileLoader.cpp:613-634): a copy is
         // attempted only when the source is a present nonzero record and both the

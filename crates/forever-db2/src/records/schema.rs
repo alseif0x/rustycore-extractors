@@ -14,6 +14,23 @@
 //! The two leading ChrRaces fields are FT_STRING_NOT_LOCALIZED in the reference
 //! (DB2Metadata.h:4182); this implementation decodes both as ordinary text, so
 //! they map to the same `Kind::String` with no behavior difference.
+//!
+//! `ChrClassesXPowerTypes` is the one reviewed table with a parent: it declares
+//! `IndexField = -1`, `ParentIndexField = 1`, `FieldCount = 2`,
+//! `FileFieldCount = 1` and `LayoutHash 0x70DA1F8C` (DB2Metadata.h). Its parent
+//! value is an extra row field appended after the single column field and is
+//! filled from the separate parent-lookup block.
+//!
+//! `Schema` separates the two counts the reference distinguishes:
+//! - `fields` is the decoded column list, one column per `FileFieldCount`; the
+//!   header's `field_count` equals `fields.len()`.
+//! - `parent` is the reviewed `ParentIndexField`, an index into the TOTAL field
+//!   array (columns plus any appended parent). When `parent >= fields.len()` the
+//!   parent is the "extra field at the end" variant: it has no column meta entry
+//!   and `DB2FileLoader.cpp:1771` then requires
+//!   `total_field_count + 1 == Meta->FieldCount`. For `ChrClassesXPowerTypes`
+//!   that gives `total_field_count = 1` while `field_count = 1` and
+//!   `ParentIndexField = 1` (the append slice index).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharacterTable {
     Classes,
@@ -22,6 +39,12 @@ pub enum CharacterTable {
     ClassUIDisplay,
     ClassUIChrModelInfo,
     ClassVillain,
+    /// `ChrClassesXPowerTypes`: the one reviewed table that declares a
+    /// `ParentIndexField == 1`. With `FileFieldCount == 1` the parent index sits
+    /// past the column list (`1 >= fields.len()`), so the parent value is the
+    /// "extra field at the end": NOT a column entry in the record body, filled
+    /// from the separate parent-lookup block after the copy table.
+    ClassXPowerTypes,
 }
 impl CharacterTable {
     pub fn named(name: &str) -> Option<Self> {
@@ -32,6 +55,7 @@ impl CharacterTable {
             "ChrClassUIDisplay" => Some(Self::ClassUIDisplay),
             "ChrClassUIChrModelInfo" => Some(Self::ClassUIChrModelInfo),
             "ChrClassVillain" => Some(Self::ClassVillain),
+            "ChrClassesXPowerTypes" => Some(Self::ClassXPowerTypes),
             _ => None,
         }
     }
@@ -43,6 +67,7 @@ impl CharacterTable {
             Self::ClassUIDisplay => "ChrClassUIDisplay",
             Self::ClassUIChrModelInfo => "ChrClassUIChrModelInfo",
             Self::ClassVillain => "ChrClassVillain",
+            Self::ClassXPowerTypes => "ChrClassesXPowerTypes",
         }
     }
     pub fn file_id(self) -> u32 {
@@ -53,6 +78,7 @@ impl CharacterTable {
             Self::ClassUIDisplay => 1316515,
             Self::ClassUIChrModelInfo => 3754770,
             Self::ClassVillain => 1267498,
+            Self::ClassXPowerTypes => 1121420,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -80,13 +106,37 @@ impl CharacterTable {
     /// only where real-header evidence pinned them (ChrClasses/ChrRaces); for
     /// the four `ChrClass*` tables the gate stays on the fields the reference
     /// actually checks. No table hash is invented.
+    /// A parent-bearing table declares one extra row field beyond its column
+    /// meta when `ParentIndexField >= FileFieldCount` (the "extra field at the
+    /// end" variant). Reference `DB2FileLoader.cpp:1771` then requires
+    /// `_header.TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
+    /// == Meta->FieldCount`, i.e. `total_field_count + 1 == FieldCount` for this
+    /// variant. So `ClassXPowerTypes` has header `field_count = 1` (the single
+    /// column) and `total_field_count = 1`, with the reviewed `FieldCount = 2`
+    /// column list describing one decoded column plus the appended parent.
+    /// Tables without a parent keep `total_field_count == field_count`.
     pub fn matches(self, header: &crate::Header) -> bool {
         let schema = self.schema();
         let table_hash_matches = schema.hash.is_none_or(|hash| header.table_hash == hash);
+        // The header's `field_count` is the column count (FileFieldCount).
+        let field_count_matches = header.field_count as usize == schema.fields.len();
+        // DB2FileLoader.cpp:1771: the gate is
+        //   TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
+        //   == Meta->FieldCount.
+        // For the reviewed extra-field-at-the-end variant this is
+        //   total_field_count + 1 == fields.len() + 1,
+        // so `total_field_count` must equal the column count. No-parent tables
+        // keep `total_field_count == field_count`.
+        let total_field_count_matches =
+            if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
+                header.total_field_count as usize + 1 == schema.fields.len() + 1
+            } else {
+                header.total_field_count == header.field_count
+            };
         table_hash_matches
             && header.layout_hash == schema.layout
-            && header.field_count as usize == schema.fields.len()
-            && header.total_field_count == header.field_count
+            && field_count_matches
+            && total_field_count_matches
     }
     /// Reviewed schema identity `(table_hash, layout_hash, index, field_count)`.
     /// The `index` element is the authoritative metadata index used for inline
@@ -109,18 +159,21 @@ impl CharacterTable {
                 hash: None,
                 layout: 0xC086F95D,
                 index: -1,
+                parent: -1,
                 fields: &[String, String, Signed(8, 1)],
             },
             Self::ClassUIDisplay => Schema {
                 hash: None,
                 layout: 0x50F5AD66,
                 index: -1,
+                parent: -1,
                 fields: &[Signed(8, 1), Unsigned(32, 1), Unsigned(32, 1)],
             },
             Self::ClassUIChrModelInfo => Schema {
                 hash: None,
                 layout: 0x26E5E322,
                 index: -1,
+                parent: -1,
                 fields: &[
                     Float(3),
                     Signed(32, 1),
@@ -133,12 +186,27 @@ impl CharacterTable {
                 hash: None,
                 layout: 0x46041630,
                 index: -1,
+                parent: -1,
                 fields: &[String, Signed(8, 1), Signed(8, 1)],
+            },
+            // Transcribed from DB2Metadata.h::ChrClassesXPowerTypesMeta:
+            // FileDataId 1121420, IndexField -1, ParentIndexField 1, FieldCount 2,
+            // FileFieldCount 1, LayoutHash 0x70DA1F8C, one signed byte column.
+            // The parent value at total-array position 1 is the extra field
+            // `DB2Metadata.h` marks with `PARENT_INDEX_FIELD`; it has NO column
+            // meta entry and is filled from the parent-lookup block.
+            Self::ClassXPowerTypes => Schema {
+                hash: None,
+                layout: 0x70DA1F8C,
+                index: -1,
+                parent: 1,
+                fields: &[Signed(8, 1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),
                 layout: 0xAFC9B0C2,
                 index: 29,
+                parent: -1,
                 fields: &[
                     String,
                     String,
@@ -189,6 +257,7 @@ impl CharacterTable {
                 hash: Some(0x53F1783C),
                 layout: 0x4F44C796,
                 index: -1,
+                parent: -1,
                 fields: &[
                     String,
                     String,
@@ -251,7 +320,15 @@ pub(super) struct Schema {
     /// the pinned `DB2Meta` cannot supply one (see `matches`). Never invented.
     pub hash: Option<u32>,
     pub layout: u32,
+    /// Reviewed metadata inline index; `-1` means a separate id table.
     pub index: i16,
+    /// Reviewed `ParentIndexField`; `-1` means the table has no parent field.
+    /// The index is into the TOTAL field array (columns plus any appended
+    /// parent). When it is `>= fields.len()` (the "extra field at the end"
+    /// variant) the header's `total_field_count` satisfies `total + 1 ==
+    /// FieldCount` per `DB2FileLoader.cpp:1771`, and the value is filled from
+    /// the separate parent-lookup block, not from a column meta entry.
+    pub parent: i16,
     pub fields: &'static [Kind],
 }
 #[derive(Clone, Copy)]
