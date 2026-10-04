@@ -74,7 +74,23 @@ impl DecodedTable {
         if !table.matches(&h) {
             return Err(RecordError::Schema);
         }
-        if h.flags & SPARSE_FLAG != 0 || h.parent_lookup_count != 0 || meta.sections.len() != 1 {
+        if h.flags & SPARSE_FLAG != 0 || h.parent_lookup_count != 0 {
+            return Err(RecordError::Unsupported);
+        }
+        if meta.sections.is_empty() {
+            // DB2FileLoader.cpp:1778-1779 admits a zero-section header and
+            // DB2FileLoader.cpp:1877 then assigns an empty record map: with no
+            // section there are no records. The only consistent body is a
+            // header declaring zero records; anything else has no offsets to
+            // read and is rejected rather than silently dropping data.
+            if h.record_count != 0 {
+                return Err(RecordError::Unsupported);
+            }
+            return Ok(Self {
+                rows: BTreeMap::new(),
+            });
+        }
+        if meta.sections.len() > 1 {
             return Err(RecordError::Unsupported);
         }
         let s = meta.sections[0];

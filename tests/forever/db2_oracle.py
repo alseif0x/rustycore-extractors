@@ -1,4 +1,4 @@
-"""Independent offline WDC5 DB2 oracle for the two character tables.
+"""Independent offline WDC5 DB2 oracle for the reviewed character tables.
 
 This is a from-scratch, read-only decoder used to cross-check the Rust
 ``crates/forever-db2/examples/db2_dump.rs`` diagnostic byte-for-byte. It never
@@ -17,8 +17,16 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   non-inline id repair ``id <= MinId -> MinId + i`` (:1958-1967);
   ``AutoProduceRecordCopies`` (:613-634); ``GetFieldOffset`` (:889-905).
 * ``src/server/game/DataStores/DB2Metadata.h`` -- ``ChrClassesMeta`` (:3455,
-  43 fields, index 29, layout ``0xAFC9B0C2``) and ``ChrRacesMeta`` (:4182,
-  51 fields, index -1, layout ``0x4F44C796``).
+  43 fields, index 29, layout ``0xAFC9B0C2``), ``ChrRacesMeta`` (:4182,
+  51 fields, index -1, layout ``0x4F44C796``) and the four ``ChrClass*``
+  tables: ``ChrClassTitleMeta`` (:3369, 3 fields, layout ``0xC086F95D``),
+  ``ChrClassUIChrModelInfoMeta`` (:3390, 5 fields, layout ``0x26E5E322``),
+  ``ChrClassUIDisplayMeta`` (:3413, 3 fields, layout ``0x50F5AD66``) and
+  ``ChrClassVillainMeta`` (:3434, 3 fields, layout ``0x46041630``); each
+  ``ChrClass*`` declares ``IndexField = -1``.
+* ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
+  loader's identity gate is LayoutHash (:1763) plus the field-count check
+  (:1771); ``_header.TableHash`` is never validated against the metadata.
 
 Canonical dump format, identical to ``db2_dump.rs``::
 
@@ -220,7 +228,68 @@ CHR_RACES = Schema(
     ),
 )
 
-SCHEMAS = {"ChrClasses": CHR_CLASSES, "ChrRaces": CHR_RACES}
+# Transcribed from DB2Metadata.h:3369 (ChrClassTitleMeta Fields[3],
+# layout 0xC086F95D, IndexField -1).
+CHR_CLASS_TITLE = Schema(
+    name="ChrClassTitle",
+    layout_hash=0xC086F95D,
+    index=-1,
+    fields=(
+        Field("string"),  # 0
+        Field("string"),  # 1
+        _signed_field(8),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h:3413 (ChrClassUIDisplayMeta Fields[3],
+# layout 0x50F5AD66, IndexField -1).
+CHR_CLASS_UI_DISPLAY = Schema(
+    name="ChrClassUIDisplay",
+    layout_hash=0x50F5AD66,
+    index=-1,
+    fields=(
+        _signed_field(8),  # 0
+        Field("unsigned", 32),  # 1
+        Field("unsigned", 32),  # 2
+    ),
+)
+
+# Transcribed from DB2Metadata.h:3390 (ChrClassUIChrModelInfoMeta Fields[5],
+# layout 0x26E5E322, IndexField -1).
+CHR_CLASS_UI_CHR_MODEL_INFO = Schema(
+    name="ChrClassUIChrModelInfo",
+    layout_hash=0x26E5E322,
+    index=-1,
+    fields=(
+        Field("float", 32, 3),  # 0
+        _signed_field(32),  # 1
+        _signed_field(8),  # 2
+        Field("float", 32, 1),  # 3
+        _signed_field(32),  # 4
+    ),
+)
+
+# Transcribed from DB2Metadata.h:3434 (ChrClassVillainMeta Fields[3],
+# layout 0x46041630, IndexField -1).
+CHR_CLASS_VILLAIN = Schema(
+    name="ChrClassVillain",
+    layout_hash=0x46041630,
+    index=-1,
+    fields=(
+        Field("string"),  # 0
+        _signed_field(8),  # 1
+        _signed_field(8),  # 2
+    ),
+)
+
+SCHEMAS = {
+    "ChrClasses": CHR_CLASSES,
+    "ChrRaces": CHR_RACES,
+    "ChrClassTitle": CHR_CLASS_TITLE,
+    "ChrClassUIDisplay": CHR_CLASS_UI_DISPLAY,
+    "ChrClassUIChrModelInfo": CHR_CLASS_UI_CHR_MODEL_INFO,
+    "ChrClassVillain": CHR_CLASS_VILLAIN,
+}
 
 
 @dataclasses.dataclass
@@ -487,11 +556,17 @@ class _Value:
 
 
 def _decode_parsed(data, header, sections, schema):
-    if (
-        header.flags & SPARSE_FLAG
-        or header.parent_lookup_count != 0
-        or len(sections) != 1
-    ):
+    if header.flags & SPARSE_FLAG or header.parent_lookup_count != 0:
+        raise OracleError("unsupported_record_variant")
+    if len(sections) == 0:
+        # DB2FileLoader.cpp:1778-1779 admits a zero-section header and
+        # DB2FileLoader.cpp:1877 then assigns an empty record map: no sections
+        # means no records. A header that still declares records has no offsets
+        # to read, so it is rejected rather than silently dropping them.
+        if header.record_count != 0:
+            raise OracleError("unsupported_record_variant")
+        return {}
+    if len(sections) > 1:
         raise OracleError("unsupported_record_variant")
     section = sections[0]
     if (

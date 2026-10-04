@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! LOCAL DIAGNOSTIC ONLY. This example dumps the fully decoded rows of one
-//! `ChrClasses`/`ChrRaces` DB2 file to stdout so an independent offline oracle
-//! can be compared byte-for-byte.
+//! `ChrClasses`/`ChrRaces`/`ChrClassTitle`/`ChrClassUIDisplay`/
+//! `ChrClassUIChrModelInfo`/`ChrClassVillain` DB2 file to stdout so an
+//! independent offline oracle can be compared byte-for-byte.
 //!
 //! Its output contains client-derived values. It must never be committed,
 //! copied into Git, attached to a report, uploaded or pasted into a model
 //! context. Run it only on a workstation that already holds the local client
 //! file, and keep the output inside the external run directory.
 //!
-//! Contract: `db2_dump --file <path.db2> --table <ChrClasses|ChrRaces>`. No
-//! network and no CASC: only the named local file is read. The canonical format
-//! is one header line `forever-db2-dump v1 <tablename>` followed by one line per
-//! row in ascending id order; fields are tab-separated and array elements are
-//! comma-joined. Values are tagged `u:`, `i:`, `f:0x########` or `t:`.
+//! Contract: `db2_dump --file <path.db2> --table <name>`, where `<name>` is any
+//! reviewed `CharacterTable` name. No network and no CASC: only the named local
+//! file is read. The canonical format is one header line
+//! `forever-db2-dump v1 <tablename>` followed by one line per row in ascending
+//! id order; fields are tab-separated and array elements are comma-joined.
+//! Values are tagged `u:`, `i:`, `f:0x########` or `t:`.
 use forever_db2::{CharacterTable, DecodedTable, RecordError, Value};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};

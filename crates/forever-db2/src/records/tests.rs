@@ -178,7 +178,9 @@ fn assemble(table: CharacterTable, s: &Spec) -> Vec<u8> {
     put32(&mut out, 140, fields as u32);
     put32(&mut out, 144, record_size as u32);
     put32(&mut out, 148, header_string_size);
-    put32(&mut out, 152, schema.hash);
+    // Unknown table hashes (the four ChrClass* tables) are written as the
+    // documented 0 "unknown" sentinel; `matches` does not gate on them.
+    put32(&mut out, 152, schema.hash.unwrap_or(0));
     put32(&mut out, 156, schema.layout);
     put32(&mut out, 160, s.min_id);
     put32(&mut out, 164, s.max_id);
@@ -272,6 +274,65 @@ fn decode_classes(spec: &Spec) -> Result<DecodedTable, RecordError> {
 fn decode_races(spec: &Spec) -> Result<DecodedTable, RecordError> {
     let bytes = build_races(spec);
     DecodedTable::read(&bytes, CharacterTable::Races)
+}
+
+/// A decode-valid spec for any reviewed id-table-only table: zero records of
+/// the right size plus a separate u32 id table. `ChrClass*` tables all have
+/// IndexField -1 and a u32 id table, so the generic builder applies to them.
+fn idtable_spec(table: CharacterTable, count: usize) -> Spec {
+    let mut spec = spec(table);
+    let len = record_size(&spec.cols);
+    spec.records = vec![vec![0u8; len]; count];
+    spec.ids = vec![0; count];
+    spec.min_id = 0;
+    spec.max_id = 100;
+    spec
+}
+
+fn build_idtable(table: CharacterTable, spec: &Spec) -> Vec<u8> {
+    assemble(table, spec)
+}
+
+/// A minimal header-only WDC5 file with `section_count == 0` (204 bytes). Used
+/// to exercise the zero-section "empty table" path. `record_size` and
+/// `min_id <= max_id` stay valid so only the section count distinguishes it.
+fn build_zero_section_header(table: CharacterTable, record_count: u32) -> Vec<u8> {
+    let schema = table.schema();
+    let fields = schema.fields.len();
+    let mut out = vec![0u8; HEADER];
+    out[..4].copy_from_slice(b"WDC5");
+    put32(&mut out, 4, 5);
+    put32(&mut out, 136, record_count);
+    put32(&mut out, 140, fields as u32);
+    put32(&mut out, 144, 8);
+    put32(&mut out, 148, 0);
+    put32(&mut out, 152, schema.hash.unwrap_or(0));
+    put32(&mut out, 156, schema.layout);
+    put32(&mut out, 160, 0);
+    put32(&mut out, 164, 100);
+    put32(&mut out, 168, 0);
+    put16(&mut out, 172, 0);
+    out[174..176].copy_from_slice(&schema.index.to_le_bytes());
+    put32(&mut out, 176, fields as u32);
+    put32(&mut out, 180, 0);
+    put32(&mut out, 184, 0);
+    put32(&mut out, 188, (fields * 24) as u32);
+    put32(&mut out, 192, 0);
+    put32(&mut out, 196, 0);
+    put32(&mut out, 200, 0);
+    out
+}
+
+fn decode_idtable(table: CharacterTable, spec: &Spec) -> Result<DecodedTable, RecordError> {
+    let bytes = build_idtable(table, spec);
+    DecodedTable::read(&bytes, table)
+}
+
+fn expect_err_idtable(table: CharacterTable, bytes: &[u8]) -> RecordError {
+    match decode(table, bytes) {
+        Err(error) => error,
+        Ok(_) => panic!("expected error, decode succeeded"),
+    }
 }
 
 fn expect_err_classes(bytes: &[u8]) -> RecordError {
@@ -711,7 +772,7 @@ fn multi_section_tact_parent_and_catalog_variants_are_unsupported() {
 fn schema_identity_mismatches_are_schema_errors() {
     let schema = CharacterTable::Classes.schema();
     let mut bytes = build_classes(&classes(1));
-    put32(&mut bytes, 152, schema.hash ^ 1);
+    put32(&mut bytes, 152, schema.hash.unwrap() ^ 1);
     assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
 
     let mut bytes = build_classes(&classes(1));
@@ -869,4 +930,329 @@ fn classes_index_field_widths_match_the_reviewed_reference() {
     assert!(matches!(schema.fields[27], Kind::Unsigned(16, 1)));
     assert!(matches!(schema.fields[28], Kind::Unsigned(16, 1)));
     assert!(matches!(schema.fields[29], Kind::Unsigned(8, 1)));
+}
+
+// ---------------------------------------------------------------------------
+// ChrClass* id-table tables (No parent lookup, IndexField -1)
+// ---------------------------------------------------------------------------
+
+/// The four reviewed `ChrClass*` tables with their pinned identity. Their table
+/// hashes are NOT transcribed because `DB2Meta` does not carry one, so the only
+/// trustworthy identity is (layout_hash, field_count, index=-1, file_id).
+const NEW_TABLES: [(CharacterTable, u32, u32, u32, i16, usize); 4] = [
+    (
+        CharacterTable::ClassTitle,
+        1267497,
+        0xC086F95D,
+        0xC086F95D,
+        -1,
+        3,
+    ),
+    (
+        CharacterTable::ClassUIDisplay,
+        1316515,
+        0x50F5AD66,
+        0x50F5AD66,
+        -1,
+        3,
+    ),
+    (
+        CharacterTable::ClassUIChrModelInfo,
+        3754770,
+        0x26E5E322,
+        0x26E5E322,
+        -1,
+        5,
+    ),
+    (
+        CharacterTable::ClassVillain,
+        1267498,
+        0x46041630,
+        0x46041630,
+        -1,
+        3,
+    ),
+];
+
+#[test]
+fn chr_class_table_identity_and_transcription_match_the_reference() {
+    // Verified 2026-10-04 against the pinned checkout at
+    // 02245dcd245e7433e524577656177723d3e4992e: DB2Metadata.h:3369/3390/3413/
+    // 3434 declare FileDataId, IndexField = -1 and LayoutHash for each
+    // `ChrClass*` meta; FieldCount == FileFieldCount for all four.
+    for (table, file_id, layout, _, index, fields) in NEW_TABLES {
+        let schema = table.schema();
+        assert_eq!(table.file_id(), file_id, "{} file_id", table.name());
+        assert_eq!(schema.layout, layout, "{} layout", table.name());
+        assert_eq!(schema.index, index, "{} index", table.name());
+        assert_eq!(schema.fields.len(), fields, "{} field count", table.name());
+        // No `DB2Meta` member supplies a table hash, so none is transcribed.
+        assert!(
+            schema.hash.is_none(),
+            "{} must not invent a hash",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn named_and_name_round_trip_for_every_reviewed_table() {
+    for (table, _, _, _, _, _) in NEW_TABLES {
+        assert_eq!(CharacterTable::named(table.name()), Some(table));
+    }
+    // The two legacy tables keep working and unrelated names stay rejected.
+    assert_eq!(
+        CharacterTable::named("ChrClasses"),
+        Some(CharacterTable::Classes)
+    );
+    assert_eq!(
+        CharacterTable::named("ChrRaces"),
+        Some(CharacterTable::Races)
+    );
+    assert_eq!(CharacterTable::named("ChrClassTitles"), None);
+    assert_eq!(CharacterTable::named("Synthetic"), None);
+}
+
+#[test]
+fn chr_class_matches_gates_on_known_identity_not_an_unknown_table_hash() {
+    // DB2Meta has no table hash and DB2FileLoader.cpp never checks
+    // `_header.TableHash` (it validates LayoutHash at :1763 and the field count
+    // at :1771), so an arbitrary header table hash must not block a `ChrClass*`
+    // file whose layout/field/total identity is right.
+    for (table, _, layout, _, _, fields) in NEW_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.layout_hash, layout, "{} layout", table.name());
+        assert_eq!(
+            header.field_count as usize,
+            fields,
+            "{} fields",
+            table.name()
+        );
+        assert!(table.matches(&header), "{} identity", table.name());
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![7]);
+
+        // Any table-hash word is accepted for these tables.
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(table.matches(&header), "{} arbitrary hash", table.name());
+    }
+}
+
+#[test]
+fn chr_class_matches_rejects_layout_field_and_total_mismatches() {
+    for (table, _, _, _, _, _) in NEW_TABLES {
+        // Wrong layout hash.
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 156, 0);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(!table.matches(&header), "{} layout mismatch", table.name());
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} layout",
+            table.name()
+        );
+
+        // Wrong header field count.
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        put32(&mut bytes, 140, 2);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(!table.matches(&header), "{} field_count", table.name());
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} field_count",
+            table.name()
+        );
+
+        // Total field count that disagrees with the header field count.
+        let mut bytes = build_idtable(table, &idtable_spec(table, 1));
+        let fields = table.schema().fields.len() as u32;
+        put32(&mut bytes, 176, fields + 1);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert!(
+            !table.matches(&header),
+            "{} total_field_count",
+            table.name()
+        );
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Schema,
+            "{} total_field_count",
+            table.name()
+        );
+    }
+}
+
+#[test]
+fn classes_and_races_still_gate_on_their_evidence_pinned_table_hash() {
+    // The transcription change must not weaken the two tables whose real-header
+    // evidence pinned a table hash.
+    assert!(CharacterTable::Classes.schema().hash.is_some());
+    assert!(CharacterTable::Races.schema().hash.is_some());
+    let mut bytes = build_classes(&classes(1));
+    put32(&mut bytes, 152, 0);
+    let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+        .unwrap()
+        .header;
+    assert!(!CharacterTable::Classes.matches(&header));
+    assert_eq!(expect_err_classes(&bytes), RecordError::Schema);
+}
+
+#[test]
+fn chr_class_title_decodes_strings_and_signed_byte() {
+    let table = CharacterTable::ClassTitle;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 100;
+    // Field 1 is a string: point record 0 at "Title\0" in the string table.
+    // The stored word is relative to the record start plus the column's own
+    // byte offset (DB2FileLoader.cpp:800-806), so subtract that byte offset.
+    spec.strings = b"Title\0".to_vec();
+    let string_off = field_offset(&spec, 1);
+    let relative = record_size(&spec.cols) as u32 - u32::from(string_off) / 8;
+    write_word(&mut spec.records[0], string_off, relative);
+    // Field 2 is Signed(8,1); 0x9C sign-extends to -100.
+    let signed_off = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], signed_off, 0x9C);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&100];
+    assert_eq!(row[0][0], Value::Text(String::new()));
+    assert_eq!(row[1][0], Value::Text("Title".to_owned()));
+    assert_eq!(row[2][0], Value::Signed(-100));
+}
+
+#[test]
+fn chr_class_ui_display_decodes_signed_byte_and_unsigned_ints() {
+    let table = CharacterTable::ClassUIDisplay;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 42;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], off0, 0x80);
+    write_word(&mut spec.records[0], off1, 0xFFFF_FFFF);
+    write_word(&mut spec.records[0], off2, 0x0000_0001);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&42];
+    assert_eq!(row[0][0], Value::Signed(-128));
+    assert_eq!(row[1][0], Value::Unsigned(0xFFFF_FFFF));
+    assert_eq!(row[2][0], Value::Unsigned(1));
+}
+
+#[test]
+fn chr_class_ui_chr_model_info_decodes_float_arrays_and_signed_fields() {
+    let table = CharacterTable::ClassUIChrModelInfo;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 9;
+    // Field 0 is Float(3): three 32-bit raw float words.
+    let f0 = field_offset(&spec, 0);
+    let at = f0 as usize / 8;
+    for (array, bits) in [0x3F80_0000u32, 0x4000_0000, 0x4040_0000]
+        .into_iter()
+        .enumerate()
+    {
+        spec.records[0][at + array * 4..at + array * 4 + 4].copy_from_slice(&bits.to_le_bytes());
+    }
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    let off3 = field_offset(&spec, 3);
+    let off4 = field_offset(&spec, 4);
+    write_word(&mut spec.records[0], off1, 0xFFFF_FFFE);
+    write_byte(&mut spec.records[0], off2, 0x7F);
+    write_word(&mut spec.records[0], off3, 0x3F00_0000);
+    write_word(&mut spec.records[0], off4, 0x0000_0005);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&9];
+    assert_eq!(
+        row[0],
+        vec![
+            Value::FloatBits(0x3F80_0000),
+            Value::FloatBits(0x4000_0000),
+            Value::FloatBits(0x4040_0000),
+        ]
+    );
+    assert_eq!(row[1][0], Value::Signed(-2));
+    assert_eq!(row[2][0], Value::Signed(127));
+    assert_eq!(row[3][0], Value::FloatBits(0x3F00_0000));
+    assert_eq!(row[4][0], Value::Signed(5));
+}
+
+#[test]
+fn chr_class_villain_decodes_string_and_two_signed_bytes() {
+    let table = CharacterTable::ClassVillain;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 3;
+    spec.strings = b"Villain\0".to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    let off0 = field_offset(&spec, 0);
+    let off1 = field_offset(&spec, 1);
+    let off2 = field_offset(&spec, 2);
+    write_word(&mut spec.records[0], off0, relative);
+    write_byte(&mut spec.records[0], off1, 0xFF);
+    write_byte(&mut spec.records[0], off2, 0x01);
+    let out = decode_idtable(table, &spec).unwrap();
+    let row = &out.rows()[&3];
+    assert_eq!(row[0][0], Value::Text("Villain".to_owned()));
+    assert_eq!(row[1][0], Value::Signed(-1));
+    assert_eq!(row[2][0], Value::Signed(1));
+}
+
+#[test]
+fn chr_class_id_table_repair_matches_the_separate_id_path() {
+    // The four ChrClass* tables use IndexField -1, so they share the separate
+    // u32 id-table path: DB2FileLoader.cpp:1958-1967 repairs `id <= MinId` to
+    // `MinId + i` for the single-section ordinal `i`.
+    let table = CharacterTable::ClassUIDisplay;
+    let mut spec = idtable_spec(table, 1);
+    spec.min_id = 50;
+    spec.max_id = 100;
+    spec.ids[0] = 3;
+    let out = decode_idtable(table, &spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![50]);
+}
+
+#[test]
+fn empty_table_with_zero_sections_decodes_to_zero_rows() {
+    // DB2FileLoader.cpp:1778-1779 admits a zero-section header and
+    // DB2FileLoader.cpp:1877 then assigns an empty record map. A reviewed table
+    // header with section_count == 0 and record_count == 0 must decode as a
+    // valid empty table, not Unsupported.
+    for (table, _, _, _, _, _) in NEW_TABLES {
+        let bytes = build_zero_section_header(table, 0);
+        let meta = crate::Metadata::read(&mut std::io::Cursor::new(&bytes)).unwrap();
+        assert_eq!(meta.sections.len(), 0, "{} sections", table.name());
+        let out = decode(table, &bytes)
+            .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
+        assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+    }
+}
+
+#[test]
+fn zero_sections_with_declared_records_is_rejected() {
+    // A zero-section header that still declares records has no offsets to read,
+    // so the declared records cannot be honored; reject rather than silently
+    // dropping them.
+    for (table, _, _, _, _, _) in NEW_TABLES {
+        let bytes = build_zero_section_header(table, 1);
+        assert_eq!(
+            expect_err_idtable(table, &bytes),
+            RecordError::Unsupported,
+            "{} zero sections with records",
+            table.name()
+        );
+    }
 }

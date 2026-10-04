@@ -299,6 +299,63 @@ def _idtable_file():
     return builder.build()
 
 
+def _chr_class_ui_chr_model_info_file():
+    """One synthetic row of the reviewed id-table ``ChrClassUIChrModelInfo``.
+
+    Schema: Float(3), Signed(32,1), Signed(8,1), Float(1), Signed(32,1), with
+    IndexField -1 so the record id comes from the separate u32 id table
+    (DB2Metadata.h:3390, layout 0x26E5E322).
+    """
+    rows = [
+        {
+            0: [0x3F800000, 0x40000000, 0x40400000],
+            1: 0xFFFFFFFE,
+            2: 0x7F,
+            3: 0x3F000000,
+            4: 0x00000005,
+        }
+    ]
+    builder = Wdc5Builder(
+        db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO,
+        rows,
+        min_id=0,
+        max_id=100,
+        ids=[9],
+    )
+    return builder.build()
+
+
+EXPECTED_CHR_CLASS_UI_CHR_MODEL_INFO = (
+    "forever-db2-dump v1 ChrClassUIChrModelInfo\n"
+    "9\tf:0x3f800000,f:0x40000000,f:0x40400000"
+    "\ti:-2\ti:127\tf:0x3f000000\ti:5\n"
+)
+
+
+def _zero_section_file(schema, record_count):
+    """A header-only WDC5 file with ``section_count == 0`` (204 bytes).
+
+    DB2FileLoader.cpp:1778-1779 admits a zero-section header and
+    DB2FileLoader.cpp:1877 assigns an empty record map, so only
+    ``record_count == 0`` is a consistent body.
+    """
+    out = bytearray(HEADER_SIZE)
+    out[0:4] = b"WDC5"
+    _put32(out, 4, 5)
+    _put32(out, 136, record_count)
+    _put32(out, 140, len(schema.fields))
+    _put32(out, 144, 8)
+    _put32(out, 152, 0)
+    _put32(out, 156, schema.layout_hash)
+    _put32(out, 160, 0)
+    _put32(out, 164, 100)
+    _put_i16(out, 174, schema.index)
+    _put32(out, 176, len(schema.fields))
+    _put32(out, 188, len(schema.fields) * 24)
+    _put32(out, 200, 0)
+    return bytes(out)
+
+
 class SyntheticOracle(unittest.TestCase):
     def test_inline_index_dump_matches_golden(self):
         data = _inline_file()
@@ -311,6 +368,34 @@ class SyntheticOracle(unittest.TestCase):
         self.assertEqual(
             db2_oracle.render(rows, SYNTHETIC_IDTABLE.name), EXPECTED_IDTABLE
         )
+
+    def test_reviewed_chr_class_ui_chr_model_info_dump_matches_golden(self):
+        # An id-table (IndexField -1) reviewed `ChrClass*` schema: the record id
+        # comes from the separate u32 id table, not an inline index field.
+        data = _chr_class_ui_chr_model_info_file()
+        rows = db2_oracle.decode(data, db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO)
+        self.assertEqual(
+            db2_oracle.render(rows, db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO.name),
+            EXPECTED_CHR_CLASS_UI_CHR_MODEL_INFO,
+        )
+
+    def test_reviewed_chr_class_transcriptions_are_present(self):
+        title = db2_oracle.SCHEMAS["ChrClassTitle"]
+        model = db2_oracle.SCHEMAS["ChrClassUIChrModelInfo"]
+        self.assertEqual(title.layout_hash, 0xC086F95D)
+        self.assertEqual(title.index, -1)
+        self.assertEqual(len(title.fields), 3)
+        self.assertEqual((title.fields[0].kind, title.fields[0].bits), ("string", 32))
+        self.assertEqual((title.fields[1].kind, title.fields[1].bits), ("string", 32))
+        self.assertEqual((title.fields[2].kind, title.fields[2].bits, title.fields[2].signed), ("signed", 8, True))
+        self.assertEqual(model.layout_hash, 0x26E5E322)
+        self.assertEqual(model.index, -1)
+        self.assertEqual(len(model.fields), 5)
+        self.assertEqual((model.fields[0].kind, model.fields[0].count), ("float", 3))
+        self.assertEqual((model.fields[1].kind, model.fields[1].bits, model.fields[1].signed), ("signed", 32, True))
+        self.assertEqual((model.fields[2].kind, model.fields[2].bits, model.fields[2].signed), ("signed", 8, True))
+        self.assertEqual((model.fields[3].kind, model.fields[3].count), ("float", 1))
+        self.assertEqual((model.fields[4].kind, model.fields[4].bits, model.fields[4].signed), ("signed", 32, True))
 
     def test_reviewed_schema_transcription(self):
         classes = db2_oracle.SCHEMAS["ChrClasses"]
@@ -329,6 +414,23 @@ class SyntheticOracle(unittest.TestCase):
         self.assertEqual(races.fields[24].count, 3)
         self.assertEqual(races.fields[31].kind, "float")
         self.assertEqual(races.fields[31].count, 1)
+
+    def test_zero_sections_with_zero_records_dumps_header_only(self):
+        schema = db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO
+        data = _zero_section_file(schema, 0)
+        rows = db2_oracle.decode(data, schema)
+        self.assertEqual(rows, {})
+        self.assertEqual(
+            db2_oracle.render(rows, schema.name),
+            "forever-db2-dump v1 ChrClassUIChrModelInfo\n",
+        )
+
+    def test_zero_sections_with_declared_records_is_rejected(self):
+        schema = db2_oracle.CHR_CLASS_UI_CHR_MODEL_INFO
+        data = _zero_section_file(schema, 4)
+        with self.assertRaises(db2_oracle.OracleError) as caught:
+            db2_oracle.decode(data, schema)
+        self.assertEqual(caught.exception.code, "unsupported_record_variant")
 
     def test_out_of_scope_variants_are_rejected(self):
         base = _inline_file()
