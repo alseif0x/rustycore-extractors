@@ -416,10 +416,10 @@ returns an error and any already-published `*.db2` files remain without a report
 
 ### Executed acceptance — 2026-10-04
 
-Status: **uncommitted working tree** on branch
-`18-forever-rust-wdc5-metadata-inspector-foundation`, based on commit
-`ec73fe61`. No tested SHA is recorded because the work is not committed, and no
-SHA is invented here.
+Status: **committed locally** as `2898fc5` on branch
+`18-forever-rust-wdc5-metadata-inspector-foundation` (local, **not pushed**).
+Subsequent commits only document or record this accepted content; no acceptance
+figure or run ID changes here.
 
 Contract verification against the pinned reference
 `02245dcd245e7433e524577656177723d3e4992e` used `git show` (the on-disk
