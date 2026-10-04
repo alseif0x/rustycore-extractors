@@ -674,3 +674,53 @@ Límites: una sección **no cifrada**, sin maps/VMaps/MMaps y **sin claim de
 del decoder, **NO paridad de formato completa** ni aceptación reader/runtime de
 RustyCore. Reproducción con placeholders propios (`<client-root>`, `<run-id>`);
 ninguna ruta de cliente real se escribe en un reporte.
+
+## RustyCore reader conformance (bounded)
+
+AGENTS.md names **TrinityCoreLegacy output plus RustyCore reader/runtime
+acceptance** as the compatibility authority. This records the first bounded
+execution of the RustyCore reader half of that gate, run offline and without
+modifying RustyCore.
+
+**Scope (not a broader acceptance).** The gate opens each produced `.db2` with
+RustyCore's own reader and compares two independent things: (1) header facts and
+id presence — `format_version`, `table_hash`, `layout_hash`, `field_count`,
+`record_count`, `inline_id_field` and whether the reviewed ids are present; and
+(2) per-id record-byte digests (FNV over each record body) against our decoder.
+It covers **2 tables** only. It is **not** a 70170 acceptance, **not** full
+extraction, and **not** complete format parity; it exercises no maps/VMaps/MMaps,
+no encrypted section and no complete table catalog.
+
+**How it is run.** The probe is a standalone lab crate that lives **outside** this
+repository at
+`rustycore-extractor-work/tools/rustycore-reader-check/` and depends on RustyCore
+by path (`wow-data = { path = "../../../rustycore/crates/wow-data" }`), using
+`wow_data::wdc4::Wdc4Reader`. RustyCore is opened **read-only and is never
+modified**. Replace `<rustycore>` and `<run-root>` with your own local paths; no
+client path is written into the report:
+
+```bash
+cd ../rustycore-extractor-work/tools/rustycore-reader-check
+CARGO_TARGET_DIR=<run-root>/build cargo run --offline --locked -- \
+  --file <run-root>/<run-id>/tables/ChrClasses.db2 --id <id> [--id <id> ...]
+```
+
+**Measured results (redacted; hashes/counts only, never raw bytes or values):**
+
+| Table | `table_hash` | `layout_hash` | `field_count` | `inline_id_field` | rows | digest match |
+| --- | --- | --- | --- | --- | --- | --- |
+| ChrClasses | `0xF5889D8C` | `0xAFC9B0C2` | 43 | `Some(29)` | 9 | 9/9 |
+| ChrRaces | `0x53F1783C` | `0x4F44C796` | 51 | `None` | 58 | 58/58 |
+
+RustyCore **accepts both** files. Positional **semantic conformance** — the FNV
+digest of each record's bytes by id — matches between RustyCore and our decoder
+**9/9** for `ChrClasses` and **58/58** for `ChrRaces`.
+
+**Persisted evidence.**
+`rustycore-extractor-work/reports/acceptance/rustycore-reader-conformance-20261004T112024Z.json`
+records this run (`rustycore_checkout_modified: false`, `network_attempted:
+false`, `client_bytes_in_report: false`, `hashes_not_values: true`,
+`full_client_extraction: false`). Only hashes and counts are compared and
+persisted; **no raw record bytes or client values are ever written into the
+report**. A green result here is bounded reader conformance on **2 tables** and
+is not complete format parity or a full reader/runtime acceptance.
