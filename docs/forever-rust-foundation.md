@@ -472,3 +472,48 @@ at the updated installation). Reports are redacted; raw client-derived outputs
 stay outside Git. A green process is **not** format parity or a RustyCore
 reader/runtime acceptance. The three implementation levels above are unchanged
 and remain the only source of scope.
+
+### Independent dump oracle — value comparison only
+
+Commit `e4d0a41` (local, **not pushed**) adds a **canonical decoded dump** and an
+**independent oracle** that reproduces it without importing Rust:
+
+- `crates/forever-db2/examples/db2_dump.rs` writes the deterministic dump
+  `forever-db2-dump v1 <table>`; rows are emitted in ascending id order, fields
+  are tab-separated, array elements are comma-joined, and every value is tagged
+  `u:`/`i:`/`f:0x########`/`t:` with `\\ \t \r \n` escaping.
+- `tests/forever/db2_oracle.py` is a from-scratch Python decoder of the same wire
+  layout (it imports nothing from the Rust crate and never touches CASC, the
+  network or a client directory), and `tests/forever/test_db2_oracle.py` carries
+  the synthetic suite plus a comparator gated by `FOREVER_DB2_FILE`,
+  `FOREVER_DB2_TABLE` and `FOREVER_DB2_RUST_DUMP`. The comparator reports only
+  equality or the index of the first differing line — never any value.
+
+Measured result on build **70205**, locale `esES`, offline, client left
+unmodified: the Rust dump and the oracle's dump are **byte-for-byte identical**
+for `ChrClasses` (**10** lines) and `ChrRaces` (**59** lines). This is a
+comparison of **decoder values** on the two authorized tables. It is **not**
+RustyCore reader/runtime acceptance and **not** complete format parity.
+
+Reproduction (replace the placeholders with your own local paths/run id; no
+client path is written into a report or the checkpoint):
+
+```bash
+export CARGO_BUILD_JOBS=1
+export CARGO_TARGET_DIR="$(pwd)/../rustycore-extractor-work/builds/rust-forever"
+cargo build --offline --locked -p forever-db2 --example db2_dump
+
+RUN="../rustycore-extractor-work/runs/candidate/<run-id>"
+mkdir -p "$RUN"
+for table in ChrClasses ChrRaces; do
+  "$CARGO_TARGET_DIR/debug/examples/db2_dump" \
+    --file <client-root>/<table>.db2 --table "$table" > "$RUN/$table.rust.dump"
+  FOREVER_DB2_FILE=<client-root>/<table>.db2 \
+  FOREVER_DB2_TABLE="$table" \
+  FOREVER_DB2_RUST_DUMP="$RUN/$table.rust.dump" \
+    python3 -m unittest tests.forever.test_db2_oracle -v
+done
+```
+
+The dumps are client-derived and stay inside the external run directory; only
+equality/line-index evidence is reported.
