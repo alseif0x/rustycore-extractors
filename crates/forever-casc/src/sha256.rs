@@ -87,9 +87,92 @@ fn compress(state: &mut [u32; 8], block: &[u8]) {
     state[7] = state[7].wrapping_add(h);
 }
 
+// Authored 2026-10-11: bounded streaming API shared by package integrity.
+pub(crate) struct Sha256 {
+    state: [u32; 8],
+    block: [u8; 64],
+    used: usize,
+    length: u64,
+}
+impl Sha256 {
+    pub(crate) fn new() -> Self {
+        Self {
+            state: H0,
+            block: [0; 64],
+            used: 0,
+            length: 0,
+        }
+    }
+    pub(crate) fn update(&mut self, mut bytes: &[u8]) {
+        self.length = self.length.wrapping_add(bytes.len() as u64);
+        if self.used != 0 {
+            let count = (64 - self.used).min(bytes.len());
+            self.block[self.used..self.used + count].copy_from_slice(&bytes[..count]);
+            self.used += count;
+            bytes = &bytes[count..];
+            if self.used != 64 {
+                return;
+            }
+            compress(&mut self.state, &self.block);
+            self.used = 0;
+        }
+        let (blocks, tail) = bytes.as_chunks::<64>();
+        for block in blocks {
+            compress(&mut self.state, block);
+        }
+        self.block[..tail.len()].copy_from_slice(tail);
+        self.used = tail.len();
+    }
+    pub(crate) fn finish(mut self) -> [u8; 32] {
+        self.block[self.used] = 0x80;
+        self.used += 1;
+        self.block[self.used..].fill(0);
+        if self.used > 56 {
+            compress(&mut self.state, &self.block);
+            self.block = [0; 64];
+        }
+        self.block[56..].copy_from_slice(&self.length.wrapping_mul(8).to_be_bytes());
+        compress(&mut self.state, &self.block);
+        let mut out = [0u8; 32];
+        for (chunk, word) in out.as_chunks_mut::<4>().0.iter_mut().zip(self.state) {
+            *chunk = word.to_be_bytes();
+        }
+        out
+    }
+}
 #[cfg(test)]
 mod tests {
-    use super::hex;
+    use super::{Sha256, hex};
+    #[test]
+    fn streaming_matches_every_padding_boundary_and_chunk_profile() {
+        for n in [
+            0, 1, 55, 56, 63, 64, 65, 119, 120, 127, 128, 129, 1024, 65536, 65537,
+        ] {
+            let data: Vec<u8> = (0..n).map(|i| (i % 251) as u8).collect();
+            for chunk in [1, 7, 55, 64, 65, 1024, 65536] {
+                let mut hash = Sha256::new();
+                hash.update(b"");
+                for b in data.chunks(chunk) {
+                    hash.update(b);
+                    hash.update(b"");
+                }
+                let actual: String = hash.finish().iter().map(|b| format!("{b:02x}")).collect();
+                assert_eq!(actual, hex(&data), "length {n}, chunk {chunk}");
+            }
+        }
+    }
+    #[test]
+    fn streaming_million_a_matches_standard_vector() {
+        let mut h = Sha256::new();
+        for _ in 0..1000 {
+            h.update(&[b'a'; 1000]);
+        }
+        let actual: String = h.finish().iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(
+            actual,
+            "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0"
+        );
+    }
 
     #[test]
     fn known_vectors_match_fips_180_4() {

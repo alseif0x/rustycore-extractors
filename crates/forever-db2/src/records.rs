@@ -1,27 +1,62 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-11: correct copy-table index semantics, reject unsafe
+// reference edge cases, bound retained scalars and cumulative UTF-8 text,
+// admit optional parent lookups,
+// and require complete primitive metadata for the minimal zero-section file.
 //! Independent checked implementation of the bounded regular WDC5 operation.
 //! Evidence: TrinityCore 02245dcd DB2FileLoader.cpp::LoadHeaders/Load,
 //! DB2FileLoaderRegularImpl::{RecordGetVarInt,RecordGetString,AutoProduceRecordCopies}.
-//! Sparse, encrypted and multi-section variants fail explicitly; at most one
+//! A separate branch admits bounded scalar numeric sparse files. Encrypted and
+//! multi-section variants fail explicitly; at most one
 //! parent-lookup block is admitted and only for a table whose reviewed metadata
 //! declares a parent index field.
+pub mod catalog;
 mod columns;
 mod schema;
+mod sparse;
+pub mod terrain_sources;
 #[cfg(test)]
 mod tests;
 use crate::Metadata;
 use columns::columns;
 pub use schema::CharacterTable;
 use schema::Kind;
-use std::{collections::BTreeMap, io::Cursor};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    io::Cursor,
+};
 
 /// Native header flag word. Reference `DB2FileLoader.cpp:1852` is the only
 /// discrimination performed: `if (!(_header.Flags & 0x1))` selects the regular
-/// implementation, else the sparse one. No other flag bit is validated or
-/// assigned a benign meaning. Bit 0 (sparse) is therefore rejected as
-/// unsupported; other bits are left alone because the pinned reference ignores
-/// them for these tables. This is not a format claim.
+/// implementation, else the sparse one. Bit 0 selects our separately bounded
+/// sparse branch. Other bits are left alone because the pinned reference does
+/// not use them to select either implementation. This is not a format claim.
 const SPARSE_FLAG: u16 = 0x1;
+
+/// Cumulative UTF-8 payload allocated or cloned during one decode. This is a
+/// resource policy, not a WDC5 format limit. Overwrites do not refund bytes.
+const TEXT_POLICY_LIMIT: usize = 64 * 1024 * 1024;
+
+#[derive(Debug)]
+struct TextBudget {
+    used: usize,
+    limit: usize,
+}
+
+impl TextBudget {
+    fn new(limit: usize) -> Self {
+        Self { used: 0, limit }
+    }
+
+    fn charge(&mut self, bytes: usize) -> Result<(), RecordError> {
+        self.used = self
+            .used
+            .checked_add(bytes)
+            .filter(|used| *used <= self.limit)
+            .ok_or(RecordError::Limit)?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecordError {
@@ -56,11 +91,19 @@ pub enum Value {
     /// never silently truncated.
     Unsigned64(u64),
     Signed(i32),
+    /// Signed FT_LONG preserves all 64 bits; compressed 64-bit storage remains
+    /// unsupported. CommonData leaves upper bytes uninitialized upstream.
+    Signed64(i64),
     FloatBits(u32),
     Text(String),
 }
 pub struct DecodedTable {
     rows: BTreeMap<u32, Vec<Vec<Value>>>,
+}
+struct ScanResult {
+    decoded: DecodedTable,
+    direct_values: BTreeSet<u32>,
+    terrain: Option<terrain_sources::Collected>,
 }
 impl DecodedTable {
     pub fn rows(&self) -> &BTreeMap<u32, Vec<Vec<Value>>> {
@@ -68,9 +111,59 @@ impl DecodedTable {
     }
     /// Validate and decode every logical field, not a projection of selected columns.
     /// Policy: <=16 MiB, 100k direct records, 100k copies, <=1M values, one
-    /// unencrypted regular section. All sizes are checked before allocation or
-    /// multiplication so 32-bit targets cannot overflow or index out of bounds.
+    /// unencrypted regular or supported numeric sparse section, and <=64 MiB
+    /// cumulative UTF-8 payload.
+    /// Every direct string and applicable copy consumes text budget, including
+    /// overwritten rows; skipped copies do not. No bytes are refunded. Outputs
+    /// under this budget are unchanged. All sizes are checked before allocation
+    /// or multiplication so 32-bit targets cannot overflow or index out of bounds.
     pub fn read(data: &[u8], table: CharacterTable) -> Result<Self, RecordError> {
+        Self::read_impl(data, table, None, TEXT_POLICY_LIMIT).map(|(decoded, _)| decoded)
+    }
+
+    /// Decode the entire table and collect original values of one physical
+    /// scalar unsigned 32-bit field from the direct records.
+    ///
+    /// `physical_field` indexes file fields, not flattened array elements or an
+    /// appended parent. Other kinds, widths and array counts return `Schema`.
+    /// The ordered set retains zero and deduplicates values before any parent
+    /// lookup, record copy or inline-ID rewrite. `rows()` still contains the
+    /// usual final logical rows, including all applicable copies.
+    ///
+    /// Both results are returned only after the complete file passes the same
+    /// validation and limits as `read`; no partial collection escapes on error.
+    /// The set has at most one entry per direct record (at most 100,000).
+    /// This supports the direct-record dependency scan used by pinned
+    /// `map_extractor/System.cpp:394-414` for CinematicCamera FileDataID, whose
+    /// original value could otherwise be lost when a copy replaces its row.
+    pub fn read_with_direct_u32_values(
+        data: &[u8],
+        table: CharacterTable,
+        physical_field: usize,
+    ) -> Result<(Self, BTreeSet<u32>), RecordError> {
+        Self::read_impl(data, table, Some(physical_field), TEXT_POLICY_LIMIT)
+    }
+
+    fn read_impl(
+        data: &[u8],
+        table: CharacterTable,
+        direct_field: Option<usize>,
+        text_limit: usize,
+    ) -> Result<(Self, BTreeSet<u32>), RecordError> {
+        let result = Self::scan_regular_or_logical(data, table, direct_field, text_limit, None)?;
+        Ok((result.decoded, result.direct_values))
+    }
+
+    // A closed terrain collector stages physical rows without invoking the
+    // AutoProduceData materializer. Every field still passes the same decoder.
+    // No caller callback or partial snapshot escapes the complete-file check.
+    fn scan_regular_or_logical(
+        data: &[u8],
+        table: CharacterTable,
+        direct_field: Option<usize>,
+        text_limit: usize,
+        mut terrain: Option<terrain_sources::Collector>,
+    ) -> Result<ScanResult, RecordError> {
         if data.len() > 16 * 1024 * 1024 {
             return Err(RecordError::Limit);
         }
@@ -80,31 +173,68 @@ impl DecodedTable {
         if !table.matches(&h) {
             return Err(RecordError::Schema);
         }
+        if let Some(field) = direct_field
+            && schema.fields.get(field) != Some(&Kind::Unsigned(32, 1))
+        {
+            return Err(RecordError::Schema);
+        }
+        let mut direct_values = BTreeSet::new();
+        // Public entry points always supply the fixed policy limit. A private
+        // parameter permits small synthetic boundary cases without huge input.
+        let mut text_budget = TextBudget::new(text_limit);
         if h.flags & SPARSE_FLAG != 0 {
-            return Err(RecordError::Unsupported);
+            if terrain.is_some() {
+                return Err(RecordError::Unsupported);
+            }
+            return sparse::read(data, &meta, &schema, direct_field).map(
+                |(decoded, direct_values)| ScanResult {
+                    decoded,
+                    direct_values,
+                    terrain: None,
+                },
+            );
         }
         // DB2FileLoader.cpp:1767 rejects `ParentLookupCount > 1`; at most one
-        // parent-lookup table is admitted. DB2FileLoader.cpp:1773 then requires
-        // the reviewed metadata to agree: a parent-bearing table has a parent
-        // index field, so a section that declares a parent block but a schema
-        // without one (or vice versa) is a schema mismatch, not a data error.
+        // parent-lookup table is admitted. DB2FileLoader.cpp:1775 rejects a
+        // declared lookup only when the reviewed schema has no parent field.
+        // Count zero is valid even with a parent: Load leaves parentIndexes
+        // empty (1866-1874), so AutoProduceData keeps an in-record parent or
+        // initializes an appended parent to zero (480-510), with no lookup.
         if h.parent_lookup_count > 1 {
             return Err(RecordError::Unsupported);
         }
-        if (h.parent_lookup_count == 1) != (schema.parent >= 0) {
+        if h.parent_lookup_count == 1 && schema.parent < 0 {
             return Err(RecordError::Schema);
         }
         if meta.sections.is_empty() {
-            // DB2FileLoader.cpp:1778-1779 admits a zero-section header and
-            // DB2FileLoader.cpp:1877 then assigns an empty record map: with no
-            // section there are no records. The only consistent body is a
-            // header declaring zero records; anything else has no offsets to
-            // read and is rejected rather than silently dropping data.
+            // A minimal zero-section file still contains 4 * FieldCount bytes
+            // of primitive field metadata: LoadHeaders reads them regardless
+            // of section count (DB2FileLoader.cpp:1782-1784), and Load checks
+            // the exact file size (1903-1912). Other empty layouts with storage
+            // or string payload are not reviewed here and fail explicitly.
             if h.record_count != 0 {
                 return Err(RecordError::Unsupported);
             }
-            return Ok(Self {
-                rows: BTreeMap::new(),
+            if h.string_table_size != 0
+                || h.column_meta_size != 0
+                || h.common_data_size != 0
+                || h.pallet_data_size != 0
+            {
+                return Err(RecordError::Unsupported);
+            }
+            let expected_len = (h.field_count as usize)
+                .checked_mul(4)
+                .and_then(|bytes| crate::HEADER_SIZE.checked_add(bytes))
+                .ok_or(RecordError::Bounds)?;
+            if data.len() != expected_len {
+                return Err(RecordError::Bounds);
+            }
+            return Ok(ScanResult {
+                decoded: Self {
+                    rows: BTreeMap::new(),
+                },
+                direct_values,
+                terrain: terrain.map(|collector| collector.finish(Vec::new(), text_budget)),
             });
         }
         if meta.sections.len() > 1 {
@@ -114,10 +244,21 @@ impl DecodedTable {
         if s.tact_declared || s.catalog_data_count != 0 {
             return Err(RecordError::Unsupported);
         }
-        // Bound every raw count before it is multiplied: record_count, value
-        // count and copy_table_count. Checked product keeps 32-bit usize safe.
-        let value_count = (h.record_count as usize)
-            .checked_mul(schema.fields.len())
+        // Count scalar array elements and an appended parent, not just columns.
+        // Copies are charged below when they add a row; overwrites and skipped
+        // copies do not increase the number of retained values.
+        let row_values = schema
+            .fields
+            .iter()
+            .try_fold(0usize, |count, kind| count.checked_add(kind.count()))
+            .and_then(|count| {
+                count.checked_add(usize::from(
+                    schema.parent >= 0 && schema.parent as usize >= schema.fields.len(),
+                ))
+            })
+            .ok_or(RecordError::Limit)?;
+        let mut value_count = (h.record_count as usize)
+            .checked_mul(row_values)
             .ok_or(RecordError::Limit)?;
         if h.record_count > 100_000 || s.copy_table_count > 100_000 || value_count > 1_000_000 {
             return Err(RecordError::Limit);
@@ -125,7 +266,7 @@ impl DecodedTable {
         if s.record_count != h.record_count
             || s.string_table_size != h.string_table_size
             || h.record_size == 0
-            || h.min_id > h.max_id
+            || (terrain.is_none() && h.min_id > h.max_id)
         {
             return Err(RecordError::Bounds);
         }
@@ -236,7 +377,7 @@ impl DecodedTable {
                     id
                 }
             };
-            if id > h.max_id || rows.contains_key(&id) {
+            if terrain.is_none() && (id > h.max_id || rows.contains_key(&id)) {
                 return Err(RecordError::Id);
             }
             let mut fields =
@@ -254,15 +395,25 @@ impl DecodedTable {
                         count,
                     )?;
                     let value = match *kind {
-                        Kind::String => {
+                        Kind::String | Kind::StringArray(_) => {
                             if cols[field].compression != 0 {
                                 return Err(RecordError::Column);
                             }
                             if bits == 0 {
+                                if terrain.as_ref().is_some_and(|collector| {
+                                    collector.requires_non_null_string(field)
+                                }) {
+                                    return Err(RecordError::String);
+                                }
                                 Value::Text(String::new())
                             } else {
                                 let at = offset
                                     .checked_add(cols[field].offset as usize / 8)
+                                    // RecordGetString:800 includes each array
+                                    // element's own 32-bit relative pointer.
+                                    .and_then(|at| {
+                                        array.checked_mul(4).and_then(|n| at.checked_add(n))
+                                    })
                                     .and_then(|at| at.checked_add(bits as usize))
                                     .ok_or(RecordError::String)?;
                                 if !(strings_start..strings_end).contains(&at) {
@@ -273,6 +424,9 @@ impl DecodedTable {
                                     .iter()
                                     .position(|byte| *byte == 0)
                                     .ok_or(RecordError::String)?;
+                                // Charge before UTF-8 conversion/allocation,
+                                // including repeated pointers and array slots.
+                                text_budget.charge(len)?;
                                 Value::Text(
                                     std::str::from_utf8(&tail[..len])
                                         .map_err(|_| RecordError::String)?
@@ -281,6 +435,7 @@ impl DecodedTable {
                             }
                         }
                         Kind::Float(_) => Value::FloatBits(bits as u32),
+                        Kind::Signed(64, _) => Value::Signed64(bits as i64),
                         Kind::Signed(width, _) => Value::Signed(match width {
                             8 => bits as u8 as i8 as i32,
                             16 => bits as u16 as i16 as i32,
@@ -295,6 +450,12 @@ impl DecodedTable {
                 }
                 fields.push(values);
             }
+            if let Some(field) = direct_field {
+                let Value::Unsigned(value) = &fields[field][0] else {
+                    return Err(RecordError::Schema);
+                };
+                direct_values.insert(*value);
+            }
             // Extra field at the end: a parent-bearing table's `ParentIndexField`
             // is an index into the TOTAL field array. When it is
             // `>= fields.len()` here it sits exactly one past the decoded
@@ -307,11 +468,56 @@ impl DecodedTable {
             // value is kept until the parent-lookup block overwrites it below.
             if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
                 fields.resize(schema.parent as usize + 1, Vec::new());
-                fields[schema.parent as usize] = vec![Value::Signed(0)];
+                fields[schema.parent as usize] = vec![if schema.appended_parent_unsigned {
+                    Value::Unsigned(0)
+                } else {
+                    Value::Signed(0)
+                }];
             }
-            ordinal_ids.push(id);
-            rows.insert(id, fields);
+            if let Some(collector) = terrain.as_mut() {
+                collector.push(id, fields)?;
+            } else {
+                ordinal_ids.push(id);
+                rows.insert(id, fields);
+            }
         }
+        if let Some(collector) = terrain {
+            // Load/GetRecordCopy (:703-709,1969-1974) returns raw ordered
+            // pairs. The terrain consumers never call GetMaxId or allocate an
+            // ID index. Zero, missing, self and full-u32 IDs remain operations.
+            let mut copies = Vec::new();
+            copies
+                .try_reserve_exact(s.copy_table_count as usize)
+                .map_err(|_| RecordError::Limit)?;
+            for index in 0..s.copy_table_count as usize {
+                let at = copy_start + index * 8; // whole table checked above
+                copies.push(terrain_sources::RecordCopy {
+                    new_id: u32_at(data, at)?,
+                    source_id: u32_at(data, at + 4)?,
+                });
+            }
+            return Ok(ScanResult {
+                decoded: Self { rows },
+                direct_values,
+                terrain: Some(collector.finish(copies, text_budget)),
+            });
+        }
+        // AutoProduceData allocates GetMaxId() + 1 index slots, not RecordCount
+        // slots (reference DB2FileLoader.cpp:394-398). GetMaxId scans direct ids
+        // and EVERY copy destination before any copy is attempted, including
+        // entries whose source will be skipped (955-977). Validate that extent
+        // against Header.MaxId, and fail closed instead of overflowing its u32
+        // size. The BTreeMap deliberately avoids allocating by this extent.
+        let mut max_id = rows.last_key_value().map_or(0, |(&id, _)| id);
+        for index in 0..s.copy_table_count as usize {
+            let base = index.checked_mul(8).ok_or(RecordError::Bounds)?;
+            let entry = copy_start.checked_add(base).ok_or(RecordError::Bounds)?;
+            max_id = max_id.max(u32_at(data, entry)?);
+        }
+        if max_id > h.max_id {
+            return Err(RecordError::Id);
+        }
+        let index_extent = max_id.checked_add(1).ok_or(RecordError::Id)?;
         // Apply the parent lookup after every row exists and before the copy
         // table, so a copied row carries its source's parent value. Entries are
         // `{ParentId, RecordIndex}` (8 bytes, LE); a later duplicate for the
@@ -336,35 +542,68 @@ impl DecodedTable {
                 // into the appended slot.
                 let value = if (schema.parent as usize) < schema.fields.len() {
                     parent_in_data_value(schema.fields[schema.parent as usize], parent_id)?
+                } else if schema.appended_parent_unsigned {
+                    Value::Unsigned(parent_id)
                 } else {
                     Value::Signed(parent_id as i32)
                 };
                 row[schema.parent as usize][0] = value;
             }
         }
-        // Source AutoProduceRecordCopies (DB2FileLoader.cpp:613-634): a copy is
-        // attempted only when the source is a present nonzero record and both the
-        // source and new row ids are below the record count. Any other entry is
-        // skipped without error, overwriting an existing destination row.
-        let record_count = h.record_count as usize;
+        // AutoProduceRecordCopies (DB2FileLoader.cpp:613-634) receives the index
+        // extent above. Process copies in order: earlier copies can be sources,
+        // missing/zero sources are skipped, and existing destinations are replaced.
         for index in 0..s.copy_table_count as usize {
             let base = index.checked_mul(8).ok_or(RecordError::Bounds)?;
             let entry = copy_start.checked_add(base).ok_or(RecordError::Bounds)?;
             let new = u32_at(data, entry)?;
             let source = u32_at(data, entry.checked_add(4).ok_or(RecordError::Bounds)?)?;
-            if source == 0 || source as usize >= record_count || new as usize >= record_count {
+            if source == 0 || source >= index_extent || new >= index_extent {
                 continue;
             }
-            let Some(mut fields) = rows.get(&source).cloned() else {
+            let Some(source_fields) = rows.get(&source) else {
                 continue;
             };
+            // The reference assigns the destination pointer before reading the
+            // source pointer, making a self-copy read uninitialized storage. It
+            // also writes a uint32 id even when the inline field is narrower
+            // (ChrClasses), overwriting neighboring fields. Neither operation
+            // has a safe reviewed compatibility contract; fail explicitly.
+            if source == new
+                || (schema.index >= 0 && schema.fields[schema.index as usize].bits() != 32)
+            {
+                return Err(RecordError::Unsupported);
+            }
+            if !rows.contains_key(&new) {
+                value_count = value_count
+                    .checked_add(row_values)
+                    .filter(|count| *count <= 1_000_000)
+                    .ok_or(RecordError::Limit)?;
+            }
+            // A clone owns a fresh String for every source text, even when it
+            // replaces an existing row. The cumulative charge bounds retained
+            // text and repeated overwrite work; skipped sources never reach it.
+            let copied_text_bytes = source_fields
+                .iter()
+                .flatten()
+                .try_fold(0usize, |total, value| match value {
+                    Value::Text(text) => total.checked_add(text.len()),
+                    _ => Some(total),
+                })
+                .ok_or(RecordError::Limit)?;
+            text_budget.charge(copied_text_bytes)?;
+            let mut fields = source_fields.clone();
             // Only a table with an inline index field rewrites the copied id.
             if schema.index >= 0 {
                 fields[schema.index as usize][0] = Value::Unsigned(new);
             }
             rows.insert(new, fields);
         }
-        Ok(Self { rows })
+        Ok(ScanResult {
+            decoded: Self { rows },
+            direct_values,
+            terrain: None,
+        })
     }
 }
 fn u32_at(data: &[u8], at: usize) -> Result<u32, RecordError> {
@@ -397,6 +636,6 @@ fn parent_in_data_value(kind: Kind, parent_id: u32) -> Result<Value, RecordError
         Kind::Unsigned(_, _) => Ok(Value::Unsigned(parent_id)),
         // A string/float parent field is not a reviewed shape; reject rather
         // than guess a write.
-        Kind::String | Kind::Float(_) => Err(RecordError::Schema),
+        Kind::String | Kind::StringArray(_) | Kind::Float(_) => Err(RecordError::Schema),
     }
 }

@@ -1,0 +1,258 @@
+{
+  "contract": "forever-windows-read-v1",
+  "version": 1,
+  "authored": "2026-10-11",
+  "license": "GPL-3.0-or-later",
+  "profile": "windows-x64-fixed-ntfs-read-lease-v1",
+  "status": "foundation API used by Windows read consumers; complete Windows product driver remains disabled",
+  "implementation": {
+    "crate": "forever-platform",
+    "readme": "crates/forever-platform/README.md",
+    "sources": [
+      "crates/forever-platform/src/path.rs",
+      "crates/forever-platform/src/windows.rs",
+      "crates/forever-platform/src/windows/ffi.rs"
+    ],
+    "rust_toolchain": "1.98.0",
+    "architecture": "x86_64",
+    "upstream_implementation_imported": false,
+    "registry_dependencies": [],
+    "unsafe_policy": "crate denies unsafe code; only the original synchronous minimal Win32 FFI module has a scoped allow",
+    "ffi_rationale": "Rust 1.98.0 stable Windows metadata does not expose all required stable volume/file identities and ChangeTime; unstable std APIs are not enabled",
+    "ffi_ownership": "borrows live std File handles; synchronous calls do not retain or close them; no raw handle escapes"
+  },
+  "api": [
+    "path::AbsolutePath::parse(&str, path::Limits)",
+    "windows::ReadFile::open(&Path, path::Limits, windows::LinkPolicy)",
+    "windows::ReadFile::identity()",
+    "windows::ReadFile::retained_handles()",
+    "windows::ReadFile::verify_unchanged()",
+    "windows::ReadFile::read_all(max_bytes)",
+    "windows::ReadFile::read_exact_at(offset, &mut [u8])",
+    "windows::ReadDirectory::open(&Path, path::Limits)",
+    "windows::ReadDirectory::identity()",
+    "windows::ReadDirectory::retained_handles()",
+    "windows::ReadDirectory::verify_unchanged()",
+    "windows::ReadDirectory::verify_same_object()",
+    "windows::Identity::same_object(other)",
+    "windows::operator_path(&Path, path::Limits)"
+  ],
+  "admission": {
+    "operating_system": "Windows x86_64 only for handle API; pure path parser is host-independent",
+    "volume": "fixed local drive, NTFS only, all retained identities on the same volume",
+    "fixed_drive_query": {
+      "api": "GetDriveTypeW",
+      "required_result": 3
+    },
+    "filesystem_query": {
+      "api": "GetVolumeInformationByHandleW",
+      "required_name": "NTFS"
+    },
+    "path": {
+      "form": "Unicode absolute ASCII drive letter, colon and backslash; backslash separators; final component is a file or explicit ReadDirectory target; volume-root-only paths reject",
+      "reject": [
+        "UNC",
+        "verbatim/device paths",
+        "relative paths",
+        "forward slash separators",
+        "alternate data streams",
+        "empty components",
+        "dot and dot-dot components",
+        "trailing dots or spaces",
+        "control characters through U+001F and U+007F",
+        "Win32 forbidden characters <>:\"/|?*",
+        "DOS reserved stems, including extensions and spaces before a period",
+        "CONIN$ and CONOUT$",
+        "COM1..COM9 and LPT1..LPT9, including superscripts 1/2/3",
+        "observed reparse components, including junctions, mountpoints and cloud placeholders"
+      ],
+      "reserved_stems": [
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        "CONIN$",
+        "CONOUT$"
+      ],
+      "unicode_normalization": "none",
+      "case_normalization": "none; OS-resolved case aliases are admitted only through the same held identity checks",
+      "short_names": "OS-resolved 8.3 aliases may be admitted for read leases; no guessing or name expansion is performed",
+      "output_protection": "read identity admission is not lexical output-path containment or key-source protection; aliases require a separate output contract",
+      "long_paths": "requires the actual process and Windows long-path policy; no verbatim-prefix fallback"
+    },
+    "reparse_policy": "reject every observed reparse attribute on held and named handles, with no fallback",
+    "hardlinks": {
+      "Reject": "final-file link count must be exactly one",
+      "Allow": "explicitly admits additional names; final-file link count is still identity-bound"
+    },
+    "unsupported": [
+      "ReFS",
+      "non-NTFS volumes",
+      "network drives",
+      "removable drives",
+      "UNC",
+      "device paths",
+      "junctions",
+      "cloud reparses"
+    ]
+  },
+  "open": {
+    "ancestor_order": "retain volume root, then each intermediate directory, before opening the leaf",
+    "directory_access": {
+      "flags": [
+        "FILE_LIST_DIRECTORY",
+        "FILE_READ_ATTRIBUTES"
+      ],
+      "value": 129,
+      "requires_list_directory_permission": true,
+      "reason": "metadata-only handles do not participate in the required read-sharing checks"
+    },
+    "leaf_access": "read access",
+    "share_mode": {
+      "flags": [
+        "FILE_SHARE_READ"
+      ],
+      "value": 1,
+      "write_sharing": false,
+      "delete_sharing": false
+    },
+    "custom_flags": {
+      "FILE_FLAG_BACKUP_SEMANTICS": 33554432,
+      "FILE_FLAG_OPEN_REPARSE_POINT": 2097152
+    },
+    "object_type": {
+      "api": "GetFileType",
+      "required_result": 1
+    },
+    "incompatible_existing_writer": "opening fails without fallback"
+  },
+  "identity": {
+    "snapshot_query_order": [
+      "GetFileInformationByHandle(before)",
+      "GetFileInformationByHandleEx(FileBasicInfo)",
+      "GetFileInformationByHandle(after)"
+    ],
+    "basic_info_class": 0,
+    "ffi_layout_bytes": {
+      "FileInfo": 52,
+      "BasicInfo": 40
+    },
+    "ffi_basic_info_alignment": 8,
+    "fields": [
+      "volume",
+      "file_index",
+      "links",
+      "attributes",
+      "size",
+      "creation_time",
+      "write_time",
+      "change_time"
+    ],
+    "repeated_query_checks": "full snapshots: all projected FileInfo fields must agree across before/after; creation/write/attributes must also agree with FileBasicInfo",
+    "excluded": [
+      "last_access_time"
+    ],
+    "ancestor_comparison": [
+      "volume",
+      "file_index",
+      "attributes"
+    ],
+    "ancestor_timestamp_policy": "ignore unrelated sibling changes; directory size/link/timestamps are not lease identity equality fields",
+    "leaf_comparison": "all captured fields; no last-access comparison",
+    "verification": "recheck each retained handle and its exact named prefix, then retained and named leaf",
+    "poison": "an observed verification failure or mismatch permanently invalidates the lease; later verification returns platform_changed",
+    "not_authentication": true,
+    "not_atomic_snapshot": true,
+    "directory_comparison": {
+      "verify_unchanged": "all captured final-directory fields; ancestors use same-object comparison",
+      "verify_same_object": "volume, file_index and attributes only for final directory and ancestors; explicit alternative permits sibling changes",
+      "after_failed_full_check": "permanent poison remains; object comparison cannot relax a previously observed failed full check"
+    },
+    "object_query_order": [
+      "GetFileInformationByHandle(before)",
+      "GetFileInformationByHandleEx(FileBasicInfo)",
+      "GetFileInformationByHandle(after)"
+    ],
+    "object_query_checks": "object-only acquisition: volume, file_index and attributes must agree across FileInfo before/after; attributes must agree with FileBasicInfo; both FileInfo samples must retain nonzero file_index and links",
+    "object_query_scope": "ancestor acquisition and held/named rechecks; explicit final-directory verify_same_object only; final file and directory open capture and verify_unchanged remain full snapshots",
+    "object_query_ignored_consistency_fields": [
+      "links",
+      "size",
+      "creation_time",
+      "write_time",
+      "change_time"
+    ]
+  },
+  "reads": {
+    "read_all": "complete bounded allocation with positional range read, EOF probe, and identity checks before successful return",
+    "read_exact_at": "checked offset plus length; complete bounded positional range with pre/post identity checks",
+    "failure": "discard any returned or caller-owned buffer bytes after failure; caller buffer may hold a prefix",
+    "large_archives": "file size may exceed a single-read limit; each admitted range remains bounded"
+  },
+  "limits": {
+    "downward_only": true,
+    "ancestors_including_volume_root": 63,
+    "steady_retained_handles": 64,
+    "temporary_verification_handles": 1,
+    "peak_handles_per_lease": 65,
+    "path_utf16_units": 32760,
+    "component_utf16_units": 255,
+    "read_bytes_per_operation": 67108864,
+    "aggregate": "multiple leases multiply the bound; caller owns aggregate handles and memory admission",
+    "not_claimed": [
+      "process RSS bound",
+      "aggregate CPU bound"
+    ]
+  },
+  "diagnostics": "static codes only; no path or OS error strings; no Debug for admitted path or lease",
+  "validation": {
+    "contract_tests": "source and contract consistency only; not execution of actual Windows calls",
+    "host_independent": "pure path tests may run on Linux",
+    "wine": "preliminary only; per-run external evidence required; corrected directory access is 0x81, and prior metadata-only sharing failure is not accepted evidence",
+    "real_windows_ntfs_accepted": false,
+    "reparse_test": "actual file/directory symlink test is ignored by default and requires separate privileged Windows execution"
+  },
+  "not_claimed": [
+    "complete Windows product extraction and driver integration",
+    "actual Windows/NTFS acceptance",
+    "DACL creation or private output directory policy",
+    "crash durability or directory-entry publication protocol",
+    "Windows package recovery or distribution",
+    "loaded executable identity",
+    "lexical output-path or key-source protection",
+    "content authentication",
+    "atomic filesystem snapshot",
+    "protection against privileged filesystem mutation, preexisting writable mappings, kernel attackers or DOS drive remapping",
+    "full real Forever extraction",
+    "RustyCore runtime acceptance",
+    "goal completion"
+  ],
+  "network": false,
+  "output_writes": false,
+  "publication_authorized": false,
+  "full_extractor_complete": false,
+  "api_profile": "forever-windows-read-ntfs-v1",
+  "consumers_contract": "forever-windows-consumers-v1",
+  "operator_path": {
+    "operation": "validate and own exact normal absolute drive path without filesystem I/O",
+    "no": [
+      "canonicalization",
+      "relative resolution",
+      "verbatim-prefix stripping",
+      "existence check",
+      "ownership check",
+      "reparse traversal",
+      "output protection"
+    ]
+  },
+  "directory": {
+    "operation": "retained ancestor and final-directory read lease; no enumeration, descendant opening or snapshot refresh",
+    "final_access": 129,
+    "enumeration": "caller separately budgets enumeration handle, drops iterator before verification and directory lease before an independent file lease when enforcing one aggregate 65-handle ceiling"
+  },
+  "diagnostic_categories": {
+    "platform_missing": "opening failed with OS NotFound only",
+    "platform_open": "sharing, permission and other open failures",
+    "platform_changed": "any failed lease verification permanently poisons it"
+  }
+}

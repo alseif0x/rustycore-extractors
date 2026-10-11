@@ -6,6 +6,9 @@ use super::CharacterTable;
 use super::schema::Kind;
 use super::{DecodedTable, RecordError, Value};
 
+#[path = "terrain_sources/tests.rs"]
+mod terrain_source_tests;
+
 const HEADER: usize = 204;
 const SECTION: usize = 40;
 /// Offset of the first column entry for a single-section file: 204 header +
@@ -390,9 +393,9 @@ fn expect_err_xpower(bytes: &[u8]) -> RecordError {
     }
 }
 
-/// A minimal header-only WDC5 file with `section_count == 0` (204 bytes). Used
-/// to exercise the zero-section "empty table" path. `record_size` and
-/// `min_id <= max_id` stay valid so only the section count distinguishes it.
+/// A minimal zero-section WDC5 file: header plus 4 bytes per primitive field.
+/// There is no column storage metadata or record/string payload. `record_size`
+/// and `min_id <= max_id` stay valid to isolate the empty-file acceptance path.
 fn build_zero_section_header(table: CharacterTable, record_count: u32) -> Vec<u8> {
     let schema = table.schema();
     let fields = schema.fields.len();
@@ -413,10 +416,13 @@ fn build_zero_section_header(table: CharacterTable, record_count: u32) -> Vec<u8
     put32(&mut out, 176, fields as u32);
     put32(&mut out, 180, 0);
     put32(&mut out, 184, 0);
-    put32(&mut out, 188, (fields * 24) as u32);
+    put32(&mut out, 188, 0);
     put32(&mut out, 192, 0);
     put32(&mut out, 196, 0);
     put32(&mut out, 200, 0);
+    // LoadHeaders reads primitive metadata even with no sections. This minimal
+    // empty variant has no column storage metadata or string/common/pallet data.
+    out.resize(HEADER + fields * 4, 0);
     out
 }
 
@@ -665,7 +671,7 @@ fn copy_skips_source_zero() {
 }
 
 #[test]
-fn copy_overwrites_destination_and_rewrites_inline_id() {
+fn copy_with_a_narrow_inline_index_is_explicitly_unsupported() {
     let mut spec = classes(3);
     spec.min_id = 0;
     spec.max_id = 1000;
@@ -675,11 +681,18 @@ fn copy_overwrites_destination_and_rewrites_inline_id() {
     write_inline_id(&mut spec, 1, 2);
     write_word(&mut spec.records[1], off, 0xBBBB);
     write_inline_id(&mut spec, 2, 3);
-    // Source row 1 exists and both ordinals are below record_count (3).
+    // ChrClasses' inline index is a byte, but the reference copy path writes a
+    // uint32 and corrupts adjacent fields. Do not silently manufacture parity.
     spec.copies = vec![(2, 1)];
-    let out = decode_classes(&spec).unwrap();
-    assert_eq!(out.rows()[&2][10][0], Value::Unsigned(0xAAAA));
-    assert_eq!(out.rows()[&2][29][0], Value::Unsigned(2));
+    assert_eq!(
+        expect_err_classes(&build_classes(&spec)),
+        RecordError::Unsupported
+    );
+
+    // Skipped entries never reach the reference's unsafe write and remain
+    // admissible, including a self-reference whose source is absent.
+    spec.copies = vec![(50, 0), (99, 99)];
+    assert_eq!(decode_classes(&spec).unwrap().rows().len(), 3);
 }
 
 #[test]
@@ -692,23 +705,48 @@ fn copy_table_exact_policy_limit_is_accepted() {
 
 #[test]
 fn value_count_exact_policy_boundary_is_accepted() {
-    // ChrClasses' inline index field (29) is FT_BYTE, so only 2^8 = 256 distinct
-    // ids fit; a 43-field value at the record_count policy frontier cannot carry
-    // that many distinct inline rows. The value-count limit is table independent,
-    // so exercise the exact boundary with ChrRaces (51 fields, separate u32 id
-    // table): floor(1_000_000 / 51) = 19_607 records is admitted, 19_608 exceeds
-    // it. Distinct ids keep the accepted decode within the id-table path.
-    let mut spec = races(19_607);
+    // ChrRaces has arrays, so the cap counts scalar values rather than columns.
+    // The separate u32 id table admits enough unique records to reach the cap.
+    let schema = CharacterTable::Races.schema();
+    let row_values: usize = schema.fields.iter().map(|kind| kind.count()).sum();
+    assert!(
+        row_values > schema.fields.len(),
+        "fixture must cover arrays"
+    );
+    let records = 1_000_000 / row_values;
+    let mut spec = races(records);
     spec.min_id = 0;
     spec.max_id = 100_000;
-    spec.ids = (1..=19_607u32).collect();
+    spec.ids = (1..=records as u32).collect();
     let out = decode_races(&spec).unwrap();
-    assert_eq!(out.rows().len(), 19_607);
+    assert_eq!(out.rows().len(), records);
     assert_eq!(out.rows().keys().next().copied(), Some(1));
 
-    let over = races(19_608);
+    let over = races(records + 1);
     let bytes = build_races(&over);
     assert_eq!(expect_err_races(&bytes), RecordError::Limit);
+}
+
+#[test]
+fn copies_count_scalar_values_but_skips_and_overwrites_do_not() {
+    let row_values: usize = CharacterTable::Races
+        .schema()
+        .fields
+        .iter()
+        .map(|kind| kind.count())
+        .sum();
+    let max_rows = (1_000_000 / row_values) as u32;
+    let mut spec = races(1);
+    spec.max_id = 100_000;
+    spec.ids = vec![70_000];
+    spec.copies = (1..max_rows).map(|new| (new, 70_000)).collect();
+    spec.copies
+        .extend([(1, 70_000), (90_000, 0), (90_001, 80_000)]);
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().len(), max_rows as usize);
+    // The next materialized destination would exceed the same scalar budget.
+    spec.copies.push((max_rows, 70_000));
+    assert_eq!(expect_err_races(&build_races(&spec)), RecordError::Limit);
 }
 
 // ---------------------------------------------------------------------------
@@ -774,10 +812,10 @@ fn extra_and_missing_tail_bytes_are_bounds() {
 }
 
 #[test]
-fn sparse_flag_bit_is_unsupported_and_other_flag_bits_are_accepted() {
+fn classes_sparse_flag_is_unsupported_and_other_flag_bits_are_accepted() {
     // Reference DB2FileLoader.cpp:1852 discriminates only on bit 0
     // (`if (!(_header.Flags & 0x1))` regular else sparse); no other bit is
-    // validated. Bit 0 must be rejected, and any value without bit 0 must
+    // validated. Classes remain outside the numeric sparse subset, and flags without bit 0 must
     // still decode normally.
     for flag in [1u16, 3, 0x8001, u16::MAX] {
         let mut bytes = build_classes(&classes(1));
@@ -945,17 +983,108 @@ fn id_table_size_mismatch_is_id_error() {
 }
 
 #[test]
-fn copy_with_new_row_id_at_or_above_record_count_is_skipped() {
-    // AutoProduceRecordCopies requires NewRowId < records; a larger id makes the
-    // entry a silent skip, not an error (DB2FileLoader.cpp:613-634).
-    let mut spec = classes(1);
-    spec.min_id = 0;
-    spec.max_id = 1_000_000;
-    write_inline_id(&mut spec, 0, 1);
-    spec.copies = vec![(70_000, 1)];
-    let out = decode_classes(&spec).unwrap();
-    assert_eq!(out.rows().len(), 1);
-    assert!(!out.rows().contains_key(&70_000));
+fn copies_with_sparse_ids_above_record_count_are_materialized_in_order() {
+    // The reference's `records` argument is GetMaxId() + 1, not RecordCount.
+    // One direct row can therefore produce copies keyed far above 1.
+    let mut spec = races(1);
+    spec.max_id = 90_000;
+    spec.ids = vec![70_000];
+    spec.copies = vec![(80_000, 70_000), (90_000, 80_000)];
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(
+        out.rows().keys().copied().collect::<Vec<_>>(),
+        vec![70_000, 80_000, 90_000]
+    );
+    assert_eq!(out.rows()[&90_000], out.rows()[&70_000]);
+}
+
+#[test]
+fn copies_skip_missing_sources_without_revisiting_forward_references() {
+    let mut spec = races(1);
+    spec.ids = vec![11];
+    spec.copies = vec![(22, 33), (33, 11), (44, 99), (55, u32::MAX)];
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![11, 33]);
+}
+
+#[test]
+fn copy_destination_zero_is_valid_but_cannot_be_a_later_source() {
+    let mut spec = races(1);
+    spec.ids = vec![11];
+    spec.copies = vec![(0, 11), (22, 0)];
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().keys().copied().collect::<Vec<_>>(), vec![0, 11]);
+    assert_eq!(out.rows()[&0], out.rows()[&11]);
+}
+
+#[test]
+fn applicable_self_copies_are_explicitly_unsupported() {
+    let mut spec = races(1);
+    spec.ids = vec![11];
+    for copies in [vec![(11, 11)], vec![(22, 11), (22, 22)]] {
+        spec.copies = copies;
+        assert_eq!(
+            expect_err_races(&build_races(&spec)),
+            RecordError::Unsupported
+        );
+    }
+    // Source zero is skipped even when that direct row exists.
+    spec.ids = vec![0];
+    spec.copies = vec![(0, 0), (99, 99)];
+    assert_eq!(decode_races(&spec).unwrap().rows().len(), 1);
+}
+
+#[test]
+fn copies_preserve_earlier_values_when_the_source_is_later_overwritten() {
+    let table = CharacterTable::Curve;
+    let mut spec = inline_spec(table, 2);
+    spec.max_id = 100_000;
+    write_inline_id_at(&mut spec, 0, 10_000, 0);
+    write_inline_id_at(&mut spec, 0, 20_000, 1);
+    let value_offset = field_offset(&spec, 1);
+    write_byte(&mut spec.records[0], value_offset, 12);
+    write_byte(&mut spec.records[1], value_offset, 34);
+    spec.copies = vec![(30_000, 10_000), (10_000, 20_000), (40_000, 30_000)];
+    let out = decode_inline(table, &spec).unwrap();
+    for (id, value) in [(10_000, 34), (20_000, 34), (30_000, 12), (40_000, 12)] {
+        assert_eq!(out.rows()[&id][0][0], Value::Unsigned(id));
+        assert_eq!(out.rows()[&id][1][0], Value::Unsigned(value));
+    }
+}
+
+#[test]
+fn copy_destinations_above_header_max_are_errors_even_for_skipped_sources() {
+    for source in [0, 11, 99] {
+        let mut spec = races(1);
+        spec.ids = vec![11];
+        spec.max_id = 100;
+        spec.copies = vec![(101, source)];
+        assert_eq!(expect_err_races(&build_races(&spec)), RecordError::Id);
+    }
+}
+
+#[test]
+fn copy_index_extent_accepts_sparse_large_ids_without_dense_allocation() {
+    let mut spec = races(1);
+    spec.max_id = u32::MAX;
+    spec.ids = vec![u32::MAX - 2];
+    spec.copies = vec![(u32::MAX - 1, u32::MAX - 2)];
+    let out = decode_races(&spec).unwrap();
+    assert_eq!(out.rows().len(), 2);
+    assert_eq!(out.rows()[&(u32::MAX - 1)], out.rows()[&(u32::MAX - 2)]);
+}
+
+#[test]
+fn direct_or_copy_maximum_id_rejects_u32_index_extent_overflow() {
+    let mut spec = races(1);
+    spec.max_id = u32::MAX;
+    spec.ids = vec![u32::MAX];
+    assert_eq!(expect_err_races(&build_races(&spec)), RecordError::Id);
+    spec.ids = vec![11];
+    for source in [0, 11, 99] {
+        spec.copies = vec![(u32::MAX, source)];
+        assert_eq!(expect_err_races(&build_races(&spec)), RecordError::Id);
+    }
 }
 
 #[test]
@@ -1338,10 +1467,7 @@ fn chr_class_id_table_repair_matches_the_separate_id_path() {
 
 #[test]
 fn empty_table_with_zero_sections_decodes_to_zero_rows() {
-    // DB2FileLoader.cpp:1778-1779 admits a zero-section header and
-    // DB2FileLoader.cpp:1877 then assigns an empty record map. A reviewed table
-    // header with section_count == 0 and record_count == 0 must decode as a
-    // valid empty table, not Unsupported.
+    // A zero-section file with no records still includes primitive metadata.
     for (table, _, _, _, _, _) in NEW_TABLES {
         let bytes = build_zero_section_header(table, 0);
         let meta = crate::Metadata::read(&mut std::io::Cursor::new(&bytes)).unwrap();
@@ -1350,6 +1476,54 @@ fn empty_table_with_zero_sections_decodes_to_zero_rows() {
             .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
         assert_eq!(out.rows().len(), 0, "{} rows", table.name());
     }
+}
+
+#[test]
+fn zero_section_files_require_complete_primitive_metadata_and_exact_length() {
+    for table in [
+        CharacterTable::Classes,
+        CharacterTable::ItemSpecOverride,
+        CharacterTable::GemProperties,
+    ] {
+        let full = build_zero_section_header(table, 0);
+        assert_eq!(full.len(), HEADER + 4 * table.schema().fields.len());
+        assert!(decode(table, &full).unwrap().rows().is_empty());
+        for truncated in [&full[..HEADER], &full[..full.len() - 1]] {
+            // The metadata-only inspector contract remains header-only; the
+            // record decoder is responsible for complete-file acceptance.
+            assert!(crate::Metadata::read(&mut std::io::Cursor::new(truncated)).is_ok());
+            assert_eq!(record_error(table, truncated), RecordError::Bounds);
+        }
+        let mut tailed = full;
+        tailed.push(0);
+        assert_eq!(record_error(table, &tailed), RecordError::Bounds);
+    }
+}
+
+#[test]
+fn zero_section_payload_variants_are_explicitly_unsupported() {
+    let table = CharacterTable::GemProperties;
+    let full = build_zero_section_header(table, 0);
+    for offset in [148, 188, 192, 196] {
+        let mut bytes = full.clone();
+        put32(&mut bytes, offset, 1);
+        assert_eq!(
+            record_error(table, &bytes),
+            RecordError::Unsupported,
+            "header {offset}"
+        );
+    }
+    for (record_size, flags) in [(0, 0), (8, 4), (27, 2)] {
+        let mut bytes = full.clone();
+        put32(&mut bytes, 144, record_size);
+        put16(&mut bytes, 172, flags);
+        assert!(decode(table, &bytes).unwrap().rows().is_empty());
+    }
+    let mut sparse = full;
+    put16(&mut sparse, 172, 1);
+    // This regular fixture has zero primitive UnusedBits for its U16 field;
+    // numeric sparse slots require the reviewed 16-bit width.
+    assert_eq!(record_error(table, &sparse), RecordError::Column);
 }
 
 #[test]
@@ -1438,6 +1612,20 @@ fn xpower_decodes_two_entries_and_fills_parent_ids() {
 }
 
 #[test]
+fn copies_carry_the_resolved_parent_lookup_value() {
+    let mut spec = xpower(1);
+    spec.ids = vec![11];
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(73, 0)];
+    spec.copies = vec![(22, 11), (33, 22)];
+    let out = decode_xpower(&spec).unwrap();
+    assert_eq!(out.rows().len(), 3);
+    for id in [11, 22, 33] {
+        assert_eq!(out.rows()[&id][1][0], Value::Signed(73));
+    }
+}
+
+#[test]
 fn xpower_zero_parent_entries_still_gets_the_default_parent_field() {
     // A parent block with NumEntries = 0 is admitted; every row keeps the
     // default appended parent field of signed zero.
@@ -1510,19 +1698,21 @@ fn xpower_extra_bytes_after_the_parent_block_are_bounds() {
 }
 
 #[test]
-fn xpower_parent_count_zero_but_schema_expects_parent_is_schema() {
-    // The reviewed schema has a parent index field, so a header that declares no
-    // parent-lookup block is a schema mismatch (the `==` in
-    // `(parent_lookup_count == 1) != (schema.parent >= 0)`), reported as
-    // unsupported_table_schema before any data bounds are checked.
+fn xpower_without_parent_lookup_appends_zero_and_copies_the_default() {
+    // Reference AutoProduceData initializes the appended field even when Load
+    // did not allocate parentIndexes because ParentLookupCount is zero.
     let mut spec = xpower(1);
     spec.ids[0] = 11;
     spec.min_id = 0;
     spec.max_id = 100;
     spec.parent_lookup_count = 0;
     spec.parent_entries = Vec::new();
-    let bytes = assemble(CharacterTable::ClassXPowerTypes, &spec);
-    assert_eq!(expect_err_xpower(&bytes), RecordError::Schema);
+    spec.copies = vec![(22, 11), (33, 22)];
+    let out = decode_xpower(&spec).unwrap();
+    assert_eq!(out.rows().len(), 3);
+    for id in [11, 22, 33] {
+        assert_eq!(out.rows()[&id][1], vec![Value::Signed(0)]);
+    }
 }
 
 #[test]
@@ -1679,14 +1869,14 @@ fn specialization_parent_byte_boundary_is_accepted() {
 }
 
 #[test]
-fn specialization_parent_count_zero_but_schema_expects_parent_is_schema() {
-    // The reviewed schema has a parent index field, so a header that declares no
-    // parent-lookup block is a schema mismatch.
+fn specialization_without_parent_lookup_preserves_the_in_record_value() {
     let mut spec = specialization(1);
     spec.parent_lookup_count = 0;
     write_inline_id_at(&mut spec, 3, 11, 0);
-    let bytes = assemble(CharacterTable::Specialization, &spec);
-    assert_eq!(expect_err_specialization(&bytes), RecordError::Schema);
+    let parent_offset = field_offset(&spec, 4);
+    write_byte(&mut spec.records[0], parent_offset, 0x80);
+    let out = decode_specialization(&spec).unwrap();
+    assert_eq!(out.rows()[&11][4], vec![Value::Signed(-128)]);
 }
 
 // ---------------------------------------------------------------------------
@@ -3338,5 +3528,2584 @@ fn forever_float_tables_empty_zero_section_variant() {
         let out = decode(table, &bytes)
             .unwrap_or_else(|error| panic!("{} rejected as {}", table.name(), error.code()));
         assert_eq!(out.rows().len(), 0, "{} rows", table.name());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Name/category metadata reviewed at TrinityCore 02245dcd (2026-10-11).
+// Fixtures contain only synthetic text and values, never client records.
+// ---------------------------------------------------------------------------
+const FOREVER_NAME_TABLES: [(CharacterTable, &str, u32, u32, usize); 4] = [
+    (
+        CharacterTable::NamesProfanity,
+        "NamesProfanity",
+        1117086,
+        0xF227E638,
+        2,
+    ),
+    (
+        CharacterTable::NamesReserved,
+        "NamesReserved",
+        1117085,
+        0x2B2D5D97,
+        1,
+    ),
+    (
+        CharacterTable::NamesReservedLocale,
+        "NamesReservedLocale",
+        1117087,
+        0x7B9823D4,
+        2,
+    ),
+    (
+        CharacterTable::CfgCategories,
+        "Cfg_Categories",
+        1068162,
+        0x8710BE94,
+        6,
+    ),
+];
+
+#[test]
+fn name_table_catalog_identity_and_field_types_match_the_pinned_metadata() {
+    for (table, name, file_id, layout, fields) in FOREVER_NAME_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), file_id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none(), "{name}: no invented table hash");
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, -1, -1)
+        );
+        assert_eq!(schema.fields.len(), fields);
+        assert!(schema.fields.iter().all(|kind| kind.count() == 1));
+        assert!(matches!(schema.fields[0], Kind::String));
+    }
+    assert!(matches!(
+        CharacterTable::NamesProfanity.schema().fields[1],
+        Kind::Signed(8, 1)
+    ));
+    assert!(matches!(
+        CharacterTable::NamesReservedLocale.schema().fields[1],
+        Kind::Unsigned(8, 1)
+    ));
+    assert!(matches!(
+        CharacterTable::CfgCategories.schema().fields,
+        [
+            Kind::String,
+            Kind::Unsigned(16, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Signed(32, 1),
+            Kind::Signed(8, 1)
+        ]
+    ));
+    for alias in [
+        "namesreserved",
+        "NamesReserved.db2",
+        "CfgCategories",
+        "Cfg_Categories ",
+    ] {
+        assert_eq!(CharacterTable::named(alias), None);
+    }
+}
+
+#[test]
+fn name_table_identity_uses_layout_and_counts_but_not_unknown_hash_or_header_index() {
+    for (table, name, _, _, fields) in FOREVER_NAME_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = build_idtable(table, &spec);
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        let out = decode(table, &bytes).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![7],
+            "{name}"
+        );
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+#[test]
+fn name_tables_decode_utf8_and_preserve_it_across_sparse_copy_chains() {
+    for (table, name, _, _, fields) in FOREVER_NAME_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 70_000;
+        spec.strings = "Nombre sintético\0".as_bytes().to_vec();
+        let relative = record_size(&spec.cols) as u32;
+        write_word(&mut spec.records[0], 0, relative);
+        spec.copies = vec![(80_000, 70_000), (90_000, 80_000)];
+        let out = decode_idtable(table, &spec).unwrap();
+        assert_eq!(out.rows().len(), 3, "{name}");
+        for id in [70_000, 80_000, 90_000] {
+            assert_eq!(out.rows()[&id].len(), fields, "{name}: row {id}");
+            assert_eq!(
+                out.rows()[&id][0][0],
+                Value::Text("Nombre sintético".to_owned())
+            );
+            assert_eq!(out.rows()[&id], out.rows()[&70_000]);
+        }
+    }
+}
+
+#[test]
+fn name_tables_accept_empty_text_and_reject_malformed_strings() {
+    for (table, name, _, _, _) in FOREVER_NAME_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        assert_eq!(
+            decode_idtable(table, &spec).unwrap().rows()[&7][0][0],
+            Value::Text(String::new())
+        );
+        let relative = record_size(&spec.cols) as u32;
+        write_word(&mut spec.records[0], 0, relative);
+        for strings in [vec![0xFF, 0], b"unterminated".to_vec(), Vec::new()] {
+            spec.strings = strings;
+            assert_eq!(
+                record_error(table, &build_idtable(table, &spec)),
+                RecordError::String,
+                "{name}"
+            );
+        }
+    }
+}
+
+#[test]
+fn names_profanity_and_reserved_locale_keep_byte_signedness() {
+    for (table, bytes, expected) in [
+        (
+            CharacterTable::NamesProfanity,
+            [0x80, 0x7F],
+            [Value::Signed(-128), Value::Signed(127)],
+        ),
+        (
+            CharacterTable::NamesReservedLocale,
+            [0xFF, 0],
+            [Value::Unsigned(255), Value::Unsigned(0)],
+        ),
+    ] {
+        let mut spec = idtable_spec(table, 2);
+        spec.ids = vec![11, 22];
+        let offset = field_offset(&spec, 1);
+        for (row, value) in bytes.into_iter().enumerate() {
+            write_byte(&mut spec.records[row], offset, value);
+        }
+        let out = decode_idtable(table, &spec).unwrap();
+        for (row, id) in [11, 22].into_iter().enumerate() {
+            assert_eq!(out.rows()[&id][1][0], expected[row]);
+        }
+    }
+}
+
+#[test]
+fn cfg_categories_keeps_short_byte_and_signed_integer_boundaries() {
+    let table = CharacterTable::CfgCategories;
+    let mut spec = idtable_spec(table, 2);
+    spec.ids = vec![11, 22];
+    let short_at = field_offset(&spec, 1) as usize / 8;
+    for (row, value) in [u16::MAX, 0].into_iter().enumerate() {
+        spec.records[row][short_at..short_at + 2].copy_from_slice(&value.to_le_bytes());
+    }
+    for (field, values) in [(2, [0xFF, 0]), (3, [0x80, 0x7F]), (5, [0xFF, 0x80])] {
+        let offset = field_offset(&spec, field);
+        for (row, value) in values.into_iter().enumerate() {
+            write_byte(&mut spec.records[row], offset, value);
+        }
+    }
+    let int_offset = field_offset(&spec, 4);
+    for (row, value) in [i32::MIN, i32::MAX].into_iter().enumerate() {
+        write_word(&mut spec.records[row], int_offset, value as u32);
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Text(String::new())],
+            vec![Value::Unsigned(65535)],
+            vec![Value::Unsigned(255)],
+            vec![Value::Unsigned(128)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(-1)],
+        ]
+    );
+    assert_eq!(
+        out.rows()[&22],
+        vec![
+            vec![Value::Text(String::new())],
+            vec![Value::Unsigned(0)],
+            vec![Value::Unsigned(0)],
+            vec![Value::Unsigned(127)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(-128)],
+        ]
+    );
+}
+
+#[test]
+fn name_tables_apply_separate_id_repair_and_reject_duplicate_or_out_of_range_ids() {
+    for (table, name, _, _, _) in FOREVER_NAME_TABLES {
+        let mut spec = idtable_spec(table, 2);
+        spec.min_id = 50;
+        spec.max_id = 100;
+        spec.ids = vec![3, 50];
+        let out = decode_idtable(table, &spec).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![50, 51],
+            "{name}"
+        );
+        for ids in [vec![60, 60], vec![60, 101]] {
+            spec.ids = ids;
+            assert_eq!(
+                record_error(table, &build_idtable(table, &spec)),
+                RecordError::Id,
+                "{name}"
+            );
+        }
+    }
+}
+
+#[test]
+fn name_tables_accept_empty_files_and_reject_declared_records_without_sections() {
+    for (table, name, _, _, _) in FOREVER_NAME_TABLES {
+        for bytes in [
+            build_zero_section_header(table, 0),
+            build_idtable(table, &idtable_spec(table, 0)),
+        ] {
+            assert!(decode(table, &bytes).unwrap().rows().is_empty(), "{name}");
+        }
+        assert_eq!(
+            record_error(table, &build_zero_section_header(table, 1)),
+            RecordError::Unsupported,
+            "{name}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Appearance metadata reviewed at TrinityCore 02245dcd (2026-10-11).
+// The parent index is part of the schema, independently of the header index.
+// ---------------------------------------------------------------------------
+const FOREVER_APPEARANCE_TABLES: [(CharacterTable, &str, u32, u32, i16, i16, usize); 5] = [
+    (
+        CharacterTable::Model,
+        "ChrModel",
+        3384313,
+        0x03FAB755,
+        2,
+        4,
+        17,
+    ),
+    (
+        CharacterTable::RaceXModel,
+        "ChrRaceXChrModel",
+        3490304,
+        0xA203BC29,
+        -1,
+        0,
+        4,
+    ),
+    (
+        CharacterTable::CustomizationOption,
+        "ChrCustomizationOption",
+        3384247,
+        0xDCC2A86E,
+        1,
+        4,
+        13,
+    ),
+    (
+        CharacterTable::CustomizationChoice,
+        "ChrCustomizationChoice",
+        3450554,
+        0x9559C358,
+        1,
+        2,
+        11,
+    ),
+    (
+        CharacterTable::CustomizationReqChoice,
+        "ChrCustomizationReqChoice",
+        3580359,
+        0xF925BC6F,
+        -1,
+        1,
+        1,
+    ),
+];
+
+fn appearance_spec(table: CharacterTable, count: usize) -> Spec {
+    let mut spec = spec(table);
+    let size = record_size(&spec.cols);
+    spec.records = vec![vec![0; size]; count];
+    spec.min_id = 0;
+    spec.max_id = 100_000;
+    spec.parent_lookup_count = 1;
+    for row in 0..count {
+        let id = (row as u32 + 1) * 11;
+        if table.schema().index < 0 {
+            spec.ids.push(id);
+        } else {
+            write_inline_id_at(&mut spec, table.schema().index as usize, id, row);
+        }
+    }
+    spec
+}
+
+fn decode_appearance(table: CharacterTable, spec: &Spec) -> Result<DecodedTable, RecordError> {
+    decode(table, &assemble(table, spec))
+}
+
+#[test]
+fn appearance_table_catalog_and_parent_identities_match_pinned_metadata() {
+    for (table, name, file_id, layout, index, parent, fields) in FOREVER_APPEARANCE_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), file_id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none(), "{name}: no invented table hash");
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, index, parent)
+        );
+        assert_eq!(schema.fields.len(), fields);
+        let mut bytes = assemble(table, &appearance_spec(table, 1));
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        let header = crate::Metadata::read(&mut std::io::Cursor::new(&bytes))
+            .unwrap()
+            .header;
+        assert_eq!(header.total_field_count as usize, fields);
+        assert!(table.matches(&header), "{name}");
+        assert_eq!(decode(table, &bytes).unwrap().rows().len(), 1);
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+#[test]
+fn appearance_parent_blocks_are_optional_but_require_valid_counts_and_ordinals() {
+    for (table, name, _, _, _, parent, _) in FOREVER_APPEARANCE_TABLES {
+        let mut spec = appearance_spec(table, 1);
+        spec.parent_lookup_count = 0;
+        let out = decode_appearance(table, &spec).unwrap();
+        assert_eq!(
+            out.rows()[&11][parent as usize],
+            vec![Value::Signed(0)],
+            "{name}: no lookup"
+        );
+        spec.parent_lookup_count = 2;
+        // Header::parse rejects counts above one before the record decoder
+        // reaches its variant gate; DecodedTable maps metadata errors here.
+        let multiple_blocks = assemble(table, &spec);
+        assert_eq!(
+            crate::Metadata::read(&mut std::io::Cursor::new(&multiple_blocks)),
+            Err(crate::Error::ParentLookupCount),
+            "{name}: header parent-count gate"
+        );
+        assert_eq!(
+            record_error(table, &multiple_blocks),
+            RecordError::Metadata,
+            "{name}: multiple blocks"
+        );
+        spec.parent_lookup_count = 1;
+        spec.parent_entries = vec![(7, 1)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id,
+            "{name}: ordinal bounds"
+        );
+        spec.parent_entries = vec![(7, 0)];
+        spec.parent_lookup_size = Some(0);
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Bounds,
+            "{name}: block size"
+        );
+    }
+}
+
+#[test]
+fn chr_model_decodes_float_vectors_inline_id_signed_scalars_and_parent() {
+    let table = CharacterTable::Model;
+    let mut spec = appearance_spec(table, 1);
+    let vectors = [
+        [0x3F80_0000u32, 0xC000_0000, 0x7FC0_0001],
+        [0x8000_0000, 0x7F80_0000, 1],
+    ];
+    for (field, vector) in vectors.into_iter().enumerate() {
+        assert!(matches!(table.schema().fields[field], Kind::Float(3)));
+        let offset = field_offset(&spec, field);
+        for (element, bits) in vector.into_iter().enumerate() {
+            write_word(&mut spec.records[0], offset + element as u16 * 32, bits);
+        }
+    }
+    let byte_offset = field_offset(&spec, 3);
+    write_byte(&mut spec.records[0], byte_offset, 0x80);
+    for field in 4..11 {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, (-(field as i32)) as u32);
+    }
+    let floats = [
+        0x3F00_0000,
+        0x4000_0000,
+        0x4040_0000,
+        0x4080_0000,
+        0xFF80_0000,
+        0x7FC0_0017,
+    ];
+    for (index, bits) in floats.into_iter().enumerate() {
+        let offset = field_offset(&spec, index + 11);
+        write_word(&mut spec.records[0], offset, bits);
+    }
+    spec.parent_entries = vec![(0x8000_0000, 0)];
+    let out = decode_appearance(table, &spec).unwrap();
+    let row = &out.rows()[&11];
+    for (field, vector) in vectors.into_iter().enumerate() {
+        assert_eq!(
+            row[field],
+            vector.into_iter().map(Value::FloatBits).collect::<Vec<_>>()
+        );
+    }
+    assert_eq!(row[2], vec![Value::Unsigned(11)]);
+    assert_eq!(row[3], vec![Value::Signed(-128)]);
+    assert_eq!(row[4], vec![Value::Signed(i32::MIN)]);
+    for (field, values) in row.iter().enumerate().take(11).skip(5) {
+        assert_eq!(values, &vec![Value::Signed(-(field as i32))]);
+    }
+    for (index, bits) in floats.into_iter().enumerate() {
+        assert_eq!(row[index + 11], vec![Value::FloatBits(bits)]);
+    }
+}
+
+#[test]
+fn chr_race_x_model_uses_signed_bytes_and_rejects_parent_width_overflow() {
+    let table = CharacterTable::RaceXModel;
+    let mut spec = appearance_spec(table, 1);
+    for (field, value) in [(1, i32::MIN), (3, i32::MAX)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let offset = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], offset, 0x80);
+    spec.parent_entries = vec![(255, 0)];
+    let out = decode_appearance(table, &spec).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(i32::MAX)]
+        ]
+    );
+    spec.parent_entries = vec![(256, 0)];
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Id
+    );
+}
+
+#[test]
+fn customization_option_decodes_utf8_short_float_and_signed_fields() {
+    let table = CharacterTable::CustomizationOption;
+    let mut spec = appearance_spec(table, 1);
+    spec.strings = "Opción sintética\0".as_bytes().to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative);
+    let short_at = field_offset(&spec, 2) as usize / 8;
+    spec.records[0][short_at..short_at + 2].copy_from_slice(&u16::MAX.to_le_bytes());
+    for field in [3, 4, 5, 6, 7, 9, 10, 11, 12] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, (-(field as i32)) as u32);
+    }
+    let float_offset = field_offset(&spec, 8);
+    write_word(&mut spec.records[0], float_offset, 0x7FC0_0013);
+    spec.parent_entries = vec![(0xFFFF_FFFF, 0)];
+    let out = decode_appearance(table, &spec).unwrap();
+    let row = &out.rows()[&11];
+    assert_eq!(row[0], vec![Value::Text("Opción sintética".to_owned())]);
+    assert_eq!(row[1], vec![Value::Unsigned(11)]);
+    assert_eq!(row[2], vec![Value::Unsigned(65535)]);
+    assert_eq!(row[4], vec![Value::Signed(-1)]);
+    assert_eq!(row[8], vec![Value::FloatBits(0x7FC0_0013)]);
+    for field in [3, 5, 6, 7, 9, 10, 11, 12] {
+        assert_eq!(row[field], vec![Value::Signed(-(field as i32))]);
+    }
+}
+
+#[test]
+fn customization_choice_decodes_unsigned_shorts_and_signed_array() {
+    let table = CharacterTable::CustomizationChoice;
+    let mut spec = appearance_spec(table, 1);
+    spec.strings = b"Synthetic choice\0".to_vec();
+    let relative = record_size(&spec.cols) as u32;
+    write_word(&mut spec.records[0], 0, relative);
+    for (field, value) in [(5, 65535u16), (6, 32768)] {
+        let at = field_offset(&spec, field) as usize / 8;
+        spec.records[0][at..at + 2].copy_from_slice(&value.to_le_bytes());
+    }
+    for field in [2, 3, 4, 7, 8, 9] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, (-(field as i32)) as u32);
+    }
+    let array_offset = field_offset(&spec, 10);
+    write_word(&mut spec.records[0], array_offset, i32::MIN as u32);
+    write_word(&mut spec.records[0], array_offset + 32, i32::MAX as u32);
+    spec.parent_entries = vec![(42, 0)];
+    let out = decode_appearance(table, &spec).unwrap();
+    let row = &out.rows()[&11];
+    assert_eq!(row[0], vec![Value::Text("Synthetic choice".to_owned())]);
+    assert_eq!(row[1], vec![Value::Unsigned(11)]);
+    assert_eq!(row[2], vec![Value::Signed(42)]);
+    assert_eq!(row[5], vec![Value::Unsigned(65535)]);
+    assert_eq!(row[6], vec![Value::Unsigned(32768)]);
+    for field in [3, 4, 7, 8, 9] {
+        assert_eq!(row[field], vec![Value::Signed(-(field as i32))]);
+    }
+    assert_eq!(
+        row[10],
+        vec![Value::Signed(i32::MIN), Value::Signed(i32::MAX)]
+    );
+}
+
+#[test]
+fn customization_req_choice_appends_parent_without_overwriting_its_only_column() {
+    let table = CharacterTable::CustomizationReqChoice;
+    let mut spec = appearance_spec(table, 1);
+    write_word(&mut spec.records[0], 0, (-7i32) as u32);
+    spec.parent_entries = vec![(0x8000_0000, 0)];
+    let out = decode_appearance(table, &spec).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![vec![Value::Signed(-7)], vec![Value::Signed(i32::MIN)]]
+    );
+}
+
+#[test]
+fn appearance_empty_parent_entries_preserve_in_data_values_or_append_zero() {
+    for (table, name, _, _, _, parent, fields) in FOREVER_APPEARANCE_TABLES {
+        let mut spec = appearance_spec(table, 1);
+        let in_data = (parent as usize) < fields;
+        if in_data {
+            let offset = field_offset(&spec, parent as usize);
+            if table == CharacterTable::RaceXModel {
+                write_byte(&mut spec.records[0], offset, 0xFF);
+            } else {
+                write_word(&mut spec.records[0], offset, u32::MAX);
+            }
+        }
+        for lookup_count in [0, 1] {
+            spec.parent_lookup_count = lookup_count;
+            let out = decode_appearance(table, &spec).unwrap();
+            assert_eq!(
+                out.rows()[&11].len(),
+                fields + usize::from(!in_data),
+                "{name}"
+            );
+            assert_eq!(
+                out.rows()[&11][parent as usize],
+                vec![Value::Signed(if in_data { -1 } else { 0 })],
+                "{name}: lookup count {lookup_count}"
+            );
+        }
+        spec.parent_entries = vec![(7, 0), (9, 0)];
+        assert_eq!(
+            decode_appearance(table, &spec).unwrap().rows()[&11][parent as usize],
+            vec![Value::Signed(9)],
+            "{name}: last parent wins"
+        );
+    }
+}
+
+#[test]
+fn appearance_sparse_copy_chains_carry_parent_and_rewrite_only_inline_id() {
+    for (table, name, _, _, index, parent, _) in FOREVER_APPEARANCE_TABLES {
+        let mut spec = appearance_spec(table, 1);
+        spec.parent_entries = vec![(77, 0)];
+        spec.copies = vec![(70_000, 11), (90_000, 70_000)];
+        let out = decode_appearance(table, &spec).unwrap();
+        assert_eq!(out.rows().len(), 3, "{name}");
+        for id in [70_000, 90_000] {
+            let mut expected = out.rows()[&11].clone();
+            if index >= 0 {
+                expected[index as usize][0] = Value::Unsigned(id);
+            }
+            assert_eq!(out.rows()[&id], expected, "{name}: copied row {id}");
+            assert_eq!(out.rows()[&id][parent as usize], vec![Value::Signed(77)]);
+        }
+    }
+}
+
+#[test]
+fn appearance_ids_follow_reviewed_inline_or_separate_path() {
+    for (table, name, _, _, index, _, _) in FOREVER_APPEARANCE_TABLES {
+        let mut spec = appearance_spec(table, 1);
+        spec.min_id = 50;
+        let expected = if index >= 0 { 11 } else { 50 };
+        let out = decode_appearance(table, &spec).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![expected],
+            "{name}"
+        );
+        spec.max_id = 50;
+        if index >= 0 {
+            write_inline_id_at(&mut spec, index as usize, 51, 0);
+        } else {
+            spec.ids[0] = 51;
+        }
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id,
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn appearance_string_fields_reject_invalid_utf8_and_accept_empty_text() {
+    for table in [
+        CharacterTable::CustomizationOption,
+        CharacterTable::CustomizationChoice,
+    ] {
+        let mut spec = appearance_spec(table, 1);
+        assert_eq!(
+            decode_appearance(table, &spec).unwrap().rows()[&11][0][0],
+            Value::Text(String::new())
+        );
+        spec.strings = vec![0xFF, 0];
+        let relative = record_size(&spec.cols) as u32;
+        write_word(&mut spec.records[0], 0, relative);
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::String
+        );
+    }
+}
+
+#[test]
+fn appearance_tables_accept_empty_sections_and_zero_section_headers_with_parent_identity() {
+    for (table, name, _, _, _, _, _) in FOREVER_APPEARANCE_TABLES {
+        assert!(
+            decode_appearance(table, &appearance_spec(table, 0))
+                .unwrap()
+                .rows()
+                .is_empty(),
+            "{name}: empty section"
+        );
+        let mut bytes = build_zero_section_header(table, 0);
+        put32(&mut bytes, 184, 1);
+        assert!(
+            decode(table, &bytes).unwrap().rows().is_empty(),
+            "{name}: zero sections"
+        );
+        put32(&mut bytes, 136, 1);
+        assert_eq!(
+            record_error(table, &bytes),
+            RecordError::Unsupported,
+            "{name}: declared records without section"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ItemSpec / ItemSpecOverride / GemProperties: independently transcribed
+// metadata at pinned 02245dcd, 2026-10-11. Synthetic values only.
+// ---------------------------------------------------------------------------
+const FOREVER_ITEM_SPEC_TABLES: [(CharacterTable, &str, u32, u32, i16, usize); 3] = [
+    (
+        CharacterTable::ItemSpec,
+        "ItemSpec",
+        1135120,
+        0x83F3D113,
+        2,
+        6,
+    ),
+    (
+        CharacterTable::ItemSpecOverride,
+        "ItemSpecOverride",
+        1134576,
+        0xB292998C,
+        1,
+        1,
+    ),
+    (
+        CharacterTable::GemProperties,
+        "GemProperties",
+        1343604,
+        0x86487AD2,
+        -1,
+        2,
+    ),
+];
+
+#[test]
+fn item_spec_catalog_transcribes_ids_layouts_unsigned_widths_and_parent_shapes() {
+    for (table, name, id, layout, parent, fields) in FOREVER_ITEM_SPEC_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none(), "{name}: no invented hash");
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, -1, parent)
+        );
+        assert_eq!(schema.fields.len(), fields);
+    }
+    assert!(matches!(
+        CharacterTable::ItemSpec.schema().fields,
+        [
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(8, 1),
+            Kind::Unsigned(16, 1),
+        ]
+    ));
+    assert!(matches!(
+        CharacterTable::ItemSpecOverride.schema().fields,
+        [Kind::Unsigned(16, 1)]
+    ));
+    assert!(matches!(
+        CharacterTable::GemProperties.schema().fields,
+        [Kind::Unsigned(16, 1), Kind::Signed(32, 1)]
+    ));
+}
+
+#[test]
+fn item_spec_identity_rejects_wrong_layout_or_counts_without_inventing_header_index_gate() {
+    for (table, name, _, _, _, fields) in FOREVER_ITEM_SPEC_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 7;
+        let mut bytes = assemble(table, &spec);
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        assert_eq!(
+            decode(table, &bytes)
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![7]
+        );
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+#[test]
+fn item_spec_without_lookup_preserves_unsigned_parent_and_copies_all_scalars() {
+    let table = CharacterTable::ItemSpec;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 11;
+    for (field, value) in [255, 128, 254, 127, 0].into_iter().enumerate() {
+        let offset = field_offset(&spec, field);
+        write_byte(&mut spec.records[0], offset, value);
+    }
+    let at = field_offset(&spec, 5) as usize / 8;
+    spec.records[0][at..at + 2].copy_from_slice(&u16::MAX.to_le_bytes());
+    spec.copies = vec![(70_000, 11), (90_000, 70_000)];
+    let out = decode_idtable(table, &spec).unwrap();
+    assert_eq!(out.rows().len(), 3);
+    for id in [11, 70_000, 90_000] {
+        assert_eq!(
+            out.rows()[&id],
+            vec![
+                vec![Value::Unsigned(255)],
+                vec![Value::Unsigned(128)],
+                vec![Value::Unsigned(254)],
+                vec![Value::Unsigned(127)],
+                vec![Value::Unsigned(0)],
+                vec![Value::Unsigned(65535)],
+            ]
+        );
+    }
+}
+
+#[test]
+fn item_spec_optional_lookup_uses_unsigned_byte_parent_width() {
+    let table = CharacterTable::ItemSpec;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 11;
+    spec.parent_lookup_count = 1;
+    let offset = field_offset(&spec, 2);
+    write_byte(&mut spec.records[0], offset, 128);
+    assert_eq!(
+        decode_idtable(table, &spec).unwrap().rows()[&11][2],
+        vec![Value::Unsigned(128)]
+    );
+    spec.parent_entries = vec![(255, 0)];
+    assert_eq!(
+        decode_idtable(table, &spec).unwrap().rows()[&11][2],
+        vec![Value::Unsigned(255)]
+    );
+    spec.parent_entries = vec![(256, 0)];
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Id
+    );
+    spec.parent_entries = vec![(7, 1)];
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Id
+    );
+}
+
+#[test]
+fn item_spec_override_defaults_appended_parent_without_lookup_and_copies_it() {
+    let table = CharacterTable::ItemSpecOverride;
+    let mut spec = idtable_spec(table, 1);
+    spec.ids[0] = 11;
+    spec.records[0][0..2].copy_from_slice(&u16::MAX.to_le_bytes());
+    spec.copies = vec![(70_000, 11)];
+    for lookup_count in [0, 1] {
+        spec.parent_lookup_count = lookup_count;
+        let out = decode_idtable(table, &spec).unwrap();
+        for id in [11, 70_000] {
+            assert_eq!(
+                out.rows()[&id],
+                vec![vec![Value::Unsigned(65535)], vec![Value::Signed(0)]]
+            );
+        }
+    }
+    spec.parent_entries = vec![(u32::MAX, 0)];
+    let out = decode_idtable(table, &spec).unwrap();
+    for id in [11, 70_000] {
+        assert_eq!(
+            out.rows()[&id],
+            vec![vec![Value::Unsigned(65535)], vec![Value::Signed(-1)]]
+        );
+    }
+}
+
+#[test]
+fn gem_properties_keeps_unsigned_short_and_signed_int_boundaries() {
+    let table = CharacterTable::GemProperties;
+    let mut spec = idtable_spec(table, 2);
+    spec.ids = vec![11, 22];
+    let int_offset = field_offset(&spec, 1);
+    for (row, (short, int)) in [(u16::MAX, i32::MIN), (0, i32::MAX)]
+        .into_iter()
+        .enumerate()
+    {
+        spec.records[row][0..2].copy_from_slice(&short.to_le_bytes());
+        write_word(&mut spec.records[row], int_offset, int as u32);
+    }
+    let out = decode_idtable(table, &spec).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![vec![Value::Unsigned(65535)], vec![Value::Signed(i32::MIN)]]
+    );
+    assert_eq!(
+        out.rows()[&22],
+        vec![vec![Value::Unsigned(0)], vec![Value::Signed(i32::MAX)]]
+    );
+    spec.parent_lookup_count = 1;
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Schema
+    );
+}
+
+#[test]
+fn zero_parent_count_rejects_ghost_parent_sizes_and_unexpected_trailing_bytes() {
+    for (table, name, _, _, _, _) in FOREVER_ITEM_SPEC_TABLES {
+        let mut spec = idtable_spec(table, 1);
+        spec.ids[0] = 11;
+        spec.parent_lookup_size = Some(12);
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Bounds,
+            "{name}: declared ghost block"
+        );
+        spec.parent_lookup_size = Some(0);
+        spec.parent_tail = 12;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Bounds,
+            "{name}: undeclared bytes"
+        );
+    }
+}
+
+#[test]
+fn item_spec_tables_empty_files_and_repaired_id_boundaries() {
+    for (table, name, _, _, parent, _) in FOREVER_ITEM_SPEC_TABLES {
+        for lookup_count in [0, 1] {
+            if lookup_count == 1 && parent < 0 {
+                continue;
+            }
+            let mut spec = idtable_spec(table, 0);
+            spec.parent_lookup_count = lookup_count;
+            assert!(
+                decode_idtable(table, &spec).unwrap().rows().is_empty(),
+                "{name}: empty section"
+            );
+            let mut bytes = build_zero_section_header(table, 0);
+            put32(&mut bytes, 184, lookup_count);
+            assert!(
+                decode(table, &bytes).unwrap().rows().is_empty(),
+                "{name}: zero sections"
+            );
+        }
+        let mut spec = idtable_spec(table, 2);
+        spec.min_id = 50;
+        spec.max_id = 100;
+        spec.ids = vec![0, 50];
+        assert_eq!(
+            decode_idtable(table, &spec)
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![50, 51]
+        );
+        for ids in [vec![60, 60], vec![60, 101]] {
+            spec.ids = ids;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::Id,
+                "{name}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Birth metadata reviewed at TrinityCore 02245dcd, 2026-10-11.
+// SkillLineAbility fixtures are synthetic, independent of live CASC availability.
+// ---------------------------------------------------------------------------
+const FOREVER_BIRTH_TABLES: [(CharacterTable, &str, u32, u32, i16, i16, usize); 5] = [
+    (
+        CharacterTable::SkillLine,
+        "SkillLine",
+        1240935,
+        0x6763217C,
+        5,
+        -1,
+        15,
+    ),
+    (
+        CharacterTable::SkillRaceClassInfo,
+        "SkillRaceClassInfo",
+        1240406,
+        0x24277B48,
+        -1,
+        0,
+        7,
+    ),
+    (
+        CharacterTable::SkillLineAbility,
+        "SkillLineAbility",
+        1266278,
+        0x224F7EA0,
+        2,
+        3,
+        18,
+    ),
+    (
+        CharacterTable::CharacterLoadout,
+        "CharacterLoadout",
+        1344281,
+        0x713CE8BB,
+        -1,
+        -1,
+        5,
+    ),
+    (
+        CharacterTable::CharacterLoadoutItem,
+        "CharacterLoadoutItem",
+        1302846,
+        0x0C7A1862,
+        -1,
+        0,
+        2,
+    ),
+];
+
+fn birth_spec(table: CharacterTable, count: usize) -> Spec {
+    // Reuse the generic record/id construction; all Birth tables admit lookup 0.
+    let mut spec = appearance_spec(table, count);
+    spec.parent_lookup_count = 0;
+    spec
+}
+
+fn birth_short(spec: &mut Spec, field: usize, value: u16) {
+    let at = field_offset(spec, field) as usize / 8;
+    spec.records[0][at..at + 2].copy_from_slice(&value.to_le_bytes());
+}
+
+fn birth_text(spec: &mut Spec, field: usize, text: &str) {
+    assert_eq!(spec.records.len(), 1);
+    let offset = field_offset(spec, field);
+    let relative = record_size(&spec.cols) + spec.strings.len() - offset as usize / 8;
+    write_word(&mut spec.records[0], offset, relative as u32);
+    spec.strings.extend(text.as_bytes());
+    spec.strings.push(0);
+}
+
+#[test]
+fn birth_catalog_identity_matches_the_pinned_reference_and_checks_layout_counts() {
+    for (table, name, id, layout, index, parent, fields) in FOREVER_BIRTH_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none(), "{name}: no invented table hash");
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, index, parent)
+        );
+        assert_eq!(schema.fields.len(), fields);
+        let mut bytes = assemble(table, &birth_spec(table, 1));
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        assert_eq!(
+            decode(table, &bytes)
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![11]
+        );
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+#[test]
+fn skill_line_decodes_five_distinct_texts_and_signed_unsigned_scalar_boundaries() {
+    let table = CharacterTable::SkillLine;
+    let mut spec = birth_spec(table, 1);
+    let texts = [
+        "Habilidad",
+        "Descripción",
+        "Alternativa",
+        "Etiqueta",
+        "synthetic_internal",
+    ];
+    for (field, text) in texts.into_iter().enumerate() {
+        birth_text(&mut spec, field, text);
+    }
+    for (field, value) in [(6, 0x80), (8, 0x7F)] {
+        let offset = field_offset(&spec, field);
+        write_byte(&mut spec.records[0], offset, value);
+    }
+    for (field, value) in [
+        (7, -7),
+        (10, -1),
+        (11, i32::MIN),
+        (12, i32::MAX),
+        (13, 42),
+        (14, -99),
+    ] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let offset = field_offset(&spec, 9);
+    write_word(&mut spec.records[0], offset, u32::MAX);
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    let row = &out.rows()[&11];
+    for (field, text) in texts.into_iter().enumerate() {
+        assert_eq!(row[field], vec![Value::Text(text.to_owned())]);
+    }
+    assert_eq!(
+        &row[5..],
+        &[
+            vec![Value::Unsigned(11)],
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(-7)],
+            vec![Value::Signed(127)],
+            vec![Value::Unsigned(u32::MAX)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(42)],
+            vec![Value::Signed(-99)],
+        ]
+    );
+}
+
+#[test]
+fn skill_race_class_info_decodes_signed_shorts_and_both_mask_words() {
+    let table = CharacterTable::SkillRaceClassInfo;
+    let mut spec = birth_spec(table, 1);
+    birth_short(&mut spec, 0, 0x8000);
+    birth_short(&mut spec, 5, 0xFFFF);
+    for (field, value) in [(1, -1), (2, i32::MIN), (3, i32::MAX)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let offset = field_offset(&spec, 4);
+    write_byte(&mut spec.records[0], offset, 0x80);
+    let offset = field_offset(&spec, 6);
+    write_word(&mut spec.records[0], offset, i32::MIN as u32);
+    write_word(&mut spec.records[0], offset + 32, i32::MAX as u32);
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Signed(-32768)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(i32::MIN), Value::Signed(i32::MAX)],
+        ]
+    );
+}
+
+#[test]
+fn skill_line_ability_decodes_text_signed_shorts_and_two_independent_mask_arrays() {
+    let table = CharacterTable::SkillLineAbility;
+    let mut spec = birth_spec(table, 1);
+    birth_text(&mut spec, 0, "Capacidad sintética");
+    birth_text(&mut spec, 1, "Otro texto");
+    for (field, value) in [
+        (3, -32768i16),
+        (5, -1),
+        (9, 32767),
+        (10, -32768),
+        (13, -2),
+        (14, 42),
+        (15, -123),
+    ] {
+        birth_short(&mut spec, field, value as u16);
+    }
+    for (field, value) in [(4, -4), (6, -6), (7, i32::MIN), (8, i32::MAX), (11, -11)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let offset = field_offset(&spec, 12);
+    write_byte(&mut spec.records[0], offset, 0x80);
+    for (field, values) in [(16, [i32::MIN, i32::MAX]), (17, [-1, 0x1234_5678])] {
+        let offset = field_offset(&spec, field);
+        for (word, value) in values.into_iter().enumerate() {
+            write_word(
+                &mut spec.records[0],
+                offset + word as u16 * 32,
+                value as u32,
+            );
+        }
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Text("Capacidad sintética".to_owned())],
+            vec![Value::Text("Otro texto".to_owned())],
+            vec![Value::Unsigned(11)],
+            vec![Value::Signed(-32768)],
+            vec![Value::Signed(-4)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(-6)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(32767)],
+            vec![Value::Signed(-32768)],
+            vec![Value::Signed(-11)],
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(-2)],
+            vec![Value::Signed(42)],
+            vec![Value::Signed(-123)],
+            vec![Value::Signed(i32::MIN), Value::Signed(i32::MAX)],
+            vec![Value::Signed(-1), Value::Signed(0x1234_5678)],
+        ]
+    );
+}
+
+#[test]
+fn character_loadout_distinguishes_signed_unsigned_bytes_and_mask_words() {
+    let table = CharacterTable::CharacterLoadout;
+    let mut spec = birth_spec(table, 1);
+    for (field, value) in [(0, 0x80), (2, 0xFF)] {
+        let offset = field_offset(&spec, field);
+        write_byte(&mut spec.records[0], offset, value);
+    }
+    for (field, value) in [(1, i32::MIN), (3, i32::MAX)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let offset = field_offset(&spec, 4);
+    write_word(&mut spec.records[0], offset, u32::MAX);
+    write_word(&mut spec.records[0], offset + 32, 0x8000_0000);
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Unsigned(255)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(-1), Value::Signed(i32::MIN)],
+        ]
+    );
+}
+
+#[test]
+fn character_loadout_item_keeps_unsigned_short_parent_and_u32_high_bit() {
+    let table = CharacterTable::CharacterLoadoutItem;
+    let mut spec = birth_spec(table, 1);
+    birth_short(&mut spec, 0, u16::MAX);
+    let offset = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], offset, u32::MAX);
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Unsigned(65535)],
+            vec![Value::Unsigned(u32::MAX)]
+        ]
+    );
+}
+
+#[test]
+fn birth_short_parent_lookup_preserves_signedness_and_rejects_width_or_ordinal_overflow() {
+    for (table, field, signed) in [
+        (CharacterTable::SkillRaceClassInfo, 0, true),
+        (CharacterTable::SkillLineAbility, 3, true),
+        (CharacterTable::CharacterLoadoutItem, 0, false),
+    ] {
+        let mut spec = birth_spec(table, 1);
+        birth_short(&mut spec, field, 0x8000);
+        let expected = if signed {
+            Value::Signed(-32768)
+        } else {
+            Value::Unsigned(32768)
+        };
+        for lookup in [0, 1] {
+            spec.parent_lookup_count = lookup;
+            assert_eq!(
+                decode(table, &assemble(table, &spec)).unwrap().rows()[&11][field],
+                vec![expected.clone()]
+            );
+        }
+        spec.parent_entries = vec![(65535, 0)];
+        let expected = if signed {
+            Value::Signed(-1)
+        } else {
+            Value::Unsigned(65535)
+        };
+        assert_eq!(
+            decode(table, &assemble(table, &spec)).unwrap().rows()[&11][field],
+            vec![expected]
+        );
+        for entries in [vec![(65536, 0)], vec![(1, 1)]] {
+            spec.parent_entries = entries;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::Id
+            );
+        }
+    }
+}
+
+#[test]
+fn birth_parentless_schemas_reject_lookup_and_all_schemas_reject_ghost_blocks() {
+    for (table, name, _, _, _, parent, _) in FOREVER_BIRTH_TABLES {
+        let mut spec = birth_spec(table, 1);
+        if parent < 0 {
+            spec.parent_lookup_count = 1;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::Schema,
+                "{name}"
+            );
+        }
+        spec.parent_lookup_count = 0;
+        spec.parent_lookup_size = Some(12);
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Bounds,
+            "{name}: ghost size"
+        );
+        spec.parent_lookup_size = Some(0);
+        spec.parent_tail = 12;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Bounds,
+            "{name}: ghost bytes"
+        );
+    }
+}
+
+#[test]
+fn birth_sparse_copy_chains_keep_parent_bits_and_rewrite_inline_ids() {
+    for (table, name, _, _, index, parent, _) in FOREVER_BIRTH_TABLES {
+        let mut spec = birth_spec(table, 1);
+        if parent >= 0 {
+            spec.parent_lookup_count = 1;
+            spec.parent_entries = vec![(65535, 0)];
+        }
+        spec.copies = vec![
+            (70_000, 11),
+            (90_000, 70_000),
+            (99_000, 0),
+            (99_001, 88_888),
+        ];
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        assert_eq!(out.rows().len(), 3, "{name}");
+        for id in [70_000, 90_000] {
+            let mut expected = out.rows()[&11].clone();
+            if index >= 0 {
+                expected[index as usize][0] = Value::Unsigned(id);
+            }
+            assert_eq!(out.rows()[&id], expected, "{name}: {id}");
+        }
+        spec.copies = vec![(100_001, 11)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id,
+            "{name}: destination bounds"
+        );
+        spec.copies = vec![(11, 11)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Unsupported,
+            "{name}: unsafe self-copy"
+        );
+    }
+}
+
+#[test]
+fn birth_string_tables_accept_empty_text_but_reject_invalid_utf8_or_unterminated_text() {
+    for table in [CharacterTable::SkillLine, CharacterTable::SkillLineAbility] {
+        let mut spec = birth_spec(table, 1);
+        assert_eq!(
+            decode(table, &assemble(table, &spec)).unwrap().rows()[&11][0],
+            vec![Value::Text(String::new())]
+        );
+        let relative = record_size(&spec.cols) as u32;
+        write_word(&mut spec.records[0], 0, relative);
+        for bytes in [vec![0xFF, 0], b"not terminated".to_vec()] {
+            spec.strings = bytes;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::String
+            );
+        }
+    }
+}
+
+#[test]
+fn birth_empty_files_require_all_primitive_metadata_and_allow_only_reviewed_payload_shape() {
+    for (table, name, _, _, _, parent, fields) in FOREVER_BIRTH_TABLES {
+        for lookup_count in [0, 1] {
+            if lookup_count == 1 && parent < 0 {
+                continue;
+            }
+            let mut spec = birth_spec(table, 0);
+            spec.parent_lookup_count = lookup_count;
+            assert!(
+                decode(table, &assemble(table, &spec))
+                    .unwrap()
+                    .rows()
+                    .is_empty()
+            );
+            let mut bytes = build_zero_section_header(table, 0);
+            put32(&mut bytes, 184, lookup_count);
+            assert_eq!(bytes.len(), HEADER + fields * 4);
+            assert!(decode(table, &bytes).unwrap().rows().is_empty());
+            assert_eq!(
+                record_error(table, &bytes[..HEADER]),
+                RecordError::Bounds,
+                "{name}: truncated primitives"
+            );
+            let mut tailed = bytes.clone();
+            tailed.push(0);
+            assert_eq!(
+                record_error(table, &tailed),
+                RecordError::Bounds,
+                "{name}: tail"
+            );
+            put32(&mut bytes, 188, 24);
+            assert_eq!(
+                record_error(table, &bytes),
+                RecordError::Unsupported,
+                "{name}: storage payload"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Initialization metadata reviewed at TrinityCore 02245dcd, 2026-10-11.
+// Map is a DB2 schema here; fixtures do not claim real-client availability or
+// geometry extraction, nor authorize prefixes or extra sections.
+// ---------------------------------------------------------------------------
+const FOREVER_INITIALIZATION_TABLES: [(CharacterTable, &str, u32, u32, i16, usize); 3] = [
+    (CharacterTable::Map, "Map", 1349477, 0xD43AFAC3, -1, 26),
+    (
+        CharacterTable::PowerType,
+        "PowerType",
+        1266022,
+        0x14BBEEA1,
+        2,
+        13,
+    ),
+    (CharacterTable::Movie, "Movie", 1332556, 0xF53888FA, -1, 6),
+];
+
+#[test]
+fn initialization_catalog_identity_and_parentless_gates_match_pinned_metadata() {
+    for (table, name, id, layout, index, fields) in FOREVER_INITIALIZATION_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none());
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, index, -1)
+        );
+        assert_eq!(schema.fields.len(), fields);
+        let mut spec = birth_spec(table, 1);
+        let mut bytes = assemble(table, &spec);
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        assert_eq!(
+            decode(table, &bytes)
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![11]
+        );
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+        spec.parent_lookup_count = 1;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Schema,
+            "{name}: unexpected parent"
+        );
+    }
+}
+
+#[test]
+fn initialization_map_golden_preserves_all_texts_float_bits_and_integer_array_words() {
+    let table = CharacterTable::Map;
+    let mut spec = birth_spec(table, 1);
+    let texts = [
+        "synthetic_directory",
+        "Mapa sintético",
+        "Descripción",
+        "Otra cadena",
+        "Nombre",
+        "Texto final",
+    ];
+    for (field, text) in texts.into_iter().enumerate() {
+        birth_text(&mut spec, field, text);
+    }
+    let pair_offset = field_offset(&spec, 6);
+    write_word(&mut spec.records[0], pair_offset, 0x8000_0000);
+    write_word(&mut spec.records[0], pair_offset + 32, 0x7FC0_0017);
+    for (field, value) in [(7, 255), (8, 128), (9, 128), (15, 1), (18, 254)] {
+        let offset = field_offset(&spec, field);
+        write_byte(&mut spec.records[0], offset, value);
+    }
+    birth_short(&mut spec, 10, u16::MAX);
+    for (field, value) in [
+        (11, i16::MIN),
+        (12, -1),
+        (13, i16::MAX),
+        (14, -2),
+        (17, 7),
+        (19, -19),
+    ] {
+        birth_short(&mut spec, field, value as u16);
+    }
+    let float_offset = field_offset(&spec, 16);
+    write_word(&mut spec.records[0], float_offset, 0x7F80_0000);
+    for (field, value) in [
+        (20, i32::MIN),
+        (21, i32::MAX),
+        (22, -1),
+        (23, 42),
+        (24, -24),
+    ] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    let array_offset = field_offset(&spec, 25);
+    for (word, value) in [i32::MIN, 0, i32::MAX].into_iter().enumerate() {
+        write_word(
+            &mut spec.records[0],
+            array_offset + word as u16 * 32,
+            value as u32,
+        );
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    let row = &out.rows()[&11];
+    for (field, text) in texts.into_iter().enumerate() {
+        assert_eq!(row[field], vec![Value::Text(text.to_owned())]);
+    }
+    assert_eq!(
+        &row[6..],
+        &[
+            vec![Value::FloatBits(0x8000_0000), Value::FloatBits(0x7FC0_0017)],
+            vec![Value::Unsigned(255)],
+            vec![Value::Signed(-128)],
+            vec![Value::Unsigned(128)],
+            vec![Value::Unsigned(65535)],
+            vec![Value::Signed(-32768)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(32767)],
+            vec![Value::Signed(-2)],
+            vec![Value::Unsigned(1)],
+            vec![Value::FloatBits(0x7F80_0000)],
+            vec![Value::Signed(7)],
+            vec![Value::Unsigned(254)],
+            vec![Value::Signed(-19)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(-1)],
+            vec![Value::Signed(42)],
+            vec![Value::Signed(-24)],
+            vec![
+                Value::Signed(i32::MIN),
+                Value::Signed(0),
+                Value::Signed(i32::MAX)
+            ],
+        ]
+    );
+}
+
+#[test]
+fn initialization_power_type_golden_keeps_inline_id_signed_values_and_float_bits() {
+    let table = CharacterTable::PowerType;
+    let mut spec = birth_spec(table, 1);
+    birth_text(&mut spec, 0, "synthetic_power");
+    birth_text(&mut spec, 1, "Recurso sintético");
+    let byte_offset = field_offset(&spec, 3);
+    write_byte(&mut spec.records[0], byte_offset, 0x80);
+    for (field, value) in [
+        (4, i32::MIN),
+        (5, i32::MAX),
+        (6, -6),
+        (7, 0),
+        (8, -8),
+        (9, 42),
+        (12, -12),
+    ] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value as u32);
+    }
+    for (field, bits) in [(10, 0x8000_0000), (11, 0x7FC0_0013)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, bits);
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Text("synthetic_power".to_owned())],
+            vec![Value::Text("Recurso sintético".to_owned())],
+            vec![Value::Unsigned(11)],
+            vec![Value::Signed(-128)],
+            vec![Value::Signed(i32::MIN)],
+            vec![Value::Signed(i32::MAX)],
+            vec![Value::Signed(-6)],
+            vec![Value::Signed(0)],
+            vec![Value::Signed(-8)],
+            vec![Value::Signed(42)],
+            vec![Value::FloatBits(0x8000_0000)],
+            vec![Value::FloatBits(0x7FC0_0013)],
+            vec![Value::Signed(-12)],
+        ]
+    );
+}
+
+#[test]
+fn initialization_movie_golden_keeps_all_unsigned_high_bits() {
+    let table = CharacterTable::Movie;
+    let mut spec = birth_spec(table, 1);
+    birth_text(&mut spec, 0, "Película sintética");
+    for (field, value) in [(1, 255), (2, 128)] {
+        let offset = field_offset(&spec, field);
+        write_byte(&mut spec.records[0], offset, value);
+    }
+    for (field, value) in [(3, u32::MAX), (4, 0x8000_0000), (5, 42)] {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value);
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::Text("Película sintética".to_owned())],
+            vec![Value::Unsigned(255)],
+            vec![Value::Unsigned(128)],
+            vec![Value::Unsigned(u32::MAX)],
+            vec![Value::Unsigned(0x8000_0000)],
+            vec![Value::Unsigned(42)],
+        ]
+    );
+}
+
+#[test]
+fn initialization_sparse_copy_chains_keep_text_and_rewrite_power_type_index_only() {
+    for (table, name, _, _, index, _) in FOREVER_INITIALIZATION_TABLES {
+        let mut spec = birth_spec(table, 1);
+        birth_text(&mut spec, 0, "Copia sintética");
+        spec.copies = vec![
+            (70_000, 11),
+            (90_000, 70_000),
+            (99_000, 0),
+            (99_001, 88_888),
+        ];
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        assert_eq!(out.rows().len(), 3, "{name}");
+        for id in [70_000, 90_000] {
+            let mut expected = out.rows()[&11].clone();
+            if index >= 0 {
+                expected[index as usize][0] = Value::Unsigned(id);
+            }
+            assert_eq!(out.rows()[&id], expected, "{name}: {id}");
+        }
+        spec.copies = vec![(100_001, 11)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id
+        );
+        spec.copies = vec![(11, 11)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Unsupported
+        );
+    }
+}
+
+#[test]
+fn initialization_strings_accept_empty_and_reject_invalid_utf8_unterminated_and_out_of_range() {
+    for (table, name, _, _, _, _) in FOREVER_INITIALIZATION_TABLES {
+        let mut spec = birth_spec(table, 1);
+        assert_eq!(
+            decode(table, &assemble(table, &spec)).unwrap().rows()[&11][0],
+            vec![Value::Text(String::new())]
+        );
+        let relative = record_size(&spec.cols) as u32;
+        write_word(&mut spec.records[0], 0, relative);
+        for strings in [vec![0xFF, 0], b"unterminated".to_vec(), Vec::new()] {
+            spec.strings = strings;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::String,
+                "{name}"
+            );
+        }
+    }
+}
+
+#[test]
+fn initialization_empty_files_require_complete_primitives_and_reject_payload() {
+    for (table, name, _, _, _, fields) in FOREVER_INITIALIZATION_TABLES {
+        assert!(
+            decode(table, &assemble(table, &birth_spec(table, 0)))
+                .unwrap()
+                .rows()
+                .is_empty()
+        );
+        let bytes = build_zero_section_header(table, 0);
+        assert_eq!(bytes.len(), HEADER + fields * 4);
+        assert!(decode(table, &bytes).unwrap().rows().is_empty());
+        assert_eq!(
+            record_error(table, &bytes[..HEADER]),
+            RecordError::Bounds,
+            "{name}: primitive truncation"
+        );
+        let mut tailed = bytes.clone();
+        tailed.push(0);
+        assert_eq!(record_error(table, &tailed), RecordError::Bounds);
+        for offset in [148, 188, 192, 196] {
+            let mut payload = bytes.clone();
+            put32(&mut payload, offset, 1);
+            assert_eq!(
+                record_error(table, &payload),
+                RecordError::Unsupported,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+#[test]
+fn initialization_map_schema_does_not_admit_sparse_encrypted_multisection_or_truncated_input() {
+    let table = CharacterTable::Map;
+    let mut spec = birth_spec(table, 1);
+    spec.flags = 1;
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Unsupported
+    );
+    spec.flags = 0;
+    spec.extra_sections = 1;
+    assert_eq!(
+        record_error(table, &assemble(table, &spec)),
+        RecordError::Unsupported
+    );
+    spec.extra_sections = 0;
+    let mut bytes = assemble(table, &spec);
+    put32(&mut bytes, HEADER, 1);
+    assert_eq!(record_error(table, &bytes), RecordError::Unsupported);
+    put32(&mut bytes, HEADER, 0);
+    bytes.pop();
+    assert_eq!(record_error(table, &bytes), RecordError::Bounds);
+}
+
+// ---------------------------------------------------------------------------
+// Scalar spell dependencies reviewed at pinned TrinityCore 02245dcd,
+// 2026-10-11. All fixtures are synthetic; common/pallet words are literal bits.
+// ---------------------------------------------------------------------------
+const FOREVER_SPELL_SCALAR_TABLES: [(CharacterTable, &str, u32, u32, usize); 4] = [
+    (
+        CharacterTable::SpellCastTimes,
+        "SpellCastTimes",
+        1134089,
+        0x75B6BD3A,
+        2,
+    ),
+    (
+        CharacterTable::SpellDuration,
+        "SpellDuration",
+        1137828,
+        0xA931BD2B,
+        3,
+    ),
+    (
+        CharacterTable::SpellRadius,
+        "SpellRadius",
+        1134584,
+        0xF9A913EE,
+        4,
+    ),
+    (
+        CharacterTable::SpellProcsPerMinute,
+        "SpellProcsPerMinute",
+        1133526,
+        0x2227014B,
+        2,
+    ),
+];
+
+#[test]
+fn spell_scalar_catalog_identity_types_and_no_parent_gate_match_pinned_metadata() {
+    for (table, name, id, layout, fields) in FOREVER_SPELL_SCALAR_TABLES {
+        assert_eq!(CharacterTable::named(name), Some(table));
+        assert_eq!(table.name(), name);
+        assert_eq!(table.file_id(), id);
+        let schema = table.schema();
+        assert!(schema.hash.is_none());
+        assert_eq!(
+            (schema.layout, schema.index, schema.parent),
+            (layout, -1, -1)
+        );
+        assert_eq!(schema.fields.len(), fields);
+        assert!(
+            schema
+                .fields
+                .iter()
+                .all(|field| field.bits() == 32 && field.count() == 1)
+        );
+        let mut spec = birth_spec(table, 1);
+        let mut bytes = assemble(table, &spec);
+        put32(&mut bytes, 152, 0xDEAD_BEEF);
+        put16(&mut bytes, 174, 123);
+        assert_eq!(
+            decode(table, &bytes)
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![11]
+        );
+        for (offset, wrong) in [(156, 0), (140, fields as u32 + 1), (176, fields as u32 + 1)] {
+            let mut bad = bytes.clone();
+            put32(&mut bad, offset, wrong);
+            assert_eq!(
+                record_error(table, &bad),
+                RecordError::Schema,
+                "{name}: header {offset}"
+            );
+        }
+        spec.parent_lookup_count = 1;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Schema,
+            "{name}: parent"
+        );
+    }
+    assert!(matches!(
+        CharacterTable::SpellCastTimes.schema().fields,
+        [Kind::Signed(32, 1), Kind::Signed(32, 1)]
+    ));
+    assert!(matches!(
+        CharacterTable::SpellDuration.schema().fields,
+        [
+            Kind::Signed(32, 1),
+            Kind::Signed(32, 1),
+            Kind::Signed(32, 1)
+        ]
+    ));
+    assert!(matches!(
+        CharacterTable::SpellRadius.schema().fields,
+        [
+            Kind::Float(1),
+            Kind::Float(1),
+            Kind::Float(1),
+            Kind::Float(1)
+        ]
+    ));
+    assert!(matches!(
+        CharacterTable::SpellProcsPerMinute.schema().fields,
+        [Kind::Float(1), Kind::Signed(32, 1)]
+    ));
+}
+
+#[test]
+fn spell_scalar_cast_times_and_duration_preserve_negative_and_extreme_values() {
+    for table in [
+        CharacterTable::SpellCastTimes,
+        CharacterTable::SpellDuration,
+    ] {
+        let mut spec = birth_spec(table, 2);
+        let values = [[i32::MIN, i32::MAX, -1], [-1, 0, 42]];
+        for (row, words) in values.into_iter().enumerate() {
+            for (field, value) in words
+                .into_iter()
+                .enumerate()
+                .take(table.schema().fields.len())
+            {
+                let offset = field_offset(&spec, field);
+                write_word(&mut spec.records[row], offset, value as u32);
+            }
+        }
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        for (row, id) in [11, 22].into_iter().enumerate() {
+            let expected: Vec<_> = values[row]
+                .iter()
+                .take(table.schema().fields.len())
+                .map(|value| vec![Value::Signed(*value)])
+                .collect();
+            assert_eq!(out.rows()[&id], expected);
+        }
+    }
+}
+
+#[test]
+fn spell_scalar_radius_and_procs_keep_negative_zero_nan_infinity_and_subnormal_bits() {
+    let table = CharacterTable::SpellRadius;
+    let mut spec = birth_spec(table, 1);
+    let values = [0x8000_0000u32, 0x7FC0_0017, 0x7F80_0000, 1];
+    for (field, value) in values.into_iter().enumerate() {
+        let offset = field_offset(&spec, field);
+        write_word(&mut spec.records[0], offset, value);
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        values
+            .into_iter()
+            .map(|bits| vec![Value::FloatBits(bits)])
+            .collect::<Vec<_>>()
+    );
+
+    let table = CharacterTable::SpellProcsPerMinute;
+    let mut spec = birth_spec(table, 2);
+    let int_offset = field_offset(&spec, 1);
+    for (row, (float, int)) in [(0xFF80_0000, i32::MIN), (0x7FC0_0001, -1)]
+        .into_iter()
+        .enumerate()
+    {
+        write_word(&mut spec.records[row], 0, float);
+        write_word(&mut spec.records[row], int_offset, int as u32);
+    }
+    let out = decode(table, &assemble(table, &spec)).unwrap();
+    assert_eq!(
+        out.rows()[&11],
+        vec![
+            vec![Value::FloatBits(0xFF80_0000)],
+            vec![Value::Signed(i32::MIN)]
+        ]
+    );
+    assert_eq!(
+        out.rows()[&22],
+        vec![vec![Value::FloatBits(0x7FC0_0001)], vec![Value::Signed(-1)]]
+    );
+}
+
+#[test]
+fn spell_scalar_common_defaults_overrides_and_copies_preserve_typed_raw_words() {
+    for (table, default, override_bits, expected_default, expected_override) in [
+        (
+            CharacterTable::SpellCastTimes,
+            0x8000_0000,
+            0xFFFF_FFFFu32,
+            Value::Signed(i32::MIN),
+            Value::Signed(-1),
+        ),
+        (
+            CharacterTable::SpellDuration,
+            0xFFFF_FFFF,
+            42,
+            Value::Signed(-1),
+            Value::Signed(42),
+        ),
+        (
+            CharacterTable::SpellRadius,
+            0x8000_0000,
+            0x7FC0_0017,
+            Value::FloatBits(0x8000_0000),
+            Value::FloatBits(0x7FC0_0017),
+        ),
+        (
+            CharacterTable::SpellProcsPerMinute,
+            0x7FC0_0001,
+            0x7F80_0000,
+            Value::FloatBits(0x7FC0_0001),
+            Value::FloatBits(0x7F80_0000),
+        ),
+    ] {
+        let mut spec = birth_spec(table, 2);
+        as_mode(&mut spec, 0, 2, default, 0, 0, 8);
+        spec.common = [22u32.to_le_bytes(), override_bits.to_le_bytes()].concat();
+        spec.copies = vec![(70_000, 22)];
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        assert_eq!(out.rows()[&11][0][0], expected_default);
+        assert_eq!(out.rows()[&22][0][0], expected_override);
+        assert_eq!(out.rows()[&70_000][0][0], expected_override);
+        // Seven bytes cannot contain complete {id, word} common entries.
+        spec.cols[0].extra = 7;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Column
+        );
+    }
+}
+
+#[test]
+fn spell_scalar_pallet_preserves_words_and_rejects_out_of_bounds_indices() {
+    for (table, _, _, _, _) in FOREVER_SPELL_SCALAR_TABLES {
+        let mut spec = birth_spec(table, 2);
+        as_mode(&mut spec, 0, 3, 0, 2, 0, 8);
+        spec.pallet = [0x8000_0000u32.to_le_bytes(), 0x7FC0_0017u32.to_le_bytes()].concat();
+        spec.records[1][0] = 1;
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        let expected = if matches!(
+            table,
+            CharacterTable::SpellRadius | CharacterTable::SpellProcsPerMinute
+        ) {
+            [Value::FloatBits(0x8000_0000), Value::FloatBits(0x7FC0_0017)]
+        } else {
+            [Value::Signed(i32::MIN), Value::Signed(0x7FC0_0017)]
+        };
+        assert_eq!(out.rows()[&11][0][0], expected[0]);
+        assert_eq!(out.rows()[&22][0][0], expected[1]);
+        spec.records[1][0] = 3;
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Column
+        );
+    }
+}
+
+#[test]
+fn spell_scalar_copy_chains_skip_zero_and_missing_sources_and_reject_invalid_destinations() {
+    for (table, name, _, _, _) in FOREVER_SPELL_SCALAR_TABLES {
+        let mut spec = birth_spec(table, 1);
+        write_word(&mut spec.records[0], 0, 0x8000_0000);
+        spec.copies = vec![
+            (70_000, 11),
+            (90_000, 70_000),
+            (0, 11),
+            (99_000, 0),
+            (99_001, 88_888),
+        ];
+        let out = decode(table, &assemble(table, &spec)).unwrap();
+        assert_eq!(
+            out.rows().keys().copied().collect::<Vec<_>>(),
+            vec![0, 11, 70_000, 90_000],
+            "{name}"
+        );
+        for id in [0, 70_000, 90_000] {
+            assert_eq!(out.rows()[&id], out.rows()[&11]);
+        }
+        spec.copies = vec![(100_001, 0)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id
+        );
+        spec.copies = vec![(11, 11)];
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Unsupported
+        );
+    }
+}
+
+#[test]
+fn spell_scalar_id_table_repair_duplicate_and_range_checks_remain_strict() {
+    for (table, name, _, _, _) in FOREVER_SPELL_SCALAR_TABLES {
+        let mut spec = birth_spec(table, 2);
+        spec.min_id = 50;
+        spec.max_id = 100;
+        spec.ids = vec![0, 50];
+        assert_eq!(
+            decode(table, &assemble(table, &spec))
+                .unwrap()
+                .rows()
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            vec![50, 51]
+        );
+        for ids in [vec![60, 60], vec![60, 101]] {
+            spec.ids = ids;
+            assert_eq!(
+                record_error(table, &assemble(table, &spec)),
+                RecordError::Id,
+                "{name}"
+            );
+        }
+        spec.ids = vec![60, 70];
+        spec.id_table_size = Some(4);
+        assert_eq!(
+            record_error(table, &assemble(table, &spec)),
+            RecordError::Id
+        );
+    }
+}
+
+#[test]
+fn spell_scalar_empty_files_require_complete_primitives_and_reject_unreviewed_payloads() {
+    for (table, name, _, _, fields) in FOREVER_SPELL_SCALAR_TABLES {
+        assert!(
+            decode(table, &assemble(table, &birth_spec(table, 0)))
+                .unwrap()
+                .rows()
+                .is_empty()
+        );
+        let bytes = build_zero_section_header(table, 0);
+        assert_eq!(bytes.len(), HEADER + fields * 4);
+        assert!(decode(table, &bytes).unwrap().rows().is_empty());
+        for truncated in [&bytes[..HEADER], &bytes[..bytes.len() - 1]] {
+            assert_eq!(
+                record_error(table, truncated),
+                RecordError::Bounds,
+                "{name}"
+            );
+        }
+        let mut tailed = bytes.clone();
+        tailed.push(0);
+        assert_eq!(record_error(table, &tailed), RecordError::Bounds);
+        for offset in [136, 148, 188, 192, 196] {
+            let mut payload = bytes.clone();
+            put32(&mut payload, offset, 1);
+            assert_eq!(
+                record_error(table, &payload),
+                RecordError::Unsupported,
+                "{name}: header {offset}"
+            );
+        }
+    }
+}
+
+// The extractor scans original physical rows, not the final copy-expanded map:
+// pinned System.cpp:394-414 and DB2Metadata.h:4410-4430. These literals also
+// guard against confusing physical FileDataID field 3 with flattened slot 5.
+fn cinematic_camera_table() -> CharacterTable {
+    let table = CharacterTable::from_catalog("CinematicCamera")
+        .unwrap()
+        .unwrap();
+    let schema = table.schema();
+    assert_eq!(table.file_id(), 1_294_214);
+    assert_eq!(schema.layout, 0x8BFD_752B);
+    assert_eq!(schema.index, -1);
+    assert_eq!(schema.parent, -1);
+    assert_eq!(
+        schema.fields,
+        &[
+            Kind::Float(3),
+            Kind::Unsigned(32, 1),
+            Kind::Float(1),
+            Kind::Unsigned(32, 1),
+            Kind::Unsigned(32, 1),
+        ]
+    );
+    table
+}
+
+fn direct_u32_error(table: CharacterTable, bytes: &[u8], field: usize) -> RecordError {
+    match DecodedTable::read_with_direct_u32_values(bytes, table, field) {
+        Err(error) => error,
+        Ok(_) => panic!("expected failure without any partial direct-value result"),
+    }
+}
+
+#[test]
+fn direct_u32_scan_retains_original_overwritten_values_zero_and_duplicates() {
+    let table = cinematic_camera_table();
+    let mut spec = birth_spec(table, 5);
+    let offset = field_offset(&spec, 3);
+    for (record, value) in spec.records.iter_mut().zip([11, 22, 11, 0, u32::MAX]) {
+        write_word(record, offset, value);
+    }
+    spec.copies = vec![
+        (22, 11), // Replaces the original second row.
+        (70_000, 22),
+        (80_000, 70_000),
+        (90_000, 0),      // Source zero is skipped.
+        (90_001, 99_999), // Missing source is skipped.
+    ];
+    let bytes = assemble(table, &spec);
+    let (decoded, values) = DecodedTable::read_with_direct_u32_values(&bytes, table, 3).unwrap();
+    assert_eq!(
+        values.into_iter().collect::<Vec<_>>(),
+        vec![0, 11, 22, u32::MAX]
+    );
+    assert_eq!(
+        decoded.rows(),
+        DecodedTable::read(&bytes, table).unwrap().rows()
+    );
+    assert_eq!(decoded.rows()[&22][3], vec![Value::Unsigned(11)]);
+    assert_eq!(decoded.rows()[&80_000][3], vec![Value::Unsigned(11)]);
+    assert!(
+        decoded
+            .rows()
+            .values()
+            .all(|row| row[3] != vec![Value::Unsigned(22)])
+    );
+    assert!(!decoded.rows().contains_key(&90_000));
+    assert!(!decoded.rows().contains_key(&90_001));
+}
+
+#[test]
+fn direct_u32_scan_captures_inline_ids_before_copy_rewrite() {
+    let table = CharacterTable::PowerType;
+    let mut spec = birth_spec(table, 2);
+    spec.copies = vec![(22, 11), (70_000, 22), (80_000, 70_000)];
+    let bytes = assemble(table, &spec);
+    let (decoded, values) = DecodedTable::read_with_direct_u32_values(&bytes, table, 2).unwrap();
+    assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![11, 22]);
+    assert_eq!(decoded.rows()[&70_000][2], vec![Value::Unsigned(70_000)]);
+    assert_eq!(decoded.rows()[&80_000][2], vec![Value::Unsigned(80_000)]);
+    assert_eq!(
+        decoded.rows(),
+        DecodedTable::read(&bytes, table).unwrap().rows()
+    );
+}
+
+#[test]
+fn direct_u32_scan_precedes_in_record_parent_lookup_and_inheritance() {
+    let table = CharacterTable::from_catalog("SoundKitChild")
+        .unwrap()
+        .unwrap();
+    // Independent pinned metadata: UINT32, UINT32, with physical parent 1.
+    assert_eq!(
+        table.schema().fields,
+        &[Kind::Unsigned(32, 1), Kind::Unsigned(32, 1)]
+    );
+    assert_eq!(table.schema().parent, 1);
+    let mut spec = birth_spec(table, 2);
+    let offset = field_offset(&spec, 1);
+    write_word(&mut spec.records[0], offset, 44);
+    write_word(&mut spec.records[1], offset, 55);
+    spec.parent_lookup_count = 1;
+    spec.parent_entries = vec![(99, 0), (u32::MAX, 1)];
+    spec.copies = vec![(70_000, 11)];
+    let bytes = assemble(table, &spec);
+    let (decoded, values) = DecodedTable::read_with_direct_u32_values(&bytes, table, 1).unwrap();
+    assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![44, 55]);
+    assert_eq!(decoded.rows()[&11][1], vec![Value::Unsigned(99)]);
+    assert_eq!(decoded.rows()[&22][1], vec![Value::Unsigned(u32::MAX)]);
+    assert_eq!(decoded.rows()[&70_000][1], vec![Value::Unsigned(99)]);
+    assert_eq!(
+        decoded.rows(),
+        DecodedTable::read(&bytes, table).unwrap().rows()
+    );
+    // An invalid ordinal is discovered after the original values were read.
+    spec.parent_entries = vec![(99, 2)];
+    assert_eq!(
+        direct_u32_error(table, &assemble(table, &spec), 1),
+        RecordError::Id
+    );
+}
+
+#[test]
+fn direct_u32_scan_rejects_nonphysical_non_u32_and_array_selectors_even_when_empty() {
+    let camera = cinematic_camera_table();
+    for (name, field) in [
+        ("CinematicCamera", 0), // Float array.
+        ("CinematicCamera", 2), // Float scalar.
+        ("CinematicCamera", 5), // Flattened FileDataID slot is not physical.
+        ("CinematicCamera", usize::MAX),
+        ("PowerType", 0),              // String.
+        ("PowerType", 4),              // Signed32.
+        ("Movie", 1),                  // Unsigned8.
+        ("CharacterLoadoutItem", 0),   // Unsigned16.
+        ("ArtifactQuestXP", 0),        // Unsigned32[10].
+        ("ItemExtendedCost", 0),       // Unsigned64.
+        ("InitiativeReward", 0),       // Signed64.
+        ("UiWidgetVisTypeDataReq", 5), // Unsigned32 appended parent, not physical.
+    ] {
+        let table = CharacterTable::from_catalog(name).unwrap().unwrap();
+        for bytes in [
+            build_zero_section_header(table, 0),
+            assemble(table, &birth_spec(table, 1)),
+        ] {
+            assert_eq!(
+                direct_u32_error(table, &bytes, field),
+                RecordError::Schema,
+                "{name}:{field}"
+            );
+        }
+    }
+    for bytes in [
+        build_zero_section_header(camera, 0),
+        assemble(camera, &birth_spec(camera, 0)),
+    ] {
+        let (decoded, values) =
+            DecodedTable::read_with_direct_u32_values(&bytes, camera, 3).unwrap();
+        assert!(decoded.rows().is_empty());
+        assert!(values.is_empty());
+    }
+}
+
+#[test]
+fn direct_u32_scan_returns_no_partial_success_for_late_copy_errors() {
+    let table = cinematic_camera_table();
+    for (copy, max_id, expected) in [
+        ((100_001, 0), 100_000, RecordError::Id),
+        ((u32::MAX, 0), u32::MAX, RecordError::Id),
+        ((11, 11), 100_000, RecordError::Unsupported),
+    ] {
+        let mut spec = birth_spec(table, 1);
+        let offset = field_offset(&spec, 3);
+        write_word(&mut spec.records[0], offset, 42);
+        spec.max_id = max_id;
+        spec.copies = vec![copy];
+        let bytes = assemble(table, &spec);
+        assert_eq!(direct_u32_error(table, &bytes, 3), expected);
+        assert_eq!(record_error(table, &bytes), expected);
+    }
+}
+
+#[test]
+fn direct_u32_scan_validates_all_fields_and_the_last_direct_record() {
+    let table = CharacterTable::Movie;
+    let mut spec = birth_spec(table, 2);
+    let offset = field_offset(&spec, 3);
+    write_word(&mut spec.records[0], offset, 42);
+    write_word(&mut spec.records[1], offset, 84);
+    // The selected field is valid, but the second row's string is out of range.
+    write_word(&mut spec.records[1], 0, 1);
+    let bytes = assemble(table, &spec);
+    assert_eq!(direct_u32_error(table, &bytes, 3), RecordError::String);
+    assert_eq!(record_error(table, &bytes), RecordError::String);
+    write_word(&mut spec.records[1], 0, 0);
+    spec.ids = vec![11, 11];
+    let bytes = assemble(table, &spec);
+    assert_eq!(direct_u32_error(table, &bytes, 3), RecordError::Id);
+}
+
+#[test]
+fn direct_u32_scan_uses_checked_common_and_pallet_column_values() {
+    let table = cinematic_camera_table();
+    let mut spec = birth_spec(table, 2);
+    as_mode(&mut spec, 3, 2, 0, 0, 0, 8);
+    spec.common = [22u32.to_le_bytes(), u32::MAX.to_le_bytes()].concat();
+    let bytes = assemble(table, &spec);
+    let (decoded, values) = DecodedTable::read_with_direct_u32_values(&bytes, table, 3).unwrap();
+    assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![0, u32::MAX]);
+    assert_eq!(
+        decoded.rows(),
+        DecodedTable::read(&bytes, table).unwrap().rows()
+    );
+
+    let mut spec = birth_spec(table, 2);
+    as_mode(&mut spec, 3, 3, 0, 2, 0, 8);
+    spec.pallet = [22u32.to_le_bytes(), 11u32.to_le_bytes()].concat();
+    spec.records[1][0] = 1;
+    let bytes = assemble(table, &spec);
+    let (_, values) = DecodedTable::read_with_direct_u32_values(&bytes, table, 3).unwrap();
+    assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![11, 22]);
+    spec.records[1][0] = 3;
+    assert_eq!(
+        direct_u32_error(table, &assemble(table, &spec), 3),
+        RecordError::Column
+    );
+}
+
+#[test]
+fn direct_u32_scan_preserves_file_variant_schema_and_exact_length_gates() {
+    let table = cinematic_camera_table();
+    let mut spec = birth_spec(table, 1);
+    spec.flags = 1;
+    assert_eq!(
+        direct_u32_error(table, &assemble(table, &spec), 3),
+        RecordError::Unsupported
+    );
+    spec.flags = 0;
+    spec.extra_sections = 1;
+    assert_eq!(
+        direct_u32_error(table, &assemble(table, &spec), 3),
+        RecordError::Unsupported
+    );
+    spec.extra_sections = 0;
+    let base = assemble(table, &spec);
+    let mut encrypted = base.clone();
+    encrypted[HEADER] = 1;
+    assert_eq!(
+        direct_u32_error(table, &encrypted, 3),
+        RecordError::Unsupported
+    );
+    let mut wrong_schema = base.clone();
+    put32(&mut wrong_schema, 156, 0);
+    assert_eq!(
+        direct_u32_error(table, &wrong_schema, 3),
+        RecordError::Schema
+    );
+    let mut tail = base.clone();
+    tail.push(0);
+    assert_eq!(direct_u32_error(table, &tail, 3), RecordError::Bounds);
+    assert_eq!(
+        direct_u32_error(table, &base[..base.len() - 1], 3),
+        RecordError::Bounds
+    );
+    let empty = build_zero_section_header(table, 0);
+    assert_eq!(
+        direct_u32_error(table, &empty[..HEADER], 3),
+        RecordError::Bounds
+    );
+}
+
+fn decode_with_text_limit(
+    table: CharacterTable,
+    bytes: &[u8],
+    limit: usize,
+) -> Result<DecodedTable, RecordError> {
+    DecodedTable::read_impl(bytes, table, None, limit).map(|(decoded, _)| decoded)
+}
+
+fn text_limit_error(table: CharacterTable, bytes: &[u8], limit: usize) -> RecordError {
+    match decode_with_text_limit(table, bytes, limit) {
+        Err(error) => error,
+        Ok(_) => panic!("expected bounded text decoding to fail"),
+    }
+}
+
+fn names_text_spec(texts: &[&str]) -> Spec {
+    let mut spec = birth_spec(CharacterTable::NamesReserved, texts.len());
+    let size = record_size(&spec.cols);
+    for (row, text) in texts.iter().enumerate() {
+        if !text.is_empty() {
+            let relative = (texts.len() - row) * size + spec.strings.len();
+            write_word(&mut spec.records[row], 0, relative as u32);
+            spec.strings.extend_from_slice(text.as_bytes());
+            spec.strings.push(0);
+        }
+    }
+    spec
+}
+
+#[test]
+fn text_budget_checks_exact_limit_and_arithmetic_overflow_before_charging() {
+    assert_eq!(super::TEXT_POLICY_LIMIT, 64 * 1024 * 1024);
+    let mut budget = super::TextBudget::new(6);
+    assert_eq!(budget.charge(2), Ok(()));
+    assert_eq!(budget.charge(4), Ok(()));
+    assert_eq!(budget.charge(0), Ok(()));
+    assert_eq!(budget.charge(1), Err(RecordError::Limit));
+    assert_eq!(budget.used, 6);
+    let mut budget = super::TextBudget::new(usize::MAX);
+    assert_eq!(budget.charge(usize::MAX), Ok(()));
+    assert_eq!(budget.charge(1), Err(RecordError::Limit));
+    assert_eq!(budget.used, usize::MAX);
+}
+
+#[test]
+fn text_budget_counts_utf8_bytes_not_characters_and_keeps_under_limit_output() {
+    let table = CharacterTable::NamesReserved;
+    let bytes = assemble(table, &names_text_spec(&["é🙂", ""]));
+    let decoded = decode_with_text_limit(table, &bytes, 6).unwrap();
+    assert_eq!(decoded.rows()[&11][0], vec![Value::Text("é🙂".into())]);
+    assert_eq!(decoded.rows()[&22][0], vec![Value::Text(String::new())]);
+    assert_eq!(
+        decoded.rows(),
+        DecodedTable::read(&bytes, table).unwrap().rows()
+    );
+    assert_eq!(text_limit_error(table, &bytes, 5), RecordError::Limit);
+}
+
+#[test]
+fn text_budget_charges_each_aliased_pointer_and_suffix() {
+    let table = CharacterTable::NamesReserved;
+    let mut spec = names_text_spec(&["abcdef", "", ""]);
+    let size = record_size(&spec.cols);
+    write_word(&mut spec.records[1], 0, (2 * size) as u32);
+    write_word(&mut spec.records[2], 0, (size + 3) as u32);
+    assert_eq!(spec.strings, b"abcdef\0");
+    let bytes = assemble(table, &spec);
+    let decoded = decode_with_text_limit(table, &bytes, 15).unwrap();
+    assert_eq!(decoded.rows()[&22][0], vec![Value::Text("abcdef".into())]);
+    assert_eq!(decoded.rows()[&33][0], vec![Value::Text("def".into())]);
+    assert_eq!(text_limit_error(table, &bytes, 14), RecordError::Limit);
+}
+
+#[test]
+fn text_budget_charges_each_string_array_slot_even_with_one_shared_payload() {
+    let table = CharacterTable::from_catalog("BattlePetEffectProperties")
+        .unwrap()
+        .unwrap();
+    assert_eq!(table.schema().fields[0], Kind::StringArray(6));
+    let mut spec = birth_spec(table, 1);
+    let size = record_size(&spec.cols);
+    spec.strings = "é\0".as_bytes().to_vec();
+    for array in 0..6 {
+        write_word(
+            &mut spec.records[0],
+            (array * 32) as u16,
+            (size - array * 4) as u32,
+        );
+    }
+    let bytes = assemble(table, &spec);
+    let decoded = decode_with_text_limit(table, &bytes, 12).unwrap();
+    assert_eq!(decoded.rows()[&11][0], vec![Value::Text("é".into()); 6]);
+    assert_eq!(text_limit_error(table, &bytes, 11), RecordError::Limit);
+}
+
+#[test]
+fn text_budget_charges_copy_chains_and_repeated_overwrites_without_refunds() {
+    let table = CharacterTable::NamesReserved;
+    let mut chain = names_text_spec(&["é"]);
+    chain.copies = vec![(22, 11), (33, 22)];
+    let bytes = assemble(table, &chain);
+    assert_eq!(
+        decode_with_text_limit(table, &bytes, 6)
+            .unwrap()
+            .rows()
+            .len(),
+        3
+    );
+    assert_eq!(text_limit_error(table, &bytes, 5), RecordError::Limit);
+
+    let mut overwrite = names_text_spec(&["é", "🙂"]);
+    overwrite.copies = vec![(22, 11), (22, 11)];
+    let bytes = assemble(table, &overwrite);
+    let decoded = decode_with_text_limit(table, &bytes, 10).unwrap();
+    assert_eq!(decoded.rows().len(), 2);
+    assert_eq!(decoded.rows()[&22][0], vec![Value::Text("é".into())]);
+    // Only four UTF-8 bytes remain, but six direct + four cloned were consumed.
+    assert_eq!(text_limit_error(table, &bytes, 9), RecordError::Limit);
+}
+
+#[test]
+fn text_budget_skips_missing_zero_sources_and_charges_nothing_for_empty_text() {
+    let table = CharacterTable::NamesReserved;
+    let mut spec = names_text_spec(&["é"]);
+    spec.copies = vec![(22, 0), (33, 99), (44, 33)];
+    let bytes = assemble(table, &spec);
+    assert_eq!(
+        decode_with_text_limit(table, &bytes, 2)
+            .unwrap()
+            .rows()
+            .len(),
+        1
+    );
+    for pointer in [false, true] {
+        let mut spec = names_text_spec(&[""]);
+        if pointer {
+            let size = record_size(&spec.cols);
+            spec.strings = vec![0];
+            write_word(&mut spec.records[0], 0, size as u32);
+        }
+        spec.copies = vec![(22, 11), (33, 22)];
+        let bytes = assemble(table, &spec);
+        assert_eq!(
+            decode_with_text_limit(table, &bytes, 0)
+                .unwrap()
+                .rows()
+                .len(),
+            3
+        );
+    }
+}
+
+#[test]
+fn text_budget_preserves_string_errors_below_limit_and_checks_before_decode() {
+    let table = CharacterTable::NamesReserved;
+    let mut spec = names_text_spec(&["a"]);
+    spec.strings[0] = 0xFF;
+    let bytes = assemble(table, &spec);
+    assert_eq!(text_limit_error(table, &bytes, 1), RecordError::String);
+    assert_eq!(text_limit_error(table, &bytes, 0), RecordError::Limit);
+    spec.strings = vec![b'a'];
+    let bytes = assemble(table, &spec);
+    assert_eq!(text_limit_error(table, &bytes, 0), RecordError::String);
+}
+
+#[test]
+fn text_budget_error_returns_no_direct_value_collection_after_copy_failure() {
+    let table = CharacterTable::Movie;
+    let mut spec = birth_spec(table, 1);
+    birth_text(&mut spec, 0, "é");
+    let offset = field_offset(&spec, 3);
+    write_word(&mut spec.records[0], offset, 42);
+    spec.copies = vec![(99, 11)];
+    let bytes = assemble(table, &spec);
+    let (decoded, values) = DecodedTable::read_impl(&bytes, table, Some(3), 4).unwrap();
+    assert_eq!(decoded.rows().len(), 2);
+    assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![42]);
+    match DecodedTable::read_impl(&bytes, table, Some(3), 3) {
+        Err(error) => assert_eq!(error, RecordError::Limit),
+        Ok(_) => panic!("a copy exceeding the text budget must expose no partial result"),
     }
 }

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-11: independently transcribed name/category, appearance and
+// item/birth/initialization/spell schemas from pinned metadata; no code imported.
 //! Schema facts independently transcribed from DB2Metadata.h::{ChrClassTitleMeta,
 //! ChrClassUIChrModelInfoMeta, ChrClassUIDisplayMeta, ChrClassVillainMeta,
 //! ChrClassesMeta, ChrRacesMeta}, TrinityCore
@@ -98,6 +100,54 @@
 //! `BoneWindModifiers` is a float array of three (`Float(3)`) followed by one
 //! float; `AreaTriggerSphere` and `DurabilityQuality` are each a single float.
 //!
+//! Four name/category tables were reviewed at the same pinned DB2Metadata.h:
+//! `NamesProfanity` (FileDataId 1117086, 2 fields, layout 0xF227E638),
+//! `NamesReserved` (1117085, 1 field, layout 0x2B2D5D97),
+//! `NamesReservedLocale` (1117087, 2 fields, layout 0x7B9823D4) and
+//! `Cfg_Categories` (1068162, 6 fields, layout 0x8710BE94). They use separate
+//! id tables, no parent, and `FieldCount == FileFieldCount`. The first three
+//! use `FT_STRING_NOT_LOCALIZED`; `Cfg_Categories` uses `FT_STRING`. Both are
+//! decoded as the text present in the selected file, without locale merging.
+//!
+//! Five further appearance tables use the existing parent-lookup decoder:
+//! `ChrModel` (3384313, layout 0x03FAB755, inline id 2, parent 4),
+//! `ChrRaceXChrModel` (3490304, 0xA203BC29, separate id, parent 0),
+//! `ChrCustomizationOption` (3384247, 0xDCC2A86E, inline id 1, parent 4),
+//! `ChrCustomizationChoice` (3450554, 0x9559C358, inline id 1, parent 2) and
+//! `ChrCustomizationReqChoice` (3580359, 0xF925BC6F, separate id, parent 1).
+//! Only `ChrCustomizationReqChoice` appends its signed 32-bit parent after one
+//! file field; the other four overwrite existing fields. `ChrRaceXChrModel`'s
+//! parent occupies a signed byte, so parent values must fit the underlying u8.
+//!
+//! Three item tables use existing scalar primitives: `ItemSpec` (1135120,
+//! layout 0x83F3D113) has five unsigned bytes, an unsigned short, and an in-data
+//! parent at field 2; `ItemSpecOverride` (1134576, 0xB292998C) has an unsigned
+//! short and appended signed parent 1; `GemProperties` (1343604, 0x86487AD2)
+//! has an unsigned short and signed int, with no parent. All use separate ids.
+//!
+//! Five birth tables add no new scalar primitives: `SkillLine` (1240935,
+//! 0x6763217C, inline id 5), `SkillRaceClassInfo` (1240406, 0x24277B48,
+//! separate id, signed-short parent 0), `SkillLineAbility` (1266278,
+//! 0x224F7EA0, inline id 2, signed-short parent 3), `CharacterLoadout`
+//! (1344281, 0x713CE8BB, separate id) and `CharacterLoadoutItem` (1302846,
+//! 0x0C7A1862, separate id, unsigned-short parent 0). All file fields are in
+//! the record. SkillLine's fifth text field is nonlocalized; its first four
+//! and SkillLineAbility's two are localized text, decoded without merging.
+//!
+//! Three initialization tables also reuse these primitives: `Map` (1349477,
+//! 0xD43AFAC3, 26 fields), `PowerType` (1266022, 0x14BBEEA1, 13 fields) and
+//! `Movie` (1332556, 0xF53888FA, 6 fields). None has a parent; only PowerType
+//! has an inline id (field 2). Map includes six strings, a float pair and a
+//! signed-int triple. Schema support does not admit incomplete, encrypted or
+//! multi-section Map input, and does not imply map geometry extraction.
+//!
+//! Four spell dependencies use only scalar fields and separate ids:
+//! `SpellCastTimes` (1134089, 0x75B6BD3A) has two signed ints;
+//! `SpellDuration` (1137828, 0xA931BD2B) has three signed ints;
+//! `SpellRadius` (1134584, 0xF9A913EE) has four floats; and
+//! `SpellProcsPerMinute` (1133526, 0x2227014B) has a float and signed int.
+//! None has a parent lookup field or an inline id.
+//!
 //! `Schema` separates the two counts the reference distinguishes:
 //! - `fields` is the decoded column list, one column per `FileFieldCount`; the
 //!   header's `field_count` equals `fields.len()`.
@@ -193,8 +243,73 @@ pub enum CharacterTable {
     AreaTriggerSphere,
     /// `DurabilityQuality`: a single float, separate u32 id table.
     DurabilityQuality,
+    /// `NamesProfanity`: nonlocalized text and one signed byte.
+    NamesProfanity,
+    /// `NamesReserved`: nonlocalized text only.
+    NamesReserved,
+    /// `NamesReservedLocale`: nonlocalized text and one unsigned byte.
+    NamesReservedLocale,
+    /// `Cfg_Categories`: text, unsigned short, two unsigned bytes, signed int
+    /// and signed byte; separate u32 id table.
+    CfgCategories,
+    /// `ChrModel`: two float vectors, inline id 2 and in-data signed parent 4.
+    Model,
+    /// `ChrRaceXChrModel`: separate id; field 0 is a signed-byte parent.
+    RaceXModel,
+    /// `ChrCustomizationOption`: string, inline id 1 and in-data parent 4.
+    CustomizationOption,
+    /// `ChrCustomizationChoice`: string, inline id 1, in-data parent 2 and a
+    /// signed 32-bit array of two values.
+    CustomizationChoice,
+    /// `ChrCustomizationReqChoice`: one signed int and an appended signed
+    /// parent, with a separate id table.
+    CustomizationReqChoice,
+    /// `ItemSpec`: five unsigned bytes and an unsigned short; parent is byte 2.
+    ItemSpec,
+    /// `ItemSpecOverride`: unsigned short and an appended signed parent.
+    ItemSpecOverride,
+    /// `GemProperties`: unsigned short and signed int; no parent.
+    GemProperties,
+    /// `SkillLine`: five strings, inline unsigned id 5 and scalar fields.
+    SkillLine,
+    /// `SkillRaceClassInfo`: signed short parent 0 and a two-word signed mask.
+    SkillRaceClassInfo,
+    /// `SkillLineAbility`: strings, inline id 2, signed-short parent 3 and two
+    /// signed two-word arrays. Schema support does not imply live availability.
+    SkillLineAbility,
+    /// `CharacterLoadout`: signed/unsigned bytes and a two-word signed mask.
+    CharacterLoadout,
+    /// `CharacterLoadoutItem`: unsigned short parent 0 and unsigned item value.
+    CharacterLoadoutItem,
+    /// `Map`: text, float pair, numeric scalars and a signed-int triple.
+    Map,
+    /// `PowerType`: two nonlocalized strings, inline id 2 and numeric scalars.
+    PowerType,
+    /// `Movie`: text, two unsigned bytes and three unsigned ints.
+    Movie,
+    /// `SpellCastTimes`: two signed 32-bit scalars, separate id table.
+    SpellCastTimes,
+    /// `SpellDuration`: three signed 32-bit scalars, separate id table.
+    SpellDuration,
+    /// `SpellRadius`: four float scalars, separate id table.
+    SpellRadius,
+    /// `SpellProcsPerMinute`: float and signed 32-bit scalar, separate id table.
+    SpellProcsPerMinute,
+    /// Explicit opt-in to a shape-compatible entry in the pinned catalog.
+    /// This does not establish live availability or runtime acceptance.
+    Catalog(super::catalog::CatalogTable),
 }
 impl CharacterTable {
+    /// Resolve pinned metadata explicitly, preserving reviewed variants and
+    /// their additional identity gates. Unknown names return `None`; known
+    /// unsupported shapes return an error, never a metadata-only fallback.
+    pub fn from_catalog(name: &str) -> Result<Option<Self>, super::catalog::CatalogError> {
+        if let Some(reviewed) = Self::named(name) {
+            return Ok(Some(reviewed));
+        }
+        super::catalog::resolve(name).map(|table| table.map(Self::Catalog))
+    }
+
     pub fn named(name: &str) -> Option<Self> {
         match name {
             "ChrClasses" => Some(Self::Classes),
@@ -229,6 +344,30 @@ impl CharacterTable {
             "BoneWindModifiers" => Some(Self::BoneWindModifiers),
             "AreaTriggerSphere" => Some(Self::AreaTriggerSphere),
             "DurabilityQuality" => Some(Self::DurabilityQuality),
+            "NamesProfanity" => Some(Self::NamesProfanity),
+            "NamesReserved" => Some(Self::NamesReserved),
+            "NamesReservedLocale" => Some(Self::NamesReservedLocale),
+            "Cfg_Categories" => Some(Self::CfgCategories),
+            "ChrModel" => Some(Self::Model),
+            "ChrRaceXChrModel" => Some(Self::RaceXModel),
+            "ChrCustomizationOption" => Some(Self::CustomizationOption),
+            "ChrCustomizationChoice" => Some(Self::CustomizationChoice),
+            "ChrCustomizationReqChoice" => Some(Self::CustomizationReqChoice),
+            "ItemSpec" => Some(Self::ItemSpec),
+            "ItemSpecOverride" => Some(Self::ItemSpecOverride),
+            "GemProperties" => Some(Self::GemProperties),
+            "SkillLine" => Some(Self::SkillLine),
+            "SkillRaceClassInfo" => Some(Self::SkillRaceClassInfo),
+            "SkillLineAbility" => Some(Self::SkillLineAbility),
+            "CharacterLoadout" => Some(Self::CharacterLoadout),
+            "CharacterLoadoutItem" => Some(Self::CharacterLoadoutItem),
+            "Map" => Some(Self::Map),
+            "PowerType" => Some(Self::PowerType),
+            "Movie" => Some(Self::Movie),
+            "SpellCastTimes" => Some(Self::SpellCastTimes),
+            "SpellDuration" => Some(Self::SpellDuration),
+            "SpellRadius" => Some(Self::SpellRadius),
+            "SpellProcsPerMinute" => Some(Self::SpellProcsPerMinute),
             _ => None,
         }
     }
@@ -266,6 +405,31 @@ impl CharacterTable {
             Self::BoneWindModifiers => "BoneWindModifiers",
             Self::AreaTriggerSphere => "AreaTriggerSphere",
             Self::DurabilityQuality => "DurabilityQuality",
+            Self::NamesProfanity => "NamesProfanity",
+            Self::NamesReserved => "NamesReserved",
+            Self::NamesReservedLocale => "NamesReservedLocale",
+            Self::CfgCategories => "Cfg_Categories",
+            Self::Model => "ChrModel",
+            Self::RaceXModel => "ChrRaceXChrModel",
+            Self::CustomizationOption => "ChrCustomizationOption",
+            Self::CustomizationChoice => "ChrCustomizationChoice",
+            Self::CustomizationReqChoice => "ChrCustomizationReqChoice",
+            Self::ItemSpec => "ItemSpec",
+            Self::ItemSpecOverride => "ItemSpecOverride",
+            Self::GemProperties => "GemProperties",
+            Self::SkillLine => "SkillLine",
+            Self::SkillRaceClassInfo => "SkillRaceClassInfo",
+            Self::SkillLineAbility => "SkillLineAbility",
+            Self::CharacterLoadout => "CharacterLoadout",
+            Self::CharacterLoadoutItem => "CharacterLoadoutItem",
+            Self::Map => "Map",
+            Self::PowerType => "PowerType",
+            Self::Movie => "Movie",
+            Self::SpellCastTimes => "SpellCastTimes",
+            Self::SpellDuration => "SpellDuration",
+            Self::SpellRadius => "SpellRadius",
+            Self::SpellProcsPerMinute => "SpellProcsPerMinute",
+            Self::Catalog(table) => table.metadata().name,
         }
     }
     pub fn file_id(self) -> u32 {
@@ -302,6 +466,31 @@ impl CharacterTable {
             Self::BoneWindModifiers => 1416756,
             Self::AreaTriggerSphere => 1315630,
             Self::DurabilityQuality => 1130268,
+            Self::NamesProfanity => 1117086,
+            Self::NamesReserved => 1117085,
+            Self::NamesReservedLocale => 1117087,
+            Self::CfgCategories => 1068162,
+            Self::Model => 3384313,
+            Self::RaceXModel => 3490304,
+            Self::CustomizationOption => 3384247,
+            Self::CustomizationChoice => 3450554,
+            Self::CustomizationReqChoice => 3580359,
+            Self::ItemSpec => 1135120,
+            Self::ItemSpecOverride => 1134576,
+            Self::GemProperties => 1343604,
+            Self::SkillLine => 1240935,
+            Self::SkillRaceClassInfo => 1240406,
+            Self::SkillLineAbility => 1266278,
+            Self::CharacterLoadout => 1344281,
+            Self::CharacterLoadoutItem => 1302846,
+            Self::Map => 1349477,
+            Self::PowerType => 1266022,
+            Self::Movie => 1332556,
+            Self::SpellCastTimes => 1134089,
+            Self::SpellDuration => 1137828,
+            Self::SpellRadius => 1134584,
+            Self::SpellProcsPerMinute => 1133526,
+            Self::Catalog(table) => table.metadata().file_data_id,
         }
     }
     /// True only when the header's identity fields match the reviewed schema:
@@ -381,11 +570,13 @@ impl CharacterTable {
     pub(super) fn schema(self) -> Schema {
         use Kind::*;
         match self {
+            Self::Catalog(table) => table.schema(),
             Self::ClassTitle => Schema {
                 hash: None,
                 layout: 0xC086F95D,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[String, String, Signed(8, 1)],
             },
             Self::ClassUIDisplay => Schema {
@@ -393,6 +584,7 @@ impl CharacterTable {
                 layout: 0x50F5AD66,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(8, 1), Unsigned(32, 1), Unsigned(32, 1)],
             },
             Self::ClassUIChrModelInfo => Schema {
@@ -400,6 +592,7 @@ impl CharacterTable {
                 layout: 0x26E5E322,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     Float(3),
                     Signed(32, 1),
@@ -413,6 +606,7 @@ impl CharacterTable {
                 layout: 0x46041630,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[String, Signed(8, 1), Signed(8, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrClassesXPowerTypesMeta:
@@ -426,6 +620,7 @@ impl CharacterTable {
                 layout: 0x70DA1F8C,
                 index: -1,
                 parent: 1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(8, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationCategoryMeta:
@@ -437,6 +632,7 @@ impl CharacterTable {
                 layout: 0x1605B68A,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     Signed(32, 1),
@@ -457,6 +653,7 @@ impl CharacterTable {
                 layout: 0x2986E1F3,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(8, 1), Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationGeosetMeta:
@@ -468,6 +665,7 @@ impl CharacterTable {
                 layout: 0xBF55F2FB,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(8, 1), Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationMaterialMeta:
@@ -479,6 +677,7 @@ impl CharacterTable {
                 layout: 0xBE9767E9,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationBoneSetMeta:
@@ -490,6 +689,7 @@ impl CharacterTable {
                 layout: 0xCC2CFF6E,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationElementMeta:
@@ -501,6 +701,7 @@ impl CharacterTable {
                 layout: 0x6483C37E,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     Signed(32, 1),
                     Signed(32, 1),
@@ -526,6 +727,7 @@ impl CharacterTable {
                 layout: 0xB24CE54F,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(32, 1), Signed(32, 1), Float(1), Float(1), Float(1)],
             },
             // Transcribed from DB2Metadata.h::ChrCustomizationReqMeta:
@@ -537,6 +739,7 @@ impl CharacterTable {
                 layout: 0xCA154412,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     Signed(32, 1),
@@ -559,6 +762,7 @@ impl CharacterTable {
                 layout: 0xD362535A,
                 index: 0,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(32, 1), Unsigned(8, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ContentRestrictionRuleSetMeta:
@@ -571,6 +775,7 @@ impl CharacterTable {
                 layout: 0x5774D75A,
                 index: 0,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(32, 1), Signed(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::DataTagInfoMeta:
@@ -583,6 +788,7 @@ impl CharacterTable {
                 layout: 0xDB46F772,
                 index: 1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[String, Unsigned(32, 1), Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::AnimKitBoneSetAliasMeta:
@@ -594,6 +800,7 @@ impl CharacterTable {
                 layout: 0x19A6986C,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(8, 1), Unsigned(8, 1)],
             },
             // Transcribed from DB2Metadata.h::AnimKitPriorityMeta:
@@ -605,6 +812,7 @@ impl CharacterTable {
                 layout: 0xCCF889D8,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(8, 1)],
             },
             // Transcribed from DB2Metadata.h::AnimReplacementSetMeta:
@@ -616,6 +824,7 @@ impl CharacterTable {
                 layout: 0x7C047695,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(8, 1)],
             },
             // Transcribed from DB2Metadata.h::AnimKitBoneSetMeta:
@@ -628,6 +837,7 @@ impl CharacterTable {
                 layout: 0x43E7736F,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     Signed(32, 1),
@@ -646,6 +856,7 @@ impl CharacterTable {
                 layout: 0xBBF66A3C,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Unsigned(16, 1), Signed(8, 1), Signed(16, 1), Signed(32, 2)],
             },
             // Transcribed from DB2Metadata.h::AnimKitConfigMeta:
@@ -657,6 +868,7 @@ impl CharacterTable {
                 layout: 0x140718EF,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Signed(32, 1)],
             },
             // Transcribed from DB2Metadata.h::ItemExtendedCostMeta:
@@ -669,6 +881,7 @@ impl CharacterTable {
                 layout: 0x22331DAB,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     Unsigned(64, 1),
                     Unsigned(16, 1),
@@ -693,6 +906,7 @@ impl CharacterTable {
                 layout: 0x91D51304,
                 index: 2,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     Unsigned(64, 1),
                     String,
@@ -715,6 +929,7 @@ impl CharacterTable {
                 layout: 0x5B2F9B36,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     Unsigned(64, 1),
                     Unsigned(8, 1),
@@ -738,6 +953,7 @@ impl CharacterTable {
                 layout: 0xDAB4CA4B,
                 index: 3,
                 parent: 4,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     String,
@@ -763,6 +979,7 @@ impl CharacterTable {
                 layout: 0xFB67352F,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Float(1), Float(1), Float(1), Float(1), Float(1)],
             },
             // Transcribed from DB2Metadata.h::BoneWindModifiersMeta: FileDataId
@@ -774,6 +991,7 @@ impl CharacterTable {
                 layout: 0x2CD1770E,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Float(3), Float(1)],
             },
             // Transcribed from DB2Metadata.h::AreaTriggerSphereMeta: FileDataId
@@ -784,6 +1002,7 @@ impl CharacterTable {
                 layout: 0xB851EBF6,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Float(1)],
             },
             // Transcribed from DB2Metadata.h::DurabilityQualityMeta: FileDataId
@@ -794,13 +1013,378 @@ impl CharacterTable {
                 layout: 0x08763C54,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[Float(1)],
+            },
+            // Independently transcribed 2026-10-11 from DB2Metadata.h:15780,
+            // :15800, :15819 and :2747 at 02245dcd245e7433e524577656177723d3e4992e.
+            // No DB2 table hash is supplied by these metadata definitions.
+            Self::NamesProfanity => Schema {
+                hash: None,
+                layout: 0xF227E638,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[String, Signed(8, 1)],
+            },
+            Self::NamesReserved => Schema {
+                hash: None,
+                layout: 0x2B2D5D97,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[String],
+            },
+            Self::NamesReservedLocale => Schema {
+                hash: None,
+                layout: 0x7B9823D4,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[String, Unsigned(8, 1)],
+            },
+            Self::CfgCategories => Schema {
+                hash: None,
+                layout: 0x8710BE94,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    Unsigned(16, 1),
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Signed(32, 1),
+                    Signed(8, 1),
+                ],
+            },
+            // Independently transcribed 2026-10-11 from DB2Metadata.h:4049,
+            // :4160, :3909, :3715 and :3967 at the pinned 02245dcd commit.
+            // `fields` contains FileFieldCount columns; ReqChoice's second
+            // metadata field is supplied by the appended parent lookup.
+            Self::Model => Schema {
+                hash: None,
+                layout: 0x03FAB755,
+                index: 2,
+                parent: 4,
+                appended_parent_unsigned: false,
+                fields: &[
+                    Float(3),
+                    Float(3),
+                    Unsigned(32, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Float(1),
+                    Float(1),
+                    Float(1),
+                    Float(1),
+                    Float(1),
+                    Float(1),
+                ],
+            },
+            Self::RaceXModel => Schema {
+                hash: None,
+                layout: 0xA203BC29,
+                index: -1,
+                parent: 0,
+                appended_parent_unsigned: false,
+                fields: &[Signed(8, 1), Signed(32, 1), Signed(8, 1), Signed(32, 1)],
+            },
+            Self::CustomizationOption => Schema {
+                hash: None,
+                layout: 0xDCC2A86E,
+                index: 1,
+                parent: 4,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    Unsigned(32, 1),
+                    Unsigned(16, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Float(1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                ],
+            },
+            Self::CustomizationChoice => Schema {
+                hash: None,
+                layout: 0x9559C358,
+                index: 1,
+                parent: 2,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    Unsigned(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Unsigned(16, 1),
+                    Unsigned(16, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 2),
+                ],
+            },
+            Self::CustomizationReqChoice => Schema {
+                hash: None,
+                layout: 0xF925BC6F,
+                index: -1,
+                parent: 1,
+                appended_parent_unsigned: false,
+                fields: &[Signed(32, 1)],
+            },
+            // Independently transcribed 2026-10-11 from pinned 02245dcd
+            // DB2Metadata.h:12929, :12953 and :9802. No table hash supplied.
+            Self::ItemSpec => Schema {
+                hash: None,
+                layout: 0x83F3D113,
+                index: -1,
+                parent: 2,
+                appended_parent_unsigned: false,
+                fields: &[
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(16, 1),
+                ],
+            },
+            Self::ItemSpecOverride => Schema {
+                hash: None,
+                layout: 0xB292998C,
+                index: -1,
+                parent: 1,
+                appended_parent_unsigned: false,
+                fields: &[Unsigned(16, 1)],
+            },
+            Self::GemProperties => Schema {
+                hash: None,
+                layout: 0x86487AD2,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[Unsigned(16, 1), Signed(32, 1)],
+            },
+            // Independently transcribed 2026-10-11 from pinned 02245dcd
+            // DB2Metadata.h:19625, :19715, :19658, :3206 and :3229.
+            // FileFieldCount == FieldCount; no table hash is supplied.
+            Self::SkillLine => Schema {
+                hash: None,
+                layout: 0x6763217C,
+                index: 5,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    Unsigned(32, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(8, 1),
+                    Unsigned(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                ],
+            },
+            Self::SkillRaceClassInfo => Schema {
+                hash: None,
+                layout: 0x24277B48,
+                index: -1,
+                parent: 0,
+                appended_parent_unsigned: false,
+                fields: &[
+                    Signed(16, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(8, 1),
+                    Signed(16, 1),
+                    Signed(32, 2),
+                ],
+            },
+            Self::SkillLineAbility => Schema {
+                hash: None,
+                layout: 0x224F7EA0,
+                index: 2,
+                parent: 3,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    String,
+                    Unsigned(32, 1),
+                    Signed(16, 1),
+                    Signed(32, 1),
+                    Signed(16, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Signed(32, 1),
+                    Signed(8, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Signed(32, 2),
+                    Signed(32, 2),
+                ],
+            },
+            Self::CharacterLoadout => Schema {
+                hash: None,
+                layout: 0x713CE8BB,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Unsigned(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 2),
+                ],
+            },
+            Self::CharacterLoadoutItem => Schema {
+                hash: None,
+                layout: 0x0C7A1862,
+                index: -1,
+                parent: 0,
+                appended_parent_unsigned: false,
+                fields: &[Unsigned(16, 1), Unsigned(32, 1)],
+            },
+            // Independently transcribed 2026-10-11 from pinned 02245dcd
+            // DB2Metadata.h:14538, :17452 and :15329. No table hash supplied.
+            Self::Map => Schema {
+                hash: None,
+                layout: 0xD43AFAC3,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    Float(2),
+                    Unsigned(8, 1),
+                    Signed(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(16, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Signed(16, 1),
+                    Unsigned(8, 1),
+                    Float(1),
+                    Signed(16, 1),
+                    Unsigned(8, 1),
+                    Signed(16, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 3),
+                ],
+            },
+            Self::PowerType => Schema {
+                hash: None,
+                layout: 0x14BBEEA1,
+                index: 2,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    String,
+                    Unsigned(32, 1),
+                    Signed(8, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Signed(32, 1),
+                    Float(1),
+                    Float(1),
+                    Signed(32, 1),
+                ],
+            },
+            Self::Movie => Schema {
+                hash: None,
+                layout: 0xF53888FA,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[
+                    String,
+                    Unsigned(8, 1),
+                    Unsigned(8, 1),
+                    Unsigned(32, 1),
+                    Unsigned(32, 1),
+                    Unsigned(32, 1),
+                ],
+            },
+            // Independently transcribed 2026-10-11 from pinned 02245dcd
+            // DB2Metadata.h:20706, :21120, :21807 and :21764.
+            Self::SpellCastTimes => Schema {
+                hash: None,
+                layout: 0x75B6BD3A,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[Signed(32, 1), Signed(32, 1)],
+            },
+            Self::SpellDuration => Schema {
+                hash: None,
+                layout: 0xA931BD2B,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[Signed(32, 1), Signed(32, 1), Signed(32, 1)],
+            },
+            Self::SpellRadius => Schema {
+                hash: None,
+                layout: 0xF9A913EE,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[Float(1), Float(1), Float(1), Float(1)],
+            },
+            Self::SpellProcsPerMinute => Schema {
+                hash: None,
+                layout: 0x2227014B,
+                index: -1,
+                parent: -1,
+                appended_parent_unsigned: false,
+                fields: &[Float(1), Signed(32, 1)],
             },
             Self::Classes => Schema {
                 hash: Some(0xF5889D8C),
                 layout: 0xAFC9B0C2,
                 index: 29,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     String,
@@ -852,6 +1436,7 @@ impl CharacterTable {
                 layout: 0x4F44C796,
                 index: -1,
                 parent: -1,
+                appended_parent_unsigned: false,
                 fields: &[
                     String,
                     String,
@@ -923,11 +1508,15 @@ pub(super) struct Schema {
     /// FieldCount` per `DB2FileLoader.cpp:1771`, and the value is filled from
     /// the separate parent-lookup block, not from a column meta entry.
     pub parent: i16,
+    /// Appended parents always occupy 32 bits. Their metadata signedness
+    /// chooses the diagnostic value type; in-record parents use their Kind.
+    pub appended_parent_unsigned: bool,
     pub fields: &'static [Kind],
 }
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Kind {
     String,
+    StringArray(usize),
     Unsigned(u32, usize),
     Signed(u32, usize),
     Float(usize),
@@ -941,7 +1530,10 @@ impl Kind {
     }
     pub fn count(self) -> usize {
         match self {
-            Self::Unsigned(_, count) | Self::Signed(_, count) | Self::Float(count) => count,
+            Self::Unsigned(_, count)
+            | Self::Signed(_, count)
+            | Self::Float(count)
+            | Self::StringArray(count) => count,
             _ => 1,
         }
     }

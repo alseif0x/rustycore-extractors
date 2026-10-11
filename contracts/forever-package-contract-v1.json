@@ -1,0 +1,81 @@
+{
+  "contract": "forever_package_artifact_integrity",
+  "version": 1,
+  "authored": "2026-10-11",
+  "platform": "linux_rooted_private_directory",
+  "builds": [
+    70170,
+    70205
+  ],
+  "scope": "artifact_integrity",
+  "semantic_compatibility": false,
+  "network": "none",
+  "component_bits": {
+    "db2": 1,
+    "gt": 2,
+    "cameras": 4,
+    "maps": 8,
+    "vmaps": 16,
+    "mmaps": 32
+  },
+  "context_hashes": "caller-supplied complete source acquisition identity, exact selected plan/options and exact producer identity; nonzero SHA256 values are identities, not signatures or authenticity proofs",
+  "manifest": "forever-package.json",
+  "incomplete_marker": ".forever-package-incomplete",
+  "internal_state": ".state",
+  "completion": "Only call finish_component after the corresponding producer returned its complete result. All selected seals, exact receipts, payload hashes and namespace closure must pass before finish removes the incomplete marker. Empty selected components need explicit seals.",
+  "resume": "Not admitted in v1 disk API; existing directories are never reused or overwritten. Same active Run can repeat an identical unsealed put only.",
+  "canonical": "Fixed JSON property order in Rust serializer; header line, lower-ASCII-path sorted artifact lines with commas except last, footer line; each line newline terminated, no optional whitespace. inventory_sha256 hashes each canonical artifact JSON plus newline, excluding array commas.",
+  "limits": {
+    "files": 262144,
+    "directories": 262144,
+    "file_bytes": 134217728,
+    "total_bytes": 1099511627776,
+    "metadata_bytes": 268435456,
+    "minimum_metadata_bytes": 131072,
+    "manifest_bytes": 100663296,
+    "line_bytes": 1024,
+    "artifact_path_bytes": 512,
+    "directory_depth": 16
+  },
+  "metadata_accounting": "Actual retained artifact Vec/String capacities, old/new Vec growth overlap plus fixed 128KiB scratch allowance. Caller payload/source buffers, allocator overhead and kernel caches are outside this logical ledger; not a portable RSS guarantee.",
+  "filesystem": "Held Linux directory descriptors, no-follow opens, regular single-link files, advisory OS writer/read locks, temporary files + fsync + exclusive hard link + unlink + parent fsync. Reobserved root/file/directory identities detect changes; no atomic snapshot against hostile concurrent mutation or authenticity claim.",
+  "errors": [
+    "package_limit",
+    "package_allocation",
+    "package_context",
+    "package_path",
+    "package_exists",
+    "package_busy",
+    "package_io",
+    "package_input_changed",
+    "package_schema",
+    "package_incomplete",
+    "package_inventory",
+    "package_digest",
+    "package_component",
+    "package_component_sealed",
+    "package_platform"
+  ],
+  "cli": {
+    "command": "forever-package verify --output <absolute-directory> [--expect-context <canonical-context.json>]",
+    "exit_codes": {
+      "0": "verified artifact integrity",
+      "2": "invalid invocation or platform unsupported",
+      "4": "package I/O failure",
+      "8": "incomplete marker",
+      "9": "integrity, schema, context, lock, path or resource rejection"
+    }
+  },
+  "excluded": [
+    "unified extraction/acquisition driver",
+    "restart/resume",
+    "Windows filesystem profile/distribution",
+    "semantic DB2/GT/camera/MAPS/VMAP/MMAP verification",
+    "runtime bootstrap/gameplay",
+    "real-client full extraction acceptance",
+    "publication"
+  ],
+  "tested_architectures": [
+    "x86_64"
+  ]
+}

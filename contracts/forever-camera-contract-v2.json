@@ -1,0 +1,26 @@
+{
+  "contract_version": 2,
+  "line": "forever",
+  "scopes": [
+    "complete_camera_files"
+  ],
+  "backend": "rust-local",
+  "manifest": "forever-camera-manifest.json",
+  "schema": "schemas/forever-camera-manifest-v2.schema.json",
+  "native_manifest_versions_unchanged": [
+    1
+  ],
+  "acquisition_schema": "schemas/forever-acquisition-v1.schema.json",
+  "acquisition_schema_sha256": "08f843c4a38ef2ec2f61aad85b5abba2082243260fee2b5e4fa97e626408ec41",
+  "max_file_bytes": 16777216,
+  "profile": "local-v7-ckey-root-nz-v1",
+  "selection": "explicit backend, uniform index layout and ROOT layout; no auto-detection/fallback",
+  "offline": true,
+  "session": "one session before creating output, reused for all reads",
+  "input_changed": "global fatal; retain incomplete marker; no later reads",
+  "bytes": "complete raw bytes preserved; no reserialization",
+  "authentication": "recorded full CKey MD5; EKey prefix9 only; verifier checks files and provenance shape offline, without re-opening client or proving its origin",
+  "old_contracts": [
+    "contracts/forever-camera-contract-v1.json"
+  ]
+}

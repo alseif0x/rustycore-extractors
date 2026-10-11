@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Offline, read-only CLI verifying a Forever v2 output directory.
+//! Offline, read-only CLI verifying Forever v2/v3 and explicit Rust-local v4 output.
 //!
 //! `forever-db2-verify` never opens the client, CASC or a remote listfile: it
 //! reads only the published `forever-manifest.json` and `.db2` files, then
 //! recomputes their hashes and reopens their metadata/decode. Exit codes follow
-//! `contracts/forever-contract-v2.json`:
+//! the versioned Forever DB2 contracts:
 //! - 0 verified
 //! - 2 `invalid_invocation` / `MANIFEST_SCHEMA_INVALID`
 //! - 4 `input_io`
@@ -18,7 +18,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const HELP: &str = "Usage: forever-db2-verify --output <existing-directory>\n\
-Offline read-only verification of a Forever v2 DB2 batch output directory.\n\
+Offline read-only verification of a Forever v2/v3/v4 DB2 batch output directory.\n\
 It never opens the client or CASC, and never writes to the output directory.";
 
 fn main() -> ExitCode {

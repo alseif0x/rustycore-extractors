@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/environment.sh"
+if [[ $# -ne 1 ]]; then
+  printf '%s\n' 'Uso: .opencode/checks {fmt-check|fmt|rust|clippy|db2|synthetic|contracts|conformance|provenance|cpp|native|live|live-extract}' >&2
+  exit 2
+fi
+case "$1" in
+  fmt-check) exec cargo fmt --all -- --check ;;
+  fmt) exec cargo fmt --all ;;
+  rust) exec cargo test --offline --locked --workspace --all-targets ;;
+  clippy) exec cargo clippy --offline --locked --workspace --all-targets -- -D warnings ;;
+  db2) exec cargo build --offline --locked --bin forever-db2-inspect ;;
+  synthetic)
+    cargo build --offline --locked --bin forever-db2-inspect
+    export FOREVER_DB2_INSPECT="$CARGO_TARGET_DIR/debug/forever-db2-inspect"
+    exec python3 -m unittest discover -s tests/forever -p 'test_*.py' -v ;;
+  contracts) exec python3 -m unittest discover -s tests/contracts -p 'test_*.py' -v ;;
+  conformance) exec python3 -m unittest discover -s tests/conformance -p 'test_*.py' -v ;;
+  provenance) exec python3 tests/provenance/test_source_closure.py ;;
+  cpp)
+    rce_cpp_build="$RCE_OPENCODE_WORK/builds/cpp-opencode"
+    cmake -S "$RCE_OPENCODE_ROOT" -B "$rce_cpp_build" -DCMAKE_BUILD_TYPE=Release
+    cmake --build "$rce_cpp_build" --parallel 1
+    exec ctest --test-dir "$rce_cpp_build" --output-on-failure ;;
+  native)
+    if [[ -z "${RCE_FOREVER_CASC_REFERENCE:-}" ]]; then
+      printf '%s\n' 'Native requiere RCE_FOREVER_CASC_REFERENCE: checkout local ya auditado y fijado por el proyecto. No se descarga automáticamente.' >&2
+      exit 2
+    fi
+    cargo test --offline --locked -p forever-casc --features native
+    cargo build --offline --locked -p forever-casc --features native
+    export FOREVER_CASC_PROBE="$CARGO_TARGET_DIR/debug/forever-casc-probe"
+    export FOREVER_DB2_EXTRACT="$CARGO_TARGET_DIR/debug/forever-db2-extract"
+    export FOREVER_DB2_INSPECT="$CARGO_TARGET_DIR/debug/forever-db2-inspect"
+    cargo build --offline --locked --bin forever-db2-inspect
+    exec python3 -m unittest discover -s tests/forever -p 'test_*.py' -v ;;
+  live|live-extract)
+    if [[ "$1" == "live-extract" ]]; then
+      cargo build --offline --locked -p forever-casc --features native --bin forever-db2-extract
+    else
+      cargo build --offline --locked -p forever-casc --features native
+    fi
+    cargo build --offline --locked --bin forever-db2-inspect
+    export FOREVER_CASC_PROBE="$CARGO_TARGET_DIR/debug/forever-casc-probe"
+    export FOREVER_DB2_EXTRACT="$CARGO_TARGET_DIR/debug/forever-db2-extract"
+    export FOREVER_DB2_INSPECT="$CARGO_TARGET_DIR/debug/forever-db2-inspect"
+    exec python3 .opencode/live-check.py "$1" ;;
+  *) printf '%s\n' "Modo desconocido: $1" >&2; exit 2 ;;
+esac

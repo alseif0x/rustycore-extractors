@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Offline, read-only verification of a Forever v2 output directory.
+//! Offline, read-only verification of Forever v2/v3 and Rust-local v4.
 //!
 //! `forever-db2-verify` proves that a directory published by
 //! `forever-db2-extract` is self-consistent. It never opens the client, CASC,
 //! a network socket or a remote listfile: it only reads the manifest and the
 //! `.db2` files already on disk and recomputes their hashes independently.
 //!
-//! The v2 schema is validated by an in-tree bounded JSON parser and an
+//! Version dispatch accepts v2, v3 and v4 explicitly and rejects unknown versions.
+//! Each schema is validated by an in-tree bounded JSON parser and an
 //! explicit field/invariant validator rather than a JSON-Schema dependency,
 //! because the crate has no JSON dependency and the dependency/network policy
 //! forbids adding one for this pass. The validator mirrors
-//! `schemas/forever-manifest-v2.schema.json`; a successful process exit is not
+//! `schemas/forever-manifest-v2.schema.json` and the separate v3 catalog schema;
+//! a successful process exit is not
 //! format parity or reader/runtime acceptance.
 //!
 //! Invariant order (first failure wins): manifest present/parse/schema, run
@@ -34,6 +36,44 @@ pub const MARKER_NAME: &str = ".rustycore-forever-incomplete.json";
 /// Inspection policy limits, not native format limits.
 const MAX_MANIFEST_BYTES: u64 = 4 * 1024 * 1024;
 const MAX_ARTIFACT_BYTES: u64 = 16 * 1024 * 1024;
+// Bound recursion before parsing any untrusted JSON document. Valid manifests
+// need only a handful of levels; this is an inspection policy.
+const MAX_JSON_DEPTH: u32 = 64;
+
+fn bounded_json_depth(text: &str) -> bool {
+    let mut depth = 0_u32;
+    let mut in_string = false;
+    let mut escaped = false;
+    for byte in text.bytes() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+        } else {
+            match byte {
+                b'"' => in_string = true,
+                b'{' | b'[' => {
+                    depth += 1;
+                    if depth > MAX_JSON_DEPTH {
+                        return false;
+                    }
+                }
+                b'}' | b']' => {
+                    let Some(next) = depth.checked_sub(1) else {
+                        return false;
+                    };
+                    depth = next;
+                }
+                _ => {}
+            }
+        }
+    }
+    depth == 0 && !in_string
+}
 
 /// Pinned compatibility oracle, matching the manifest schema and `manifest.rs`.
 const ORACLE_COMMIT: &str = "02245dcd245e7433e524577656177723d3e4992e";
@@ -152,7 +192,7 @@ fn run(output: &Path) -> Result<VerifyReport, Code> {
         return Err(Code::InputIo);
     }
 
-    // 1. Manifest must exist, parse and validate against the v2 schema.
+    // 1. Manifest must exist, parse and validate against its explicit version.
     let manifest_path = output.join(MANIFEST_NAME);
     let manifest_meta = fs::symlink_metadata(&manifest_path).map_err(|_| Code::InputIo)?;
     if manifest_meta.file_type().is_symlink() {
@@ -201,15 +241,27 @@ fn run(output: &Path) -> Result<VerifyReport, Code> {
     }
 
     // 4-6. Recompute hashes, reopen metadata and re-decode claimed bodies.
-    let loaded = load_complete(output, &complete).map_err(|_| Code::InventoryMismatch)?;
+    let loaded = load_complete(
+        output,
+        &complete,
+        manifest.schema_catalog || manifest.acquisition.is_some(),
+        manifest.max_file_bytes,
+    )
+    .map_err(|_| Code::InventoryMismatch)?;
     check_integrity(output, &complete, &loaded, &manifest.integrity)
         .map_err(|_| Code::InventoryMismatch)?;
-    check_tables(&complete, &loaded, &manifest.tables).map_err(|_| Code::TableIdentityMismatch)?;
-    check_rows(&complete, &loaded).map_err(|_| Code::RowDecodeMismatch)?;
+    check_tables(
+        &complete,
+        &loaded,
+        &manifest.tables,
+        manifest.schema_catalog,
+    )
+    .map_err(|_| Code::TableIdentityMismatch)?;
+    check_rows(&complete, &loaded, manifest.schema_catalog).map_err(|_| Code::RowDecodeMismatch)?;
 
     // 7. Declared constants; network/privacy/scope are schema consts, and the
     // companion report is additionally checked for `full_client_extraction`.
-    check_declared_constants(output).map_err(|_| Code::ManifestSchemaInvalid)?;
+    check_declared_constants(output, &manifest).map_err(|_| Code::ManifestSchemaInvalid)?;
 
     Ok(VerifyReport {
         code: Code::Verified,
@@ -253,11 +305,28 @@ fn db2_files(output: &Path) -> Result<Vec<String>, Invalid> {
     Ok(names)
 }
 
-fn load_complete(output: &Path, complete: &[&Artifact]) -> Result<Vec<Vec<u8>>, Invalid> {
-    complete
-        .iter()
-        .map(|artifact| read_capped(&output.join(&artifact.relative_path), MAX_ARTIFACT_BYTES))
-        .collect()
+fn load_complete(
+    output: &Path,
+    complete: &[&Artifact],
+    bounded_batch: bool,
+    max_file_bytes: u64,
+) -> Result<Vec<Vec<u8>>, Invalid> {
+    let mut loaded = Vec::with_capacity(complete.len());
+    let mut total = 0u64;
+    for artifact in complete {
+        let budget = if bounded_batch {
+            crate::batch::MAX_BATCH_BYTES
+                .checked_sub(total)
+                .ok_or(Invalid)?
+                .min(max_file_bytes)
+        } else {
+            max_file_bytes
+        };
+        let bytes = read_capped(&output.join(&artifact.relative_path), budget)?;
+        total = total.checked_add(bytes.len() as u64).ok_or(Invalid)?;
+        loaded.push(bytes);
+    }
+    Ok(loaded)
 }
 
 fn check_integrity(
@@ -308,6 +377,7 @@ fn check_tables(
     complete: &[&Artifact],
     loaded: &[Vec<u8>],
     tables: &[Table],
+    schema_catalog: bool,
 ) -> Result<(), Invalid> {
     for (artifact, bytes) in complete.iter().zip(loaded) {
         let metadata = Metadata::read(&mut Cursor::new(bytes)).map_err(|_| Invalid)?;
@@ -324,21 +394,45 @@ fn check_tables(
         {
             return Err(Invalid);
         }
-        if let Some(known) = CharacterTable::named(&artifact.name)
+        if let Some(known) = resolve_table(&artifact.name, schema_catalog)?
             && !known.matches(&header)
         {
             return Err(Invalid);
+        }
+        if schema_catalog {
+            let known = resolve_table(&artifact.name, true)?.ok_or(Invalid)?;
+            if artifact.file_id != u64::from(known.file_id())
+                || table.meta_index_field != i64::from(known.schema_identity().2)
+                || artifact.declared_records != u64::from(header.record_count)
+            {
+                return Err(Invalid);
+            }
         }
     }
     Ok(())
 }
 
-fn check_rows(complete: &[&Artifact], loaded: &[Vec<u8>]) -> Result<(), Invalid> {
+fn resolve_table(name: &str, schema_catalog: bool) -> Result<Option<CharacterTable>, Invalid> {
+    if schema_catalog {
+        CharacterTable::from_catalog(name)
+            .map_err(|_| Invalid)?
+            .map(Some)
+            .ok_or(Invalid)
+    } else {
+        Ok(CharacterTable::named(name))
+    }
+}
+
+fn check_rows(
+    complete: &[&Artifact],
+    loaded: &[Vec<u8>],
+    schema_catalog: bool,
+) -> Result<(), Invalid> {
     for (artifact, bytes) in complete.iter().zip(loaded) {
         if !artifact.record_data_decoded {
             continue;
         }
-        let table = CharacterTable::named(&artifact.name).ok_or(Invalid)?;
+        let table = resolve_table(&artifact.name, schema_catalog)?.ok_or(Invalid)?;
         let decoded = DecodedTable::read(bytes, table).map_err(|_| Invalid)?;
         if artifact.decoded_rows != Some(decoded.rows().len() as u64) {
             return Err(Invalid);
@@ -347,23 +441,89 @@ fn check_rows(complete: &[&Artifact], loaded: &[Vec<u8>]) -> Result<(), Invalid>
     Ok(())
 }
 
-fn check_declared_constants(output: &Path) -> Result<(), Invalid> {
+fn check_declared_constants(output: &Path, manifest: &Manifest) -> Result<(), Invalid> {
+    let schema_catalog = manifest.schema_catalog;
+    let acquisition = manifest.acquisition;
     // `network`, `privacy` and `scope` are schema consts already enforced by
     // `validate`. `full_client_extraction` lives only in the companion
     // `report.json`; when that file is present it must still declare `false`.
     let path = output.join(REPORT_NAME);
+    if acquisition.is_some()
+        && fs::symlink_metadata(&path)
+            .map_err(|_| Invalid)?
+            .file_type()
+            .is_symlink()
+    {
+        return Err(Invalid);
+    }
     if !fs::metadata(&path)
         .map(|meta| meta.is_file())
         .unwrap_or(false)
     {
-        return Ok(());
+        return if acquisition.is_some() {
+            Err(Invalid)
+        } else {
+            Ok(())
+        };
     }
     let bytes = read_capped(&path, MAX_MANIFEST_BYTES)?;
     let text = std::str::from_utf8(&bytes).map_err(|_| Invalid)?;
     let report = json::parse(text).map_err(|_| Invalid)?;
+    if let Some(profile) = acquisition {
+        const_u64(report.get("report_version").ok_or(Invalid)?, 2)?;
+        const_u64(
+            report.get("build").ok_or(Invalid)?,
+            u64::from(manifest.build),
+        )?;
+        const_str(report.get("locale").ok_or(Invalid)?, &manifest.locale)?;
+        const_str(report.get("status").ok_or(Invalid)?, "success")?;
+        for key in ["offline", "paths_redacted", "all_requested_files_complete"] {
+            if report.get(key).and_then(json::Json::as_bool) != Some(true) {
+                return Err(Invalid);
+            }
+        }
+        let observed = crate::acquisition::Profile::decode(
+            report.get("acquisition").ok_or(Invalid)?,
+            crate::batch::MAX_FILE_BYTES,
+        )
+        .map_err(|_| Invalid)?;
+        if observed != profile {
+            return Err(Invalid);
+        }
+        const_str(
+            report.get("schema_selection").ok_or(Invalid)?,
+            if schema_catalog {
+                "catalog"
+            } else {
+                "reviewed"
+            },
+        )?;
+        const_str(
+            report.get("scope").ok_or(Invalid)?,
+            if schema_catalog {
+                crate::manifest::CATALOG_SCOPE
+            } else {
+                SCOPE
+            },
+        )?;
+        if !schema_catalog && report.get("schema_catalog").is_some() {
+            return Err(Invalid);
+        }
+    }
+    if schema_catalog {
+        const_str(
+            report.get("scope").ok_or(Invalid)?,
+            crate::manifest::CATALOG_SCOPE,
+        )?;
+        const_str(
+            report.get("schema_catalog").ok_or(Invalid)?,
+            forever_db2::catalog::CATALOG_ID,
+        )?;
+    }
     match report.get("full_client_extraction") {
         Some(value) if value.as_bool() == Some(false) => Ok(()),
         Some(_) => Err(Invalid),
+        None if schema_catalog || acquisition.is_some() => Err(Invalid),
         None => Ok(()),
     }
 }
@@ -371,10 +531,10 @@ fn check_declared_constants(output: &Path) -> Result<(), Invalid> {
 // ---------------------------------------------------------------------------
 // Bounded JSON parser (objects, arrays, strings, integers, booleans, null).
 // ---------------------------------------------------------------------------
-mod json {
+pub(crate) mod json {
     /// Parsed JSON value. Integers only, matching the v2 manifest's types.
     #[derive(Debug, Clone, PartialEq)]
-    pub(super) enum Json {
+    pub(crate) enum Json {
         Null,
         Bool(bool),
         Number(i64),
@@ -402,7 +562,10 @@ mod json {
         }
     }
 
-    pub(super) fn parse(text: &str) -> Result<Json, ()> {
+    pub(crate) fn parse(text: &str) -> Result<Json, ()> {
+        if !super::bounded_json_depth(text) {
+            return Err(());
+        }
         let mut parser = Parser {
             bytes: text.as_bytes(),
             at: 0,
@@ -640,6 +803,8 @@ struct Artifact {
     sha256: String,
     record_data_decoded: bool,
     decoded_rows: Option<u64>,
+    declared_records: u64,
+    schema_validated: bool,
 }
 
 struct Table {
@@ -648,6 +813,7 @@ struct Table {
     table_hash: u64,
     layout_hash: u64,
     field_count: u64,
+    meta_index_field: i64,
 }
 
 struct Integrity {
@@ -659,10 +825,14 @@ struct Integrity {
 struct Manifest {
     status: Status,
     build: u32,
+    locale: String,
     artifacts: Vec<Artifact>,
     tables: Vec<Table>,
     integrity: Integrity,
     incomplete_marker_present: bool,
+    schema_catalog: bool,
+    acquisition: Option<crate::acquisition::Profile>,
+    max_file_bytes: u64,
 }
 
 const TOP_REQUIRED: &[&str] = &[
@@ -682,8 +852,48 @@ const TOP_REQUIRED: &[&str] = &[
 const TOP_OPTIONAL: &[&str] = &["run_id", "reason"];
 
 fn validate(root: &json::Json) -> VResult<Manifest> {
-    let top = members(root, TOP_REQUIRED, TOP_OPTIONAL)?;
-    const_u64(need(top, "manifest_version")?, 2)?;
+    // Version dispatch precedes either contract's member validation. A v3
+    // document is never interpreted as a strengthened v2 claim, and future
+    // versions remain explicit failures.
+    let acquired = matches!(root.get("manifest_version"), Some(json::Json::Number(4)));
+    let schema_catalog = match root.get("manifest_version") {
+        Some(json::Json::Number(2)) => false,
+        Some(json::Json::Number(3)) => true,
+        Some(json::Json::Number(4)) => match root
+            .get("schema_selection")
+            .and_then(|value| as_str(value).ok())
+        {
+            Some("reviewed") => false,
+            Some("catalog") => true,
+            _ => return Err(Invalid),
+        },
+        _ => return Err(Invalid),
+    };
+    let mut required = TOP_REQUIRED.to_vec();
+    if acquired {
+        required.extend(["acquisition", "schema_selection"]);
+    }
+    if schema_catalog {
+        required.push("schema_catalog");
+    }
+    let top = members(root, &required, TOP_OPTIONAL)?;
+    let acquisition = if acquired {
+        Some(
+            crate::acquisition::Profile::decode(
+                need(top, "acquisition")?,
+                crate::batch::MAX_FILE_BYTES,
+            )
+            .map_err(|_| Invalid)?,
+        )
+    } else {
+        None
+    };
+    let max_file_bytes = acquisition.map_or(MAX_ARTIFACT_BYTES, |profile| {
+        u64::from(profile.max_file_bytes())
+    });
+    if schema_catalog {
+        validate_catalog(need(top, "schema_catalog")?)?;
+    }
     if let Some(run_id) = get(top, "run_id")
         && !valid_uuid(as_str(run_id)?)
     {
@@ -760,7 +970,14 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         need(extractor, "compatibility_oracle_commit")?,
         ORACLE_COMMIT,
     )?;
-    const_str(need(top, "scope")?, SCOPE)?;
+    const_str(
+        need(top, "scope")?,
+        if schema_catalog {
+            crate::manifest::CATALOG_SCOPE
+        } else {
+            SCOPE
+        },
+    )?;
 
     let formats = members(need(top, "formats")?, &["db2", "tables"], &[])?;
     let db2 = members(need(formats, "db2")?, &["magic", "version"], &[])?;
@@ -770,7 +987,9 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     let json::Json::Array(table_items) = tables_json else {
         return Err(Invalid);
     };
-    if table_items.is_empty() {
+    if table_items.is_empty()
+        || ((schema_catalog || acquired) && table_items.len() > crate::batch::MAX_FILES)
+    {
         return Err(Invalid);
     }
     let mut tables = Vec::with_capacity(table_items.len());
@@ -798,33 +1017,49 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         }
         // `meta_index_field` is any integer; its authority is the reviewed
         // metadata, deliberately not the native header `IndexField` word.
-        let _meta_index_field = as_i64(need(entry, "meta_index_field")?)?;
+        let meta_index_field = as_i64(need(entry, "meta_index_field")?)?;
         tables.push(Table {
             name: name.to_owned(),
             file_id,
             table_hash: as_u64(need(entry, "table_hash")?)?,
             layout_hash: as_u64(need(entry, "layout_hash")?)?,
             field_count,
+            meta_index_field,
         });
     }
 
-    let options = members(
-        need(top, "options")?,
-        &[
-            "locale",
-            "table_selection",
-            "manifest_sha256",
-            "entry_count",
-            "max_file_bytes",
-            "max_batch_bytes",
-        ],
-        &[],
-    )?;
+    let mut required_options = vec![
+        "locale",
+        "table_selection",
+        "manifest_sha256",
+        "entry_count",
+        "max_file_bytes",
+        "max_batch_bytes",
+    ];
+    if schema_catalog {
+        required_options.push("schema_catalog");
+    }
+    let options = members(need(top, "options")?, &required_options, &[])?;
     one_of_str(need(options, "locale")?, &["enUS", "esES"])?;
     let selection = one_of_str(
         need(options, "table_selection")?,
         &["default_character_tables", "explicit_manifest"],
     )?;
+    if schema_catalog {
+        const_str(
+            need(options, "schema_catalog")?,
+            forever_db2::catalog::CATALOG_ID,
+        )?;
+        if selection != "explicit_manifest" {
+            return Err(Invalid);
+        }
+    }
+    if (schema_catalog || acquired)
+        && (as_str(need(options, "locale")?)? != as_str(need(client, "locale")?)?
+            || target != build)
+    {
+        return Err(Invalid);
+    }
     match need(options, "manifest_sha256")? {
         json::Json::Null if selection == "default_character_tables" => {}
         json::Json::String(hash) if selection == "explicit_manifest" && valid_hex(hash, 64) => {}
@@ -833,7 +1068,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     if !(1..=256).contains(&as_u64(need(options, "entry_count")?)?) {
         return Err(Invalid);
     }
-    const_u64(need(options, "max_file_bytes")?, 16_777_216)?;
+    const_u64(need(options, "max_file_bytes")?, max_file_bytes)?;
     const_u64(need(options, "max_batch_bytes")?, 268_435_456)?;
 
     let network = members(
@@ -901,7 +1136,9 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     let json::Json::Array(artifact_items) = artifacts_json else {
         return Err(Invalid);
     };
-    if artifact_items.is_empty() {
+    if artifact_items.is_empty()
+        || ((schema_catalog || acquired) && artifact_items.len() > crate::batch::MAX_FILES)
+    {
         return Err(Invalid);
     }
     let mut artifacts = Vec::with_capacity(artifact_items.len());
@@ -909,6 +1146,47 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         artifacts.push(parse_artifact(item)?);
     }
     let integrity = parse_integrity(need(outputs, "integrity")?)?;
+    if schema_catalog || acquired {
+        let entry_count = as_u64(need(options, "entry_count")?)? as usize;
+        if tables.len() != entry_count
+            || artifacts.len() != entry_count
+            || integrity.total_bytes > crate::batch::MAX_BATCH_BYTES
+        {
+            return Err(Invalid);
+        }
+        let mut names = BTreeSet::new();
+        let mut ids = BTreeSet::new();
+        for table in &tables {
+            let known = resolve_table(&table.name, schema_catalog)?;
+            if known.is_some_and(|known| table.file_id != u64::from(known.file_id()))
+                || table.file_id == 0
+                || table.file_id >= u64::from(u32::MAX)
+                || !names.insert(table.name.to_ascii_lowercase())
+                || !ids.insert(table.file_id)
+            {
+                return Err(Invalid);
+            }
+        }
+        let mut seen = BTreeSet::new();
+        for artifact in &artifacts {
+            if !seen.insert(&artifact.name)
+                || !tables
+                    .iter()
+                    .any(|table| table.name == artifact.name && table.file_id == artifact.file_id)
+                || artifact.relative_path != format!("{}.db2", artifact.name)
+                || artifact.bytes > max_file_bytes
+                || (schema_catalog
+                    && artifact.complete
+                    && (!artifact.schema_validated
+                        || !artifact.record_data_decoded
+                        || artifact.decoded_rows.is_none()))
+                || (!artifact.complete
+                    && (artifact.record_data_decoded || artifact.decoded_rows.is_some()))
+            {
+                return Err(Invalid);
+            }
+        }
+    }
 
     match status {
         Status::Complete => {
@@ -931,11 +1209,39 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     Ok(Manifest {
         status,
         build: build as u32,
+        locale: as_str(need(client, "locale")?)?.to_owned(),
         artifacts,
         tables,
         integrity,
         incomplete_marker_present: marker,
+        schema_catalog,
+        acquisition,
+        max_file_bytes,
     })
+}
+
+fn validate_catalog(value: &json::Json) -> VResult<()> {
+    let facts = members(
+        value,
+        &[
+            "id",
+            "source_commit",
+            "source_blob",
+            "source_sha256",
+            "facts_sha256",
+        ],
+        &[],
+    )?;
+    for (key, expected) in [
+        ("id", forever_db2::catalog::CATALOG_ID),
+        ("source_commit", forever_db2::catalog::SOURCE_COMMIT),
+        ("source_blob", forever_db2::catalog::SOURCE_GIT_BLOB),
+        ("source_sha256", forever_db2::catalog::SOURCE_SHA256),
+        ("facts_sha256", crate::manifest::CATALOG_FACTS_SHA256),
+    ] {
+        const_str(need(facts, key)?, expected)?;
+    }
+    Ok(())
 }
 
 fn parse_artifact(value: &json::Json) -> VResult<Artifact> {
@@ -979,8 +1285,8 @@ fn parse_artifact(value: &json::Json) -> VResult<Artifact> {
     if !valid_hex(sha256, 64) {
         return Err(Invalid);
     }
-    let _declared_records = as_u64(need(entry, "declared_records")?)?;
-    let _table_schema_validated = as_bool(need(entry, "table_schema_validated")?)?;
+    let declared_records = as_u64(need(entry, "declared_records")?)?;
+    let schema_validated = as_bool(need(entry, "table_schema_validated")?)?;
     let record_data_decoded = as_bool(need(entry, "record_data_decoded")?)?;
     let decoded_rows = match need(entry, "decoded_rows")? {
         json::Json::Null => None,
@@ -999,6 +1305,8 @@ fn parse_artifact(value: &json::Json) -> VResult<Artifact> {
         sha256: sha256.to_owned(),
         record_data_decoded,
         decoded_rows,
+        declared_records,
+        schema_validated,
     })
 }
 

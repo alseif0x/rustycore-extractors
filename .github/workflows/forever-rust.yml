@@ -1,0 +1,203 @@
+{
+  "name": "Forever Rust synthetic checks",
+  "on": {
+    "pull_request": {
+      "branches": [
+        "forever"
+      ]
+    },
+    "push": {
+      "branches": [
+        "forever"
+      ]
+    },
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "forever-rust-${{ github.workflow }}-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "env": {
+    "CARGO_TERM_COLOR": "always",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUTF8": "1",
+    "RUSTUP_TOOLCHAIN": "1.98.0"
+  },
+  "jobs": {
+    "linux": {
+      "name": "Linux workspace (${{ matrix.profile }})",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "strategy": {
+        "fail-fast": false,
+        "matrix": {
+          "include": [
+            {
+              "profile": "debug",
+              "profile-flag": ""
+            },
+            {
+              "profile": "release",
+              "profile-flag": "--release"
+            }
+          ]
+        }
+      },
+      "defaults": {
+        "run": {
+          "shell": "bash"
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+          "with": {
+            "python-version": "3.11"
+          }
+        },
+        {
+          "name": "Display explicit build-only download plan",
+          "run": "printf '%s\\n' 'Fetch Rust 1.98.0 minimal toolchain, rustfmt/clippy from static.rust-lang.org via rustup checksum verification; fetch Cargo.lock registry archives only. No client, TACT, listfile or native-reference downloads.'",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Install exact Rust version",
+          "run": "rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Fetch locked registry closure",
+          "run": "cargo fetch --locked",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check Linux lint policy",
+          "if": "matrix.profile == 'debug'",
+          "run": "cargo clippy --offline --locked --workspace --all-targets --no-default-features -- -D warnings",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Test Rust workspace on synthetic inputs",
+          "run": "cargo test --offline --locked --workspace --all-targets --no-default-features ${{ matrix.profile-flag }}",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Build product and component binaries",
+          "run": "cargo build --offline --locked --workspace --bins --no-default-features ${{ matrix.profile-flag }}",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check source contracts and synthetic Python oracle",
+          "if": "matrix.profile == 'debug'",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Exercise synthetic metadata CLI",
+          "env": {
+            "FOREVER_DB2_INSPECT": "${{ runner.temp }}/forever-rust-target/${{ matrix.profile }}/forever-db2-inspect",
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          },
+          "run": "python -m unittest discover -s tests/forever -p test_metadata_cli.py -v"
+        }
+      ]
+    },
+    "windows": {
+      "name": "Windows workspace read consumers and output guards",
+      "runs-on": "windows-2022",
+      "timeout-minutes": 20,
+      "defaults": {
+        "run": {
+          "shell": "pwsh"
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+          "with": {
+            "python-version": "3.11"
+          }
+        },
+        {
+          "name": "Display explicit build-only download plan",
+          "run": "Write-Output 'Fetch Rust 1.98.0 minimal toolchain from static.rust-lang.org via rustup checksum verification; fetch Cargo.lock registry archives only. No client, TACT, listfile or native-reference downloads.'",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Install exact Rust version",
+          "run": "rustup toolchain install 1.98.0 --profile minimal\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Fetch locked registry closure",
+          "run": "cargo fetch --locked\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Test Rust workspace on synthetic inputs",
+          "run": "cargo test --offline --locked --workspace --all-targets --no-default-features\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Build product and component binaries",
+          "run": "cargo build --offline --locked --workspace --bins --no-default-features\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check source contracts and synthetic Python oracle",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Exercise synthetic metadata CLI",
+          "env": {
+            "FOREVER_DB2_INSPECT": "${{ runner.temp }}/forever-rust-target/debug/forever-db2-inspect.exe",
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          },
+          "run": "python -m unittest discover -s tests/forever -p test_metadata_cli.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
+        }
+      ]
+    }
+  }
+}

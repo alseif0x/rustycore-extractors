@@ -1,0 +1,19 @@
+[package]
+name = "forever-navigation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bounded pure Rust navigation geometry for the pinned Forever target"
+publish = false
+
+[dependencies]
+forever-db2 = { path = "../forever-db2" }
+forever-terrain = { path = "../forever-terrain" }
+forever-vmap = { path = "../forever-vmap" }
+
+[lints]
+workspace = true
+
+[target.'cfg(windows)'.dependencies]
+forever-platform = { path = "../forever-platform" }

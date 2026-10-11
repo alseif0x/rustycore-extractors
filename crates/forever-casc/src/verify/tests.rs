@@ -6,11 +6,270 @@
 use super::{Code, MARKER_NAME, verify};
 use forever_db2::CharacterTable;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+#[test]
+fn json_depth_policy_bounds_recursion_and_ignores_escaped_string_content() {
+    let at_limit = format!("{}null{}", "[".repeat(64), "]".repeat(64));
+    assert!(super::json::parse(&at_limit).is_ok());
+    let over_limit = format!("[{at_limit}]");
+    assert!(super::json::parse(&over_limit).is_err());
+    let mixed = format!("{}null{}", "{\"x\":[".repeat(32), "]}".repeat(32));
+    assert!(super::json::parse(&mixed).is_ok());
+    assert!(super::json::parse(&format!("[{mixed}]")).is_err());
+    let quoted = format!(r#"{{"text":"{}\"\\[]{{}}"}}"#, "[".repeat(256));
+    assert!(super::json::parse(&quoted).is_ok());
+    for invalid in ["]", "[", "\"unterminated", "{]"] {
+        assert!(super::json::parse(invalid).is_err());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn deeply_nested_manifest_and_companion_report_fail_below_byte_limit() {
+    let nested = format!("{}null{}", "[".repeat(65), "]".repeat(65));
+    assert!((nested.len() as u64) < super::MAX_MANIFEST_BYTES);
+    for name in [super::MANIFEST_NAME, super::REPORT_NAME] {
+        let sandbox = Sandbox::new();
+        let output = acquired_run(&sandbox, false, false);
+        fs::write(output.join(name), &nested).unwrap();
+        assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid, "{name}");
+    }
+}
+
+#[cfg(unix)]
+fn catalog_run(sandbox: &Sandbox, name: &str) -> PathBuf {
+    let table = CharacterTable::from_catalog(name).unwrap().unwrap();
+    let plan = crate::batch::Plan::parse_with_catalog(
+        &format!("{name}\t{}\n", table.file_id()),
+        "pinned-metadata-v1",
+    )
+    .unwrap();
+    let client = sandbox.root.join("client");
+    fs::create_dir_all(&client).unwrap();
+    let output = sandbox.root.join("catalog");
+    let report = crate::batch::extract(&plan, &client, &output, 70205, "enUS", |_, _| {
+        Ok((70205, crate::batch::tests::catalog_empty_fixture(name)))
+    })
+    .unwrap();
+    assert!(report.complete);
+    output
+}
+
+fn change_manifest(output: &std::path::Path, from: &str, to: &str) {
+    let path = output.join(super::MANIFEST_NAME);
+    let original = fs::read_to_string(&path).unwrap();
+    assert!(original.contains(from), "mutation absent: {from}");
+    fs::write(path, original.replace(from, to)).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_verifies_additional_and_reviewed_tables() {
+    for name in [
+        "LiquidType",
+        "UiWidgetVisTypeDataReq",
+        "ChrClasses",
+        "ChrRaces",
+    ] {
+        let sandbox = Sandbox::new();
+        let output = catalog_run(&sandbox, name);
+        assert_eq!(verify(&output).exit_code(), 0, "{name}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_rejects_changed_provenance_selector_or_version() {
+    for (from, to) in [
+        ("\"manifest_version\":3", "\"manifest_version\":2"),
+        ("\"manifest_version\":3", "\"manifest_version\":4"),
+        (
+            "\"scope\":\"explicit_db2_catalog_batch\"",
+            "\"scope\":\"explicit_db2_batch\"",
+        ),
+        ("\"id\":\"pinned-metadata-v1\"", "\"id\":\"other\""),
+        (
+            "\"source_commit\":\"02245dcd245e7433e524577656177723d3e4992e\"",
+            "\"source_commit\":\"12245dcd245e7433e524577656177723d3e4992e\"",
+        ),
+        (
+            "\"source_blob\":\"d06b97bad72ca2aecad3987ce9c348ac6055e0db\"",
+            "\"source_blob\":\"e06b97bad72ca2aecad3987ce9c348ac6055e0db\"",
+        ),
+        (
+            "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+            "197bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+        ),
+        (
+            "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9",
+            "1f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9",
+        ),
+        (",\"schema_catalog\":\"pinned-metadata-v1\"", ""),
+        (
+            "\"table_selection\":\"explicit_manifest\"",
+            "\"table_selection\":\"default_character_tables\"",
+        ),
+    ] {
+        let sandbox = Sandbox::new();
+        let output = catalog_run(&sandbox, "LiquidType");
+        change_manifest(&output, from, to);
+        assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid, "{from}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_rejects_unknown_identity_counts_paths_and_downgraded_claims() {
+    for (from, to) in [
+        ("LiquidType", "liquidtype"),
+        ("LiquidType", "UnknownTable"),
+        ("1371380", "1371381"),
+        ("\"entry_count\":1", "\"entry_count\":2"),
+        (
+            "\"relative_path\":\"LiquidType.db2\"",
+            "\"relative_path\":\"Other.db2\"",
+        ),
+        (
+            "\"table_schema_validated\":true",
+            "\"table_schema_validated\":false",
+        ),
+        (
+            "\"record_data_decoded\":true",
+            "\"record_data_decoded\":false",
+        ),
+        ("\"decoded_rows\":0", "\"decoded_rows\":null"),
+        ("\"total_bytes\":288", "\"total_bytes\":268435457"),
+    ] {
+        let sandbox = Sandbox::new();
+        let output = catalog_run(&sandbox, "LiquidType");
+        change_manifest(&output, from, to);
+        assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid, "{from}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_rechecks_meta_index_declared_count_and_decoded_rows() {
+    for (from, to, code) in [
+        (
+            "\"meta_index_field\":-1",
+            "\"meta_index_field\":0",
+            Code::TableIdentityMismatch,
+        ),
+        (
+            "\"declared_records\":0",
+            "\"declared_records\":1",
+            Code::TableIdentityMismatch,
+        ),
+        (
+            "\"decoded_rows\":0",
+            "\"decoded_rows\":1",
+            Code::RowDecodeMismatch,
+        ),
+    ] {
+        let sandbox = Sandbox::new();
+        let output = catalog_run(&sandbox, "LiquidType");
+        change_manifest(&output, from, to);
+        assert_eq!(verify(&output).code, code);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_keeps_known_table_hash_gate_after_artifact_rehash() {
+    let sandbox = Sandbox::new();
+    let output = catalog_run(&sandbox, "ChrClasses");
+    let path = output.join("ChrClasses.db2");
+    let old = fs::read(&path).unwrap();
+    let mut changed = old.clone();
+    put32(&mut changed, 152, 0);
+    fs::write(path, &changed).unwrap();
+    let old_hash = crate::sha256::hex(&old);
+    let new_hash = crate::sha256::hex(&changed);
+    let old_inventory = crate::sha256::hex(format!("{old_hash}  ChrClasses.db2").as_bytes());
+    let new_inventory = crate::sha256::hex(format!("{new_hash}  ChrClasses.db2").as_bytes());
+    change_manifest(&output, &old_hash, &new_hash);
+    change_manifest(&output, &old_inventory, &new_inventory);
+    change_manifest(
+        &output,
+        &format!(
+            "\"table_hash\":{}",
+            CharacterTable::Classes.schema_identity().0
+        ),
+        "\"table_hash\":0",
+    );
+    assert_eq!(verify(&output).code, Code::TableIdentityMismatch);
+}
+
+#[test]
+fn v2_cannot_acquire_catalog_claim_by_changing_only_version() {
+    let sandbox = Sandbox::new();
+    let (spec, files) = valid_run();
+    let output = materialize(&sandbox, &spec, &files);
+    assert_eq!(verify(&output).exit_code(), 0);
+    change_manifest(&output, "\"manifest_version\":2", "\"manifest_version\":3");
+    assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid);
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_rejects_duplicate_entries_even_with_matching_counts() {
+    let sandbox = Sandbox::new();
+    let output = catalog_run(&sandbox, "LiquidType");
+    let path = output.join(super::MANIFEST_NAME);
+    let mut text = fs::read_to_string(&path).unwrap();
+    for key in ["tables", "artifacts"] {
+        let prefix = format!("\"{key}\":[");
+        let start = text.find(&prefix).unwrap() + prefix.len();
+        let end = start + text[start..].find(']').unwrap();
+        let duplicate = format!(",{}", &text[start..end]);
+        text.insert_str(end, &duplicate);
+    }
+    text = text.replace("\"entry_count\":1", "\"entry_count\":2");
+    fs::write(path, text).unwrap();
+    assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid);
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_v3_redecodes_rehashed_metadata_only_or_extra_tail_files() {
+    for truncated in [true, false] {
+        let sandbox = Sandbox::new();
+        let output = catalog_run(&sandbox, "LiquidType");
+        let path = output.join("LiquidType.db2");
+        let old = fs::read(&path).unwrap();
+        let mut changed = old.clone();
+        if truncated {
+            changed.truncate(204);
+        } else {
+            changed.push(0);
+        }
+        fs::write(path, &changed).unwrap();
+        let old_hash = crate::sha256::hex(&old);
+        let new_hash = crate::sha256::hex(&changed);
+        let old_inventory = crate::sha256::hex(format!("{old_hash}  LiquidType.db2").as_bytes());
+        let new_inventory = crate::sha256::hex(format!("{new_hash}  LiquidType.db2").as_bytes());
+        change_manifest(&output, &old_hash, &new_hash);
+        change_manifest(&output, &old_inventory, &new_inventory);
+        change_manifest(
+            &output,
+            "\"bytes\":288",
+            &format!("\"bytes\":{}", changed.len()),
+        );
+        change_manifest(
+            &output,
+            "\"total_bytes\":288",
+            &format!("\"total_bytes\":{}", changed.len()),
+        );
+        assert_eq!(verify(&output).code, Code::RowDecodeMismatch);
+    }
+}
 
 struct Sandbox {
     root: PathBuf,
@@ -404,6 +663,7 @@ fn a_missing_manifest_is_input_io() {
     assert_eq!(report.exit_code(), 4);
 }
 
+#[cfg(unix)]
 #[test]
 fn a_symlinked_output_is_an_unsafe_path() {
     let sandbox = Sandbox::new();
@@ -438,4 +698,182 @@ fn an_marker_file_makes_a_self_declared_complete_run_incomplete() {
     let report = verify(&directory);
     assert_eq!(report.code, Code::IncompleteRun);
     assert_eq!(report.exit_code(), 8);
+}
+
+#[cfg(unix)]
+fn acquired_run(sandbox: &Sandbox, catalog: bool, metadata_only: bool) -> PathBuf {
+    let name = if catalog || metadata_only {
+        "LiquidType"
+    } else {
+        "ChrClasses"
+    };
+    let table = CharacterTable::from_catalog(name).unwrap().unwrap();
+    let text = if metadata_only {
+        "UnknownTable\t123\n".to_owned()
+    } else {
+        format!("{name}\t{}\n", table.file_id())
+    };
+    let plan = if catalog {
+        crate::batch::Plan::parse_with_catalog(&text, "pinned-metadata-v1").unwrap()
+    } else {
+        crate::batch::Plan::parse(&text).unwrap()
+    };
+    let client = sandbox.root.join("client");
+    fs::create_dir_all(&client).unwrap();
+    let output = sandbox.root.join("acquired");
+    let report = crate::batch::extract_with_acquisition(
+        &plan,
+        &client,
+        &output,
+        70205,
+        "enUS",
+        Some(crate::batch::tests::rust_local_profile(1024)),
+        |_, _| Ok((70205, crate::batch::tests::catalog_empty_fixture(name))),
+    )
+    .unwrap();
+    assert!(report.complete);
+    output
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_verifies_both_selectors_and_preserves_metadata_only_claims() {
+    for (catalog, metadata_only) in [(false, false), (false, true), (true, false)] {
+        let sandbox = Sandbox::new();
+        let output = acquired_run(&sandbox, catalog, metadata_only);
+        assert_eq!(verify(&output).exit_code(), 0);
+        let manifest = fs::read_to_string(output.join(super::MANIFEST_NAME)).unwrap();
+        assert!(manifest.contains("\"manifest_version\":4"));
+        if metadata_only {
+            assert!(manifest.contains("\"table_schema_validated\":false,\"record_data_decoded\":false,\"decoded_rows\":null"));
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_rejects_profile_selector_budget_and_version_tampering() {
+    for (from, to) in [
+        ("\"manifest_version\":4", "\"manifest_version\":3"),
+        ("\"manifest_version\":4", "\"manifest_version\":2"),
+        ("\"manifest_version\":4", "\"manifest_version\":5"),
+        (
+            "\"schema_selection\":\"reviewed\"",
+            "\"schema_selection\":\"catalog\"",
+        ),
+        ("\"backend\":\"rust-local\"", "\"backend\":\"native\""),
+        ("local-v7-ckey-root-nz-v1", "local-v7-ckey-root-nz-v2"),
+        ("\"offline\":true", "\"offline\":false"),
+        ("\"complete_ckey_md5\":true", "\"complete_ckey_md5\":false"),
+        (
+            "\"ekey_validation\":\"prefix9\"",
+            "\"ekey_validation\":\"full\"",
+        ),
+        (
+            "\"root_layout\":\"header-50893-v2\"",
+            "\"root_layout\":\"auto\"",
+        ),
+        ("\"file_bytes\":1024", "\"file_bytes\":2048"),
+        ("\"max_file_bytes\":1024", "\"max_file_bytes\":2048"),
+        ("\"entry_count\":1", "\"entry_count\":2"),
+        (
+            "\"max_batch_bytes\":268435456",
+            "\"max_batch_bytes\":268435457",
+        ),
+    ] {
+        let sandbox = Sandbox::new();
+        let output = acquired_run(&sandbox, false, false);
+        change_manifest(&output, from, to);
+        assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid, "{from}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_requires_its_profile_and_companion_report_to_match() {
+    for mutation in 0..5 {
+        let sandbox = Sandbox::new();
+        let output = acquired_run(&sandbox, true, false);
+        let report = output.join(super::REPORT_NAME);
+        if mutation == 0 {
+            fs::remove_file(&report).unwrap();
+        } else if mutation == 1 {
+            let bytes = fs::read_to_string(&report).unwrap();
+            fs::write(
+                &report,
+                bytes.replace("\"file_bytes\":1024", "\"file_bytes\":512"),
+            )
+            .unwrap();
+        } else if mutation == 2 {
+            let bytes = fs::read_to_string(&report).unwrap();
+            fs::write(
+                &report,
+                bytes.replace(
+                    "\"schema_selection\":\"catalog\"",
+                    "\"schema_selection\":\"reviewed\"",
+                ),
+            )
+            .unwrap();
+        } else if mutation == 3 {
+            let path = output.join(super::MANIFEST_NAME);
+            let text = fs::read_to_string(&path).unwrap();
+            let profile = crate::batch::tests::rust_local_profile(1024).render();
+            fs::write(
+                path,
+                text.replace(&format!(",\"acquisition\":{profile}"), ""),
+            )
+            .unwrap();
+        } else {
+            let path = output.join(super::MANIFEST_NAME);
+            let text = fs::read_to_string(&path).unwrap();
+            let profile = crate::batch::tests::rust_local_profile(1024).render();
+            fs::write(
+                path,
+                text.replace(
+                    &format!(",\"acquisition\":{profile}"),
+                    &format!(",\"acquisition\":{profile},\"acquisition\":{profile}"),
+                ),
+            )
+            .unwrap();
+        }
+        assert_eq!(
+            verify(&output).code,
+            Code::ManifestSchemaInvalid,
+            "case {mutation}"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_cannot_exceed_lower_profile_cap_even_with_consistent_hashes() {
+    let sandbox = Sandbox::new();
+    let output = acquired_run(&sandbox, false, false);
+    // Original empty ChrClasses file is 376 bytes. The 300-byte profile and
+    // options agree with each other but cannot describe this artifact.
+    change_manifest(&output, "\"file_bytes\":1024", "\"file_bytes\":300");
+    change_manifest(&output, "\"max_file_bytes\":1024", "\"max_file_bytes\":300");
+    assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid);
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_catalog_never_downgrades_to_metadata_only() {
+    let sandbox = Sandbox::new();
+    let output = acquired_run(&sandbox, true, false);
+    change_manifest(
+        &output,
+        "\"record_data_decoded\":true,\"decoded_rows\":0",
+        "\"record_data_decoded\":false,\"decoded_rows\":null",
+    );
+    assert_eq!(verify(&output).code, Code::ManifestSchemaInvalid);
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_v4_marker_and_failed_manifest_remain_incomplete() {
+    let sandbox = Sandbox::new();
+    let output = acquired_run(&sandbox, false, false);
+    fs::write(output.join(MARKER_NAME), b"{}").unwrap();
+    assert_eq!(verify(&output).code, Code::IncompleteRun);
 }

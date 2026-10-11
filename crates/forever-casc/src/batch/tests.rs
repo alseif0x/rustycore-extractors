@@ -3,14 +3,145 @@
 //! storage, no real client bytes and no network. All temporary directories live
 //! under `TMPDIR` (externally configured) and are removed on drop.
 use super::{MAX_FILE_BYTES, Plan, extract};
+#[cfg(unix)]
 use crate::Error;
 use forever_db2::{CharacterTable, DecodedTable, Metadata};
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::symlink;
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+#[test]
+fn catalog_plan_requires_exact_known_name_and_file_id() {
+    for metadata in forever_db2::catalog::tables() {
+        let input = format!("{}\t{}\n", metadata.name, metadata.file_data_id);
+        assert!(Plan::parse_with_catalog(&input, "pinned-metadata-v1").is_ok());
+    }
+    for input in [
+        "LiquidType\t1\n",
+        "liquidtype\t1371380\n",
+        "UnknownTable\t123\n",
+        "LiquidType\t1371380\nLIQUIDTYPE\t123\n",
+    ] {
+        assert!(Plan::parse_with_catalog(input, "pinned-metadata-v1").is_err());
+    }
+    assert!(Plan::parse_with_catalog("LiquidType\t1371380\n", "other").is_err());
+    // Legacy explicit plans retain their existing metadata-only behavior.
+    assert!(Plan::parse("UnknownTable\t123\n").is_ok());
+    let mut input = String::new();
+    for metadata in forever_db2::catalog::tables().iter().take(257) {
+        input.push_str(&format!("{}\t{}\n", metadata.name, metadata.file_data_id));
+    }
+    assert_eq!(
+        Plan::parse_with_catalog(&input, "pinned-metadata-v1").err(),
+        Some("manifest_policy_limit")
+    );
+}
+
+#[cfg(unix)]
+pub(crate) fn catalog_empty_fixture(name: &str) -> Vec<u8> {
+    let table = CharacterTable::from_catalog(name).unwrap().unwrap();
+    let (hash, layout, index, fields) = table.schema_identity();
+    let mut data = vec![0; 204 + 4 * fields];
+    data[..4].copy_from_slice(b"WDC5");
+    put32(&mut data, 4, 5);
+    put32(&mut data, 140, fields as u32);
+    put32(&mut data, 152, hash);
+    put32(&mut data, 156, layout);
+    data[174..176].copy_from_slice(&index.to_le_bytes());
+    put32(&mut data, 176, fields as u32);
+    data
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_batch_emits_v3_and_decodes_an_additional_table() {
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("catalog");
+    let plan = Plan::parse_with_catalog("LiquidType\t1371380\n", "pinned-metadata-v1").unwrap();
+    let report = extract(
+        &plan,
+        &sandbox.client(),
+        &destination,
+        70205,
+        "enUS",
+        |_, budget| {
+            assert_eq!(budget, MAX_FILE_BYTES);
+            Ok((70205, catalog_empty_fixture("LiquidType")))
+        },
+    )
+    .unwrap();
+    assert!(report.complete);
+    assert!(
+        report
+            .json
+            .contains("\"scope\":\"explicit_db2_catalog_batch\"")
+    );
+    assert!(
+        report
+            .json
+            .contains("\"record_data_decoded\":true,\"decoded_rows\":0")
+    );
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    assert!(manifest.contains("\"manifest_version\":3"));
+    assert!(manifest.contains("\"schema_catalog\":\"pinned-metadata-v1\""));
+    assert_eq!(crate::verify::verify(&destination).exit_code(), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn catalog_never_publishes_metadata_only_fallback() {
+    let sandbox = Sandbox::new();
+    let plan = Plan::parse_with_catalog("LiquidType\t1371380\n", "pinned-metadata-v1").unwrap();
+    for (name, mutation) in [("truncated", 0), ("wrong_layout", 1)] {
+        let destination = sandbox.destination(name);
+        let mut data = catalog_empty_fixture("LiquidType");
+        if mutation == 0 {
+            data.truncate(204);
+        } else {
+            put32(&mut data, 156, 0);
+        }
+        let report = extract(
+            &plan,
+            &sandbox.client(),
+            &destination,
+            70205,
+            "enUS",
+            |_, _| Ok((70205, data.clone())),
+        )
+        .unwrap();
+        assert!(!report.complete);
+        assert!(!destination.join("LiquidType.db2").exists());
+        assert!(!report.json.contains("\"record_data_decoded\":true"));
+    }
+    let legacy = Plan::parse("LiquidType\t1371380\n").unwrap();
+    let destination = sandbox.destination("legacy");
+    let report = extract(
+        &legacy,
+        &sandbox.client(),
+        &destination,
+        70205,
+        "enUS",
+        |_, _| Ok((70205, catalog_empty_fixture("LiquidType"))),
+    )
+    .unwrap();
+    assert!(report.complete);
+    assert!(
+        report
+            .json
+            .contains("\"table_schema_validated\":false,\"record_data_decoded\":false")
+    );
+    assert!(
+        fs::read_to_string(destination.join("forever-manifest.json"))
+            .unwrap()
+            .starts_with("{\"manifest_version\":2,")
+    );
+}
 
 struct Sandbox {
     root: PathBuf,
@@ -19,7 +150,7 @@ struct Sandbox {
 impl Sandbox {
     fn new() -> Self {
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = base_dir().join(format!("forever-batch-{}-{id}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("forever-batch-{}-{id}", std::process::id()));
         fs::create_dir_all(root.join("client")).unwrap();
         fs::create_dir_all(root.join("out")).unwrap();
         Self { root }
@@ -42,21 +173,6 @@ impl Drop for Sandbox {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.root);
     }
-}
-
-/// A writable base directory with no `.git` ancestor. `output::create` rejects
-/// any destination below a repository marker, so the external `TMPDIR` (which
-/// may sit under a checkout) is only a fallback.
-fn base_dir() -> PathBuf {
-    for candidate in [PathBuf::from("/tmp/opencode"), std::env::temp_dir()] {
-        let git_free = !candidate
-            .ancestors()
-            .any(|ancestor| ancestor.join(".git").exists());
-        if candidate.is_dir() && git_free {
-            return candidate;
-        }
-    }
-    std::env::temp_dir()
 }
 
 fn put32(buf: &mut [u8], at: usize, value: u32) {
@@ -98,6 +214,7 @@ fn decoded_fixture(table: CharacterTable) -> Vec<u8> {
 }
 
 /// Metadata-only prefix: enough for `Metadata::read`, no decodable body.
+#[cfg(unix)]
 fn metadata_fixture() -> Vec<u8> {
     let mut out = vec![0u8; 204];
     out[..4].copy_from_slice(b"WDC5");
@@ -111,6 +228,7 @@ fn unknown_plan() -> Plan {
     Plan::parse("Alpha\t1\nBeta\t2\n").unwrap()
 }
 
+#[cfg(unix)]
 fn list_dir(path: &Path) -> Vec<String> {
     let mut names: Vec<_> = fs::read_dir(path)
         .unwrap()
@@ -189,6 +307,7 @@ fn manifest_parse_accepts_valid_and_rejects_every_violation() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn default_plan_writes_two_db2_and_a_report() {
     let sandbox = Sandbox::new();
@@ -216,6 +335,7 @@ fn default_plan_writes_two_db2_and_a_report() {
     assert!(report.json.contains("\"record_data_decoded\":true"));
 }
 
+#[cfg(unix)]
 #[test]
 fn unreviewed_name_is_published_without_schema_or_decode_claims() {
     let sandbox = Sandbox::new();
@@ -268,6 +388,7 @@ fn unsupported_build_or_locale_creates_nothing() {
     assert!(!destination.exists());
 }
 
+#[cfg(unix)]
 #[test]
 fn observed_build_change_and_oversized_buffer_are_entry_errors() {
     let sandbox = Sandbox::new();
@@ -293,6 +414,7 @@ fn observed_build_change_and_oversized_buffer_are_entry_errors() {
     assert!(report.json.contains("read_policy_limit"));
 }
 
+#[cfg(unix)]
 #[test]
 fn one_failed_entry_does_not_abort_or_publish_the_rest() {
     let sandbox = Sandbox::new();
@@ -319,6 +441,7 @@ fn one_failed_entry_does_not_abort_or_publish_the_rest() {
     assert!(report.json.contains("file_unavailable"));
 }
 
+#[cfg(unix)]
 #[test]
 fn encrypted_or_unsupported_section_is_an_error_not_a_published_file() {
     let sandbox = Sandbox::new();
@@ -348,6 +471,7 @@ fn encrypted_or_unsupported_section_is_an_error_not_a_published_file() {
     assert!(!list_dir(&destination).contains(&"ChrClasses.db2".to_owned()));
 }
 
+#[cfg(unix)]
 #[test]
 fn unsafe_output_paths_are_rejected_before_any_creation() {
     // Inside the client root.
@@ -394,6 +518,7 @@ fn unsafe_output_paths_are_rejected_before_any_creation() {
     assert!(!missing.exists());
 }
 
+#[cfg(unix)]
 fn attempt(sandbox: &Sandbox, destination: &Path) -> &'static str {
     match extract(
         &unknown_plan(),
@@ -408,6 +533,7 @@ fn attempt(sandbox: &Sandbox, destination: &Path) -> &'static str {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn reports_never_contain_the_client_path() {
     let sandbox = Sandbox::new();
@@ -441,6 +567,7 @@ fn file_limit_constants_are_the_documented_policy() {
     assert_eq!(super::MAX_FILES, 256);
 }
 
+#[cfg(unix)]
 #[test]
 fn complete_batch_publishes_a_v2_manifest_with_matching_invariants() {
     let sandbox = Sandbox::new();
@@ -493,6 +620,52 @@ fn complete_batch_publishes_a_v2_manifest_with_matching_invariants() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn batch_and_verifier_count_sparse_copies_beyond_the_direct_record_count() {
+    let sandbox = Sandbox::new();
+    let destination = sandbox.destination("sparse-copies");
+    let plan = Plan::parse("ChrRaces\t1305311\n").unwrap();
+    let mut bytes = decoded_fixture(CharacterTable::Races);
+    let id_offset = bytes.len() - 4;
+    put32(&mut bytes, id_offset, 70_000);
+    put32(&mut bytes, 164, 90_000);
+    put32(&mut bytes, 204 + 36, 2);
+    for (new, source) in [(80_000u32, 70_000u32), (90_000, 80_000)] {
+        bytes.extend(new.to_le_bytes());
+        bytes.extend(source.to_le_bytes());
+    }
+    let report = extract(
+        &plan,
+        &sandbox.client(),
+        &destination,
+        build(),
+        "enUS",
+        |_entry, _budget| Ok((build(), bytes.clone())),
+    )
+    .unwrap();
+    assert!(report.complete, "{}", report.json);
+    assert!(report.json.contains("\"declared_records\":1"));
+    assert!(report.json.contains("\"decoded_rows\":3"));
+    let manifest = fs::read_to_string(destination.join("forever-manifest.json")).unwrap();
+    assert_eq!(
+        artifact_field(&manifest, "ChrRaces", "declared_records"),
+        "1"
+    );
+    assert_eq!(artifact_field(&manifest, "ChrRaces", "decoded_rows"), "3");
+    let verified = crate::verify::verify(&destination);
+    assert_eq!(verified.exit_code(), 0, "{}", verified.json());
+
+    // A stale manifest produced by the old RecordCount rule must fail the
+    // re-decoding gate even though the artifact and its hash are unchanged.
+    let stale = manifest.replace("\"decoded_rows\":3", "\"decoded_rows\":1");
+    assert_ne!(manifest, stale);
+    fs::write(destination.join("forever-manifest.json"), stale).unwrap();
+    let verified = crate::verify::verify(&destination);
+    assert!(verified.json().contains("ROW_DECODE_MISMATCH"));
+}
+
+#[cfg(unix)]
 #[test]
 fn manifest_meta_index_field_comes_from_the_reviewed_schema_not_the_header() {
     // Real 70205 evidence: `ChrRaces` carries header `IndexField == 0` while the
@@ -527,6 +700,7 @@ fn manifest_meta_index_field_comes_from_the_reviewed_schema_not_the_header() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn unreviewed_table_publishes_the_meta_index_sentinel() {
     // No reviewed authority exists for an unknown table, so the honest sentinel
@@ -557,6 +731,7 @@ fn unreviewed_table_publishes_the_meta_index_sentinel() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn failed_batch_publishes_a_failed_manifest_with_reason_and_code() {
     let sandbox = Sandbox::new();
@@ -598,6 +773,7 @@ fn failed_batch_publishes_a_failed_manifest_with_reason_and_code() {
 /// `"name":"<name>"` anchor within the manifest's `"artifacts":[...]` array.
 /// The manifest is a flat, single-line document with stable key order, so
 /// linear scanning is sufficient and dependency-free.
+#[cfg(unix)]
 fn artifact_field(manifest: &str, name: &str, key: &str) -> String {
     let array = artifact_section(manifest);
     let anchor = format!("\"name\":\"{name}\"");
@@ -607,6 +783,7 @@ fn artifact_field(manifest: &str, name: &str, key: &str) -> String {
     json_field(&rest[..end], key)
 }
 
+#[cfg(unix)]
 fn artifact_section(manifest: &str) -> &str {
     let start = manifest.find("\"artifacts\":[").expect("artifacts array");
     let rest = &manifest[start..];
@@ -617,6 +794,7 @@ fn artifact_section(manifest: &str) -> &str {
 /// Returns the JSON value for `key` inside the table object that follows the
 /// `"name":"<name>"` anchor within the manifest's `"formats":{"tables":[...]}`
 /// array. Same linear-scan assumption as `artifact_field`.
+#[cfg(unix)]
 fn table_field(manifest: &str, name: &str, key: &str) -> String {
     let start = manifest.find("\"tables\":[").expect("tables array");
     let rest = &manifest[start..];
@@ -630,6 +808,7 @@ fn table_field(manifest: &str, name: &str, key: &str) -> String {
 }
 
 /// Returns the JSON value for `key` inside the `"integrity":{...}` object.
+#[cfg(unix)]
 fn integrity_field(manifest: &str, key: &str) -> String {
     let start = manifest.find("\"integrity\":{").expect("integrity object");
     let rest = &manifest[start..];
@@ -640,6 +819,7 @@ fn integrity_field(manifest: &str, key: &str) -> String {
 /// Minimal field reader for the manifest's flat `"key":value` members. Values
 /// are unquoted strings/numbers/booleans/null; the manifest contains no nested
 /// objects between an artifact's braces or inside the integrity object.
+#[cfg(unix)]
 fn json_field(object: &str, key: &str) -> String {
     let needle = format!("\"{key}\":");
     let start = object
@@ -654,4 +834,191 @@ fn json_field(object: &str, key: &str) -> String {
         let end = rest.find([',', '}']).unwrap_or(rest.len());
         rest[..end].to_owned()
     }
+}
+
+#[cfg(unix)]
+pub(crate) fn rust_local_profile(limit: u32) -> crate::acquisition::Profile {
+    let mut builder = crate::acquisition::OptionsBuilder::default();
+    for (key, value) in [
+        ("--backend", "rust-local"),
+        ("--index-layout", "contiguous"),
+        ("--root-layout", "header-50893-v2"),
+    ] {
+        assert!(builder.push(key, std::ffi::OsStr::new(value)).unwrap());
+    }
+    builder
+        .push("--max-file-bytes", std::ffi::OsStr::new(&limit.to_string()))
+        .unwrap();
+    builder.finish(MAX_FILE_BYTES).unwrap().profile().unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_default_batch_emits_v4_and_removes_real_marker_only_on_success() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.destination("acquired");
+    let profile = rust_local_profile(1024);
+    let report = super::extract_with_acquisition(
+        &Plan::character_tables(),
+        &sandbox.client(),
+        &output,
+        70205,
+        "enUS",
+        Some(profile),
+        |entry, budget| {
+            assert_eq!(budget, 1024);
+            assert!(output.join(crate::verify::MARKER_NAME).is_file());
+            Ok((70205, catalog_empty_fixture(&entry.name)))
+        },
+    )
+    .unwrap();
+    assert!(report.complete);
+    assert!(report.json.contains("\"schema_selection\":\"reviewed\""));
+    let manifest = fs::read_to_string(output.join("forever-manifest.json")).unwrap();
+    assert!(manifest.contains("\"manifest_version\":4"));
+    assert!(manifest.contains(&profile.render()));
+    assert!(!output.join(crate::verify::MARKER_NAME).exists());
+    assert_eq!(crate::verify::verify(&output).exit_code(), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_catalog_and_legacy_metadata_only_keep_their_selection_policy() {
+    for catalog in [false, true] {
+        let sandbox = Sandbox::new();
+        let output = sandbox.destination("acquired");
+        let plan = if catalog {
+            Plan::parse_with_catalog("LiquidType\t1371380\n", "pinned-metadata-v1").unwrap()
+        } else {
+            Plan::parse("UnknownTable\t123\n").unwrap()
+        };
+        let report = super::extract_with_acquisition(
+            &plan,
+            &sandbox.client(),
+            &output,
+            70205,
+            "enUS",
+            Some(rust_local_profile(1024)),
+            |_, _| Ok((70205, catalog_empty_fixture("LiquidType"))),
+        )
+        .unwrap();
+        assert!(report.complete);
+        assert!(report.json.contains(if catalog {
+            "\"record_data_decoded\":true"
+        } else {
+            "\"table_schema_validated\":false,\"record_data_decoded\":false,\"decoded_rows\":null"
+        }));
+        assert_eq!(crate::verify::verify(&output).exit_code(), 0);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_input_change_aborts_without_later_reads_or_removing_marker() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.destination("changed");
+    let plan = Plan::parse("ChrClasses\t1361031\nChrRaces\t1305311\nUnknownTable\t123\n").unwrap();
+    let mut calls = 0;
+    let result = super::extract_with_acquisition(
+        &plan,
+        &sandbox.client(),
+        &output,
+        70205,
+        "enUS",
+        Some(rust_local_profile(1024)),
+        |entry, _| {
+            calls += 1;
+            if calls == 1 {
+                Ok((70205, catalog_empty_fixture(&entry.name)))
+            } else {
+                Err(Error::LocalStore(crate::local_store::Error::InputChanged))
+            }
+        },
+    );
+    assert_eq!(result.err(), Some("local_store_input_changed"));
+    assert_eq!(calls, 2);
+    assert!(output.join(crate::verify::MARKER_NAME).is_file());
+    assert!(output.join("ChrClasses.db2").is_file());
+    assert!(!output.join("ChrRaces.db2").exists());
+    assert!(!output.join("forever-manifest.json").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_ordinary_entry_failure_continues_and_retains_incomplete_marker() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.destination("partial");
+    let mut calls = 0;
+    let report = super::extract_with_acquisition(
+        &Plan::character_tables(),
+        &sandbox.client(),
+        &output,
+        70205,
+        "enUS",
+        Some(rust_local_profile(1024)),
+        |entry, _| {
+            calls += 1;
+            if calls == 1 {
+                Err(Error::LocalStore(crate::local_store::Error::MissingFile))
+            } else {
+                Ok((70205, catalog_empty_fixture(&entry.name)))
+            }
+        },
+    )
+    .unwrap();
+    assert!(!report.complete);
+    assert_eq!(calls, 2);
+    assert!(output.join(crate::verify::MARKER_NAME).is_file());
+    assert!(output.join("ChrRaces.db2").is_file());
+    assert_eq!(crate::verify::verify(&output).exit_code(), 8);
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_smaller_file_budget_is_forwarded_and_enforced_before_publication() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.destination("capped");
+    let plan = Plan::parse("UnknownTable\t123\n").unwrap();
+    let report = super::extract_with_acquisition(
+        &plan,
+        &sandbox.client(),
+        &output,
+        70205,
+        "enUS",
+        Some(rust_local_profile(64)),
+        |_, budget| {
+            assert_eq!(budget, 64);
+            Ok((70205, vec![0; 65]))
+        },
+    )
+    .unwrap();
+    assert!(!report.complete);
+    assert!(report.json.contains("read_policy_limit"));
+    assert!(!output.join("UnknownTable.db2").exists());
+    assert!(output.join(crate::verify::MARKER_NAME).exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn acquired_build_change_is_fatal_and_never_reads_next_entry() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.destination("build_changed");
+    let mut calls = 0;
+    let result = super::extract_with_acquisition(
+        &Plan::character_tables(),
+        &sandbox.client(),
+        &output,
+        70205,
+        "enUS",
+        Some(rust_local_profile(1024)),
+        |_, _| {
+            calls += 1;
+            Ok((70170, catalog_empty_fixture("ChrClasses")))
+        },
+    );
+    assert_eq!(result.err(), Some("client_build_changed"));
+    assert_eq!(calls, 1);
+    assert!(output.join(crate::verify::MARKER_NAME).exists());
+    assert!(!output.join("ChrClasses.db2").exists());
+    assert!(!output.join("forever-manifest.json").exists());
 }

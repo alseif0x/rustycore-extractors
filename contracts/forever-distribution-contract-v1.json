@@ -1,0 +1,245 @@
+{
+  "contract": "forever-distribution-v1",
+  "version": 1,
+  "status": "local-candidate",
+  "full_extractor_complete": false,
+  "publication_authorized": false,
+  "platform": "linux",
+  "target": "x86_64-unknown-linux-gnu",
+  "toolchain": "1.98.0",
+  "commands": {
+    "build": "python3 tools/package_forever.py build --source ROOT --output NEW --cargo-cache CACHE --epoch UNIX",
+    "verify": "python3 tools/package_forever.py verify --archive FILE",
+    "rebuild": "python3 tools/package_forever.py rebuild --bundle UNPACKED_ROOT --output NEW"
+  },
+  "source": {
+    "identity": "exact current allowlisted source snapshot, including uncommitted product code; not HEAD-only git archive",
+    "required": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      "LICENSE",
+      "NOTICE.md",
+      "THIRD_PARTY_NOTICES.md",
+      "AUTHORS",
+      "LICENSES",
+      "crates",
+      "contracts",
+      "schemas",
+      "tools/package_forever.py",
+      "docs/forever-distribution.md",
+      "docs/licensing/forever-rust-casc.md",
+      "licensing/import-manifest.json",
+      "licensing/inventory.json",
+      "licensing/source-files.json",
+      ".github/workflows/forever-rust.yml",
+      "docs/forever-ci.md",
+      "tests/contracts/test_forever_ci_contract.py",
+      "crates/forever-platform/README.md",
+      "crates/forever-platform/src/path.rs",
+      "crates/forever-platform/src/windows.rs",
+      "crates/forever-platform/src/windows/ffi.rs",
+      "crates/forever-platform/src/windows/tests.rs",
+      "crates/forever-casc/src/admission.rs",
+      "crates/forever-casc/src/local_store.rs",
+      "crates/forever-casc/src/local_store/io.rs",
+      "crates/forever-casc/src/local_store/io/windows.rs",
+      "crates/forever-casc/src/local_store/io/windows/tests.rs",
+      "crates/forever-extractor/src/input.rs",
+      "crates/forever-extractor/src/input/windows.rs",
+      "crates/forever-extractor/src/input/windows_tests.rs",
+      "contracts/forever-windows-consumers-contract-v1.json",
+      "tests/contracts/test_forever_windows_consumers_contract.py",
+      "crates/forever-platform/src/windows/producer.rs",
+      "crates/forever-platform/src/windows/producer/ffi.rs",
+      "crates/forever-platform/src/windows/producer/tests.rs",
+      "crates/forever-extractor/src/producer.rs",
+      "crates/forever-extractor/src/producer/tests.rs",
+      "crates/forever-extractor/examples/windows_producer_identity.rs",
+      "tools/seal_forever_windows.py",
+      "tests/distribution/test_windows_seal.py",
+      "contracts/forever-windows-producer-contract-v1.json",
+      "tests/contracts/test_forever_windows_producer_contract.py",
+      "docs/forever-windows-producer.md",
+      "crates/forever-vmap/Cargo.toml",
+      "crates/forever-vmap/src/store.rs",
+      "crates/forever-vmap/src/store/windows.rs",
+      "crates/forever-vmap/src/store/windows/tests.rs",
+      "contracts/forever-windows-vmap-contract-v1.json",
+      "tests/contracts/test_forever_windows_vmap_contract.py",
+      "docs/forever-windows-vmap.md",
+      "crates/forever-casc/src/blte.rs",
+      "crates/forever-casc/src/blte/framing.rs",
+      "crates/forever-casc/src/blte/framing/tests.rs",
+      "crates/forever-casc/src/local_store/io/route.rs",
+      "crates/forever-casc/src/local_store/owned.rs",
+      "crates/forever-casc/src/local_store/routes.rs",
+      "crates/forever-casc/src/local_store/route_tests.rs",
+      "crates/forever-casc/src/local_store/tests.rs",
+      "contracts/forever-input-diagnostics-contract-v1.json",
+      "tests/contracts/test_forever_input_diagnostics_contract.py",
+      "docs/forever-blte-framing.md",
+      "docs/forever-required-routes.md",
+      "crates/forever-casc/src/local_store/framing.rs",
+      "crates/forever-casc/src/local_store/framing_tests.rs",
+      "crates/forever-casc/src/local_store/io/framing.rs",
+      "docs/forever-required-framing.md",
+      "contracts/forever-required-framing-contract-v1.json",
+      "tests/contracts/test_forever_required_framing_contract.py",
+      "docs/forever-required-framing-acceptance.md",
+      "crates/forever-navigation/Cargo.toml",
+      "crates/forever-navigation/src/inventory.rs",
+      "crates/forever-navigation/src/inventory/windows.rs",
+      "crates/forever-navigation/src/inventory/windows/guard.rs",
+      "crates/forever-navigation/src/inventory/windows/run.rs",
+      "crates/forever-navigation/src/inventory/windows/run/tests.rs",
+      "crates/forever-navigation/src/inventory/windows/tests.rs",
+      "crates/forever-navigation/src/terrain/load.rs",
+      "crates/forever-navigation/src/terrain/load/windows.rs",
+      "crates/forever-navigation/src/terrain/load/windows/tests.rs",
+      "docs/forever-windows-navigation-readers.md",
+      "contracts/forever-windows-navigation-contract-v1.json",
+      "tests/contracts/test_forever_windows_navigation_contract.py"
+    ],
+    "forbidden": [
+      "client assets",
+      "keys",
+      "CASC caches",
+      "generated extraction output",
+      ".git",
+      ".opencode",
+      "environment secrets",
+      "native reference checkout",
+      "unreviewed binary extensions"
+    ],
+    "symlinks_and_special_files": "reject",
+    "mutation": "reject a changed selected source snapshot",
+    "scope": "production pure Rust build, synthetic checks, exact registry sources and retained notices; native oracle reference trees are external and excluded",
+    "legacy_provenance": "retain existing legacy license/reference inventories as documentation; the actual pure Rust binary dependency closure is its versioned distribution manifest, not a claim native C++ dependencies are linked",
+    "profile": "forever-seven-crate-windows-navigation-readers-source-v7",
+    "workspace_crates": 7,
+    "windows_dependency_edges": {
+      "forever-casc": [
+        "forever-platform"
+      ],
+      "forever-extractor": [
+        "forever-platform"
+      ],
+      "forever-vmap": [
+        "forever-platform"
+      ],
+      "forever-navigation": [
+        "forever-platform"
+      ]
+    },
+    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge",
+    "windows_producer_scope": "original loaded-main-module seal acquisition and pure PE verifier/sealer source, synthetic checks and scope documentation are mandatory corresponding source; this Linux recipe does not seal or enable a Windows product",
+    "windows_vmap_scope": "original guarded Windows RootedSource and safe EOF source/tests; preliminary synthetic Wine evidence does not accept actual Windows/NTFS or enable the product",
+    "input_diagnostics_scope": "metadata-only fixed routes and pure whole-span BLTE inspector remain distinct APIs; v6 additionally mandates the key-free fixed-three-input complete-span framing adapter with static contract and qualified executed Linux observations; no full EKey/CKey/plaintext or key sufficiency claim",
+    "routes_doc_relocation": {
+      "from": "crates/forever-casc/docs/required-routes-v1.md",
+      "to": "docs/forever-required-routes.md",
+      "policy": "byte-identical content, original author/date retained; original crate-doc path is not imported or allowlisted"
+    },
+    "required_framing_scope": "exact7adapter imports plus contract/static tests/evidence scope doc; full guarded record read,30byte ignored prelude,9byte index-prefix check, all frame MD5s and outer N/Z/E only; imported design doc retains pre-live snapshot wording; Windows runtime/product remains unaccepted",
+    "windows_navigation_scope": "original guarded Windows terrain/inventory readers and sequential caller-owned memory-sink runner; strict filesystem admission and protected final-check work; source-only inclusion does not enable Windows product or output publication",
+    "windows_navigation_evidence": {
+      "synthetic_tests_passed": 112,
+      "overall_accepted": false,
+      "trace_evidence_complete": false,
+      "unknown_syscall_bodies": 40,
+      "denied_nonlocal_attempts": 783,
+      "actual_windows_ntfs_accepted": false,
+      "windows_product_enabled": false,
+      "qualification": "Original trace_evidence_complete=true is rejected by root; 40 unknown syscall classes remain unresolved independently of 783 visible denied NETLINK attempts. Synthetic semantics only; no zero-attempt or full runtime claim."
+    }
+  },
+  "registry_dependencies": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "sha256": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+      "selected_license": "MIT"
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.8.9",
+      "sha256": "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316",
+      "selected_license": "MIT"
+    }
+  ],
+  "dependency_sources": "explicit existing Cargo cache only; exact archives, unmodified extracted files, all original notices and generated Cargo directory checksums; lockfile exact closure required",
+  "network": false,
+  "build": {
+    "recipe": "cargo build --offline --locked --release -p forever-extractor --no-default-features",
+    "source": "build the frozen shipped corresponding source",
+    "isolation": "new external Cargo home and target; sanitized flags/environment; directory-vendored dependencies",
+    "reproducibility": "explicit epoch, fixed remapped build paths, debuginfo stripped, one codegen unit; two fresh local builds and moved-source rebuild must match",
+    "native_backend": false,
+    "external_prerequisites": [
+      "Python 3 with tomllib",
+      "installed Rust 1.98.0 toolchain",
+      "native linker",
+      "compatible Linux x86_64 system runtime"
+    ],
+    "runtime_evidence": "record actual ELF dependencies and version requirements; no static or universal Linux ABI compatibility claim"
+  },
+  "archive": {
+    "format": "sorted deterministic tar.gz",
+    "metadata": "explicit epoch for tar/gzip; uid/gid zero; empty owner/group; fixed file modes; no build logs or absolute source paths",
+    "contains": [
+      "bin/forever-extractor",
+      "source",
+      "BUILD.md",
+      "toolchain.json",
+      "distribution-manifest.json"
+    ],
+    "inventory": "closed versioned manifest, sorted relative paths with exact bytes, SHA-256 and modes",
+    "verification": "safe names/types/topology, duplicate rejection, exact inventory and all payload hashes; no execution",
+    "self_authentication": false
+  },
+  "acceptance": [
+    "focused synthetic positive/negative packaging tests",
+    "two fresh offline builds with identical binary/source/archive hashes",
+    "unpacked moved-source offline rebuild with identical binary",
+    "packaged CLI smoke and complete synthetic component package verification",
+    "no attempted network access",
+    "production Rust source and existing work preserved"
+  ],
+  "not_claimed": [
+    "Windows functional extraction or distribution",
+    "full real Forever extraction",
+    "new C++ output parity",
+    "new RustyCore runtime acceptance",
+    "cryptographic authenticity",
+    "release publication"
+  ],
+  "limits": {
+    "selected_source_file_bytes": 33554432,
+    "payload_file_bytes": 67108864,
+    "total_payload_bytes": 268435456,
+    "members": 8192,
+    "manifest_bytes": 4194304,
+    "scope": "logical input/retained-payload budgets, not process RSS; decoder/raw archive and payload buffers coexist"
+  },
+  "toolchain_notices": {
+    "scope": "exact installed Rust1.98.0 standard-library copyright index and complete distributed license-text directory, retained as notices; not an assertion every listed component is linked",
+    "sha256": {
+      "COPYRIGHT-library.html": "68129500b616d5838629e68f55ff3aed5e096dacf60ce9eb41bbe599a563afa6",
+      "licenses/Apache-2.0.txt": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff",
+      "licenses/BSD-2-Clause.txt": "f32fb3b417a194167cfad068223fc975ba96c5960513a10f66a3c28720aec1df",
+      "licenses/CC-BY-SA-4.0.txt": "23ee78c8bae49cf08ea2f0c84945c66b987ebe4520881fb51b3dad4fb43d07c2",
+      "licenses/GCC-exception-3.1.txt": "a3966c9410ef94a1efbfa9ec04e9c1994026a70623fbf0885ce36737bfba3b54",
+      "licenses/GPL-2.0-only.txt": "54b212ba1f97f6948fa5486239ab505dd820b02e50cbfd296b4062c8609a70af",
+      "licenses/GPL-3.0-or-later.txt": "05315fce6c35f79b8a35454828995fa26336f235895ac64557abc028f4ffcea2",
+      "licenses/ISC.txt": "0ff61769b238634e042ab759dddfd104a8e69d091e3600ae3410e401a6164381",
+      "licenses/LLVM-exception.txt": "e34c58338bd89d43e709e226610d8f32b3e3c47f4ad9a99a8dc1d4ac7842488e",
+      "licenses/MIT.txt": "b85dcd3e453d05982552c52b5fc9e0bdd6d23c6f8e844b984a88af32570b0cc0",
+      "licenses/NCSA.txt": "39cb0234065c92b9e6cee3830cbb52b1aa289aa8fe9ba2e66730fec5cf05c630",
+      "licenses/OFL-1.1.txt": "8eea8287e5876b539670cadb82e99f9a7afddec6f6730811be1daf25d2e9bcfd",
+      "licenses/Unicode-3.0.txt": "f5062c9a188d81dfe66b56db4182dcf9e4b17c0d9b0d311a8e20b3a1b075c443"
+    },
+    "source": "known installed compiler sysroot for initial build; bundled copies for moved rebuild; no download",
+    "verifier": "closed exact pinned map and byte hashes; reject missing/changed notices"
+  }
+}

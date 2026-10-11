@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rustycore.dev/schemas/forever-acquisition-v1.schema.json",
+  "title": "Explicit Forever Rust local CASC acquisition profile v1",
+  "$comment": "Original contract 2026-10-11. Logical payload budgets are not RSS bounds. Current CLI selects one explicit layout uniformly for all sixteen index buckets. Parent component schema must further constrain file_bytes to its own ceiling. No source paths, keys, raw assets or network requests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "backend",
+    "profile",
+    "index_layouts",
+    "root_layout",
+    "offline",
+    "complete_ckey_md5",
+    "ekey_validation",
+    "limits"
+  ],
+  "properties": {
+    "backend": {
+      "const": "rust-local"
+    },
+    "profile": {
+      "const": "local-v7-ckey-root-nz-v1"
+    },
+    "index_layouts": {
+      "enum": [
+        [
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous",
+          "contiguous"
+        ],
+        [
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged",
+          "paged"
+        ]
+      ]
+    },
+    "root_layout": {
+      "enum": [
+        "headerless-18125",
+        "header-30080",
+        "header-50893-v1",
+        "header-50893-v2"
+      ]
+    },
+    "offline": {
+      "const": true
+    },
+    "complete_ckey_md5": {
+      "const": true
+    },
+    "ekey_validation": {
+      "const": "prefix9"
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resident_bytes",
+        "scratch_bytes",
+        "combined_bytes",
+        "build_info_bytes",
+        "build_info_rows",
+        "path_bytes",
+        "config_bytes",
+        "config_lines",
+        "config_keys",
+        "directory_entries",
+        "index_files",
+        "index_bytes",
+        "index_entries",
+        "index_pages",
+        "encoding_bytes",
+        "encoding_pages",
+        "encoding_page_bytes",
+        "encoding_espec_bytes",
+        "encoding_tail_bytes",
+        "encoding_entries",
+        "encoding_keys",
+        "root_bytes",
+        "root_header_bytes",
+        "root_blocks",
+        "root_entries",
+        "archive_span_bytes",
+        "file_bytes",
+        "candidate_attempts",
+        "blte_frames"
+      ],
+      "properties": {
+        "resident_bytes": {
+          "const": 805306368
+        },
+        "scratch_bytes": {
+          "const": 536870912
+        },
+        "combined_bytes": {
+          "const": 1073741824
+        },
+        "build_info_bytes": {
+          "const": 262144
+        },
+        "build_info_rows": {
+          "const": 4096
+        },
+        "path_bytes": {
+          "const": 4096
+        },
+        "config_bytes": {
+          "const": 262144
+        },
+        "config_lines": {
+          "const": 8192
+        },
+        "config_keys": {
+          "const": 4096
+        },
+        "directory_entries": {
+          "const": 65536
+        },
+        "index_files": {
+          "const": 4096
+        },
+        "index_bytes": {
+          "const": 67108864
+        },
+        "index_entries": {
+          "const": 2000000
+        },
+        "index_pages": {
+          "const": 131072
+        },
+        "encoding_bytes": {
+          "const": 268435456
+        },
+        "encoding_pages": {
+          "const": 65536
+        },
+        "encoding_page_bytes": {
+          "const": 65536
+        },
+        "encoding_espec_bytes": {
+          "const": 16777216
+        },
+        "encoding_tail_bytes": {
+          "const": 134217728
+        },
+        "encoding_entries": {
+          "const": 4000000
+        },
+        "encoding_keys": {
+          "const": 8000000
+        },
+        "root_bytes": {
+          "const": 268435456
+        },
+        "root_header_bytes": {
+          "const": 4096
+        },
+        "root_blocks": {
+          "const": 65536
+        },
+        "root_entries": {
+          "const": 4000000
+        },
+        "archive_span_bytes": {
+          "const": 268435456
+        },
+        "file_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "candidate_attempts": {
+          "const": 64
+        },
+        "blte_frames": {
+          "const": 65536
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-package-state-v2.schema.json",
+  "title": "Forever package state v2 protocol and transaction",
+  "description": "Authored 2026-10-11. Internal recovery metadata only; final artifact-integrity manifest remains v1. Actual recovery additionally checks caller context, full hashes, namespace and inode identities before mutations.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state_version",
+        "context_sha256"
+      ],
+      "properties": {
+        "state_version": {
+          "const": 2
+        },
+        "context_sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "not": {
+            "const": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transaction_version",
+        "context_sha256",
+        "artifact"
+      ],
+      "properties": {
+        "transaction_version": {
+          "const": 2
+        },
+        "context_sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "not": {
+            "const": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "component",
+            "path",
+            "bytes",
+            "sha256"
+          ],
+          "properties": {
+            "component": {
+              "enum": [
+                "db2",
+                "gt",
+                "cameras",
+                "maps",
+                "vmaps",
+                "mmaps"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[ -~]+$",
+              "allOf": [
+                {
+                  "not": {
+                    "pattern": "[\"\\\\:*?<>|]"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(^|/)\\."
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[. ](/|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(^/|//|/$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "[^ -~]"
+                  }
+                }
+              ]
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 134217728
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "minLength": 64,
+              "maxLength": 64
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "db2"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^dbc/(enUS|esES)/"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "gt"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^gt/"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "cameras"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^cameras/"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "maps"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^maps/"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "vmaps"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^vmaps/"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "mmaps"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "pattern": "^mmaps/"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -22,6 +22,9 @@ pub struct Plan {
     explicit: bool,
     /// SHA-256 of the exact manifest text, present only for explicit plans.
     manifest_sha256: Option<String>,
+    /// Private invariant: true only after every entry resolved in the pinned
+    /// catalog with its exact spelling and FileDataId. v2 remains unchanged.
+    schema_catalog: bool,
 }
 impl Plan {
     /// Two reviewed tables, not an invented full-client catalog.
@@ -36,6 +39,7 @@ impl Plan {
                 .collect(),
             explicit: false,
             manifest_sha256: None,
+            schema_catalog: false,
         }
     }
     /// ASCII table name TAB decimal FileDataID; no paths, comments, keys or URLs.
@@ -86,7 +90,38 @@ impl Plan {
             entries,
             explicit: true,
             manifest_sha256: Some(crate::sha256::hex(input.as_bytes())),
+            schema_catalog: false,
         })
+    }
+
+    /// Explicit v3 plan. Unknown/case-mismatched names and wrong IDs fail
+    /// before output creation; there is no metadata-only catalog fallback.
+    pub fn parse_with_catalog(input: &str, catalog: &str) -> Result<Self, &'static str> {
+        if catalog != forever_db2::catalog::CATALOG_ID {
+            return Err("invalid_manifest");
+        }
+        let mut plan = Self::parse(input)?;
+        for entry in &plan.entries {
+            let table = CharacterTable::from_catalog(&entry.name)
+                .map_err(|_| "invalid_manifest")?
+                .ok_or("invalid_manifest")?;
+            if entry.id != table.file_id() {
+                return Err("invalid_manifest");
+            }
+        }
+        plan.schema_catalog = true;
+        Ok(plan)
+    }
+
+    fn table(&self, name: &str) -> Result<Option<CharacterTable>, &'static str> {
+        if self.schema_catalog {
+            CharacterTable::from_catalog(name)
+                .map_err(|_| "invalid_manifest")?
+                .map(Some)
+                .ok_or("invalid_manifest")
+        } else {
+            Ok(CharacterTable::named(name))
+        }
     }
 }
 pub struct Report {
@@ -250,6 +285,22 @@ pub fn extract(
     destination: &Path,
     build: u32,
     locale: &str,
+    load: impl FnMut(&Entry, u32) -> Result<(u32, Vec<u8>), Error>,
+) -> Result<Report, &'static str> {
+    extract_with_acquisition(plan, client, destination, build, locale, None, load)
+}
+
+/// Version 4 when an explicit Rust-local acquisition profile is supplied.
+/// The profile changes acquisition and resource limits, not table selection or
+/// the existing distinction between reviewed records and metadata-only entries.
+/// The caller opens one Session before invoking this output-producing function.
+pub fn extract_with_acquisition(
+    plan: &Plan,
+    client: &Path,
+    destination: &Path,
+    build: u32,
+    locale: &str,
+    acquisition: Option<crate::acquisition::Profile>,
     mut load: impl FnMut(&Entry, u32) -> Result<(u32, Vec<u8>), Error>,
 ) -> Result<Report, &'static str> {
     if !crate::SUPPORTED_CLIENTS
@@ -259,7 +310,23 @@ pub fn extract(
     {
         return Err("unsupported_client");
     }
+    let max_file_bytes = acquisition.map_or(MAX_FILE_BYTES, |profile| profile.max_file_bytes());
+    if max_file_bytes == 0 || max_file_bytes > MAX_FILE_BYTES {
+        return Err("read_policy_limit");
+    }
     let directory = output::create(client, destination)?;
+    if let Some(profile) = acquisition {
+        let marker = format!(
+            "{{\"manifest_version\":4,\"status\":\"incomplete\",\"acquisition\":{},\"paths_redacted\":true}}",
+            profile.render()
+        );
+        output::publish(
+            &directory,
+            ".rustycore-forever-incomplete",
+            "json",
+            marker.as_bytes(),
+        )?;
+    }
     let started_at = crate::manifest::now_rfc3339();
     let mut total = 0u64;
     let mut complete = true;
@@ -267,17 +334,24 @@ pub fn extract(
     let mut facts = Vec::new();
     for entry in &plan.entries {
         let remaining = MAX_BATCH_BYTES - total;
-        let budget = remaining.min(u64::from(MAX_FILE_BYTES)) as u32;
-        let known = CharacterTable::named(&entry.name);
+        let budget = remaining.min(u64::from(max_file_bytes)) as u32;
+        let known = plan.table(&entry.name)?;
         let identity = std::cell::Cell::new(FactIdentity::unknown());
         let digest = std::cell::Cell::new(None);
         let outcome = if budget == 0 {
             Outcome::failed("batch_policy_limit")
         } else {
             match load(entry, budget) {
+                Err(error) if acquisition.is_some() && error.is_input_changed() => {
+                    // Fatal: no more reads or publication; the real marker stays.
+                    return Err(error.code());
+                }
                 Err(error) => Outcome::failed(error.code()),
                 Ok((observed, bytes)) => {
                     if observed != build {
+                        if acquisition.is_some() {
+                            return Err("client_build_changed");
+                        }
                         Outcome::failed("client_build_changed")
                     } else if bytes.len() > budget as usize {
                         Outcome::failed("read_policy_limit")
@@ -339,30 +413,65 @@ pub fn extract(
         reports.push(outcome.json(entry));
         facts.push(outcome.fact(entry, identity.get(), digest.take()));
     }
+    let scope = if plan.schema_catalog {
+        "explicit_db2_catalog_batch"
+    } else {
+        "explicit_db2_batch"
+    };
+    let catalog_report = if plan.schema_catalog {
+        format!(
+            ",\"schema_catalog\":\"{}\"",
+            forever_db2::catalog::CATALOG_ID
+        )
+    } else {
+        String::new()
+    };
+    let acquisition_report = acquisition.map_or_else(String::new, |profile| {
+        format!(
+            ",\"schema_selection\":\"{}\",\"acquisition\":{}",
+            if plan.schema_catalog {
+                "catalog"
+            } else {
+                "reviewed"
+            },
+            profile.render()
+        )
+    });
+    let report_version = if acquisition.is_some() { 2 } else { 1 };
     let json = format!(
-        "{{\"report_version\":1,\"scope\":\"explicit_db2_batch\",\"status\":\"{}\",\"build\":{},\"locale\":\"{}\",\"offline\":true,\"paths_redacted\":true,\"all_requested_files_complete\":{},\"full_client_extraction\":false,\"files\":[{}]}}",
+        "{{\"report_version\":{report_version},\"scope\":\"{scope}\"{catalog_report}{acquisition_report},\"status\":\"{}\",\"build\":{},\"locale\":\"{}\",\"offline\":true,\"paths_redacted\":true,\"all_requested_files_complete\":{},\"full_client_extraction\":false,\"files\":[{}]}}",
         if complete { "success" } else { "incomplete" },
         build,
         locale,
         complete,
         reports.join(",")
     );
-    let manifest = crate::manifest::render(
-        build,
-        &crate::manifest::Options {
-            locale: if locale == "enUS" { "enUS" } else { "esES" },
-            table_selection: if plan.explicit {
-                "explicit_manifest"
-            } else {
-                "default_character_tables"
-            },
-            manifest_sha256: plan.manifest_sha256.clone(),
-            entry_count: plan.entries.len(),
+    let options = crate::manifest::Options {
+        locale: if locale == "enUS" { "enUS" } else { "esES" },
+        table_selection: if plan.explicit {
+            "explicit_manifest"
+        } else {
+            "default_character_tables"
         },
-        &facts,
-        &started_at,
-        Some(&crate::manifest::now_rfc3339()),
-    );
+        manifest_sha256: plan.manifest_sha256.clone(),
+        entry_count: plan.entries.len(),
+    };
+    let completed_at = crate::manifest::now_rfc3339();
+    let manifest = if let Some(profile) = acquisition {
+        crate::manifest::render_acquired(
+            build,
+            &options,
+            &facts,
+            &started_at,
+            Some(&completed_at),
+            plan.schema_catalog,
+            profile,
+        )
+    } else if plan.schema_catalog {
+        crate::manifest::render_catalog(build, &options, &facts, &started_at, Some(&completed_at))
+    } else {
+        crate::manifest::render(build, &options, &facts, &started_at, Some(&completed_at))
+    };
     // If either JSON document cannot be published, extraction returns Err and
     // the already published `.db2` files remain on disk without it. That
     // partial directory is explicit (the manifest is required for a complete
@@ -371,5 +480,9 @@ pub fn extract(
     // compatibility, then the v2 `forever-manifest.json`.
     output::publish(&directory, "report", "json", json.as_bytes())?;
     output::publish(&directory, "forever-manifest", "json", manifest.as_bytes())?;
+    if complete && acquisition.is_some() {
+        std::fs::remove_file(directory.join(crate::verify::MARKER_NAME))
+            .map_err(|_| "output_write_failed")?;
+    }
     Ok(Report { complete, json })
 }

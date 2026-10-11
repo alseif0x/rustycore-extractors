@@ -1,19 +1,46 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 use crate::Error;
-use std::{fs::File, io::Read, path::Path};
+use std::path::Path;
+#[cfg(not(windows))]
+use std::{fs::File, io::Read};
 pub const PRODUCT: &str = "wow_classic_beta";
 pub const SUPPORTED_CLIENTS: &[(&str, u32)] = &[("1.60.1.70170", 70170), ("1.60.1.70205", 70205)];
 const MAX_BUILD_INFO: u64 = 256 * 1024;
 
 pub fn admit(client: &Path) -> Result<u32, Error> {
-    let file = File::open(client.join(".build.info")).map_err(|_| Error::Input)?;
-    let mut bytes = Vec::new();
-    file.take(MAX_BUILD_INFO + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| Error::Input)?;
-    if bytes.len() as u64 > MAX_BUILD_INFO {
-        return Err(Error::Limit);
-    }
+    #[cfg(windows)]
+    let bytes = {
+        use forever_platform::{
+            path::Limits,
+            windows::{LinkPolicy, ReadFile},
+        };
+        let map = |error| match error {
+            forever_platform::Error::Limit | forever_platform::Error::Allocation => Error::Limit,
+            forever_platform::Error::Changed => {
+                Error::LocalStore(crate::local_store::Error::InputChanged)
+            }
+            _ => Error::Input,
+        };
+        let file = ReadFile::open(
+            &client.join(".build.info"),
+            Limits::default(),
+            LinkPolicy::Allow,
+        )
+        .map_err(map)?;
+        file.read_all(MAX_BUILD_INFO as usize).map_err(map)?
+    };
+    #[cfg(not(windows))]
+    let bytes = {
+        let file = File::open(client.join(".build.info")).map_err(|_| Error::Input)?;
+        let mut bytes = Vec::new();
+        file.take(MAX_BUILD_INFO + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| Error::Input)?;
+        if bytes.len() as u64 > MAX_BUILD_INFO {
+            return Err(Error::Limit);
+        }
+        bytes
+    };
     let info = std::str::from_utf8(&bytes).map_err(|_| Error::Metadata)?;
     let build = parse(info)?;
     native_shape(info)?;

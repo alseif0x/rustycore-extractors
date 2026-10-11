@@ -10,12 +10,13 @@
 //! file, and keep the output inside the external run directory.
 //!
 //! Contract: `db2_dump --file <path.db2> --table <name>`, where `<name>` is any
-//! reviewed `CharacterTable` name. No network and no CASC: only the named local
+//! reviewed `CharacterTable` name. Additional pinned metadata requires
+//! `--schema-catalog pinned-metadata-v1`. No network and no CASC: only the named local
 //! file is read. The canonical format is one header line
 //! `forever-db2-dump v1 <tablename>` followed by one line per row in ascending
 //! id order; fields are tab-separated and array elements are comma-joined.
 //! Values are tagged `u:`, `i:`, `f:0x########` or `t:`.
-use forever_db2::{CharacterTable, DecodedTable, RecordError, Value};
+use forever_db2::{CharacterTable, DecodedTable, RecordError, Value, catalog};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -47,24 +48,41 @@ fn main() -> ExitCode {
 }
 
 fn parse_args() -> Result<Config, &'static str> {
+    parse_options(std::env::args_os().skip(1))
+}
+
+fn parse_options(
+    args: impl IntoIterator<Item = std::ffi::OsString>,
+) -> Result<Config, &'static str> {
     let mut file: Option<PathBuf> = None;
-    let mut table: Option<CharacterTable> = None;
-    let mut args = std::env::args_os().skip(1);
+    let mut name: Option<String> = None;
+    let mut catalog_selected = false;
+    let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         if arg == "--file" && file.is_none() {
             let value = args.next().ok_or("invalid_invocation")?;
             file = Some(PathBuf::from(value));
-        } else if arg == "--table" && table.is_none() {
+        } else if arg == "--table" && name.is_none() {
             let value = args.next().ok_or("invalid_invocation")?;
-            let name = value.to_str().ok_or("invalid_invocation")?;
-            table = Some(CharacterTable::named(name).ok_or(RecordError::Schema.code())?);
+            name = Some(value.to_str().ok_or("invalid_invocation")?.to_owned());
+        } else if arg == "--schema-catalog" && !catalog_selected {
+            if args.next().ok_or("invalid_invocation")? != catalog::CATALOG_ID {
+                return Err("invalid_invocation");
+            }
+            catalog_selected = true;
         } else {
             return Err("invalid_invocation");
         }
     }
+    let name = name.ok_or("invalid_invocation")?;
+    let table = if catalog_selected {
+        CharacterTable::from_catalog(&name).map_err(|error| error.code())?
+    } else {
+        CharacterTable::named(&name)
+    };
     Ok(Config {
         file: file.ok_or("invalid_invocation")?,
-        table: table.ok_or("invalid_invocation")?,
+        table: table.ok_or(RecordError::Schema.code())?,
     })
 }
 
@@ -105,6 +123,7 @@ fn write_values(out: &mut impl Write, values: &[Value]) -> io::Result<()> {
             Value::Unsigned(number) => write!(out, "u:{number}")?,
             Value::Unsigned64(number) => write!(out, "u:{number}")?,
             Value::Signed(number) => write!(out, "i:{number}")?,
+            Value::Signed64(number) => write!(out, "i:{number}")?,
             Value::FloatBits(bits) => write!(out, "f:0x{bits:08x}")?,
             Value::Text(text) => {
                 out.write_all(b"t:")?;
@@ -135,4 +154,90 @@ fn write_text(out: &mut impl Write, text: &str) -> io::Result<()> {
 
 fn output_error(_: io::Error) -> &'static str {
     "output_io"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn options(args: &[&str]) -> Result<Config, &'static str> {
+        parse_options(args.iter().map(|arg| std::ffi::OsString::from(*arg)))
+    }
+
+    #[test]
+    fn catalog_diagnostic_is_explicit_and_order_independent() {
+        for args in [
+            vec![
+                "--file",
+                "synthetic.db2",
+                "--table",
+                "LiquidType",
+                "--schema-catalog",
+                "pinned-metadata-v1",
+            ],
+            vec![
+                "--schema-catalog",
+                "pinned-metadata-v1",
+                "--table",
+                "LiquidType",
+                "--file",
+                "synthetic.db2",
+            ],
+        ] {
+            assert_eq!(options(&args).unwrap().table.name(), "LiquidType");
+        }
+        assert!(options(&["--file", "synthetic.db2", "--table", "LiquidType"]).is_err());
+        assert!(
+            options(&[
+                "--file",
+                "synthetic.db2",
+                "--table",
+                "LiquidType",
+                "--schema-catalog",
+                "untrusted"
+            ])
+            .is_err()
+        );
+        assert!(
+            options(&[
+                "--file",
+                "synthetic.db2",
+                "--table",
+                "LiquidType",
+                "--schema-catalog",
+                "pinned-metadata-v1",
+                "--schema-catalog",
+                "pinned-metadata-v1"
+            ])
+            .is_err()
+        );
+        assert_eq!(
+            options(&[
+                "--file",
+                "synthetic.db2",
+                "--table",
+                "ChrClasses",
+                "--schema-catalog",
+                "pinned-metadata-v1"
+            ])
+            .unwrap()
+            .table,
+            CharacterTable::Classes
+        );
+    }
+
+    #[test]
+    fn canonical_signed_64_text_is_lossless() {
+        let mut out = Vec::new();
+        write_values(
+            &mut out,
+            &[
+                Value::Signed64(i64::MIN),
+                Value::Signed64(i64::MAX),
+                Value::Signed64(-1),
+            ],
+        )
+        .unwrap();
+        assert_eq!(out, b"i:-9223372036854775808,i:9223372036854775807,i:-1");
+    }
 }

@@ -1,10 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Target-admitted offline CASC read prototype, not a pure-Rust CASC engine.
+pub mod acquisition;
 mod admission;
+pub mod archive_record;
 pub mod batch;
+pub mod blte;
+pub mod build_config;
+pub mod cameras;
+pub mod collision;
+pub mod encoding;
+pub mod gametables;
+pub mod integrity;
+pub mod keys;
+pub mod local_index;
+pub mod local_store;
 pub mod manifest;
 pub mod options;
+pub mod package;
+pub mod root;
 mod sha256;
+pub mod terrain;
 pub mod verify;
 pub use admission::{PRODUCT, SUPPORTED_CLIENTS, admit};
 
@@ -27,6 +42,8 @@ pub enum Error {
     Limit,
     InvalidId,
     InvalidLocale,
+    BackendUnavailable,
+    LocalStore(local_store::Error),
 }
 impl Error {
     pub fn code(self) -> &'static str {
@@ -42,13 +59,26 @@ impl Error {
             Self::Limit => "read_policy_limit",
             Self::InvalidId => "invalid_file_data_id",
             Self::InvalidLocale => "unsupported_locale",
+            Self::BackendUnavailable => "backend_unavailable",
+            Self::LocalStore(error) => error.code(),
         }
+    }
+    pub const fn is_input_changed(self) -> bool {
+        matches!(self, Self::LocalStore(local_store::Error::InputChanged))
     }
     pub fn exit_code(self) -> u8 {
         match self {
             Self::UnsupportedClient => 3,
             Self::Limit => 6,
-            Self::InvalidId | Self::InvalidLocale => 2,
+            Self::InvalidId | Self::InvalidLocale | Self::BackendUnavailable => 2,
+            Self::LocalStore(local_store::Error::UnsupportedClient) => 3,
+            Self::LocalStore(
+                local_store::Error::Limit
+                | local_store::Error::Config(build_config::Error::Limit)
+                | local_store::Error::Index(local_index::Error::Limit)
+                | local_store::Error::Encoding(encoding::Error::Limit)
+                | local_store::Error::Root(root::Error::Limit),
+            ) => 6,
             _ => 4,
         }
     }

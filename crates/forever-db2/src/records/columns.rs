@@ -154,7 +154,10 @@ impl Column {
                 u64::from_le_bytes(word)
             }
             2 => {
-                if count != 1 {
+                // Pinned RecordGetVarInt::CommonData copies at most four
+                // bytes into an uninitialized T. A 64-bit T has no defined
+                // upper half; reject for signed and unsigned fields alike.
+                if width > 32 || count != 1 {
                     return Err(RecordError::Column);
                 }
                 u64::from(*self.common.get(&id).unwrap_or(&self.a))
@@ -252,5 +255,17 @@ mod tests {
             direct(4).bits(&record, 0, 0, 0, 32, 1),
             Err(RecordError::Column)
         );
+    }
+
+    #[test]
+    fn common_data_cannot_define_upper_half_of_64_bit_field() {
+        let mut column = direct(0);
+        column.compression = 2;
+        column.a = u32::MAX;
+        column.common.insert(7, 0x12345678);
+        for id in [7, 8] {
+            assert_eq!(column.bits(&[], 0, id, 0, 64, 1), Err(RecordError::Column));
+        }
+        assert_eq!(column.bits(&[], 0, 7, 0, 32, 1), Ok(0x12345678));
     }
 }

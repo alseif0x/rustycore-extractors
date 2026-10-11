@@ -1,0 +1,51 @@
+{
+  "contract": "forever-product-v1",
+  "version": 1,
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "builds": [70170, 70205],
+  "locales": ["enUS", "esES"],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "linux",
+  "commands": ["inspect", "extract", "resume", "verify"],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "max_db2_entries": 1126,
+    "ordered_keys": ["forever-product", "build", "locale", "index", "root", "components", "terrain", "pack", "navigation", "big-base-unit", "skip-liquids", "maximum-slope", "non-steep-slope"],
+    "repeatable_tail": "db2 TAB exact-catalog-name TAB exact-FDID LF; alphabetical names, unique IDs",
+    "components": ["db2", "gt", "cameras", "maps", "vmaps", "mmaps"],
+    "index_layouts": ["contiguous", "paged"],
+    "root_layouts": ["headerless-18125", "header-30080", "header-50893-v1", "header-50893-v2"],
+    "selections": ["none", "all", "map:ID", "tile:ID:X:Y"],
+    "coordinates": "X=column,Y=row; 0..63; canonical unsigned decimal",
+    "slopes": "integer 0..90; non-steep <= maximum; unselected navigation requires 55/55 and false flags",
+    "dependencies": {
+      "cameras": ["db2", "CinematicCamera"],
+      "mmaps": ["db2", "maps", "vmaps", "Map", "LiquidType", "terrain=all"]
+    },
+    "offmesh_connections": "explicitly unsupported in v1; empty only"
+  },
+  "identities": {
+    "plan": "SHA-256 of the complete canonical TSV bytes",
+    "producer": "SHA-256 of loaded /proc/self/exe, max 256 MiB",
+    "source": "SHA-256(forever-logical-collection-v1 NUL + build little-endian u32 + build key + CDN key + locale ASCII + ENCODING content key + ROOT content key)",
+    "source_scope": "authenticated logical collection; not physical archive availability, encryption-key discovery or a complete archive snapshot; every read still requires complete content MD5"
+  },
+  "package": {"manifest": "forever-package.json", "final_version": 1, "state_version": 2},
+  "limits": {"db2_file_bytes": 16777216, "db2_total_bytes": 17179869184, "gt_files": 20, "camera_files": 4096, "camera_total_bytes": 268435456},
+  "resume": "explicit same-context only; verified sealed components skipped; entire unfinished producer reruns and replays retained artifacts; complete output refuses writes",
+  "empty_world": "complete empty Map direct rows plus validated liquid startup and pure empty navigation plan admit zero navigation artifacts for All only",
+  "verification": {
+    "scope": "artifact_integrity_and_intrinsic_formats",
+    "db2": "complete bounded catalog decoding; exact selected name set",
+    "gt": "all 20 exact names; 14 numeric, six raw-only",
+    "cameras": "exact discovered raw file set from selected complete CinematicCamera; no M2 parsing",
+    "maps": "canonical names, selected map/tile scope, MAPS10/build and tilelist framing",
+    "vmaps": "VMAP_4.E intrinsic dtree/VMO/tree/tile/index framing and per-tree ordinal bounds",
+    "mmaps": "canonical selected names, MMAP16/Detour7 framing, no offmesh records",
+    "not_claimed": ["complete geometry inventory", "placement or ancestor association proof", "Detour topology", "original C++ byte parity for newly produced worlds", "runtime acceptance", "full real-client extraction", "Windows distribution"]
+  },
+  "failure": "stable path-free code and component; incomplete outputs retained; no hidden available-prefix, native, network or missing-file fallback",
+  "full_extractor_complete": false
+}

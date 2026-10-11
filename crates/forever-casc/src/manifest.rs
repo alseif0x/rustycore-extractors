@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Deterministic serializer for the Forever v2 output manifest.
+//! Deterministic serializers for reviewed v2 and explicit catalog v3 manifests.
 //!
 //! This module owns no I/O, no storage and no client access: the batch feeds it
 //! already-reviewed per-entry facts and it emits JSON in the exact field order
-//! of `schemas/forever-manifest-v2.schema.json`. It uses `std` only (no JSON or
+//! of their separate versioned schemas. The v2 byte format remains unchanged.
+//! It uses `std` only (no JSON or
 //! hashing dependency); `sha256` is the in-tree FIPS 180-4 implementation.
 //!
 //! Honest omissions: the batch has no source for a real `run_id` or an install
@@ -20,6 +21,11 @@ const EXTRACTOR_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Documented batch limits (mirror `batch::{MAX_FILE_BYTES, MAX_BATCH_BYTES}`).
 const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_BATCH_BYTES: u64 = 256 * 1024 * 1024;
+/// Digest of the complete, reproducible factual catalog artifact. Version3
+/// locks source declarations and their generated representation independently.
+pub const CATALOG_FACTS_SHA256: &str =
+    "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9";
+pub const CATALOG_SCOPE: &str = "explicit_db2_catalog_batch";
 
 /// Identity and independent facts for one requested entry, in plan order.
 ///
@@ -63,6 +69,50 @@ pub fn render(
     started_at: &str,
     completed_at: Option<&str>,
 ) -> String {
+    render_version(build, options, facts, started_at, completed_at, false, None)
+}
+
+/// Separate v3 contract for explicitly selected pinned catalog schemas.
+pub fn render_catalog(
+    build: u32,
+    options: &Options,
+    facts: &[TableFact],
+    started_at: &str,
+    completed_at: Option<&str>,
+) -> String {
+    render_version(build, options, facts, started_at, completed_at, true, None)
+}
+
+/// Version 4 records explicit acquisition, independently of schema selection.
+pub fn render_acquired(
+    build: u32,
+    options: &Options,
+    facts: &[TableFact],
+    started_at: &str,
+    completed_at: Option<&str>,
+    schema_catalog: bool,
+    acquisition: crate::acquisition::Profile,
+) -> String {
+    render_version(
+        build,
+        options,
+        facts,
+        started_at,
+        completed_at,
+        schema_catalog,
+        Some(acquisition),
+    )
+}
+
+fn render_version(
+    build: u32,
+    options: &Options,
+    facts: &[TableFact],
+    started_at: &str,
+    completed_at: Option<&str>,
+    schema_catalog: bool,
+    acquisition: Option<crate::acquisition::Profile>,
+) -> String {
     let complete = facts.iter().all(|fact| fact.error_code.is_none());
     let file_count = facts
         .iter()
@@ -78,7 +128,13 @@ pub fn render(
 
     let status = if complete { "complete" } else { "failed" };
     let mut out = String::with_capacity(4096);
-    out.push_str("{\"manifest_version\":2");
+    out.push_str(if acquisition.is_some() {
+        "{\"manifest_version\":4"
+    } else if schema_catalog {
+        "{\"manifest_version\":3"
+    } else {
+        "{\"manifest_version\":2"
+    });
     out.push_str(&format!(",\"status\":\"{status}\""));
     if !complete {
         out.push_str(&format!(
@@ -97,7 +153,26 @@ pub fn render(
         ",\"extractor\":{{\"name\":\"forever-db2-extract\",\"version\":\"{}\",\"implementation\":\"rust\",\"compatibility_oracle_commit\":\"{ORACLE_COMMIT}\"}}",
         escape(EXTRACTOR_VERSION)
     ));
-    out.push_str(",\"scope\":\"explicit_db2_batch\"");
+    if schema_catalog {
+        let catalog = forever_db2::catalog::CATALOG_ID;
+        let commit = forever_db2::catalog::SOURCE_COMMIT;
+        let blob = forever_db2::catalog::SOURCE_GIT_BLOB;
+        let source_sha = forever_db2::catalog::SOURCE_SHA256;
+        out.push_str(&format!(",\"scope\":\"{CATALOG_SCOPE}\",\"schema_catalog\":{{\"id\":\"{catalog}\",\"source_commit\":\"{commit}\",\"source_blob\":\"{blob}\",\"source_sha256\":\"{source_sha}\",\"facts_sha256\":\"{CATALOG_FACTS_SHA256}\"}}"));
+    } else {
+        out.push_str(",\"scope\":\"explicit_db2_batch\"");
+    }
+    if let Some(profile) = acquisition {
+        out.push_str(&format!(
+            ",\"schema_selection\":\"{}\",\"acquisition\":{}",
+            if schema_catalog {
+                "catalog"
+            } else {
+                "reviewed"
+            },
+            profile.render()
+        ));
+    }
     out.push_str(",\"formats\":{\"db2\":{\"magic\":\"WDC5\",\"version\":5},\"tables\":[");
     for (index, fact) in facts.iter().enumerate() {
         if index > 0 {
@@ -114,8 +189,16 @@ pub fn render(
         ));
     }
     out.push_str("]}");
+    let selector = if schema_catalog {
+        format!(
+            ",\"schema_catalog\":\"{}\"",
+            forever_db2::catalog::CATALOG_ID
+        )
+    } else {
+        String::new()
+    };
     out.push_str(&format!(
-        ",\"options\":{{\"locale\":\"{}\",\"table_selection\":\"{}\",\"manifest_sha256\":{},\"entry_count\":{},\"max_file_bytes\":{},\"max_batch_bytes\":{}}}",
+        ",\"options\":{{\"locale\":\"{}\",\"table_selection\":\"{}\",\"manifest_sha256\":{},\"entry_count\":{},\"max_file_bytes\":{},\"max_batch_bytes\":{}{selector}}}",
         options.locale,
         escape(options.table_selection),
         options
@@ -123,7 +206,7 @@ pub fn render(
             .as_deref()
             .map_or_else(|| "null".to_owned(), |value| format!("\"{value}\"")),
         options.entry_count,
-        MAX_FILE_BYTES,
+        acquisition.map_or(MAX_FILE_BYTES, |profile| u64::from(profile.max_file_bytes())),
         MAX_BATCH_BYTES
     ));
     out.push_str(",\"network\":{\"mode\":\"local\",\"allow_network\":false,\"remote_casc\":false,\"lock_sha256\":null,\"downloaded_bytes\":0}");
@@ -289,6 +372,52 @@ mod tests {
         assert_eq!("2026-10-04T10:00:00Z", rfc3339_from_unix(1_791_108_000));
         // Leap day handling.
         assert_eq!("2024-02-29T12:34:56Z", rfc3339_from_unix(1_709_210_096));
+    }
+
+    #[test]
+    fn catalog_provenance_digest_matches_committed_fact_bytes() {
+        assert_eq!(
+            CATALOG_FACTS_SHA256,
+            sha256::hex(include_bytes!(
+                "../../../contracts/forever-metadata-v1.json"
+            ))
+        );
+    }
+
+    #[test]
+    fn v2_bytes_remain_identical_when_catalog_is_not_selected() {
+        let options = Options {
+            locale: "enUS",
+            table_selection: "default_character_tables",
+            manifest_sha256: None,
+            entry_count: 1,
+        };
+        let facts = [fact("ChrClasses", 1361031, None)];
+        let start = "2026-10-11T00:00:00Z";
+        let document = render(70205, &options, &facts, start, Some(start));
+        assert!(document.starts_with("{\"manifest_version\":2,"));
+        assert!(document.contains("\"scope\":\"explicit_db2_batch\""));
+        assert!(!document.contains("schema_catalog"));
+        assert_eq!(
+            document,
+            include_str!(
+                "../../../tests/contracts/fixtures/forever-manifest-v2.serializer-golden.json"
+            )
+            .trim_end()
+        );
+        assert_eq!(
+            document,
+            render_version(70205, &options, &facts, start, Some(start), false, None)
+        );
+        let explicit = Options {
+            table_selection: "explicit_manifest",
+            manifest_sha256: Some("a".repeat(64)),
+            ..options
+        };
+        let catalog = render_catalog(70205, &explicit, &facts, start, Some(start));
+        assert!(catalog.starts_with("{\"manifest_version\":3,"));
+        assert!(catalog.contains("\"scope\":\"explicit_db2_catalog_batch\""));
+        assert!(catalog.contains(CATALOG_FACTS_SHA256));
     }
 
     #[test]

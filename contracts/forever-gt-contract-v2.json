@@ -1,0 +1,214 @@
+{
+  "contract_version": 2,
+  "line": "forever",
+  "scope": "pinned_gt_catalog",
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "catalog": "contracts/forever-gt-catalog-v1.json",
+  "catalog_sha256": "45fbc37f023eb54d71e1e47ab2fe252fabb139a5c923e25b1f9244399c29fec4",
+  "manifest": "forever-gt-manifest.json",
+  "schema": "schemas/forever-gt-manifest-v2.schema.json",
+  "incomplete_marker": ".rustycore-forever-gt-incomplete.json",
+  "product": "wow_classic_beta",
+  "admitted_builds": [
+    70170,
+    70205
+  ],
+  "storage_locales": [
+    "enUS",
+    "esES"
+  ],
+  "explicit_selection": "--group catalog",
+  "plan": "catalog",
+  "v1_default_unchanged": "all remains exactly six with v1 manifest",
+  "tables": [
+    {
+      "name": "ArtifactKnowledgeMultiplier",
+      "file_id": 1582086,
+      "relative_path": "gt/ArtifactKnowledgeMultiplier.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "ArtifactLevelXP",
+      "file_id": 1391662,
+      "relative_path": "gt/ArtifactLevelXP.txt",
+      "validation_mode": "f32",
+      "value_columns": 2
+    },
+    {
+      "name": "BarberShopCostBase",
+      "file_id": 1391663,
+      "relative_path": "gt/BarberShopCostBase.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "BaseMp",
+      "file_id": 1391664,
+      "relative_path": "gt/BaseMp.txt",
+      "validation_mode": "f32",
+      "value_columns": 15
+    },
+    {
+      "name": "BaseProfessionRatings",
+      "file_id": 4494528,
+      "relative_path": "gt/BaseProfessionRatings.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "BattlePetTypeDamageMod",
+      "file_id": 1391665,
+      "relative_path": "gt/BattlePetTypeDamageMod.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "BattlePetXP",
+      "file_id": 1391666,
+      "relative_path": "gt/BattlePetXP.txt",
+      "validation_mode": "f32",
+      "value_columns": 2
+    },
+    {
+      "name": "CombatRatings",
+      "file_id": 1391669,
+      "relative_path": "gt/CombatRatings.txt",
+      "validation_mode": "f32",
+      "value_columns": 32
+    },
+    {
+      "name": "CombatRatingsMultByILvl",
+      "file_id": 1391670,
+      "relative_path": "gt/CombatRatingsMultByILvl.txt",
+      "validation_mode": "f32",
+      "value_columns": 4
+    },
+    {
+      "name": "HonorLevel",
+      "file_id": 1391671,
+      "relative_path": "gt/HonorLevel.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "HpPerSta",
+      "file_id": 1391642,
+      "relative_path": "gt/HpPerSta.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "ItemLevelByLevel",
+      "file_id": 2012881,
+      "relative_path": "gt/ItemLevelByLevel.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "ItemLevelSquish",
+      "file_id": 1726830,
+      "relative_path": "gt/ItemLevelSquish.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "ItemSocketCostPerLevel",
+      "file_id": 1391643,
+      "relative_path": "gt/ItemSocketCostPerLevel.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "NPCManaCostScaler",
+      "file_id": 1391651,
+      "relative_path": "gt/NPCManaCostScaler.txt",
+      "validation_mode": "f32",
+      "value_columns": 1
+    },
+    {
+      "name": "ProfessionRatings",
+      "file_id": 4492239,
+      "relative_path": "gt/ProfessionRatings.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "SandboxScaling",
+      "file_id": 1391659,
+      "relative_path": "gt/SandboxScaling.txt",
+      "validation_mode": "raw",
+      "value_columns": null
+    },
+    {
+      "name": "SpellScaling",
+      "file_id": 1391660,
+      "relative_path": "gt/SpellScaling.txt",
+      "validation_mode": "f32",
+      "value_columns": 24
+    },
+    {
+      "name": "StaminaMultByILvl",
+      "file_id": 1980632,
+      "relative_path": "gt/StaminaMultByILvl.txt",
+      "validation_mode": "f32",
+      "value_columns": 4
+    },
+    {
+      "name": "xp",
+      "file_id": 1391661,
+      "relative_path": "gt/xp.txt",
+      "validation_mode": "f32",
+      "value_columns": 5
+    }
+  ],
+  "limits": {
+    "files": 20,
+    "file_bytes": 4194304,
+    "batch_bytes": 83886080,
+    "data_rows_per_numeric_file": 100000,
+    "values_per_numeric_file_including_row_zero": 1000000,
+    "manifest_bytes": 65536,
+    "manifest_depth": 8
+  },
+  "numeric_policy": "finite_decimal_f64_to_f32_v1",
+  "unknown_schemas": {
+    "count": 6,
+    "complete_raw_bytes_and_sha256": true,
+    "numeric_parsing": false,
+    "value_columns": null,
+    "row_facts": null,
+    "typed_claims": false
+  },
+  "raw_bytes_preserved": true,
+  "offline": true,
+  "network_options": false,
+  "resume": false,
+  "overwrite": false,
+  "publication": "new_private_directory_exclusive_atomic_files_incomplete_marker_manifest_last",
+  "directory_atomic_promotion": false,
+  "full_client_extraction": false,
+  "typed_loaders_executed": false,
+  "required_for_success": "all twenty complete including six raw-only identities; no optional success",
+  "verification": {
+    "read_only": true,
+    "exact_catalog_order": true,
+    "exact_output_tree": true,
+    "symlinks_allowed": false,
+    "hash": "sha256",
+    "inventory": "UTF8 relative-path sorted lines: lowercase sha256, two spaces, relative path, LF",
+    "reparse_fourteen_numeric_schemas": true,
+    "unknown_schema_has_no_numeric_facts": true,
+    "partial_catalog_accepted": false,
+    "legacy_v1_manifests_still_supported": true,
+    "report_schema": "existing report_version1 forever_gt_verification applies to both manifest versions"
+  },
+  "exit_codes": {
+    "success": 0,
+    "invalid_invocation_or_manifest": 2,
+    "unsupported_client": 3,
+    "input_or_publication_failure": 4,
+    "incomplete_batch": 8,
+    "verification_mismatch": 9
+  }
+}

@@ -1,0 +1,754 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-camera-manifest-v2.schema.json",
+  "title": "Forever raw camera files with explicit Rust local acquisition v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "scope",
+    "status",
+    "product",
+    "build",
+    "locale",
+    "extractor",
+    "extractor_version",
+    "oracle_commit",
+    "db2_metadata_sha256",
+    "discovery_policy",
+    "max_source_bytes",
+    "max_file_bytes",
+    "max_files",
+    "max_total_bytes",
+    "offline",
+    "downloaded_bytes",
+    "paths_redacted",
+    "full_client_extraction",
+    "m2_parsed",
+    "waypoints_generated",
+    "runtime_accepted",
+    "source",
+    "cameras",
+    "integrity",
+    "acquisition"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 2
+    },
+    "scope": {
+      "const": "complete_camera_files"
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "partial"
+      ]
+    },
+    "product": {
+      "const": "wow_classic_beta"
+    },
+    "build": {
+      "enum": [
+        70170,
+        70205
+      ]
+    },
+    "locale": {
+      "enum": [
+        "enUS",
+        "esES"
+      ]
+    },
+    "extractor": {
+      "const": "forever-camera-extract"
+    },
+    "extractor_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9.+-]+$"
+    },
+    "oracle_commit": {
+      "const": "02245dcd245e7433e524577656177723d3e4992e"
+    },
+    "db2_metadata_sha256": {
+      "const": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def"
+    },
+    "discovery_policy": {
+      "const": "direct_rows_u32_field3_v1"
+    },
+    "max_source_bytes": {
+      "const": 16777216
+    },
+    "max_file_bytes": {
+      "const": 16777216
+    },
+    "max_files": {
+      "const": 4096
+    },
+    "max_total_bytes": {
+      "const": 268435456
+    },
+    "offline": {
+      "const": true
+    },
+    "downloaded_bytes": {
+      "const": 0
+    },
+    "paths_redacted": {
+      "const": true
+    },
+    "full_client_extraction": {
+      "const": false
+    },
+    "m2_parsed": {
+      "const": false
+    },
+    "waypoints_generated": {
+      "const": false
+    },
+    "runtime_accepted": {
+      "const": false
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "file_id",
+        "relative_path",
+        "layout_hash",
+        "status",
+        "bytes",
+        "sha256",
+        "error_code",
+        "direct_records",
+        "unique_file_ids",
+        "file_id_set_sha256"
+      ],
+      "properties": {
+        "name": {
+          "const": "CinematicCamera.db2"
+        },
+        "file_id": {
+          "const": 1294214
+        },
+        "relative_path": {
+          "enum": [
+            "dbc/enUS/CinematicCamera.db2",
+            "dbc/esES/CinematicCamera.db2"
+          ]
+        },
+        "layout_hash": {
+          "const": 2348643627
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "error"
+          ]
+        },
+        "bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "direct_records": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unique_file_ids": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "file_id_set_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "bytes": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "error_code": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "bytes": {
+                "type": "null"
+              },
+              "sha256": {
+                "type": "null"
+              },
+              "error_code": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "direct_records": {
+                "type": "integer"
+              },
+              "unique_file_ids": {
+                "type": "integer"
+              },
+              "file_id_set_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "direct_records": {
+                "type": "null"
+              },
+              "unique_file_ids": {
+                "type": "null"
+              },
+              "file_id_set_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cameras": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file_id",
+          "relative_path",
+          "status",
+          "bytes",
+          "sha256",
+          "error_code"
+        ],
+        "properties": {
+          "file_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "relative_path": {
+            "type": "string",
+            "pattern": "^cameras/FILE[0-9A-F]{8}\\.xxx$"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "error"
+            ]
+          },
+          "bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 16777216
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9_]+$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "complete"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "bytes": {
+                  "type": "integer"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "error_code": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "bytes": {
+                  "type": "null"
+                },
+                "sha256": {
+                  "type": "null"
+                },
+                "error_code": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_count",
+        "total_bytes",
+        "inventory_sha256"
+      ],
+      "properties": {
+        "file_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4097
+        },
+        "total_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 268435456
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "acquisition": {
+      "$comment": "Original contract 2026-10-11. Logical payload budgets are not RSS bounds. Current CLI selects one explicit layout uniformly for all sixteen index buckets. Parent component schema must further constrain file_bytes to its own ceiling. No source paths, keys, raw assets or network requests.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backend",
+        "profile",
+        "index_layouts",
+        "root_layout",
+        "offline",
+        "complete_ckey_md5",
+        "ekey_validation",
+        "limits"
+      ],
+      "properties": {
+        "backend": {
+          "const": "rust-local"
+        },
+        "profile": {
+          "const": "local-v7-ckey-root-nz-v1"
+        },
+        "index_layouts": {
+          "enum": [
+            [
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous",
+              "contiguous"
+            ],
+            [
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged",
+              "paged"
+            ]
+          ]
+        },
+        "root_layout": {
+          "enum": [
+            "headerless-18125",
+            "header-30080",
+            "header-50893-v1",
+            "header-50893-v2"
+          ]
+        },
+        "offline": {
+          "const": true
+        },
+        "complete_ckey_md5": {
+          "const": true
+        },
+        "ekey_validation": {
+          "const": "prefix9"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "resident_bytes",
+            "scratch_bytes",
+            "combined_bytes",
+            "build_info_bytes",
+            "build_info_rows",
+            "path_bytes",
+            "config_bytes",
+            "config_lines",
+            "config_keys",
+            "directory_entries",
+            "index_files",
+            "index_bytes",
+            "index_entries",
+            "index_pages",
+            "encoding_bytes",
+            "encoding_pages",
+            "encoding_page_bytes",
+            "encoding_espec_bytes",
+            "encoding_tail_bytes",
+            "encoding_entries",
+            "encoding_keys",
+            "root_bytes",
+            "root_header_bytes",
+            "root_blocks",
+            "root_entries",
+            "archive_span_bytes",
+            "file_bytes",
+            "candidate_attempts",
+            "blte_frames"
+          ],
+          "properties": {
+            "resident_bytes": {
+              "const": 805306368
+            },
+            "scratch_bytes": {
+              "const": 536870912
+            },
+            "combined_bytes": {
+              "const": 1073741824
+            },
+            "build_info_bytes": {
+              "const": 262144
+            },
+            "build_info_rows": {
+              "const": 4096
+            },
+            "path_bytes": {
+              "const": 4096
+            },
+            "config_bytes": {
+              "const": 262144
+            },
+            "config_lines": {
+              "const": 8192
+            },
+            "config_keys": {
+              "const": 4096
+            },
+            "directory_entries": {
+              "const": 65536
+            },
+            "index_files": {
+              "const": 4096
+            },
+            "index_bytes": {
+              "const": 67108864
+            },
+            "index_entries": {
+              "const": 2000000
+            },
+            "index_pages": {
+              "const": 131072
+            },
+            "encoding_bytes": {
+              "const": 268435456
+            },
+            "encoding_pages": {
+              "const": 65536
+            },
+            "encoding_page_bytes": {
+              "const": 65536
+            },
+            "encoding_espec_bytes": {
+              "const": 16777216
+            },
+            "encoding_tail_bytes": {
+              "const": 134217728
+            },
+            "encoding_entries": {
+              "const": 4000000
+            },
+            "encoding_keys": {
+              "const": 8000000
+            },
+            "root_bytes": {
+              "const": 268435456
+            },
+            "root_header_bytes": {
+              "const": 4096
+            },
+            "root_blocks": {
+              "const": 65536
+            },
+            "root_entries": {
+              "const": 4000000
+            },
+            "archive_span_bytes": {
+              "const": 268435456
+            },
+            "file_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "candidate_attempts": {
+              "const": 64
+            },
+            "blte_frames": {
+              "const": 65536
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            }
+          },
+          "cameras": {
+            "items": {
+              "properties": {
+                "status": {
+                  "const": "complete"
+                }
+              }
+            }
+          },
+          "integrity": {
+            "properties": {
+              "file_count": {
+                "minimum": 1
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "anyOf": [
+          {
+            "properties": {
+              "source": {
+                "properties": {
+                  "status": {
+                    "const": "error"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "cameras": {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "const": "error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "properties": {
+              "status": {
+                "const": "error"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cameras": {
+            "maxItems": 0
+          },
+          "integrity": {
+            "properties": {
+              "file_count": {
+                "const": 0
+              },
+              "total_bytes": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "locale": {
+            "const": "enUS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": {
+              "relative_path": {
+                "const": "dbc/enUS/CinematicCamera.db2"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "locale": {
+            "const": "esES"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": {
+              "relative_path": {
+                "const": "dbc/esES/CinematicCamera.db2"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "Embedded acquisition v1 schema SHA256 08f843c4a38ef2ec2f61aad85b5abba2082243260fee2b5e4fa97e626408ec41. No remote resolution. Profile limits are checked exactly by the offline verifier, including each artifact byte count versus the chosen file_bytes."
+}

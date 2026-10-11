@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/forever-db2", "crates/forever-casc"]
+members = ["crates/forever-db2", "crates/forever-casc", "crates/forever-terrain", "crates/forever-vmap", "crates/forever-navigation", "crates/forever-extractor", "crates/forever-platform"]
 resolver = "3"
 
 [workspace.package]

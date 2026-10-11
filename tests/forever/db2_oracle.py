@@ -1,5 +1,10 @@
 """Independent offline WDC5 DB2 oracle for the reviewed character tables.
 
+Modified 2026-10-11: corrected copy-ID extent, scalar budgets and signed
+parents; unsafe reference copy variants are explicitly rejected. A separate
+numeric sparse path transcribes SparseImpl:1020-1570 for scalar U8/U16/U32/I32
+with catalog IDs and no parent; other sparse shapes remain excluded.
+
 This is a from-scratch, read-only decoder used to cross-check the Rust
 ``crates/forever-db2/examples/db2_dump.rs`` diagnostic byte-for-byte. It never
 imports or links the Rust crate, never touches CASC, the network or a client
@@ -15,7 +20,13 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   the immediate/commonData/pallet union); ``RecordGetVarInt`` modes 0..5,
   ``RecordGetString`` (``src/...:800-806``), ``RecordGetId`` (:747-760) and the
   non-inline id repair ``id <= MinId -> MinId + i`` (:1958-1967);
+  ``AutoProduceData`` (:394-398), ``GetMaxId`` (:955-977),
   ``AutoProduceRecordCopies`` (:613-634); ``GetFieldOffset`` (:889-905).
+  The sparse path uses catalog IDs, primitive widths and Header.MaxId+1
+  (:1020-1057, :1064, :1297-1320, :1487-1570).
+* ``src/server/shared/DataStores/DB2Store.cpp`` (:101-107) passes the index-table size
+  (maximum observed direct/copy-destination id plus one for regular files;
+  Header.MaxId+1 for sparse files) to the corresponding copy routine.
 * ``src/server/game/DataStores/DB2Metadata.h`` -- ``ChrClassesMeta`` (:3455,
   43 fields, index 29, layout ``0xAFC9B0C2``), ``ChrRacesMeta`` (:4182,
   51 fields, index -1, layout ``0x4F44C796``) and the four ``ChrClass*``
@@ -45,6 +56,37 @@ Wire layout and semantics follow the pinned C++ reference (TrinityCore
   1 field, ``0xB851EBF6``) and ``DurabilityQualityMeta`` (1130268, 1 field,
   ``0x08763C54``); all four declare ``IndexField = -1`` and
   ``ParentIndexField = -1``.
+  The reviewed name tables add ``NamesProfanityMeta`` (:15780,
+  ``0xF227E638``), ``NamesReservedMeta`` (:15800, ``0x2B2D5D97``),
+  ``NamesReservedLocaleMeta`` (:15819, ``0x7B9823D4``), plus
+  ``Cfg_CategoriesMeta`` (:2747, ``0x8710BE94``). Their leading string is
+  followed respectively by a signed byte, no field, an unsigned byte, or
+  unsigned short/byte/byte and signed int/byte fields. All have separate u32
+  id tables and no parent; the three name tables use nonlocalized strings.
+  The reviewed appearance tables include ``ChrModelMeta`` (:4049),
+  ``ChrRaceXChrModelMeta`` (:4160), ``ChrCustomizationOptionMeta`` (:3909),
+  ``ChrCustomizationChoiceMeta`` (:3715), and
+  ``ChrCustomizationReqChoiceMeta`` (:3967). The first four carry their
+  parent inside the file fields; the last appends a signed 32-bit parent.
+  ``ItemSpecMeta`` (:12929) has five unsigned bytes and an unsigned short,
+  with its parent in field 2; ``ItemSpecOverrideMeta`` (:12953) has an
+  unsigned short and an appended signed parent; ``GemPropertiesMeta``
+  (:9802) has an unsigned short and signed int without a parent.
+  Birth-record schemas include ``SkillLineMeta`` (:19625),
+  ``SkillRaceClassInfoMeta`` (:19715), ``SkillLineAbilityMeta`` (:19658),
+  ``CharacterLoadoutMeta`` (:3206) and ``CharacterLoadoutItemMeta`` (:3229).
+  SkillLine's fifth string is nonlocalized; its other four strings and
+  SkillLineAbility's two strings are localized. Mask columns are signed
+  int arrays of two; parent fields, where present, are in-record shorts.
+  Initialization schemas add ``MapMeta`` (:14538), ``PowerTypeMeta``
+  (:17452) and ``MovieMeta`` (:15329), all without parents. Map's first
+  string and both PowerType strings are nonlocalized; Map's remaining
+  strings and Movie's string are localized. Map carries a float pair and
+  signed int array of three; PowerType has an inline unsigned id at field 2.
+  Scalar spell dependencies add ``SpellCastTimesMeta`` (:20706),
+  ``SpellDurationMeta`` (:21120), ``SpellRadiusMeta`` (:21807) and
+  ``SpellProcsPerMinuteMeta`` (:21764). All use separate id tables with no
+  parent. Radius has four separate float columns, not one array column.
 * ``src/common/DataStores/DB2Meta.h`` (:32-49) has no table-hash member, so the
   loader's identity gate is LayoutHash (:1763) plus the field-count check
   (:1771); ``_header.TableHash`` is never validated against the metadata.
@@ -63,6 +105,9 @@ LF, terminated by a single trailing newline.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
+from pathlib import Path
 import sys
 
 HEADER_SIZE = 204
@@ -72,7 +117,14 @@ MAX_BYTES = 16 * 1024 * 1024
 RECORD_POLICY_LIMIT = 100_000
 COPY_POLICY_LIMIT = 100_000
 VALUE_POLICY_LIMIT = 1_000_000
+# Cumulative logical UTF-8 payload: direct values and every applicable copy,
+# including overwrites. This is a decoder policy, not a WDC5 format limit.
+TEXT_POLICY_LIMIT = 64 * 1024 * 1024
 SPARSE_FLAG = 0x1
+CATALOG_ID = "pinned-metadata-v1"
+# Pin the complete factual artifact, not just its self-declared provenance.
+# Reproduction against the immutable upstream Git object is tested separately.
+CATALOG_SHA256 = "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
 
 # Stable error code -> process exit status. Exit 2 is reserved for argument
 # errors, 3 for an unsupported signature/version, 6 for the inspection limit.
@@ -141,6 +193,7 @@ class Schema:
     index: int
     fields: tuple
     parent: int = -1
+    appended_parent_unsigned: bool = False
 
 
 def _signed_field(bits, count=1):
@@ -714,6 +767,234 @@ DURABILITY_QUALITY = Schema(
     fields=(Field("float", 32, 1),),
 )
 
+# Transcribed from pinned DB2Metadata.h:15780 (FileDataId 1117086):
+# FT_STRING_NOT_LOCALIZED followed by signed FT_BYTE; separate u32 id table.
+NAMES_PROFANITY = Schema(
+    name="NamesProfanity",
+    layout_hash=0xF227E638,
+    index=-1,
+    fields=(Field("string"), _signed_field(8)),
+)
+
+# DB2Metadata.h:15800 (FileDataId 1117085): one nonlocalized string.
+NAMES_RESERVED = Schema(
+    name="NamesReserved",
+    layout_hash=0x2B2D5D97,
+    index=-1,
+    fields=(Field("string"),),
+)
+
+# DB2Metadata.h:15819 (FileDataId 1117087): nonlocalized string plus UNSIGNED
+# FT_BYTE. This byte deliberately differs from NamesProfanity's signed byte.
+NAMES_RESERVED_LOCALE = Schema(
+    name="NamesReservedLocale",
+    layout_hash=0x7B9823D4,
+    index=-1,
+    fields=(Field("string"), Field("unsigned", 8)),
+)
+
+# DB2Metadata.h:2747 (FileDataId 1068162): FT_STRING, unsigned FT_SHORT,
+# unsigned FT_BYTE twice, signed FT_INT, then signed FT_BYTE.
+CFG_CATEGORIES = Schema(
+    name="Cfg_Categories",
+    layout_hash=0x8710BE94,
+    index=-1,
+    fields=(
+        Field("string"), Field("unsigned", 16), Field("unsigned", 8),
+        Field("unsigned", 8), _signed_field(32), _signed_field(8),
+    ),
+)
+
+# DB2Metadata.h:4049 (FileDataId 3384313): two float arrays, an inline u32
+# id, signed byte, seven signed ints (including parent field 4), six floats.
+CHR_MODEL = Schema(
+    name="ChrModel", layout_hash=0x03FAB755, index=2, parent=4,
+    fields=(
+        Field("float", 32, 3), Field("float", 32, 3), Field("unsigned", 32),
+        _signed_field(8), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32), Field("float"), Field("float"),
+        Field("float"), Field("float"), Field("float"), Field("float"),
+    ),
+)
+
+# DB2Metadata.h:4160 (FileDataId 3490304): separate id table; signed byte
+# parent at field 0, signed int, signed byte and signed int.
+CHR_RACE_X_CHR_MODEL = Schema(
+    name="ChrRaceXChrModel", layout_hash=0xA203BC29, index=-1, parent=0,
+    fields=(_signed_field(8), _signed_field(32), _signed_field(8), _signed_field(32)),
+)
+
+# DB2Metadata.h:3909 (FileDataId 3384247): localized string, inline u32 id,
+# unsigned short, signed ints (parent at 4), float and further signed ints.
+CHR_CUSTOMIZATION_OPTION = Schema(
+    name="ChrCustomizationOption", layout_hash=0xDCC2A86E, index=1, parent=4,
+    fields=(
+        Field("string"), Field("unsigned", 32), Field("unsigned", 16),
+        _signed_field(32), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32), Field("float"),
+        _signed_field(32), _signed_field(32), _signed_field(32), _signed_field(32),
+    ),
+)
+
+# DB2Metadata.h:3715 (FileDataId 3450554): localized string, inline u32 id,
+# signed parent at 2, unsigned shorts at 5/6, and a signed int array at 10.
+CHR_CUSTOMIZATION_CHOICE = Schema(
+    name="ChrCustomizationChoice", layout_hash=0x9559C358, index=1, parent=2,
+    fields=(
+        Field("string"), Field("unsigned", 32), _signed_field(32),
+        _signed_field(32), _signed_field(32), Field("unsigned", 16),
+        Field("unsigned", 16), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32, 2),
+    ),
+)
+
+# DB2Metadata.h:3967 (FileDataId 3580359): one signed int file field, then
+# a signed int appended parent; Meta FieldCount 2, FileFieldCount 1.
+CHR_CUSTOMIZATION_REQ_CHOICE = Schema(
+    name="ChrCustomizationReqChoice", layout_hash=0xF925BC6F, index=-1, parent=1,
+    fields=(_signed_field(32),),
+)
+
+# DB2Metadata.h:12929 (FileDataId 1135120): five unsigned bytes and an
+# unsigned short; byte field 2 is an in-record parent. Separate u32 id table.
+ITEM_SPEC = Schema(
+    name="ItemSpec", layout_hash=0x83F3D113, index=-1, parent=2,
+    fields=(
+        Field("unsigned", 8), Field("unsigned", 8), Field("unsigned", 8),
+        Field("unsigned", 8), Field("unsigned", 8), Field("unsigned", 16),
+    ),
+)
+
+# DB2Metadata.h:12953 (FileDataId 1134576): one unsigned short file field,
+# then an appended signed int parent; Meta FieldCount 2, FileFieldCount 1.
+ITEM_SPEC_OVERRIDE = Schema(
+    name="ItemSpecOverride", layout_hash=0xB292998C, index=-1, parent=1,
+    fields=(Field("unsigned", 16),),
+)
+
+# DB2Metadata.h:9802 (FileDataId 1343604): unsigned short and signed int.
+GEM_PROPERTIES = Schema(
+    name="GemProperties", layout_hash=0x86487AD2, index=-1,
+    fields=(Field("unsigned", 16), _signed_field(32)),
+)
+
+# DB2Metadata.h:19625 (FileDataId 1240935): first four strings FT_STRING,
+# fifth FT_STRING_NOT_LOCALIZED; inline unsigned id at 5, no parent.
+SKILL_LINE = Schema(
+    name="SkillLine", layout_hash=0x6763217C, index=5,
+    fields=(
+        Field("string"), Field("string"), Field("string"), Field("string"),
+        Field("string"), Field("unsigned", 32), _signed_field(8),
+        _signed_field(32), _signed_field(8), Field("unsigned", 32),
+        _signed_field(32), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32),
+    ),
+)
+
+# DB2Metadata.h:19715 (FileDataId 1240406): signed short parent at 0,
+# separate id table, and signed int array-of-two at field 6.
+SKILL_RACE_CLASS_INFO = Schema(
+    name="SkillRaceClassInfo", layout_hash=0x24277B48, index=-1, parent=0,
+    fields=(
+        _signed_field(16), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(8), _signed_field(16), _signed_field(32, 2),
+    ),
+)
+
+# DB2Metadata.h:19658 (FileDataId 1266278): two FT_STRING fields, inline
+# unsigned id at 2, signed short parent at 3, two signed int arrays at 16/17.
+SKILL_LINE_ABILITY = Schema(
+    name="SkillLineAbility", layout_hash=0x224F7EA0, index=2, parent=3,
+    fields=(
+        Field("string"), Field("string"), Field("unsigned", 32),
+        _signed_field(16), _signed_field(32), _signed_field(16),
+        _signed_field(32), _signed_field(32), _signed_field(32),
+        _signed_field(16), _signed_field(16), _signed_field(32),
+        _signed_field(8), _signed_field(16), _signed_field(16),
+        _signed_field(16), _signed_field(32, 2), _signed_field(32, 2),
+    ),
+)
+
+# DB2Metadata.h:3206 (FileDataId 1344281): signed byte/int, unsigned byte,
+# signed int and signed int array-of-two. Separate id table, no parent.
+CHARACTER_LOADOUT = Schema(
+    name="CharacterLoadout", layout_hash=0x713CE8BB, index=-1,
+    fields=(
+        _signed_field(8), _signed_field(32), Field("unsigned", 8),
+        _signed_field(32), _signed_field(32, 2),
+    ),
+)
+
+# DB2Metadata.h:3229 (FileDataId 1302846): unsigned short parent at 0,
+# unsigned int at 1 and a separate id table.
+CHARACTER_LOADOUT_ITEM = Schema(
+    name="CharacterLoadoutItem", layout_hash=0x0C7A1862, index=-1, parent=0,
+    fields=(Field("unsigned", 16), Field("unsigned", 32)),
+)
+
+# DB2Metadata.h:14538 (FileDataId 1349477): first string nonlocalized,
+# remaining five localized; float pair at 6 and signed int array at 25.
+MAP = Schema(
+    name="Map", layout_hash=0xD43AFAC3, index=-1,
+    fields=(
+        Field("string"), Field("string"), Field("string"), Field("string"),
+        Field("string"), Field("string"), Field("float", 32, 2),
+        Field("unsigned", 8), _signed_field(8), Field("unsigned", 8),
+        Field("unsigned", 16), _signed_field(16), _signed_field(16),
+        _signed_field(16), _signed_field(16), Field("unsigned", 8),
+        Field("float"), _signed_field(16), Field("unsigned", 8),
+        _signed_field(16), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32), _signed_field(32), _signed_field(32, 3),
+    ),
+)
+
+# DB2Metadata.h:17452 (FileDataId 1266022): two nonlocalized strings,
+# inline unsigned id at 2, signed byte/ints and two scalar floats.
+POWER_TYPE = Schema(
+    name="PowerType", layout_hash=0x14BBEEA1, index=2,
+    fields=(
+        Field("string"), Field("string"), Field("unsigned", 32),
+        _signed_field(8), _signed_field(32), _signed_field(32),
+        _signed_field(32), _signed_field(32), _signed_field(32),
+        _signed_field(32), Field("float"), Field("float"), _signed_field(32),
+    ),
+)
+
+# DB2Metadata.h:15329 (FileDataId 1332556): localized string, two
+# unsigned bytes and three unsigned ints. Separate u32 id table.
+MOVIE = Schema(
+    name="Movie", layout_hash=0xF53888FA, index=-1,
+    fields=(
+        Field("string"), Field("unsigned", 8), Field("unsigned", 8),
+        Field("unsigned", 32), Field("unsigned", 32), Field("unsigned", 32),
+    ),
+)
+
+# DB2Metadata.h:20706 (FileDataId 1134089): two signed int scalars.
+SPELL_CAST_TIMES = Schema(
+    name="SpellCastTimes", layout_hash=0x75B6BD3A, index=-1,
+    fields=(_signed_field(32), _signed_field(32)),
+)
+
+# DB2Metadata.h:21120 (FileDataId 1137828): three signed int scalars.
+SPELL_DURATION = Schema(
+    name="SpellDuration", layout_hash=0xA931BD2B, index=-1,
+    fields=(_signed_field(32), _signed_field(32), _signed_field(32)),
+)
+
+# DB2Metadata.h:21807 (FileDataId 1134584): four distinct float scalars.
+SPELL_RADIUS = Schema(
+    name="SpellRadius", layout_hash=0xF9A913EE, index=-1,
+    fields=(Field("float"), Field("float"), Field("float"), Field("float")),
+)
+
+# DB2Metadata.h:21764 (FileDataId 1133526): float then signed int.
+SPELL_PROCS_PER_MINUTE = Schema(
+    name="SpellProcsPerMinute", layout_hash=0x2227014B, index=-1,
+    fields=(Field("float"), _signed_field(32)),
+)
+
 SCHEMAS = {
     "ChrClasses": CHR_CLASSES,
     "ChrRaces": CHR_RACES,
@@ -747,7 +1028,80 @@ SCHEMAS = {
     "BoneWindModifiers": BONE_WIND_MODIFIERS,
     "AreaTriggerSphere": AREA_TRIGGER_SPHERE,
     "DurabilityQuality": DURABILITY_QUALITY,
+    "NamesProfanity": NAMES_PROFANITY,
+    "NamesReserved": NAMES_RESERVED,
+    "NamesReservedLocale": NAMES_RESERVED_LOCALE,
+    "Cfg_Categories": CFG_CATEGORIES,
+    "ChrModel": CHR_MODEL,
+    "ChrRaceXChrModel": CHR_RACE_X_CHR_MODEL,
+    "ChrCustomizationOption": CHR_CUSTOMIZATION_OPTION,
+    "ChrCustomizationChoice": CHR_CUSTOMIZATION_CHOICE,
+    "ChrCustomizationReqChoice": CHR_CUSTOMIZATION_REQ_CHOICE,
+    "ItemSpec": ITEM_SPEC,
+    "ItemSpecOverride": ITEM_SPEC_OVERRIDE,
+    "GemProperties": GEM_PROPERTIES,
+    "SkillLine": SKILL_LINE,
+    "SkillRaceClassInfo": SKILL_RACE_CLASS_INFO,
+    "SkillLineAbility": SKILL_LINE_ABILITY,
+    "CharacterLoadout": CHARACTER_LOADOUT,
+    "CharacterLoadoutItem": CHARACTER_LOADOUT_ITEM,
+    "Map": MAP,
+    "PowerType": POWER_TYPE,
+    "Movie": MOVIE,
+    "SpellCastTimes": SPELL_CAST_TIMES,
+    "SpellDuration": SPELL_DURATION,
+    "SpellRadius": SPELL_RADIUS,
+    "SpellProcsPerMinute": SPELL_PROCS_PER_MINUTE,
 }
+
+
+def load_catalog(catalog_id=CATALOG_ID, path=None):
+    """Construct schemas from verified raw facts, independently of Rust Kinds.
+
+    This is explicit opt-in. It never modifies the reviewed SCHEMAS mapping,
+    fetches metadata, reads a client or infers record/runtime acceptance.
+    """
+    if catalog_id != CATALOG_ID:
+        raise OracleError("invalid_invocation")
+    path = Path(path) if path is not None else Path(__file__).resolve().parents[2] / "contracts/forever-metadata-v1.json"
+    try:
+        with path.open("rb") as handle:
+            raw = handle.read(2 * 1024 * 1024 + 1)
+        if hashlib.sha256(raw).hexdigest() != CATALOG_SHA256:
+            raise OracleError("unsupported_table_schema")
+        document = json.loads(raw)
+        if document['catalog_id'] != CATALOG_ID or document['source']['commit'] != '02245dcd245e7433e524577656177723d3e4992e':
+            raise OracleError("unsupported_table_schema")
+        result = {}
+        widths = {'FT_BYTE': 8, 'FT_SHORT': 16, 'FT_INT': 32, 'FT_LONG': 64}
+        for table in document['tables']:
+            fields = []
+            for field in table['fields'][:table['file_field_count']]:
+                kind = field['type']
+                if kind in ('FT_STRING', 'FT_STRING_NOT_LOCALIZED'):
+                    fields.append(Field('string', 32, field['array_size']))
+                elif kind == 'FT_FLOAT':
+                    fields.append(Field('float', 32, field['array_size']))
+                else:
+                    fields.append(Field('signed' if field['signed'] else 'unsigned', widths[kind], field['array_size'], signed=field['signed']))
+            parent_unsigned = table['parent_index'] >= table['file_field_count'] and not table['fields'][table['parent_index']]['signed']
+            result[table['name']] = Schema(table['name'], table['layout_hash'], table['index'], tuple(fields), table['parent_index'], parent_unsigned)
+        if len(result) != 1126:
+            raise OracleError("unsupported_table_schema")
+        return result
+    except (OSError, KeyError, TypeError, ValueError):
+        raise OracleError("unsupported_table_schema")
+
+
+def resolve_schema(table_name, schema_catalog=None):
+    if schema_catalog is not None and schema_catalog != CATALOG_ID:
+        raise OracleError("invalid_invocation")
+    schema = SCHEMAS.get(table_name)
+    if schema is None and schema_catalog is not None:
+        schema = load_catalog(schema_catalog).get(table_name)
+    if schema is None:
+        raise OracleError("unsupported_table_schema")
+    return schema
 
 
 @dataclasses.dataclass
@@ -889,7 +1243,9 @@ class _Column:
             at = self.offset // 8 + array * byte_width
             value = int.from_bytes(_slice(record, at, byte_width), "little")
         elif mode == 2:
-            if count != 1:
+            # CommonData copies only four bytes into native T; a 64-bit T
+            # retains indeterminate upper bytes, not a defined zero extension.
+            if width > 32 or count != 1:
                 raise OracleError("invalid_column_data")
             value = self.common.get(record_id, self.a)
         else:
@@ -983,32 +1339,47 @@ def _columns(data, header):
     return columns, at
 
 
-def _string_value(data, column, bits, record_start, strings_start, strings_end):
+class _TextBudget:
+    def __init__(self, limit):
+        self.limit = limit
+        self.used = 0
+
+    def charge(self, size):
+        if size > self.limit - self.used:
+            raise OracleError("record_policy_limit")
+        self.used += size
+
+
+def _string_value(data, column, bits, record_start, strings_start, strings_end, budget, array=0,
+                  require_non_null=False):
     if column.compression != 0:
         raise OracleError("invalid_column_data")
     if bits == 0:
+        if require_non_null:
+            # GetRecord.GetString returns nullptr; System.cpp:294-295 would
+            # assign it to std::string, including rows later filtered by WDT.
+            raise OracleError("invalid_record_string")
         return ""
-    at = record_start + column.offset // 8 + bits
+    # DB2FileLoader.cpp:800: each pointer is relative to its own array slot.
+    at = record_start + column.offset // 8 + 4 * array + bits
     if not strings_start <= at < strings_end:
         raise OracleError("invalid_record_string")
-    tail = data[at:strings_end]
-    nul = tail.find(b"\x00")
+    # Search the original bytes: slicing the whole remaining block would copy
+    # potentially megabytes even when the referenced string is empty.
+    nul = data.find(b"\x00", at, strings_end)
     if nul < 0:
         raise OracleError("invalid_record_string")
+    budget.charge(nul - at)
     try:
-        return tail[:nul].decode("utf-8")
+        return data[at:nul].decode("utf-8")
     except UnicodeDecodeError:
         raise OracleError("invalid_record_string")
 
 
 def _signed_value(bits, width):
-    mask = 0xFFFFFFFF if width == 32 else (1 << width) - 1
+    mask = (1 << width) - 1
     value = bits & mask
-    if width == 8:
-        return value - 256 if value >= 128 else value
-    if width == 16:
-        return value - 65536 if value >= 32768 else value
-    return value - 2**32 if value >= 2**31 else value
+    return value - (1 << width) if value >= (1 << (width - 1)) else value
 
 
 @dataclasses.dataclass
@@ -1024,7 +1395,8 @@ def _parent_in_data_value(field, parent_id):
     Mirrors the Rust ``parent_in_data_value`` / reference
     ``DB2FileLoader.cpp:650-712``: the write uses the field's own kind/width and
     a ParentId that does not fit is ``invalid_record_ids`` (the reference
-    ``ASSERT``). FT_INT and wider carry the u32 unchanged.
+    ``ASSERT``). FT_INT preserves the u32 bits, interpreted as signed when
+    the reviewed field kind is signed.
     """
     if field.kind == "signed":
         if field.bits == 8:
@@ -1035,7 +1407,7 @@ def _parent_in_data_value(field, parent_id):
             if parent_id > 0xFFFF:
                 raise OracleError("invalid_record_ids")
             return _Value("signed", number=_signed_value(parent_id, 16))
-        return _Value("signed", number=parent_id)
+        return _Value("signed", number=_signed_value(parent_id, 32))
     if field.kind == "unsigned":
         if field.bits == 8:
             if parent_id > 0xFF:
@@ -1050,29 +1422,161 @@ def _parent_in_data_value(field, parent_id):
     raise OracleError("unsupported_table_schema")
 
 
-def _decode_parsed(data, header, sections, schema):
-    if header.flags & SPARSE_FLAG:
+def _decode_sparse(data, header, sections, schema):
+    """Independent transcription of pinned SparseImpl:1020-1570.
+
+    The first subset has catalog IDs, scalar U8/U16/U32/I32 fields and no
+    parent. Primitive widths determine sequential offsets; neither regular
+    column bit offsets nor the conventional ID table determine values here.
+    """
+    if schema.parent >= 0 or schema.index >= 0 or any(
+        field.count != 1
+        or not (
+            (field.kind == "unsigned" and field.bits in (8, 16, 32))
+            or (field.kind == "signed" and field.bits == 32)
+        )
+        for field in schema.fields
+    ):
+        # Sparse AutoProduceData:1055 rejects appended parents even if empty.
         raise OracleError("unsupported_record_variant")
-    # DB2FileLoader.cpp:1767 rejects ParentLookupCount > 1; :1773 then requires
-    # the reviewed metadata to agree on whether the table has a parent field.
     if header.parent_lookup_count > 1:
         raise OracleError("unsupported_record_variant")
-    if (header.parent_lookup_count == 1) != (schema.parent >= 0):
+    if header.parent_lookup_count:
+        raise OracleError("unsupported_table_schema")
+    if (len(sections) > 1 or header.string_table_size
+            or header.common_data_size or header.pallet_data_size):
+        raise OracleError("unsupported_record_variant")
+    values_per_row = len(schema.fields)
+    value_count = header.record_count * values_per_row
+    if header.record_count > RECORD_POLICY_LIMIT or value_count > VALUE_POLICY_LIMIT:
+        raise OracleError("record_policy_limit")
+    if header.min_id > header.max_id:
+        raise OracleError("record_data_bounds")
+    # Sparse allocates MaxId+1, not the regular maximum of IDs/copy targets.
+    if header.max_id == 0xFFFFFFFF:
+        raise OracleError("invalid_record_ids")
+    extent = header.max_id + 1
+    primitive_at = HEADER_SIZE + len(sections) * SECTION_SIZE
+    primitive_end = primitive_at + header.field_count * 4
+    _slice(data, primitive_at, header.field_count * 4)
+    widths = []
+    for field_number, field in enumerate(schema.fields):
+        unused = _i16(data, primitive_at + field_number * 4)
+        if (not 0 <= unused <= 31
+                or (field.bits == 8 and unused != 24)
+                or (field.bits == 16 and unused != 16)):
+            raise OracleError("invalid_column_data")
+        widths.append((4 - unused // 8, 32 - unused))
+    if not sections:
+        if header.record_count or header.column_meta_size:
+            raise OracleError("unsupported_record_variant")
+        if len(data) != primitive_end:
+            raise OracleError("record_data_bounds")
+        return {}
+    section = sections[0]
+    if section.tact or section.string_table_size or section.parent_lookup_data_size:
+        raise OracleError("unsupported_record_variant")
+    if section.copy_table_count > COPY_POLICY_LIMIT:
+        raise OracleError("record_policy_limit")
+    if section.record_count != header.record_count or section.catalog_data_count != header.record_count:
+        raise OracleError("record_data_bounds")
+    if header.column_meta_size not in (0, header.total_field_count * 24):
+        raise OracleError("invalid_column_data")
+    metadata_end = primitive_end + header.column_meta_size
+    _slice(data, primitive_end, header.column_meta_size)
+    if header.column_meta_size:
+        for field_number in range(values_per_row):
+            at = primitive_end + field_number * 24
+            if _u32(data, at + 4) or _u32(data, at + 8):
+                raise OracleError("unsupported_record_variant")
+    start, end = section.file_offset, section.catalog_data_offset
+    if start != metadata_end or end < start or end > len(data):
+        raise OracleError("record_data_bounds")
+    id_bytes = section.catalog_data_count * 4
+    if section.id_table_size != id_bytes:
+        raise OracleError("invalid_record_ids")
+    copies_at = end + id_bytes
+    entries_at = copies_at + section.copy_table_count * 8
+    trailing_ids_at = entries_at + section.catalog_data_count * 6
+    if trailing_ids_at + id_bytes != len(data):
+        raise OracleError("record_data_bounds")
+    rows = {}
+    for ordinal in range(section.catalog_data_count):
+        record_id = _u32(data, end + ordinal * 4)
+        if record_id >= extent or record_id in rows:
+            raise OracleError("invalid_record_ids")
+        entry = entries_at + ordinal * 6
+        at, size = _u32(data, entry), _u16(data, entry + 4)
+        if at < start or at + size > end or not size:
+            raise OracleError("record_data_bounds")
+        record = _slice(data, at, size)
+        cursor, fields = 0, []
+        for field, (width, significant) in zip(schema.fields, widths):
+            number = int.from_bytes(_slice(record, cursor, width), "little")
+            if field.kind == "signed":
+                number = _signed_value(number, significant)
+            elif field.bits == 32:
+                number &= (1 << significant) - 1
+            fields.append([_Value(field.kind, number=number)])
+            cursor += width
+        # C++ sparse getters ignore trailing record padding and Header.RecordSize.
+        rows[record_id] = fields
+    for copy_number in range(section.copy_table_count):
+        at = copies_at + copy_number * 8
+        new, source = _u32(data, at), _u32(data, at + 4)
+        if not source or source >= extent or new >= extent or source not in rows:
+            continue
+        if source == new:
+            raise OracleError("unsupported_record_variant")
+        if new not in rows:
+            value_count += values_per_row
+            if value_count > VALUE_POLICY_LIMIT:
+                raise OracleError("record_policy_limit")
+        rows[new] = [[dataclasses.replace(value) for value in group] for group in rows[source]]
+    return dict(sorted(rows.items()))
+
+
+def _decode_parsed(data, header, sections, schema, terrain_role=None, text_limit=None):
+    if header.flags & SPARSE_FLAG:
+        if terrain_role is not None:
+            raise OracleError("unsupported_record_variant")
+        return _decode_sparse(data, header, sections, schema)
+    # DB2FileLoader.cpp:1767 rejects ParentLookupCount > 1; :1775 rejects a
+    # lookup only when the reviewed schema has no parent. A parent-bearing
+    # schema may have no lookup: in-record values remain intact and appended
+    # parents keep their initialized zero (:480-505, :509-510).
+    if header.parent_lookup_count > 1:
+        raise OracleError("unsupported_record_variant")
+    if header.parent_lookup_count == 1 and schema.parent < 0:
         raise OracleError("unsupported_table_schema")
     if len(sections) == 0:
-        # DB2FileLoader.cpp:1778-1779 admits a zero-section header and
-        # DB2FileLoader.cpp:1877 then assigns an empty record map: no sections
-        # means no records. A header that still declares records has no offsets
-        # to read, so it is rejected rather than silently dropping them.
+        # DB2FileLoader.cpp:1782-1784 still reads primitive field metadata,
+        # four bytes per file field; :1903-1912 checks the exact file end when
+        # no section exists. Admit this complete minimal empty variant only.
         if header.record_count != 0:
             raise OracleError("unsupported_record_variant")
-        return {}
+        if (
+            header.string_table_size != 0
+            or header.column_meta_size != 0
+            or header.common_data_size != 0
+            or header.pallet_data_size != 0
+        ):
+            raise OracleError("unsupported_record_variant")
+        if len(data) != HEADER_SIZE + header.field_count * 4:
+            raise OracleError("record_data_bounds")
+        return {} if terrain_role is None else TerrainSources(terrain_role, (), (), 0,
+            TEXT_POLICY_LIMIT if text_limit is None else text_limit)
     if len(sections) > 1:
         raise OracleError("unsupported_record_variant")
     section = sections[0]
     if section.tact or section.catalog_data_count != 0:
         raise OracleError("unsupported_record_variant")
-    value_count = header.record_count * len(schema.fields)
+    # Bound decoded scalar values, including arrays and an appended parent.
+    # The same budget also applies to distinct rows added by the copy table.
+    values_per_row = sum(field.count for field in schema.fields)
+    if schema.parent >= len(schema.fields):
+        values_per_row += 1
+    value_count = header.record_count * values_per_row
     if (
         header.record_count > RECORD_POLICY_LIMIT
         or section.copy_table_count > COPY_POLICY_LIMIT
@@ -1083,7 +1587,7 @@ def _decode_parsed(data, header, sections, schema):
         section.record_count != header.record_count
         or section.string_table_size != header.string_table_size
         or header.record_size == 0
-        or header.min_id > header.max_id
+        or (terrain_role is None and header.min_id > header.max_id)
     ):
         raise OracleError("record_data_bounds")
     columns, metadata_end = _columns(data, header)
@@ -1119,6 +1623,12 @@ def _decode_parsed(data, header, sections, schema):
         raise OracleError("invalid_column_data")
 
     rows = {}
+    text_budget = _TextBudget(TEXT_POLICY_LIMIT if text_limit is None else text_limit)
+    terrain_direct = []
+    # Cache UTF-8 byte lengths by row so copies never re-encode Python strings.
+    # Python shares immutable str objects, but the logical budget deliberately
+    # mirrors Rust's owned String clones and bounds canonical rendered output.
+    row_text_bytes = {}
     # Record ordinal -> row id, so the parent block can address a row by its
     # ordinal (DB2FileLoader.cpp:1877 fills the appended field from the block).
     ordinal_ids = []
@@ -1141,9 +1651,11 @@ def _decode_parsed(data, header, sections, schema):
             record_id = (
                 header.min_id + record if raw_id <= header.min_id else raw_id
             )
-        if record_id > header.max_id or record_id in rows:
+        if record_id > 0xFFFFFFFF or (terrain_role is None and
+                (record_id > header.max_id or record_id in rows)):
             raise OracleError("invalid_record_ids")
         fields = []
+        text_before_row = text_budget.used
         for field, kind in enumerate(schema.fields):
             values = []
             for array in range(kind.count):
@@ -1166,6 +1678,9 @@ def _decode_parsed(data, header, sections, schema):
                                 record_start,
                                 strings_start,
                                 strings_end,
+                                text_budget,
+                                array,
+                                require_non_null=(terrain_role in ("Map", "VMap") and field in (0, 1)),
                             ),
                         )
                     )
@@ -1178,6 +1693,20 @@ def _decode_parsed(data, header, sections, schema):
                 else:
                     values.append(_Value("unsigned", number=bits))
             fields.append(values)
+        if terrain_role is not None:
+            if terrain_role == "Map":
+                projected = (fields[21][0].number, fields[1][0].text, fields[0][0].text)
+            elif terrain_role == "VMap":
+                parent = _signed_value(fields[13][0].number & 0xFFFF, 16)
+                if parent < 0:
+                    parent = _signed_value(fields[14][0].number & 0xFFFF, 16)
+                projected = (fields[21][0].number, parent, fields[1][0].text, fields[0][0].text)
+            elif terrain_role == "LiquidType":
+                projected = (fields[3][0].number, fields[14][0].number)
+            else:
+                projected = (fields[0][0].number & 0xFFFFFFFF, fields[1][0].number)
+            terrain_direct.append((record_id, projected))
+            continue
         # Extra field at the end: grow the row to `parent` and default the
         # appended slot to a signed zero; filled from the parent block below.
         # When instead `parent < len(schema.fields)` the parent is an EXISTING
@@ -1186,9 +1715,16 @@ def _decode_parsed(data, header, sections, schema):
         if schema.parent >= 0 and schema.parent >= len(schema.fields):
             while len(fields) <= schema.parent:
                 fields.append([])
-            fields[schema.parent] = [_Value("signed", number=0)]
+            fields[schema.parent] = [_Value("unsigned" if schema.appended_parent_unsigned else "signed", number=0)]
         ordinal_ids.append(record_id)
         rows[record_id] = fields
+        row_text_bytes[record_id] = text_budget.used - text_before_row
+
+    if terrain_role is not None:
+        copies = tuple((_u32(data, copy_start + i * 8), _u32(data, copy_start + i * 8 + 4))
+                       for i in range(section.copy_table_count))
+        return TerrainSources(terrain_role, tuple(terrain_direct), copies,
+                              text_budget.used, text_budget.limit)
 
     # Apply the parent lookup before the copy table so a copied row carries its
     # source's parent value. A later duplicate for the same RecordIndex wins.
@@ -1212,30 +1748,152 @@ def _decode_parsed(data, header, sections, schema):
                 rows[rid][schema.parent][0] = _parent_in_data_value(
                     schema.fields[schema.parent], parent_id
                 )
+            elif schema.appended_parent_unsigned:
+                rows[rid][schema.parent][0] = _Value("unsigned", number=parent_id)
             else:
-                rows[rid][schema.parent][0] = _Value("signed", number=parent_id)
+                rows[rid][schema.parent][0] = _Value(
+                    "signed", number=_signed_value(parent_id, 32)
+                )
 
-    # AutoProduceRecordCopies (DB2FileLoader.cpp:613-634).
+    # DB2FileLoader.cpp:955-977 GetMaxId includes every copy destination,
+    # even when that copy will be skipped. AutoProduceData (:394-398) adds
+    # one and DB2Store.cpp:101-107 passes this index-table size to
+    # AutoProduceRecordCopies, not the number of physical file records.
+    max_record_id = max(rows, default=0)
+    for index in range(section.copy_table_count):
+        new = _u32(data, copy_start + index * 8)
+        max_record_id = max(max_record_id, new)
+    # Fail closed on the reference's header assertion or u32 size overflow.
+    if max_record_id > header.max_id or max_record_id == 0xFFFFFFFF:
+        raise OracleError("invalid_record_ids")
+    index_table_size = max_record_id + 1
+
+    # AutoProduceRecordCopies (DB2FileLoader.cpp:613-634), in file order.
     for index in range(section.copy_table_count):
         entry = copy_start + index * 8
         new = _u32(data, entry)
         source = _u32(data, entry + 4)
         if (
             source == 0
-            or source >= header.record_count
-            or new >= header.record_count
+            or source >= index_table_size
+            or new >= index_table_size
             or source not in rows
         ):
             continue
+        # The reference writes a destination pointer before reading its
+        # source, so self-copies read uninitialized data. Its uint32 inline-id
+        # write also corrupts adjacent fields when the reviewed id is narrower.
+        # Neither case has defined output we can safely claim to reproduce.
+        if source == new or (schema.index >= 0 and schema.fields[schema.index].bits != 32):
+            raise OracleError("unsupported_record_variant")
+        if new not in rows and (len(rows) + 1) * values_per_row > VALUE_POLICY_LIMIT:
+            raise OracleError("record_policy_limit")
+        # Charge before constructing the copy. Overwrites consume bytes too;
+        # no refund permits repeated replacement to evade the work budget.
+        text_budget.charge(row_text_bytes[source])
         fields = [[dataclasses.replace(value) for value in group] for group in rows[source]]
         if schema.index >= 0:
             fields[schema.index][0] = _Value("unsigned", number=new)
         rows[new] = fields
+        row_text_bytes[new] = row_text_bytes[source]
+    return dict(sorted(rows.items()))
+
+
+@dataclasses.dataclass(frozen=True)
+class TerrainSources:
+    """Closed terrain projection; complete validated physical order, no assets IO.
+
+    Fields: Map=(signed WDT, name, directory), Type=(sound, material),
+    Material=(flags bits, signed LVF). Copies are (new, source) raw u32 pairs.
+    """
+    name: str
+    direct_records: tuple
+    copies: tuple
+    decoded_utf8_bytes: int
+    text_limit: int
+
+
+def read_terrain_sources(data, name, *, _text_limit=None):
+    """Pinned System.cpp275-389 consumer, separate from AutoProduceData rows."""
+    identities = {"Map": (0xD43AFAC3, 26), "LiquidType": (0xD1ECEEC9, 21),
+                  "LiquidMaterial": (0x98E5D7AA, 2)}
+    if name not in identities:
+        raise OracleError("unsupported_table_schema")
+    schema = resolve_schema(name, CATALOG_ID)
+    header, sections = parse(data)
+    layout, count = identities[name]
+    if (header.layout_hash != layout or header.field_count != count
+            or header.total_field_count != count or schema.parent != -1 or schema.index != -1):
+        raise OracleError("unsupported_table_schema")
+    return _decode_parsed(data, header, sections, schema, name, _text_limit)
+
+
+def read_vmap_sources(data, *, _text_limit=None):
+    """Pinned vmapexport.cpp421-449 fields/copies; retain zero-WDT rows for graph analysis.
+
+    ParentMapID field13 is a signed 16-bit word. CosmeticParentMapID field14
+    replaces it only when negative. Physical source rows and append copies
+    remain distinct from generic AutoProduceData and the terrain projection.
+    """
+    schema = resolve_schema("Map", CATALOG_ID)
+    header, sections = parse(data)
+    if (header.layout_hash != 0xD43AFAC3 or header.field_count != 26
+            or header.total_field_count != 26 or schema.parent != -1 or schema.index != -1):
+        raise OracleError("unsupported_table_schema")
+    return _decode_parsed(data, header, sections, schema, "VMap", _text_limit)
+
+
+def _utf8_length(text):
+    # Count bytes without allocating a second encoded string.
+    return sum(1 if ord(c) < 0x80 else 2 if ord(c) < 0x800 else 3 if ord(c) < 0x10000 else 4
+               for c in text)
+
+
+def materialize_terrain(sources, *, _row_limit=None):
+    """Exact source-specific copy operations with bounded accumulation."""
+    if sources.name in ("Map", "VMap"):
+        limit = 200_000 if _row_limit is None else _row_limit
+        rows = list(sources.direct_records)
+        if len(rows) > limit:
+            raise OracleError("record_policy_limit")
+        direct_index = {rid: ordinal for ordinal, (rid, _) in enumerate(rows)}
+        budget = _TextBudget(sources.text_limit)
+        budget.charge(sources.decoded_utf8_bytes)
+        for new, source in sources.copies:
+            if source not in direct_index:
+                continue
+            if len(rows) >= limit:
+                raise OracleError("record_policy_limit")
+            fields = rows[direct_index[source]][1]
+            text_at = 2 if sources.name == "VMap" else 1
+            budget.charge(_utf8_length(fields[text_at]) + _utf8_length(fields[text_at + 1]))
+            rows.append((new, fields))
+        if sources.name == "VMap":
+            return rows
+        return [(rid, fields) for rid, fields in rows if fields[0] != 0]
+    if sources.name not in ("LiquidType", "LiquidMaterial"):
+        raise OracleError("unsupported_table_schema")
+    limit = 300_000 if _row_limit is None else _row_limit
+    rows = {}
+    def assign(rid, value):
+        if rid not in rows and len(rows) >= limit:
+            raise OracleError("record_policy_limit")
+        rows[rid] = value
+    for rid, fields in sources.direct_records:
+        assign(rid, fields)
+    for new, source in sources.copies:
+        if source not in rows:
+            assign(source, (0, 0))
+        assign(new, rows[source])
     return dict(sorted(rows.items()))
 
 
 def decode(data, schema):
-    """Decode one regular, unencrypted, single-section WDC5 file."""
+    """Decode bounded regular/numeric sparse WDC5 with a 64 MiB UTF-8 budget.
+
+    Direct strings and applicable copies, including overwrites, consume the
+    budget without refunds. Results below the budget are unchanged.
+    """
     header, sections = parse(data)
     return _decode_parsed(data, header, sections, schema)
 
@@ -1270,11 +1928,9 @@ def render(rows, table_name):
     return "\n".join(lines) + "\n"
 
 
-def dump_file(path, table_name):
-    """Read a local file and return its canonical dump for a reviewed table."""
-    schema = SCHEMAS.get(table_name)
-    if schema is None:
-        raise OracleError("unsupported_table_schema")
+def dump_file(path, table_name, schema_catalog=None):
+    """Canonical local dump; additional schemas require a pinned catalog opt-in."""
+    schema = resolve_schema(table_name, schema_catalog)
     try:
         with open(path, "rb") as handle:
             data = handle.read(MAX_BYTES + 1)
@@ -1306,6 +1962,7 @@ def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     path = None
     table = None
+    schema_catalog = None
     index = 0
     while index < len(args):
         if args[index] == "--file" and path is None and index + 1 < len(args):
@@ -1314,6 +1971,9 @@ def main(argv=None):
         elif args[index] == "--table" and table is None and index + 1 < len(args):
             table = args[index + 1]
             index += 2
+        elif args[index] == "--schema-catalog" and schema_catalog is None and index + 1 < len(args):
+            schema_catalog = args[index + 1]
+            index += 2
         else:
             sys.stderr.write("invalid_invocation\n")
             return 2
@@ -1321,7 +1981,7 @@ def main(argv=None):
         sys.stderr.write("invalid_invocation\n")
         return 2
     try:
-        dump = dump_file(path, table)
+        dump = dump_file(path, table, schema_catalog)
     except OracleError as error:
         sys.stderr.write(error.code + "\n")
         return error.exit_code

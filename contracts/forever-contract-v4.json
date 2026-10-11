@@ -1,0 +1,165 @@
+{
+  "contract_version": 4,
+  "line": "forever",
+  "description": "Explicit Rust-local acquisition for the existing reviewed/default or pinned catalog selection policies. Reviewed unknown tables retain metadata-only claims; catalog results require full schema and row decoding. Acquisition does not establish runtime acceptance.",
+  "manifest": {
+    "published_name": "forever-manifest.json",
+    "report_name": "report.json",
+    "incomplete_marker_name": ".rustycore-forever-incomplete.json",
+    "schema_id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-manifest-v4.schema.json",
+    "report_version": 2
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "admitted_builds": [
+      {
+        "build": 70170,
+        "version": "1.60.1.70170"
+      },
+      {
+        "build": 70205,
+        "version": "1.60.1.70205"
+      }
+    ],
+    "supported_locales": [
+      "enUS",
+      "esES"
+    ]
+  },
+  "scope": {
+    "batch_scopes": [
+      "explicit_db2_batch",
+      "explicit_db2_catalog_batch"
+    ],
+    "full_client_extraction": false,
+    "db2": {
+      "magic": "WDC5",
+      "version": 5
+    },
+    "default_tables": [
+      "ChrClasses",
+      "ChrRaces"
+    ],
+    "schema_selection": {
+      "reviewed": "Default two reviewed tables or the unchanged explicit-list policy: known schemas decode; unknown tables publish complete metadata-only bytes with false/null record claims.",
+      "catalog": "Explicit manifest plus --schema-catalog pinned-metadata-v1; every name/ID must resolve exactly and every complete artifact requires schema+record decode."
+    }
+  },
+  "limits": {
+    "max_entries": 256,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "upload_permitted": false
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  },
+  "verification": {
+    "exit_codes": [
+      {
+        "code": 0,
+        "name": "verified"
+      },
+      {
+        "code": 2,
+        "name": "invalid_invocation"
+      },
+      {
+        "code": 3,
+        "name": "unsupported_client"
+      },
+      {
+        "code": 4,
+        "name": "input_io"
+      },
+      {
+        "code": 8,
+        "name": "incomplete"
+      },
+      {
+        "code": 9,
+        "name": "verification_failed"
+      },
+      {
+        "code": 10,
+        "name": "internal"
+      }
+    ],
+    "failure_codes": [
+      "MANIFEST_SCHEMA_INVALID",
+      "INVENTORY_MISMATCH",
+      "TABLE_IDENTITY_MISMATCH",
+      "UNSAFE_PATH",
+      "INCOMPLETE_RUN",
+      "ROW_DECODE_MISMATCH"
+    ],
+    "code_bindings": [
+      {
+        "code": "MANIFEST_SCHEMA_INVALID",
+        "exit": 2
+      },
+      {
+        "code": "INVENTORY_MISMATCH",
+        "exit": 9
+      },
+      {
+        "code": "TABLE_IDENTITY_MISMATCH",
+        "exit": 9
+      },
+      {
+        "code": "UNSAFE_PATH",
+        "exit": 9
+      },
+      {
+        "code": "INCOMPLETE_RUN",
+        "exit": 8
+      },
+      {
+        "code": "ROW_DECODE_MISMATCH",
+        "exit": 9
+      }
+    ]
+  },
+  "schema_catalog": {
+    "id": "pinned-metadata-v1",
+    "source_commit": "02245dcd245e7433e524577656177723d3e4992e",
+    "source_blob": "d06b97bad72ca2aecad3987ce9c348ac6055e0db",
+    "source_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+    "facts_sha256": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+  },
+  "version_dispatch": {
+    "2": "Unchanged native reviewed/default and metadata-only contract.",
+    "3": "Unchanged native explicit pinned catalog contract.",
+    "4": "Explicit Rust-local acquisition; schema_selection independently preserves reviewed or catalog semantics.",
+    "other": "MANIFEST_SCHEMA_INVALID"
+  },
+  "invariants": [
+    "Open exactly one acquisition session before creating output; reuse it for every read.",
+    "Profile contains all effective store limits, explicit index/ROOT layouts, offline mode and full CKey MD5 validation; only nine EKey prefix bytes are authenticated.",
+    "1..16 MiB effective per-file ceiling; option, acquisition and artifact claims must agree; batch limit 256 MiB and at most256entries.",
+    "Create the real incomplete marker before reads; remove it only after a fully complete report and manifest publish.",
+    "InputChanged or a changed observed build is fatal: retain marker and partial artifacts, issue no more reads; ordinary entry failure may continue but cannot produce a complete run.",
+    "Native v2/v3 bytes and schema/record claim semantics remain unchanged; backend selection does not upgrade metadata-only claims.",
+    "V4 verifier validates the acquisition profile and companion report offline, and recomputes the existing inventory, identity and claimed-row checks.",
+    "Catalog schema provenance remains fixed and mandatory only when schema_selection=catalog.",
+    "No client bytes, paths, keys, remote fallback or full runtime acceptance claim."
+  ],
+  "acquisition": {
+    "required_backend": "rust-local",
+    "profile": "local-v7-ckey-root-nz-v1",
+    "schema_id": "https://rustycore.dev/schemas/forever-acquisition-v1.schema.json",
+    "options": [
+      "--backend rust-local",
+      "--index-layout contiguous|paged",
+      "--root-layout headerless-18125|header-30080|header-50893-v1|header-50893-v2",
+      "--max-file-bytes 1..16777216 (optional reduction)"
+    ],
+    "native_default": "Unchanged v2/v3; layout/limit options are rejected with native. A binary without native rejects its default before client/output IO. Native report.json remains version1; Rust-local uses report_version2. The verifier result keeps version1 because its shape is unchanged."
+  }
+}

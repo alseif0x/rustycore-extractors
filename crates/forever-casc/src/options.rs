@@ -13,6 +13,9 @@ pub struct Options {
     pub output: PathBuf,
     pub locale: Locale,
     pub manifest: Option<PathBuf>,
+    /// Explicit pinned metadata opt-in; never enabled by a default plan.
+    pub schema_catalog: Option<&'static str>,
+    pub acquisition: crate::acquisition::Selection,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,10 +56,16 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
         return Err(CliError::INVALID_INVOCATION);
     }
     let mut values: BTreeMap<&str, &OsString> = BTreeMap::new();
+    let mut acquisition = crate::acquisition::OptionsBuilder::default();
     for pair in args.as_chunks::<2>().0 {
         let key = pair[0].to_str().ok_or(CliError::INVALID_INVOCATION)?;
-        if !matches!(key, "--client" | "--locale" | "--output" | "--manifest")
-            || pair[1].is_empty()
+        if acquisition.push(key, &pair[1])? {
+            continue;
+        }
+        if !matches!(
+            key,
+            "--client" | "--locale" | "--output" | "--manifest" | "--schema-catalog"
+        ) || pair[1].is_empty()
             || values.insert(key, &pair[1]).is_some()
         {
             return Err(CliError::INVALID_INVOCATION);
@@ -72,11 +81,22 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
     )
     .map_err(|_| CliError::UNSUPPORTED_LOCALE)?;
     let manifest = values.get("--manifest").map(PathBuf::from);
+    let schema_catalog = match values.get("--schema-catalog") {
+        Some(value)
+            if value.to_str() == Some(forever_db2::catalog::CATALOG_ID) && manifest.is_some() =>
+        {
+            Some(forever_db2::catalog::CATALOG_ID)
+        }
+        Some(_) => return Err(CliError::INVALID_INVOCATION),
+        None => None,
+    };
     Ok(Parsed::Run(Options {
         client,
         output,
         locale,
         manifest,
+        schema_catalog,
+        acquisition: acquisition.finish(crate::batch::MAX_FILE_BYTES)?,
     }))
 }
 
@@ -161,6 +181,42 @@ mod tests {
     }
 
     #[test]
+    fn catalog_selection_is_exact_and_requires_explicit_manifest() {
+        let base = ["--client", "c", "--locale", "enUS", "--output", "o"];
+        for extra in [
+            vec!["--schema-catalog", "pinned-metadata-v1"],
+            vec!["--manifest", "m", "--schema-catalog", "unknown"],
+            vec!["--manifest", "m", "--schema-catalog", "PINNED-METADATA-V1"],
+            vec![
+                "--manifest",
+                "m",
+                "--schema-catalog",
+                "pinned-metadata-v1",
+                "--schema-catalog",
+                "pinned-metadata-v1",
+            ],
+        ] {
+            assert_eq!(
+                run(&[base.to_vec(), extra].concat()),
+                Err(CliError::INVALID_INVOCATION)
+            );
+        }
+        let Parsed::Run(options) = run(&[
+            base.to_vec(),
+            vec!["--manifest", "m", "--schema-catalog", "pinned-metadata-v1"],
+        ]
+        .concat())
+        .unwrap() else {
+            panic!("run expected")
+        };
+        assert_eq!(options.schema_catalog, Some("pinned-metadata-v1"));
+        let Parsed::Run(default) = run(&base).unwrap() else {
+            panic!("run expected")
+        };
+        assert_eq!(default.schema_catalog, None);
+    }
+
+    #[test]
     fn errors_are_redacted_and_exit_codes_match_the_taxonomy() {
         let error = run(&["--client", "/private/secret", "--locale", "enUS"]).unwrap_err();
         assert_eq!(error.code, "invalid_invocation");
@@ -173,6 +229,85 @@ mod tests {
         assert_eq!(Error::InvalidLocale.code(), "unsupported_locale");
         assert_eq!(Error::InvalidLocale.exit_code(), 2);
         assert_eq!(error, CliError::new("invalid_invocation", 2));
+    }
+
+    #[test]
+    fn acquisition_defaults_native_and_rust_requires_explicit_layouts() {
+        let base = ["--client", "c", "--locale", "enUS", "--output", "o"];
+        let Parsed::Run(native) = run(&base).unwrap() else {
+            panic!("run");
+        };
+        assert_eq!(native.acquisition, crate::acquisition::Selection::Native);
+        for root in [
+            "headerless-18125",
+            "header-30080",
+            "header-50893-v1",
+            "header-50893-v2",
+        ] {
+            for index in ["contiguous", "paged"] {
+                let values = [
+                    base.to_vec(),
+                    vec![
+                        "--backend",
+                        "rust-local",
+                        "--index-layout",
+                        index,
+                        "--root-layout",
+                        root,
+                        "--max-file-bytes",
+                        "1024",
+                    ],
+                ]
+                .concat();
+                let Parsed::Run(options) = run(&values).unwrap() else {
+                    panic!("run");
+                };
+                assert_eq!(
+                    options.acquisition.profile().unwrap().max_file_bytes(),
+                    1024
+                );
+                assert_eq!(options.schema_catalog, None);
+            }
+        }
+    }
+
+    #[test]
+    fn acquisition_rejects_incomplete_ambiguous_or_enlarged_policy() {
+        let base = ["--client", "c", "--locale", "enUS", "--output", "o"];
+        for extra in [
+            vec!["--backend", "other"],
+            vec!["--backend", "rust-local"],
+            vec!["--index-layout", "paged"],
+            vec!["--root-layout", "header-30080"],
+            vec!["--max-file-bytes", "1"],
+            vec!["--backend", "native", "--max-file-bytes", "1"],
+            vec!["--backend", "native", "--backend", "native"],
+            vec![
+                "--backend",
+                "rust-local",
+                "--index-layout",
+                "paged",
+                "--root-layout",
+                "header-30080",
+                "--max-file-bytes",
+                "16777217",
+            ],
+            vec![
+                "--backend",
+                "rust-local",
+                "--index-layout",
+                "paged",
+                "--root-layout",
+                "header-30080",
+                "--max-file-bytes",
+                "0",
+            ],
+        ] {
+            assert_eq!(
+                run(&[base.to_vec(), extra].concat()),
+                Err(CliError::INVALID_INVOCATION)
+            );
+        }
     }
 
     impl Parsed {

@@ -1,0 +1,60 @@
+{
+  "contract": "forever_package_state",
+  "version": 2,
+  "authored": "2026-10-11",
+  "manifest_version": 1,
+  "manifest_contract": "forever-package-contract-v1.json",
+  "platform": "linux_rooted_private_directory",
+  "tested_architectures": [
+    "x86_64"
+  ],
+  "scope": "artifact_integrity_and_same_context_restart",
+  "network": "none",
+  "protocol_file": ".state/protocol.json",
+  "protocol": "canonical state_version=2 and SHA256(Context::json())",
+  "transaction_file": ".state/transaction.json",
+  "transaction": "canonical transaction_version=2, same context hash, exact component/path/bytes/SHA256 facts",
+  "serialization": "final manifest v1 and artifact facts remain byte-identical for the same context and complete outputs",
+  "lifecycle": [
+    "create a new private initialized state v2 stage with durable incomplete marker",
+    "acquire exclusive OS writer lock; no recovery while another writer owns it",
+    "put: durable transaction -> complete artifact -> durable canonical receipt -> remove transaction and sync state directory",
+    "finish_component: complete producer result -> rehash component -> durable seal",
+    "finish: all selected seals -> complete hashes/closure -> durable canonical manifest -> remove incomplete marker and sync root"
+  ],
+  "resume_api": "Run::resume(output, expected_context, protected_inputs, limits)",
+  "required_preflight": [
+    "explicit caller-expected build/locale/component/source/plan/producer identities exactly match stored canonical context and protocol",
+    "incomplete marker has exact canonical contents; completed markerless stages refuse write access",
+    "all committed receipts, payloads and optional seals are canonical and complete",
+    "a pending artifact reserves full declared file/byte/metadata limits before mutation",
+    "every pending/final link pair is the same inode with exactly two links; unrelated links refuse",
+    "complete observed namespace contains only declared payloads and explicitly identified producer-owned pending files",
+    "no filesystem mutation before complete preflight and namespace closure"
+  ],
+  "recovery_actions": [
+    "discard only recognized unpublished regular single-link pending files within declared lengths; never trust their partial bytes",
+    "unlink only a matching two-link pending/final publication pair; retain and rehash complete final bytes",
+    "authenticate a final artifact against its durable transaction and write a missing canonical receipt",
+    "remove resolved transaction only after receipt publication; retain unresolved transaction for exact producer replay",
+    "discard unpublished seal; require new producer completion; retain verified published seal",
+    "discard partial unpublished manifest; regenerate only after every seal; reuse an exact published manifest without rewriting"
+  ],
+  "producer_replay": "Replay unfinished producers to their full complete result. Every retained unsealed artifact and outstanding intent must be re-emitted with identical facts before its component can seal; duplicate callbacks cannot cover a different retained file. Identical retained artifacts return AlreadyPresent. An outstanding transaction requires the same exact expected bytes; conflicting output poisons the active run. completed_components exposes verified seals for skipping fully completed producers. Unfinished computation is replayed; no arbitrary per-task computational checkpoint or source inventory discovery is supplied.",
+  "failed_recovery": "Preflight rejection preserves stage bytes and names. Later I/O/interruption can leave applied safe recovery steps; marker remains and a subsequent explicit same-context resume repeats validation. No atomic hostile-mutation or filesystem power-loss guarantee.",
+  "legacy": "Existing complete manifest/state v1 packages remain read-only verifiable. Incomplete v1 stages lack a durable intent protocol and are not migrated or resumed. Interrupted initial create before durable context/protocol/lock initialization is not admitted.",
+  "limits": "Same downward-only v1 payload/manifest/metadata limits. At most 24 recovery observations plus matching cleanup records fit the fixed scratch allowance. A sorted digest/component/seen index for retained unsealed artifacts charges actual Vec capacity in addition to the fact inventory before mutation; later inventories subtract that reservation. It is released after complete replay coverage. No unbounded journal history or portable RSS guarantee.",
+  "error_codes_additional": [
+    "package_state_version"
+  ],
+  "excluded": [
+    "unified extraction/acquisition/plan CLI",
+    "automatic input fingerprint discovery",
+    "Windows/other architectures",
+    "semantic or new runtime compatibility acceptance",
+    "complete real client extraction",
+    "authentication and atomic adversarial filesystem snapshot",
+    "power-cut storage-device testing",
+    "publication"
+  ]
+}

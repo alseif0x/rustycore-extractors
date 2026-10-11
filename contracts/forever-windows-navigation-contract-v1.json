@@ -1,0 +1,147 @@
+{
+  "contract": "forever-windows-navigation-readers-source-v1",
+  "version": 1,
+  "distribution_source_profile": "forever-seven-crate-windows-navigation-readers-source-v7",
+  "original_implementation": true,
+  "network": false,
+  "windows_product_enabled": false,
+  "actual_windows_ntfs_accepted": false,
+  "real_geometry_accepted": false,
+  "full_runtime_accepted": false,
+  "full_extractor_complete": false,
+  "publication_authorized": false,
+  "new_registry_dependencies": [],
+  "sources": [
+    "crates/forever-navigation/Cargo.toml",
+    "crates/forever-navigation/src/inventory.rs",
+    "crates/forever-navigation/src/inventory/windows.rs",
+    "crates/forever-navigation/src/inventory/windows/guard.rs",
+    "crates/forever-navigation/src/inventory/windows/run.rs",
+    "crates/forever-navigation/src/inventory/windows/run/tests.rs",
+    "crates/forever-navigation/src/inventory/windows/tests.rs",
+    "crates/forever-navigation/src/terrain/load.rs",
+    "crates/forever-navigation/src/terrain/load/windows.rs",
+    "crates/forever-navigation/src/terrain/load/windows/tests.rs",
+    "docs/forever-windows-navigation-readers.md",
+    "contracts/forever-windows-navigation-contract-v1.json",
+    "tests/contracts/test_forever_windows_navigation_contract.py"
+  ],
+  "api": {
+    "terrain": "terrain::load::windows::{RootedSource, FsLimits, FsStats}",
+    "inventory": "inventory::windows::{Package, Limits, Statistics}",
+    "runner": "inventory::windows::run::{execute, Sink, Selection}",
+    "selection": [
+      "All",
+      "Map",
+      "Tile"
+    ],
+    "sink": "caller-owned; callbacks provisional until Completed; no filesystem output/publication adapter"
+  },
+  "dependency_graph": {
+    "workspace_crates": 7,
+    "packages": 9,
+    "new_local_edge": {
+      "forever-navigation": [
+        "forever-platform"
+      ]
+    },
+    "registry_packages": {
+      "adler2": "2.0.1",
+      "miniz_oxide": "0.8.9"
+    }
+  },
+  "policy": {
+    "path": "normal absolute drive paths only; no canonicalization, case folding, verbatim/UNC or reparse fallback",
+    "inventory_names": "printable ASCII 1..255 bytes; reject Windows ambiguous punctuation/trailing dot or space and unobservable/irrelevant nonregular or reparse entries; stricter than Linux",
+    "identity": "full root/final-directory/file snapshots, ancestor object identity via existing platform leases; metadata-only verification, not an atomic snapshot or content authentication",
+    "absence": "verified genuine absence retained; later appearance, replacement or observed mutation permanently poisons source",
+    "read": "complete bounded reads, actual EOF and SHA-256 before return; repeated reads bind full identity and digest",
+    "serial_handles": 65,
+    "resident_handles_between_operations": 0,
+    "ordering": "drop enumeration iterator before final directory lease verification; drop file lease before independent root/directory guards",
+    "protected_cleanup": "reserve_after pre-admits separate cleanup work before file acquisition; exact_name reserves final directory check before enumeration; body work cannot consume cleanup allowance",
+    "changed_priority": "finish_tile preserves an already observed changed result and failed=true even if subsequent inventory verification refuses on limits",
+    "early_error_boundary": "inherited high-level open_rows/source-setup admission/parser errors can precede whole-inventory final verification; no atomic concurrent-mutation exclusion claim for these failures",
+    "queries": "existing checked queries unchanged; source/model reads outside queries",
+    "errors": "static redacted codes, no raw OS paths or error strings"
+  },
+  "limits": {
+    "only_downward": true,
+    "terrain": {
+      "metadata_bytes": 134217728,
+      "entries": 65536,
+      "root_bytes": 4096,
+      "verify_steps": 262144,
+      "chunk_bytes": 16384,
+      "artifact_bytes": "forever_terrain::maps::MAX_MAP_BYTES"
+    },
+    "inventory": {
+      "metadata_bytes": 268435456,
+      "entries": 1000000,
+      "tilelists": 4096,
+      "root_bytes": 4096,
+      "steps": 8000000,
+      "tilelist_bytes": 4108
+    },
+    "lease_allowance_bytes": 262144,
+    "scope": "actual retained capacities, growth overlap and separate transient lease allowance charged; conservative logical admission, not allocator rounding, RSS or all CPU/kernel work",
+    "read_statistics": "successful complete chunks only; failed primitive prefixes and EOF probe bytes excluded"
+  },
+  "validation": {
+    "static_tests": "static source consistency only; not runtime proof",
+    "source_freeze_sha256": "008f2b23de76ca6e826ad0325ed804eab234812c0530a95e06bc8451f5b23f6b",
+    "linux_tests_each_profile": 52,
+    "linux_ignored_each_profile": 3,
+    "gnu_alltargets_clippy": true,
+    "wine": {
+      "terminal": true,
+      "debug_passed": 56,
+      "release_passed": 56,
+      "total_passed": 112,
+      "timeouts": 0,
+      "not_run": 0,
+      "semantic_passed": true,
+      "overall_accepted": false,
+      "strict_zero_nonlocal_attempts": false,
+      "trace_evidence_complete": false,
+      "original_trace_complete_claim_accepted": false,
+      "unknown_syscall_bodies": 40,
+      "denied_nonlocal_attempts": 783,
+      "recognized_ip_attempts": 0,
+      "unknown_scope": "unresolved syscall class; no safe/nonnetwork assumption; zero recognized IP attempts is not complete zero-attempt evidence",
+      "report_sha256": "52b351af1de73424d3a8fac6420d540b9356cf4f62a49a53af656db35b612edb",
+      "root_semantic_review_sha256": "faa6af302012c98a517e52f730522760df97467054f3d901561f834681742041",
+      "root_trace_body_audit_sha256": "6568c256083139c7a392755b28a8115e6c49639f77878781dd7a830fc4919da3",
+      "independent_trace_body_audit_sha256": "8375804d415e9c81ea2070f6295535f03bbe90c7e6fd9d45f960545376018485",
+      "network_qualification_sha256": "5e3c359460ce4dc83c47deb8d0f04bbbdd4405ea633e520fb9d0b65f6b83f508",
+      "cleanup": "all 112 traced finite servers natural exit0; redundant prefix-k skipped, not proof of every possible descendant",
+      "scope": "synthetic Wine semantics only; actual NTFS, real input, Windows product/runtime and full extraction unaccepted; historical original report preserved, qualification sidecars supersede its trace-completeness claim"
+    },
+    "history": "prior initial resource-cap failure, aggregate-filter timeout, exact8 infinite-server timeout, exact8 cleanup refusal and full56 network/completeness failures remain historical; no failed report rewritten"
+  },
+  "not_claimed": [
+    "equal Linux failure admission",
+    "atomic filesystem snapshot",
+    "complete trace evidence",
+    "zero nonlocal attempts",
+    "actual Windows/NTFS acceptance",
+    "real geometry",
+    "Windows product publication",
+    "server activation",
+    "full extraction"
+  ],
+  "validated_import_sha256": {
+    "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
+    "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",
+    "crates/forever-navigation/src/inventory.rs": "13946d3a1df2e99deed0faebe57a715ff99dff3213c50bee018a772c968f1a00",
+    "crates/forever-navigation/src/inventory/windows.rs": "34478c4da953be0f26f8cf8b663c73d529b05bbfaf81356c41d9879143565b40",
+    "crates/forever-navigation/src/inventory/windows/guard.rs": "c9cfd8e0fabc155120945b22c3bcffeeac0843fa29b5a2f9da54fe0906980fd5",
+    "crates/forever-navigation/src/inventory/windows/run.rs": "5941c934ccb4406adf4d04db0b85b52fdd9393ba08fefba9ae67a92b7b1db38b",
+    "crates/forever-navigation/src/inventory/windows/run/tests.rs": "b263c5face7e9f36c0d641b0023b1e4eef08afc0b7d3dcd081d1748fa89c982f",
+    "crates/forever-navigation/src/inventory/windows/tests.rs": "aa133f32639fa52722ee1c92e53e0b3ddd6a9c5137d25d691464d296f1849178",
+    "crates/forever-navigation/src/terrain/load.rs": "240abd73b1c41a6c03fdfd7dee91c4179713a6fbb5c007ec04604da4e693bbab",
+    "crates/forever-navigation/src/terrain/load/windows.rs": "f32c7b498ff461eb107016bab3993a5a5e28b795e0dd2fa1743e7da6d601f7ae",
+    "crates/forever-navigation/src/terrain/load/windows/tests.rs": "56ff0049c76d7cb2039e703b5dba5885dda0f1e4a7c4d733175e7e9a0a63c680",
+    "docs/forever-windows-navigation-readers.md": "94c386e8521fa8567279fdc53be9d5f509f4844b60a2f260ad000707859e137c"
+  }
+}

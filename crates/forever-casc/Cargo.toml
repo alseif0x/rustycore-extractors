@@ -4,15 +4,21 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Offline target-admitted CASC read prototype with a pinned native backend"
+description = "Offline admitted CASC reads with bounded Rust N/Z and optional pinned native backends"
 publish = false
 
 [features]
-# Explicit external source/build dependency; pure-Rust CASC is NOT claimed.
+# Optional pinned external backend; the default Rust build supports only the reviewed local N/Z profile.
 native = []
 
 [dependencies]
 forever-db2 = { path = "../forever-db2" }
+forever-terrain = { path = "../forever-terrain" }
+forever-vmap = { path = "../forever-vmap" }
+miniz_oxide = { version = "=0.8.9", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+forever-platform = { path = "../forever-platform" }
 
 [lints.rust]
 unsafe_code = "deny"
@@ -25,8 +31,27 @@ required-features = ["native"]
 [[bin]]
 name = "forever-db2-extract"
 path = "src/extract_main.rs"
-required-features = ["native"]
 
 [[bin]]
 name = "forever-db2-verify"
 path = "src/verify_main.rs"
+
+[[bin]]
+name = "forever-gt-extract"
+path = "src/gt_extract_main.rs"
+
+[[bin]]
+name = "forever-gt-verify"
+path = "src/gt_verify_main.rs"
+
+[[bin]]
+name = "forever-camera-extract"
+path = "src/camera_extract_main.rs"
+
+[[bin]]
+name = "forever-camera-verify"
+path = "src/camera_verify_main.rs"
+
+[[bin]]
+name = "forever-package"
+path = "src/package_main.rs"

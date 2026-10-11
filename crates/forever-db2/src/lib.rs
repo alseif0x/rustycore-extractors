@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Read-only WDC5 metadata inspection plus a bounded regular-record decoder for
-//! the two character tables (ChrClasses/ChrRaces). No CASC, no network and no
-//! generic or full extraction: other tables, sparse/encrypted/parent-bearing and
-//! multi-section variants are rejected. A successful decode is not format parity.
+//! Read-only WDC5 metadata inspection and a bounded record decoder for reviewed
+//! schemas. The decoder accepts minimal empty files and unencrypted regular
+//! single-section files, including reviewed parent-field variants. A separate
+//! sparse path admits scalar U8/U16/U32/I32 with catalog IDs and no parent.
+//! Other sparse shapes, unsupported schemas, encryption and multiple sections
+//! are rejected. This
+//! crate has no CASC or network access; decoding is not full extraction, format
+//! parity or reader/runtime acceptance.
 //!
 //! Wire evidence: TrinityCore 02245dcd245e7433e524577656177723d3e4992e,
 //! DB2FileLoader.h::DB2Header/DB2SectionHeader and LoadHeaders. This is an
 //! independent bounded implementation, not an imported C++ loader.
 use std::io::{self, Read};
 mod records;
+pub use records::catalog;
+pub use records::terrain_sources;
 pub use records::{CharacterTable, DecodedTable, RecordError, Value};
 
 pub const HEADER_SIZE: usize = 204;
