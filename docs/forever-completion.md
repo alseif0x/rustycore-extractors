@@ -115,6 +115,18 @@ complete CKey/EKey identity, cipher interiors or that supplying keys alone would
 recover the inputs. Preserve the earlier incomplete outcomes as historical
 attempts; see [the framing acceptance](forever-required-framing-acceptance.md).
 
+A later read-only audit of the workstation's esES `DBCache.bin` completely
+framed 28,377 HTFX v9 records, but its header is build 70170 while the target
+client is 70205. It contains 128 invalid `TactKey` records with zero-byte data,
+no valid `TactKey` or `TactKeyLookup` rows, and no `BroadcastText` records. It
+therefore supplies no usable key for the missing files and is stale evidence for
+this target build. The audit retained only aggregate metadata at
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/dbcache-audit-v1.json`
+(SHA-256 `e9577f74b6922b93d1065382e8d194d6780700de854775a7dd105337ee714b95`);
+record IDs and payloads were not retained. Format and table-hash references
+were pinned to [wowdev/DBCD](https://github.com/wowdev/DBCD/tree/e732093f8864240fc5884bd1bba6b02f3dfc0d56)
+and [WoWDBDefs](https://github.com/wowdev/WoWDBDefs/blob/07d008f28907c00827cacadf2d7c1a40f578b6a3/manifest.json).
+
 ## Additional executed evidence — 2026-10-12 (Europe/Madrid)
 
 ### Complete 49-table public spell loader, synthetic inputs
