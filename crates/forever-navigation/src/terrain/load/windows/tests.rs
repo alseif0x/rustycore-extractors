@@ -23,12 +23,11 @@ impl Drop for Temp {
         fs::remove_dir_all(&self.0).unwrap();
     }
 }
-// These tests need an observable metadata change, not two operations that may
-// receive the same filesystem timestamp. Set the fixture's directory write time
+// These tests need an observable metadata change. Set the fixture's write time
 // well in the past BEFORE any readonly lease, and close the attribute writer.
 // SetFileTime requires FILE_WRITE_ATTRIBUTES; directories need BACKUP_SEMANTICS.
 // https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime
-fn seed_directory_write_time(path: &Path) {
+fn seed_write_time(path: &Path) {
     use std::os::windows::fs::OpenOptionsExt;
     let past = std::time::UNIX_EPOCH + std::time::Duration::from_secs(86_400);
     let directory = fs::OpenOptions::new()
@@ -88,6 +87,7 @@ fn complete_reads_hash_and_reuse_identity_across_chunk_boundaries() {
 #[test]
 fn genuine_absence_is_recorded_and_creation_poisoned() {
     let t = Temp::new();
+    seed_write_time(&t.0);
     let mut s = RootedSource::new(&t.0, FsLimits::default()).unwrap();
     assert_eq!(read(&mut s, 44).unwrap(), (Presence::Missing, vec![]));
     fs::write(t.0.join(name()), b"new").unwrap();
@@ -100,6 +100,8 @@ fn changed_contents_and_deleted_files_poison_recorded_snapshots() {
     for remove in [false, true] {
         let t = Temp::new();
         fs::write(t.0.join(name()), b"original").unwrap();
+        seed_write_time(&t.0.join(name()));
+        seed_write_time(&t.0);
         let mut s = RootedSource::new(&t.0, FsLimits::default()).unwrap();
         read(&mut s, 44).unwrap();
         if remove {
@@ -168,6 +170,7 @@ fn file_byte_metadata_and_verification_limits_only_reduce() {
 fn unrelated_root_entry_mutation_invalidates_inventory_identity() {
     let t = Temp::new();
     fs::write(t.0.join(name()), b"data").unwrap();
+    seed_write_time(&t.0);
     let mut s = RootedSource::new(&t.0, FsLimits::default()).unwrap();
     read(&mut s, 44).unwrap();
     fs::write(t.0.join("other"), b"unrelated").unwrap();
@@ -254,7 +257,7 @@ fn observed_open_changes_and_recorded_artifact_failures_win_over_guard_limits() 
 fn protected_read_cleanup_detects_change_after_body_budget_is_exhausted() {
     let t = Temp::new();
     fs::write(t.0.join(name()), b"complete").unwrap();
-    seed_directory_write_time(&t.0);
+    seed_write_time(&t.0);
     let mut source = RootedSource::new(&t.0, Default::default()).unwrap();
     let path = source
         .named_path(&request(artifact()).unwrap().full)
@@ -305,7 +308,7 @@ fn protected_read_cleanup_preserves_plain_limits_and_observed_changes() {
 #[test]
 fn protected_enumeration_recheck_changes_override_collection_limits() {
     let t = Temp::new();
-    seed_directory_write_time(&t.0);
+    seed_write_time(&t.0);
     let lease = ReadDirectory::open(&t.0, PlatformLimits::default()).unwrap();
     fs::write(t.0.join("new-after-enumeration"), b"other").unwrap();
     let result: Result<bool, SourceError> = finish_directory(lease, Err(SourceError::Limit));
