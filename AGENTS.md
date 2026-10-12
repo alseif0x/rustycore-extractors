@@ -1721,3 +1721,18 @@ distribution remain open, alongside full real inputs/geometry and RustyCore
 runtime acceptance. No new binary bundle or global hosted-runner network
 exclusion is claimed. Documentation-only follow-up validation does not rebuild
 the functional binaries or establish execution of its later document commit.
+
+### Opt-in regular multi-section DB2 evidence — 2026-10-12
+
+`forever-db2-regular-sections-numeric-v1` is an explicit supplied-byte API for
+2..16 complete unencrypted WDC5 sections, using existing reviewed numeric
+non-catalog schemas with external IDs and no text or parent fields. Cumulative
+limits are 16 MiB, 100,000 direct rows, 100,000 copy pairs and 1,000,000
+retained scalar values. The production/default reader and CLI remain single
+section; catalog admission and inline IDs remain closed. Debug/release each pass
+2,675 workspace tests and 83 original `SpellDuration` signed32 direct/getter/
+materializer comparisons. Native does not cover floats, arrays, 64-bit fields or
+real-client/runtime acceptance. The retained source checkpoint in the v1
+contract records authored-time flags; executed evidence is a separate field and
+is detailed in `docs/forever-db2-regular-sections.md`. Full extractor completion
+remains open.

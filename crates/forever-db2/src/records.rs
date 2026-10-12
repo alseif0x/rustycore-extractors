@@ -7,11 +7,13 @@
 //! Evidence: TrinityCore 02245dcd DB2FileLoader.cpp::LoadHeaders/Load,
 //! DB2FileLoaderRegularImpl::{RecordGetVarInt,RecordGetString,AutoProduceRecordCopies}.
 //! A separate branch admits bounded scalar numeric sparse files. Encrypted and
-//! multi-section variants fail explicitly; at most one
+//! multi-section variants fail explicitly in production `read`; a separate
+//! opt-in numeric/external-ID API admits bounded regular sections. At most one
 //! parent-lookup block is admitted and only for a table whose reviewed metadata
 //! declares a parent index field.
 pub mod catalog;
 mod columns;
+mod regular_sections;
 mod schema;
 mod sparse;
 pub mod terrain_sources;
@@ -106,6 +108,28 @@ struct ScanResult {
     terrain: Option<terrain_sources::Collected>,
 }
 impl DecodedTable {
+    /// Separate opt-in numeric multi-section profile; production `read` keeps
+    /// its existing single-section policy. This is not client acceptance.
+    pub const REGULAR_SECTIONS_PROFILE: &'static str = "forever-db2-regular-sections-numeric-v1";
+    /// Policy ceiling, not a WDC5 format limit.
+    pub const MAX_REGULAR_SECTIONS: u32 = 16;
+
+    /// Decode 2..=16 regular, unencrypted sections with reviewed numeric
+    /// (non-catalog) schemas and external IDs. Strings, catalog and parent data
+    /// are excluded; contiguous layout and exact EOF are required. Inline-ID
+    /// schemas are outside this profile.
+    /// `max_sections` must be 2..=16 and can only reduce the fixed ceiling.
+    /// Original 16 MiB / 100k direct / 100k copy / 1M retained scalar limits
+    /// apply cumulatively to the complete file. IDs and copies are processed
+    /// globally; no partial table is returned on any error. No I/O is performed.
+    pub fn read_regular_sections(
+        data: &[u8],
+        table: CharacterTable,
+        max_sections: u32,
+    ) -> Result<Self, RecordError> {
+        regular_sections::read(data, table, max_sections)
+    }
+
     pub fn rows(&self) -> &BTreeMap<u32, Vec<Vec<Value>>> {
         &self.rows
     }

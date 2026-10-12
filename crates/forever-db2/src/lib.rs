@@ -3,8 +3,11 @@
 //! schemas. The decoder accepts minimal empty files and unencrypted regular
 //! single-section files, including reviewed parent-field variants. A separate
 //! sparse path admits scalar U8/U16/U32/I32 with catalog IDs and no parent.
-//! Other sparse shapes, unsupported schemas, encryption and multiple sections
-//! are rejected. This
+//! Production decoding rejects other sparse shapes, unsupported schemas,
+//! encryption and multiple sections. The separate explicit
+//! `DecodedTable::read_regular_sections` API admits bounded regular numeric
+//! reviewed schemas with external IDs, without text, parents or encryption.
+//! This
 //! crate has no CASC or network access; decoding is not full extraction, format
 //! parity or reader/runtime acceptance.
 //!

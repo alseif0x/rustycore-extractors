@@ -16,13 +16,22 @@ pub(super) struct Column {
 /// 24-byte column entry, then the pallet and common blocks. Every size is
 /// checked before it is used as a slice bound so no arithmetic can overflow.
 pub(super) fn columns(data: &[u8], h: &Header) -> Result<(Vec<Column>, usize), RecordError> {
+    columns_after_prefix(data, h, 244)
+}
+/// The explicit regular multi-section API supplies its checked header/section
+/// prefix. Legacy callers retain the fixed 244-byte single-section prefix.
+pub(super) fn columns_after_prefix(
+    data: &[u8],
+    h: &Header,
+    prefix: usize,
+) -> Result<(Vec<Column>, usize), RecordError> {
     let fields = h.field_count as usize;
     let meta_bytes = fields.checked_mul(24).ok_or(RecordError::Column)?;
     if h.column_meta_size as usize != meta_bytes {
         return Err(RecordError::Column);
     }
     let offsets_bytes = fields.checked_mul(4).ok_or(RecordError::Bounds)?;
-    let start = 244usize
+    let start = prefix
         .checked_add(offsets_bytes)
         .ok_or(RecordError::Bounds)?;
     let mut at = start.checked_add(meta_bytes).ok_or(RecordError::Bounds)?;

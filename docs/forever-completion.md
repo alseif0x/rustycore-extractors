@@ -2080,3 +2080,39 @@ distribution remain open, alongside full real inputs/geometry and RustyCore
 runtime acceptance. No new binary bundle or global hosted-runner network
 exclusion is claimed. Documentation-only follow-up validation does not rebuild
 the functional binaries or establish execution of its later document commit.
+
+## Opt-in numeric regular multi-section DB2 — 2026-10-12
+
+`forever-db2-regular-sections-numeric-v1` adds the explicitly invoked
+`DecodedTable::read_regular_sections` library API. It admits only 2..16 complete,
+unencrypted sections for existing reviewed numeric non-catalog schemas with
+external IDs, no strings or parent blocks, contiguous exact framing, and whole-
+file limits. The production reader, CLI, sparse path and reviewed hash gates do
+not change. Global ID repair and one ordered copy pass match the pinned original
+for the admitted profile; no partial result is returned. Catalog schemas,
+inline IDs, TACT, sparse/text/parent blocks and nonzero catalog metadata remain
+outside the profile.
+
+Linux debug/release pass 2,675 tests each (zero failures, 26 existing ignored),
+including 32 new unit cases. Linux and GNU-Windows Clippy, scoped formatting,
+GNU-Windows compile-only profiles, 233 contract tests and 112 distribution tests
+pass. The bounded pinned-native comparison executes all 33 retained original
+source/header/notice entries at `02245dcd245e7433e524577656177723d3e4992e` and
+actual depfiles use 30 original inputs plus the wrapper. Each native profile
+passes 83 complete synthetic `SpellDuration` positives: 634 direct records,
+107 copies and 732 materialized rows, with 1,902 direct and 2,196 materialized
+signed32 scalar-bit checks. Both profiles also pass 36 Rust-only negatives,
+five section-ceiling checks and two exclusive-output guards. Their 209 actual
+CLI process network traces per profile are empty. The outer Python acceptance
+harness is not syscall traced. The rejected initial native permission preflight
+and the successful fresh native-only rerun are retained and described in
+`docs/forever-db2-regular-sections.md`; the earlier nine regression commands
+passed on the same source freeze.
+
+Native coverage is signed32 `SpellDuration` only. Other API numeric widths have
+unit evidence without native parity. No float, array, 64-bit, real-client,
+full-extraction or runtime acceptance is added. The contract preserves its
+source-time checkpoint flags and records execution in a separate field. Exact
+report hashes and scope are in the companion. This increment does not complete
+the extractor; full encrypted real inputs, product integration and RustyCore
+runtime acceptance remain open.
