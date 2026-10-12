@@ -1743,3 +1743,11 @@ The independent Python DB2 oracle now accepts explicit
 enables local oracle comparisons but is not decoder acceptance. The earlier
 1,023-file survey used frozen binaries and the previous catalog, so its results
 remain historical until files are decoded again through an accepted path.
+
+The explicit Python oracle now parses the pinned catalog's `decode_kinds`
+widths and array shapes instead of assuming all DBD integer fields are 32-bit.
+On 2026-10-12, its canonical dumps match the Rust standalone diagnostic for
+three complete build-70205/esES files: ChrClasses (9 rows), ChrRaces (58), and
+CinematicCamera (10). These comparisons use private local outputs and prove
+only those file-reader paths; they do not accept CASC acquisition, typed
+loaders, the complete catalog, encryption, or runtime behavior.

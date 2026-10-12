@@ -5,8 +5,10 @@ parents; unsafe reference copy variants are explicitly rejected. A separate
 numeric sparse path transcribes SparseImpl:1020-1570 for scalar U8/U16/U32/I32
 with catalog IDs and no parent; other sparse shapes remain excluded.
 Modified 2026-10-12: added an explicit WoWDBDefs build-70205 schema catalog
-reader, independently normalizing its field declarations and checking target
-table/layout hashes. This is not evidence that any client file was decoded.
+reader, independently parsing its explicit decoder widths/array shapes and
+checking target table/layout hashes. Three complete local build-70205 files
+now match the Rust diagnostic byte-for-byte; this does not establish catalog-
+wide decoder, acquisition, typed-loader or runtime acceptance.
 
 This is a from-scratch, read-only decoder used to cross-check the Rust
 ``crates/forever-db2/examples/db2_dump.rs`` diagnostic byte-for-byte. It never
@@ -111,6 +113,7 @@ import dataclasses
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Optional
 
@@ -1119,7 +1122,11 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
             or source['manifest_sha256'] != '4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265'
         ):
             raise OracleError("unsupported_table_schema")
-        widths = {'Byte': 8, 'Short': 16, 'Int': 32, 'Long': 64}
+        decode_patterns = (
+            (re.compile(r"^(Signed|Unsigned)\((8|16|32|64), ([1-9][0-9]*)\)$"), "integer"),
+            (re.compile(r"^Float\(([1-9][0-9]*)\)$"), "float"),
+            (re.compile(r"^StringArray\(([1-9][0-9]*)\)$"), "string_array"),
+        )
         for table in document['tables']:
             if table['blockers']:
                 raise OracleError("unsupported_table_schema")
@@ -1127,17 +1134,39 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
             declared_fields = table['fields']
             if not 1 <= file_field_count <= len(declared_fields) or len(declared_fields) != table['field_count']:
                 raise OracleError("unsupported_table_schema")
+            decode_kinds = table['decode_kinds']
+            if len(decode_kinds) != file_field_count:
+                raise OracleError("unsupported_table_schema")
             fields = []
-            for field in declared_fields[:file_field_count]:
-                kind = field['kind']
-                if kind in ('String', 'NonLocalizedString'):
-                    fields.append(Field('string', 32, field['array_size']))
-                elif kind == 'Float':
-                    fields.append(Field('float', 32, field['array_size']))
-                elif kind in widths:
-                    fields.append(Field('signed' if field['signed'] else 'unsigned', widths[kind], field['array_size'], signed=field['signed']))
+            for field, decode_kind in zip(declared_fields[:file_field_count], decode_kinds):
+                if decode_kind == 'String':
+                    parsed = Field('string', 32)
                 else:
+                    parsed = None
+                    for pattern, shape in decode_patterns:
+                        match = pattern.fullmatch(decode_kind)
+                        if match is None:
+                            continue
+                        if shape == 'integer':
+                            kind, bits, count = match.groups()
+                            parsed = Field(kind.lower(), int(bits), int(count), signed=kind == 'Signed')
+                        elif shape == 'float':
+                            parsed = Field('float', 32, int(match.group(1)))
+                        else:
+                            parsed = Field('string', 32, int(match.group(1)))
+                        break
+                    if parsed is None:
+                        raise OracleError("unsupported_table_schema")
+                source_kind = field['kind']
+                if (
+                    parsed.count != field['array_size']
+                    or (source_kind in ('String', 'NonLocalizedString') and parsed.kind != 'string')
+                    or (source_kind == 'Float' and parsed.kind != 'float')
+                    or (source_kind == 'Int' and (parsed.kind not in ('signed', 'unsigned') or parsed.signed != field['signed']))
+                    or source_kind not in ('String', 'NonLocalizedString', 'Float', 'Int')
+                ):
                     raise OracleError("unsupported_table_schema")
+                fields.append(parsed)
             parent = table['parent_index']
             if parent < -1 or parent >= len(declared_fields):
                 raise OracleError("unsupported_table_schema")

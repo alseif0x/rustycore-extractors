@@ -561,3 +561,19 @@ typed RustyCore loaders, or establish extraction/runtime compatibility. The
 catalog's Rust verifier binds manifests to the exact catalog provenance and
 re-decodes complete artifacts using only that catalog's field facts; it also
 rejects build 70170.
+
+### Local decoder comparison — 2026-10-12
+
+The independent Python oracle now reads the catalog's explicit `decode_kinds`
+for scalar widths and array shapes. Treating every DBD `Int` as 32 bits caused
+a real `ChrRaces` mismatch because the selected DBD definition includes
+explicit 8-bit fields. With that correction, Python and Rust's standalone
+`db2_dump` produce byte-identical canonical dumps for three complete local
+build-70205/esES files: `ChrClasses` (9 rows), `ChrRaces` (58 rows), and
+`CinematicCamera` (10 rows). Dumps remain in a private external run directory
+and are not checked into Git.
+
+This is direct reader comparison for those three files only. It does not
+replay local CASC acquisition, validate the earlier failed native
+`ChrClasses` batch, invoke RustyCore typed loaders, or establish all-schema,
+multi-section, encrypted, sparse, or runtime compatibility.
