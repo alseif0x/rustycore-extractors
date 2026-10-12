@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: isolated synthetic Windows VMap read-source fixtures.
+// Modified 2026-10-12: isolate the renamed source beneath a private parent.
 use super::*;
 use crate::store::{self, memory};
 use std::{
@@ -60,7 +61,11 @@ fn read(
 }
 #[test]
 fn complete_and_empty_reads_repeated_digest_and_no_retained_leases() {
-    let dir = Directory::new();
+    // Give the renamed source its own private parent. Other concurrent tests
+    // can hold ancestor leases on the common temporary directory.
+    let container = Directory::new();
+    let dir = Directory(container.0.join("source"));
+    fs::create_dir(&dir.0).unwrap();
     let bytes: Vec<_> = (0..33001).map(|n| (n % 251) as u8).collect();
     dir.file("Model.xxx.vmo", &bytes);
     dir.file("empty.vmo", b"");
