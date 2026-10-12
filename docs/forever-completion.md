@@ -136,6 +136,22 @@ The aggregate report
 retains counts only, not lines or record identifiers. This bounded text scan
 does not prove the absence of binary or non-printable material.
 
+A second private cache copy from the RustyCore local client fixture is also
+build 70170. It has 112 valid `TactKey` rows, 588 zero-byte `TactKey`
+invalidations, and no `TactKeyLookup` rows. Joining its additions to the current
+70205 static tables produced 113 candidate joins and 84 unmatched lookup rows.
+Three in-memory keyring variants (current static tables, cache additions only,
+and push-ordered cache semantics) were tried against `Map`,
+`SkillLineAbility`, and `GameObjectDisplayInfo`; every acquisition returned
+`local_store_no_verified_encoding`. No plaintext or decoded output was
+accepted. This rules out that stale cache as a sufficient key source for these
+inputs; it does not establish that no other target-build key source exists.
+The mode-0600 aggregate report
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/dbcache-cross-build-key-probe-v1.json`
+has SHA-256
+`439039a8be1b118bc704682e7e09efc4dab829038b5bc109351bea6c31e20949` and
+contains no key bytes, key identifiers, record identifiers, or client payloads.
+
 ## Additional executed evidence — 2026-10-12 (Europe/Madrid)
 
 ### Complete 49-table public spell loader, synthetic inputs
