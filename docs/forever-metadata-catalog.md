@@ -191,6 +191,20 @@ at its header gate, so decoder comparison or v3 extract/verify evidence does
 not establish generic or typed RustyCore reader/runtime acceptance. No change
 to that integration reader is part of this work.
 
+A current-source diagnostic recheck on 2026-10-12 confirms that the
+`ChrRacesCreateScreenIcon` mismatch is still present in this checkout, rather
+than only in the frozen 1,126-table survey binary. The complete retained
+build-70205/esES file has five physical fields and a different layout hash from
+the pinned catalog declaration, which has four physical fields; the current
+`db2_dump` returns `unsupported_table_schema`. The same decoder recheck still
+returns `unsupported_record_variant` for the three `CollectableSource*Sparse`
+tables, while it accepts the retained `ConversationLine` input. The private,
+payload-free summary is
+`current-db2-dump-failure-spotcheck-20261012T2005.json` in the external
+laboratory's `reports/acceptance` directory. This rechecks one of eleven
+schema failures and four of six variant failures; the other frozen-survey
+failures have not all been replayed against this source revision.
+
 ## Explicit Rust-local acquisition and DB2 v4
 
 `forever-db2-extract` keeps native acquisition as its default. Native reviewed
