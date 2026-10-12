@@ -1704,7 +1704,26 @@ verified encoded-frame MD5s. The bounded adapter reads complete records, ignores
 30 prelude bytes, checks only the nine-byte index prefix, and retains final
 guards on all results. The 4096-frame cap is per candidate BLTE object, not
 aggregated per FDID. No full EKey/CKey, Z interior, E inner mode, ciphertext
-interior or plaintext validity is established. Key sufficiency remains unknown.
+interior or plaintext validity is established. The follow-up key-name diagnosis
+below narrows the missing-key evidence without establishing plaintext validity.
+
+### Required-input encryption-key name diagnosis — 2026-10-12
+
+A separate bounded probe resolves the same complete build-70205/esES local
+spans and validates their BLTE frame framing and encoded-frame MD5s. The three
+required files contain nine encrypted frames and eight distinct key names:
+three frames for Map, five for SkillLineAbility and one for
+GameObjectDisplayInfo. The local build's joined TactKey/TactKeyLookup tables
+provide zero of those eight names. The installed DBCache is build 70170 and has
+128 invalid TactKey rows, zero valid TactKey rows and no TactKeyLookup rows;
+all tested merge variants still provide zero required names. The public
+[wowdev/TACTKeys snapshot at f800811](https://github.com/wowdev/TACTKeys/tree/f800811762b2e9ea638bf6dfdb4707382c497943)
+contains one of the eight names, which is insufficient for the three files.
+
+No key material or client payload is retained in the repository. This probe
+does not decrypt a frame, validate plaintext, decode a DB2 or establish that
+other target-build key sources do not exist. The private report's SHA-256 is
+`cfc6153cbd9c69607814c9654ad87ca03a2126d33aac44acc1139b65c814d078`.
 
 Earlier `local_file_incomplete` statements for these three inputs describe
 their historical attempts; they are not the current acquisition category. Old
