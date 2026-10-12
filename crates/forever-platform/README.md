@@ -247,8 +247,17 @@ Downward-only ceilings are 128 directories, 512 admitted/decoded records
 cap can confirm EOF; extra data rejects before decoding and poisons. Enumeration
 uses class 38, a fixed aligned 640-byte buffer and strict single-entry/EOF framing.
 Concurrent changes may escape observation: no atomic snapshot, directory write
-exclusion or same-SID isolation is claimed. Native acceptance is pending for this
-increment; the earlier fourteen-case output acceptance retains its own scope.
+exclusion or same-SID isolation is claimed. Native acceptance was pending at the authored source
+checkpoint; the earlier fourteen-case output acceptance retains its own scope.
 No Windows package/recovery/product or new bundle is enabled. See
 [the membership scope](../../docs/forever-windows-membership.md) and
 `contracts/forever-windows-membership-contract-v1.json`.
+
+Ordinary membership now has separate native acceptance on functional commit
+`433d5ce`: all 24 exact cases pass debug/release on fixed local NTFS in
+[CI run 38261424386](https://github.com/alseif0x/rustycore-extractors/actions/runs/38261424386),
+including 13 NTFS fixtures and 11 pure cases. The full Windows workspace passes
+2,175 tests; Linux debug/release each pass 2,643. The authored contract flags
+retain their checkpoint meaning. Package publication/recovery, privileged
+reparse and full extraction/runtime remain open; see the executed acceptance
+in [the membership scope](../../docs/forever-windows-membership.md).

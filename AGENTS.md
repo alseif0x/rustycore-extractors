@@ -1671,11 +1671,53 @@ EOF; extra data fails without decoding and poisons. The fixed class-38 buffer is
 snapshot or detection of every transient concurrent change, directory write
 exclusion, same-SID isolation or a publication/recovery protocol.
 
-This is source candidate documentation, with new native membership acceptance
-pending. The earlier fourteen-case output acceptance of a220596 and its later
+This paragraph records the authored source candidate checkpoint, when new
+native membership acceptance was pending. The earlier fourteen-case output acceptance of a220596 and its later
 5ce8b83 documentary checkpoint retain their original scope. Separate membership
 CI steps require exact listed/executed inventories in both profiles; declaring
 them is not hosted-run evidence. Historical contracts, Linux mandatory v9 source
 profile/bundle and Linux hardlink recovery are unchanged. Windows product,
 package/recovery/durability, real complete inputs/geometry and RustyCore server /
 runtime remain gates. See `docs/forever-windows-membership.md`.
+
+## Windows membership executed acceptance — 2026-10-12
+
+Functional commit `433d5ce02c5fa541ca9340a20de21889c10216bd`, tree
+`7fee5b9f1abbfdc24c3832034ca0c1691b45f154`, passes
+[synthetic CI run 38261424386](https://github.com/alseif0x/rustycore-extractors/actions/runs/38261424386).
+Each actual job checked out `f4b8a1006d6317d87fd14235439008866840701c`;
+its tree equals the functional tree. The Windows Server 2022 job
+(`windows-2022`, reported OS `Microsoft Windows NT 10.0.20348.0`) admitted
+fixed local NTFS and listed then passed all 24 exact membership cases separately
+in debug and release, with zero failed or ignored cases. Thirteen cases use
+real temporary NTFS fixtures; eleven exercise pure decoding, matching, status
+and limits. The unchanged fourteen private-output cases also pass separately
+in both profiles. The privileged reparse case remains ignored and unaccepted.
+
+The full Windows workspace reports 2,175 passed, zero failed and 21 ignored
+across 41 summaries. Linux debug and release each report 2,643 passed, zero
+failed and 26 ignored across 41 summaries. The separate isolated remote
+`compile3` validation passes Linux/GNU-Windows all-target Clippy, scoped format,
+both Linux workspace profiles, 219 contracts, 112 distribution cases and both
+GNU-Windows compile-only profiles. Its exact terminal invocation, unchanged
+source/tools/binaries and independently classified network traces are retained;
+GNU-Windows compilation does not supply the native execution evidence.
+
+Retained review: `native-ci1-root-review.json`, SHA-256
+`d3ff10adcfa4ec9254e1a54c15e863369c4431906cb2fe1cdad3f49d994231d2`. Source freeze:
+`b192bebc605ef7daa039e86cd4bb4df515d02ec19fc49f8b34ab8004acb02713`.
+Remote review: `compile3-root-review.json`, SHA-256
+`feab62b4ea4537d54d84f2550685ab30bd421843edf52fe490f5aafbd38f3985`.
+Reports reside under the external `windows-membership-20261012T133305Z`
+acceptance directory. Compile1's permission preflight and compile2's two
+Clippy style failures remain failed attempts; compile3 reran all nine commands
+after the reviewed style correction. No native membership attempt failed.
+
+This later acceptance does not rewrite the authored contract's pending/native
+false flags. It accepts bounded complete observed membership, not an atomic
+snapshot or same-SID isolation. Windows adoption, removal, locks, package
+publication, restart recovery, product enablement and reproducible Windows
+distribution remain open, alongside full real inputs/geometry and RustyCore
+runtime acceptance. No new binary bundle or global hosted-runner network
+exclusion is claimed. Documentation-only follow-up validation does not rebuild
+the functional binaries or establish execution of its later document commit.
