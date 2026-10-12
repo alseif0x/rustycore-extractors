@@ -1281,3 +1281,27 @@ VMO/map assembly, product publication/resume integration, real mandatory DB2
 and complete model inputs, runtime activation and reproducible Linux/Windows
 distribution remain completion gates. See
 docs/forever-collision-spooled-world.md and docs/forever-completion.md.
+
+### Typed private collision inventory acceptance (2026-10-12)
+
+The optional Linux `collision::inventory_spool` owner stores supplied complete
+WDTs and normalized own-tile caches in an empty private Spool. Typed keys bind
+map/FDID or map/cell associations; private ordinals never escape. Empty own
+caches remain present. Caller-declared acquisition/provenance, the original
+planner/cache codecs, downward limits and same-mount policy are preserved.
+Protected source directories are object-identity anchors, not authenticated
+membership/content snapshots. All observed failures poison the inventory;
+callback causes survive independent guard failures.
+
+Attempt 3 passes 25 focused and 412 complete collision tests per Linux profile,
+CASC library/test Clippy, three formatting checks, 171 source/state contracts
+and 104 distribution/sealer checks. Exact hashes and retained failed fixture
+history are in docs/forever-collision-inventory-spool.md. The new owner is not
+wired into world extraction; its WDT and cache collections remain resident.
+Whole-world budgets, cross-volume support, final assembly, product/runtime and
+real mandatory inputs remain completion gates.
+
+Separately, hosted Rust run 38189148916 at 9e97d48 passes Linux debug/release
+and Windows debug (2,116 tests, 41 targets, 20 ignored on Windows). This is
+synthetic hosted execution of the preceding source, not acceptance of the new
+Linux-only owner, actual-client NTFS behavior or Windows product publication.

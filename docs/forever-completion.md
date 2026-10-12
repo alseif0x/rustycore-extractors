@@ -1667,3 +1667,28 @@ The 935-source v5 canonical merge is accepted as source integration only
 (closeout SHA256
 `dc55520190ea017eedda82436469cd8199f2079d07a95fb28a4a4d04c63be77f`).
 This adds no v5/v6 bundle, publication or hosted CI result.
+
+## Private collision inventory source acceptance — 2026-10-12
+
+The optional Linux [typed WDT/cache inventory](forever-collision-inventory-spool.md)
+now has supplied-input synthetic acceptance: 25 focused and 412 complete
+collision tests per debug/release profile, CASC library/test Clippy, scoped
+formatting, 171 source/state and 104 distribution/sealer checks. The component
+uses immutable typed private envelopes and preserves empty own-tile presence,
+parent-bit replay and terminal failure policies. The companion records exact
+source/report hashes and the two preserved failed fixture attempts.
+
+This is a library primitive. The authenticated world runner still retains its
+WDT and parent-cache inventories in memory. Integrating separate disk owners
+requires a combined memory ledger and whole-selection source/spool checks.
+The cumulative 4,096 source-read ceiling, same-mount spool boundary, selected
+VMO/map/proof disk staging, product publication/resume, real mandatory DB2/model
+inputs, runtime activation and reproducible distribution remain gates.
+
+The preceding source commit `9e97d48` independently passes hosted
+[Rust run 38189148916](https://github.com/alseif0x/rustycore-extractors/actions/runs/38189148916):
+Linux debug/release and Windows debug, with 2,116 Windows tests across 41
+targets and 20 ignored. Hosted workflow downloads are distinct from local
+IPC-only trace evidence. That run precedes this Linux inventory increment and
+does not establish real-client, general NTFS, Windows release/product or full
+extractor acceptance. No new bundle is built here.

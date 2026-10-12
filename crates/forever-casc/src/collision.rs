@@ -14,6 +14,8 @@
 //! Neither placement publication, VMap assembly nor runtime loading occurs here.
 pub mod assemble;
 pub mod gameobjects;
+#[cfg(target_os = "linux")]
+pub mod inventory_spool;
 mod names;
 #[cfg(target_os = "linux")]
 pub mod payload;
