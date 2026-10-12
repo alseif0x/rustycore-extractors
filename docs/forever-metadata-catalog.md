@@ -573,7 +573,16 @@ build-70205/esES files: `ChrClasses` (9 rows), `ChrRaces` (58 rows), and
 `CinematicCamera` (10 rows). Dumps remain in a private external run directory
 and are not checked into Git.
 
-This is direct reader comparison for those three files only. It does not
-replay local CASC acquisition, validate the earlier failed native
-`ChrClasses` batch, invoke RustyCore typed loaders, or establish all-schema,
-multi-section, encrypted, sparse, or runtime compatibility.
+The Rust-local v4 extractor also acquired the same three files from the
+installed 70205/esES client using explicit contiguous indexes and ROOT
+50893-v2. All three schemas and record sets were accepted (9, 58, and 10 rows);
+the offline v4 verifier accepted all three artifacts, and their raw bytes match
+the earlier accepted live package. The path-free run is retained under the
+external private run name `db2-catalog-extract-70205-esES-three-20261012`.
+
+This acceptance covers only those three unencrypted DB2 files. It does not
+rewrite the earlier failed native `ChrClasses` manifest, invoke RustyCore typed
+loaders, or establish all-schema, encrypted, multi-section, sparse, or runtime
+compatibility. The required encrypted `Map`, `SkillLineAbility`, and
+`GameObjectDisplayInfo` files remain unavailable without their target-build
+TACT keys.

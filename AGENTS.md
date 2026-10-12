@@ -1748,6 +1748,8 @@ The explicit Python oracle now parses the pinned catalog's `decode_kinds`
 widths and array shapes instead of assuming all DBD integer fields are 32-bit.
 On 2026-10-12, its canonical dumps match the Rust standalone diagnostic for
 three complete build-70205/esES files: ChrClasses (9 rows), ChrRaces (58), and
-CinematicCamera (10). These comparisons use private local outputs and prove
-only those file-reader paths; they do not accept CASC acquisition, typed
-loaders, the complete catalog, encryption, or runtime behavior.
+CinematicCamera (10). A separate explicit Rust-local v4 batch acquired those
+same three files from the client; v4 verification accepts all three, and raw
+bytes match the earlier accepted live package. Reports and dumps remain in a
+private external run. This does not accept other catalog tables, encrypted
+inputs, RustyCore typed loaders, or runtime behavior.
