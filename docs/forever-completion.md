@@ -1714,8 +1714,9 @@ spans and validates their BLTE frame framing and encoded-frame MD5s. The three
 required files contain nine encrypted frames and eight distinct key names:
 three frames for Map, five for SkillLineAbility and one for
 GameObjectDisplayInfo. The local build's joined TactKey/TactKeyLookup tables
-provide zero of those eight names. The installed DBCache is build 70170 and has
-128 invalid TactKey rows, zero valid TactKey rows and no TactKeyLookup rows;
+provide zero of those eight names in both esES and enUS. The installed DBCache
+from build 70170 has 128 invalid TactKey rows, zero valid TactKey rows and no
+TactKeyLookup rows;
 all tested merge variants still provide zero required names. The public
 [wowdev/TACTKeys snapshot at f800811](https://github.com/wowdev/TACTKeys/tree/f800811762b2e9ea638bf6dfdb4707382c497943)
 contains one of the eight names, which is insufficient for the three files.
@@ -1723,7 +1724,9 @@ contains one of the eight names, which is insufficient for the three files.
 No key material or client payload is retained in the repository. This probe
 does not decrypt a frame, validate plaintext, decode a DB2 or establish that
 other target-build key sources do not exist. The private report's SHA-256 is
-`cfc6153cbd9c69607814c9654ad87ca03a2126d33aac44acc1139b65c814d078`.
+`cfc6153cbd9c69607814c9654ad87ca03a2126d33aac44acc1139b65c814d078`; the
+separate enUS static-table report's SHA-256 is
+`35fe16f68e92e4dedf43bb095374f7fae8f8d208e8d284b3bbc9307299051310`.
 
 Earlier `local_file_incomplete` statements for these three inputs describe
 their historical attempts; they are not the current acquisition category. Old
