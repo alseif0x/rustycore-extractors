@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: synthetic guarded Windows CASC consumer tests.
+// Modified 2026-10-12: isolate directory replacement from the file fixture.
 
 use super::*;
 use crate::local_store::{Limits as StoreLimits, tests::CollisionFixture};
@@ -55,12 +56,17 @@ fn snapshot_guards_reject_same_content_replacement_and_directory_changes() {
     fs::rename(&path, temp.0.join("old")).unwrap();
     fs::write(&path, b"same").unwrap();
     assert!(matches!(guard.check(), Err(Error::InputChanged)));
-    let directory_guard = Guard::capture_directory(&temp.0).unwrap();
+    // Keep the directory replacement independent of the earlier file case:
+    // rename a dedicated empty leaf instead of the shared fixture container.
+    let directory = temp.0.join("directory");
+    let moved = temp.0.join("directory-old");
+    fs::create_dir(&directory).unwrap();
+    let directory_guard = Guard::capture_directory(&directory).unwrap();
     directory_guard.check().unwrap();
-    fs::rename(&temp.0, temp.0.with_extension("old")).unwrap();
-    fs::create_dir(&temp.0).unwrap();
+    fs::rename(&directory, &moved).unwrap();
+    fs::create_dir(&directory).unwrap();
     assert!(matches!(directory_guard.check(), Err(Error::InputChanged)));
-    fs::remove_dir_all(temp.0.with_extension("old")).unwrap();
+    fs::remove_dir_all(&moved).unwrap();
 }
 
 #[test]
