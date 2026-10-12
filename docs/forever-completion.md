@@ -24,7 +24,7 @@ or client-data upload is authorized by this checklist.
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
 | Product interface | Canonical v1 N/Z and separate v2 explicit supplied-key plans; Linux inspect/extract/resume/verify connect all six Rust producers; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
-| Distribution | Legacy C++ suite; Linux v9 bundle of `b692ed3` has two identical fresh archives/manifests/binaries, an exact moved-source offline rebuild and 50 packaged synthetic CLI cases; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation and remaining filesystem gates are [recorded](forever-distribution.md) | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
+| Distribution | Legacy C++ suite; Linux v9 bundle of `b692ed3` has two identical fresh archives/manifests/binaries, an exact moved-source offline rebuild and 50 packaged synthetic CLI cases; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation is [recorded](forever-distribution.md); the separate [private-output foundation](forever-windows-output.md) has fourteen ordinary native fixed-NTFS cases per debug/release profile, while privileged reparse and Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
 
 ## Version differences that must be resolved
 
@@ -1953,3 +1953,58 @@ documentation commit is not rebuilt and replaces no accepted archive bytes.
 Historical source profiles and reports retain their original scope. Real complete
 inputs/geometry, full-world resources, RustyCore runtime and complete Windows
 product/distribution acceptance remain gates. The extractor is not complete.
+
+
+## Windows private-output native foundation acceptance — 2026-10-12
+
+The original `forever-platform` private-output API now has bounded ordinary
+synthetic native Windows x86_64/fixed local NTFS acceptance for functional commit
+`a220596da8a29f9f3a867dc7f2bd016d01cd3558`. [CI run 38254527798, attempt 1](https://github.com/alseif0x/rustycore-extractors/actions/runs/38254527798)
+and [Windows job 114829043981](https://github.com/alseif0x/rustycore-extractors/actions/runs/38254527798/job/114829043981)
+pass on Windows Server 2022 / `windows-2022`, OS `10.0.20348.0`, with fixed local
+NTFS admission recorded for the temporary fixtures. Focused debug/release each
+list and execute the exact fourteen ordinary tests: 14 pass, zero fail and zero
+ignored. The Windows workspace debug log has 2,151 pass / zero fail / 21 ignored;
+Linux debug/release each have 2,643 pass / zero fail / 26 ignored. Each workspace
+job has 41 result summaries; these are observed hosted counts.
+The separate [C++ CI run 38254528030](https://github.com/alseif0x/rustycore-extractors/actions/runs/38254528030)
+builds that same functional commit with Linux Ninja and Windows Visual Studio
+17; this is build evidence, not extraction or runtime acceptance.
+
+The independent ACL oracle validates persisted directory/file process-user
+ownership, protected DACL, one explicit non-inheriting FullControl ALLOW ACE,
+without inherited ACEs, after output and parent leases close. Its live path probe
+is only diagnostic; no sharing/NTFS cause is inferred. Child PowerShell alone
+removes `PSModulePath`; only bounded numeric exception diagnostics are exposed.
+Ordinary thread impersonation rejection/permanent poison and the test-only
+DACL restore helper pass without weakening production security guards.
+
+The actual checkout merge `8a208b5d01c06dccea92f82cb5cca5822eb13a45` and functional
+commit share tree `5014b5f12020fc5324c6d4deca1d2335fa9077b4`. Compile6 source
+freeze is `1de7e5ae036d61f5fbabea51fdf2a152486a6622cd9ba6381b0958fc900479cf`
+(1,023 files). Accepted terminal native review `native-ci4-root-review.json`
+has SHA-256
+`353c2a48b8094eb4d2dbc5ba42bcc7fd61b505117cf3484f715edb60a757afda`;
+Windows job log SHA-256 is
+`962c0fe700c4f1e57e3eb77ad0a372db82d6dc168b2b699ce8680ab1aa42bb81`.
+Complete log/report hashes and local source-check scopes are recorded in
+[the private-output scope](forever-windows-output.md). Native CI1/CI2/CI3 and
+static compile1/compile4 failures remain retained and unaccepted.
+
+This closes the ordinary synthetic native private-output foundation gate for
+that functional source. It does not certify the later documentation commit,
+which this run neither rebuilds nor executes, and creates no new binary/bundle.
+The frozen contract's native/hosted false flags, pending status and earlier
+oracle description remain the authored checkpoint before this later external
+closeout. Actual functional source and terminal evidence bind the persisted
+oracle scope; product/recovery/publication flags remain false in current scope.
+
+The privileged reparse case remains ignored and needs explicit native privilege /
+NTFS execution. Windows driver, package protocol/receipts/sealing, recovery,
+durable directory entries, crash durability and reproducible Windows product
+packages remain gates. No atomic namespace, closed membership inventory,
+same-SID/administrator isolation or global runner/harness/oracle network
+exclusion is inferred. Real complete inputs/geometry, full-world operation and
+RustyCore runtime/server activation remain open. The historical Linux v9 bundle,
+its source profile and Linux hardlink recovery are not relabeled or migrated.
+The full extractor is not complete.

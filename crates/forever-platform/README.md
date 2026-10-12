@@ -221,8 +221,13 @@ not prevented by that sharing mode.
 Limits only reduce 128 objects, depth 16, 64 MiB/file, 256 MiB total writes,
 1 MiB/append and 16,384 operations; names have a lowercase ASCII grammar and
 at most 64 bytes. Full paths remain bounded by 32,760 UTF16 units.
-Actual Windows/NTFS execution acceptance is pending. This separate API does not
+Ordinary synthetic native Windows x86_64/fixed local NTFS acceptance is recorded
+on 2026-10-12 for `a220596da8a29f9f3a867dc7f2bd016d01cd3558`: fourteen focused
+cases pass in each debug/release profile. The independent ACL oracle checks
+persisted security after output/parent leases close; its live path probe is
+diagnostic only. Privileged reparse remains ignored. This separate API does not
 enable the Windows product, package publication/recovery, distribution or crash
-durability. See [the versioned scope](../../docs/forever-windows-output.md) and
+durability. The later documentation commit is not the tested functional SHA;
+frozen contract pending flags retain their earlier checkpoint meaning. See [the versioned scope](../../docs/forever-windows-output.md) and
 `contracts/forever-windows-output-contract-v1.json`; the Linux hardlink/recovery
 protocol and accepted v9 bundle retain their original scope.

@@ -1613,3 +1613,42 @@ documentation commit is not rebuilt and replaces no accepted archive bytes.
 Historical source profiles and reports retain their original scope. Real complete
 inputs/geometry, full-world resources, RustyCore runtime and complete Windows
 product/distribution acceptance remain gates. The extractor is not complete.
+
+
+## Windows private-output native foundation acceptance — 2026-10-12
+
+The separate `forever-windows-private-output-v1` foundation has bounded ordinary
+synthetic native Windows x86_64/fixed local NTFS acceptance for functional commit
+`a220596da8a29f9f3a867dc7f2bd016d01cd3558`. [CI run 38254527798, attempt 1](https://github.com/alseif0x/rustycore-extractors/actions/runs/38254527798)
+and [Windows job 114829043981](https://github.com/alseif0x/rustycore-extractors/actions/runs/38254527798/job/114829043981)
+pass on Windows Server 2022, OS `10.0.20348.0`. Both focused debug/release
+inventories contain exactly fourteen passing cases, zero failures and zero
+ignored cases. Windows workspace debug has 2,151 passing / 21 ignored tests;
+Linux debug/release each have 2,643 passing / 26 ignored tests, with 41 workspace
+result summaries per job and zero failures.
+
+The independent PowerShell oracle checks persisted directory/file owner and
+protected single non-inheriting FullControl ALLOW DACL after the root and parent
+leases close. Its live path probe is diagnostic only. The child removes only its
+own `PSModulePath`; diagnostics admit two numeric codes, never raw output, SID
+or fixture paths. Ordinary impersonation rejection and permanent poison pass;
+the DACL restore helper is test-only and production guards remain strict.
+
+The actual checkout merge `8a208b5d01c06dccea92f82cb5cca5822eb13a45` has the same
+Git tree `5014b5f12020fc5324c6d4deca1d2335fa9077b4` as the functional commit.
+Compile6 source freeze is
+`1de7e5ae036d61f5fbabea51fdf2a152486a6622cd9ba6381b0958fc900479cf`
+(1,023 files). Accepted terminal native review SHA-256 is
+`353c2a48b8094eb4d2dbc5ba42bcc7fd61b505117cf3484f715edb60a757afda`.
+The later documentation commit is not rebuilt or tested by this run and creates
+no new binary or bundle. Frozen contract native/hosted false flags, pending
+status and earlier oracle description retain their authored checkpoint;
+the later report binds execution to actual functional source and persisted scope.
+See `docs/forever-windows-output.md` for exact evidence and retained failed runs.
+
+Privileged reparse remains ignored. Windows driver, package protocol, recovery,
+directory-entry/crash durability and complete product/distribution acceptance
+remain open, as do real complete inputs/geometry and RustyCore runtime/server
+activation. The Linux v9 source profile, accepted b692ed3 bundle and hardlink
+recovery protocol retain their own scopes. No global runner/harness/oracle
+network exclusion is established. The extractor is not complete.
