@@ -666,7 +666,11 @@ pub(crate) fn admit_inventories<L: LiquidLookup + ?Sized, E>(
     limits: Limits,
 ) -> Result<usize, Error<E>> {
     limits.run.validate_resources(collector.resources())?;
-    if wdts.resources() != collector.resources() || caches.resources() != collector.resources() {
+    if wdts.resources() != collector.resources()
+        || caches.resources() != collector.resources()
+        || wdts.backend() != collector.backend()
+        || caches.backend() != collector.backend()
+    {
         return Err(super::Error::InvalidLimits.into());
     }
     if limits.max_combined_memory_bytes > MAX_COMBINED_MEMORY_BYTES {

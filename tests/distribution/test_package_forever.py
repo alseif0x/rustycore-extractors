@@ -116,7 +116,7 @@ class DistributionTests(unittest.TestCase):
         archive = self.root / "a/forever-extractor-linux.tar.gz"
         manifest = m.verify_archive(archive)
         self.assertFalse(manifest["full_extractor_complete"])
-        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-windows-navigation-readers-source-v7")
+        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-collision-leased-archive-source-v8")
         unpacked = self.root / "moved"
         unpacked.mkdir()
         # Test archive has already been checked; manually write regular members.
@@ -473,6 +473,9 @@ class DistributionTests(unittest.TestCase):
         manifest["source_snapshot"]["profile"] = "forever-seven-crate-windows-vmap-required-framing-source-v6"
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
+        manifest["source_snapshot"]["profile"] = "forever-seven-crate-windows-navigation-readers-source-v7"
+        self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
+
     def test_exact_windows_dependency_edges_are_required(self):
         lock = synthetic_lock()
         m.validate_lock(lock.encode())
@@ -640,6 +643,45 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(m.bundle_path_allowed(name))
         for name in ("source/docs/required-framing-private.md", "source/tools/required_framing_live.py",
                      "source/crates/forever-casc/docs/required-framing.md"):
+            self.assertFalse(m.bundle_path_allowed(name))
+
+    def test_v8_linux_archive_sources_are_shipped_and_mandatory(self):
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        for name in m.LINUX_COLLISION_ARCHIVE_SOURCE:
+            with self.subTest(name=name):
+                self.assertEqual((self.root / "output/source" / name).read_bytes(), (self.source / name).read_bytes())
+                incomplete = copy.deepcopy(manifest)
+                incomplete["inventory"].pop("source/" + name)
+                self.assertFailure("manifest_missing", m.validate_manifest, incomplete)
+
+    def test_v8_missing_linux_archive_source_rejects_before_compiler(self):
+        for name in m.LINUX_COLLISION_ARCHIVE_SOURCE:
+            with self.subTest(name=name):
+                path = self.source / name
+                saved = path.read_bytes()
+                path.unlink()
+                try:
+                    with patch.object(m, "compile_source", side_effect=AssertionError("missing v8 source must reject before compilation")):
+                        self.assertFailure("source_crate_missing" if name.endswith("/Cargo.toml") else "input_io", self.build, "missing-v8")
+                finally:
+                    path.write_bytes(saved)
+
+    def test_v8_linux_archive_payload_corruption_rejects(self):
+        root = self.unpack()
+        for name in m.LINUX_COLLISION_ARCHIVE_SOURCE:
+            with self.subTest(name=name):
+                path = root / "source" / name
+                saved = path.read_bytes()
+                path.write_bytes(saved + b"changed")
+                try:
+                    self.assertFailure("inventory_hash", m.verify_bundle, root)
+                finally:
+                    path.write_bytes(saved)
+
+    def test_v8_linux_archive_doc_allowlist_is_exact(self):
+        self.assertTrue(m.bundle_path_allowed("source/docs/forever-collision-leased-archive.md"))
+        for name in ("source/docs/private-collision-archive.md", "source/tools/collision_live.py", "source/crates/forever-casc/docs/leased-archive.md"):
             self.assertFalse(m.bundle_path_allowed(name))
 
     def test_environment_drops_inherited_injection(self):

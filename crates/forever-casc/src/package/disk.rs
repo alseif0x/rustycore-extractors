@@ -284,7 +284,7 @@ impl Root {
         }
         self.named_file(&a.path, &f, limits)
     }
-    fn lock(&self, write: bool, limits: Limits) -> Result<File, Error> {
+    fn lock(&self, write: bool, limits: Limits) -> Result<PackageLock, Error> {
         let (p, leaf) = self.parent(".state/lock", false, &mut 0, limits)?;
         let f = OpenOptions::new()
             .read(true)
@@ -302,7 +302,7 @@ impl Root {
             f.try_lock_shared()
         };
         r.map_err(|_| Error::Busy)?;
-        Ok(f)
+        Ok(PackageLock(f))
     }
 }
 pub(super) fn receipt(a: &Artifact) -> String {
@@ -492,12 +492,29 @@ fn manifest_fact(context: Context, inventory: &Inventory) -> Result<Artifact, Er
         sha256: hash.finish(),
     })
 }
+// Bind the OS lock to this owner, even when a child briefly retains a duplicate
+// open description before exec closes its CLOEXEC descriptors. Closing only our
+// descriptor would leave that shared-description lock held by the child.
+struct PackageLock(File);
+impl std::ops::Deref for PackageLock {
+    type Target = File;
+    fn deref(&self) -> &File {
+        &self.0
+    }
+}
+impl Drop for PackageLock {
+    fn drop(&mut self) {
+        // Closing follows regardless; errors cannot be returned from Drop.
+        // A failed unlock retains the previous close-only fallback behavior.
+        let _ = self.0.unlock();
+    }
+}
 /// New private output only. Drop/error leaves the incomplete marker. Completion
 /// must be called only after each selected producer returned its complete token.
 /// State v2 supports explicit same-context recovery; completed output stays immutable.
 pub struct Run {
     root: Root,
-    _lock: File,
+    _lock: PackageLock,
     context: Context,
     limits: Limits,
     dirs: usize,

@@ -246,6 +246,9 @@ impl Inventory {
     pub fn verify_unchanged(&mut self) -> Result<(), Error> {
         self.finish(Ok(()))
     }
+    pub const fn backend(&self) -> spool::BackendProfile {
+        self.repository.backend()
+    }
     pub const fn resources(&self) -> super::resources::Profile {
         self.repository.resources()
     }

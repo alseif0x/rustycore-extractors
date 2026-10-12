@@ -25,6 +25,7 @@ const GROUP: usize = 33;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     InvalidLimits,
+    BackendUnavailable,
     Limit,
     Allocation,
     Path,
@@ -42,6 +43,7 @@ impl Error {
     pub const fn code(self) -> &'static str {
         match self {
             Self::InvalidLimits => "collision_payload_invalid_limits",
+            Self::BackendUnavailable => "collision_payload_backend_unavailable",
             Self::Limit => "collision_payload_limit",
             Self::Allocation => "collision_payload_allocation",
             Self::Path => "collision_payload_path",
@@ -662,6 +664,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             failed: None,
         })
     }
+    pub fn backend(&self) -> spool::BackendProfile {
+        self.inner
+            .payloads
+            .as_ref()
+            .expect("spooled collector")
+            .spool
+            .backend()
+    }
     pub fn resources(&self) -> super::resources::Profile {
         self.inner
             .payloads
@@ -1104,6 +1114,9 @@ pub struct SpoolingExtraction {
     failed: Option<CollectorError>,
 }
 impl SpoolingExtraction {
+    pub const fn backend(&self) -> spool::BackendProfile {
+        self.repository.spool.backend()
+    }
     pub const fn resources(&self) -> super::resources::Profile {
         self.repository.spool.resources()
     }

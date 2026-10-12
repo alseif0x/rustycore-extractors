@@ -9,7 +9,8 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
+PROFILE = 'forever-seven-crate-linux-collision-leased-archive-source-v8'
+HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 
 def literal(name):
@@ -36,7 +37,9 @@ class RequiredFramingContract(unittest.TestCase):
 
     def test_v6_mandatory_closure_and_historical_profiles(self):
         d = json.loads((ROOT / 'contracts/forever-distribution-contract-v1.json').read_text())
-        self.assertEqual(literal('SOURCE_PROFILE'), self.c['distribution_source_profile'])
+        self.assertEqual(self.c['distribution_source_profile'], HISTORICAL_PROFILE)
+        self.assertEqual(literal('SOURCE_PROFILE'), PROFILE)
+        self.assertIn(HISTORICAL_PROFILE, d['source']['prior_profiles'])
         self.assertEqual(d['source']['profile'], PROFILE)
         self.assertEqual(literal('REQUIRED_FRAMING_SOURCE'), tuple(self.c['sources']))
         for path in self.c['sources']:

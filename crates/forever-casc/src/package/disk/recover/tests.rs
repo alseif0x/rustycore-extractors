@@ -637,3 +637,29 @@ fn replay_metadata_index_is_charged_and_released_after_coverage() {
     assert_eq!(r.inventory_limits().metadata_bytes, r.limits.metadata_bytes);
     complete(r);
 }
+
+// A child can briefly inherit an open description before exec closes CLOEXEC
+// descriptors. A private test duplicate reproduces that lifetime deterministically.
+#[test]
+fn dropped_or_finished_owner_releases_lock_with_retained_description() {
+    for finish in [false, true] {
+        let t = Temp::new();
+        let mut r = t.run();
+        intent(&mut r);
+        let inherited = r._lock.try_clone().unwrap();
+        if finish {
+            assert_eq!(complete(r).files, 1);
+            assert_eq!(
+                verify(&t.out(), Some(ctx()), Default::default())
+                    .unwrap()
+                    .files,
+                1
+            );
+        } else {
+            drop(r);
+            let next = t.resume().unwrap();
+            assert_eq!(complete(next).files, 1);
+        }
+        drop(inherited);
+    }
+}

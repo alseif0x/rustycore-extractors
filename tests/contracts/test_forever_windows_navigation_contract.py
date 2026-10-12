@@ -10,7 +10,8 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
+PROFILE = 'forever-seven-crate-linux-collision-leased-archive-source-v8'
+HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 
 def literal(name):
@@ -39,7 +40,8 @@ class WindowsNavigationContract(unittest.TestCase):
 
     def test_mandatory_closed_source_group_and_prior_profiles(self):
         d = json.loads((ROOT / 'contracts/forever-distribution-contract-v1.json').read_text())
-        self.assertEqual(self.c['distribution_source_profile'], PROFILE)
+        self.assertEqual(self.c['distribution_source_profile'], HISTORICAL_PROFILE)
+        self.assertIn(HISTORICAL_PROFILE, d['source']['prior_profiles'])
         self.assertEqual(literal('SOURCE_PROFILE'), PROFILE)
         self.assertEqual(d['source']['profile'], PROFILE)
         self.assertEqual(tuple(self.c['sources']), literal('WINDOWS_NAVIGATION_SOURCE'))

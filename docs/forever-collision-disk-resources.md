@@ -113,3 +113,19 @@ product publication/resume integration with final actual LocalStore verification
 complete encrypted mandatory inputs, real geometry/runtime activation and
 reproducible Linux/Windows distribution remain goal gates. The full extractor
 is incomplete.
+
+## Subsequent cache admission correction (2026-10-12)
+
+The expanded package matrix exposed a conservative admission conflict: two
+64 MiB descriptor ceilings plus the 512 KiB guard allowance leave less than
+128 MiB inside the disk profile's 256 MiB inventory ceiling. Reserving the
+previous 128 MiB cache parser allowance rejected even a small own-tile cache.
+The disk profile now defaults to a reduced 64 MiB cache parser allowance.
+No memory, active-body, parser or cumulative ceiling is raised. Earlier
+resource evidence remains historical; the later current-v8 executable-source report accepts this correction. See
+`forever-collision-leased-archive.md` for exact scope and hashes.
+
+The full-workspace attempt also retained a directory-metadata test failure:
+a newly created name can share the captured timestamp. That test now forces
+a changed timestamp. LocalStore's production directory guard remains
+metadata-only and does not authenticate a full directory-name snapshot.

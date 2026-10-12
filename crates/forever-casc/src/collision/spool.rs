@@ -17,6 +17,31 @@ use std::{
     },
     path::{Component, Path, PathBuf},
 };
+mod archive;
+
+/// Independent private-record capability. FileSetV1 remains the default.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum BackendProfile {
+    #[default]
+    FileSetV1,
+    /// Fresh unshared file description with an intact kernel write lease.
+    /// Explicit GNU/Linux x86_64 capability; unavailable filesystems reject.
+    LeasedAppendV1,
+}
+impl BackendProfile {
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::FileSetV1 => "linux-private-collision-file-set-v1",
+            Self::LeasedAppendV1 => "linux-private-collision-leased-append-v1",
+        }
+    }
+    pub const fn supported(self) -> bool {
+        match self {
+            Self::FileSetV1 => true,
+            Self::LeasedAppendV1 => forever_platform::linux::lease::supported(),
+        }
+    }
+}
 const NOFOLLOW: i32 = 0x20000;
 const DIRECTORY: i32 = 0x10000;
 const NONBLOCK: i32 = 0x800;
@@ -401,13 +426,15 @@ pub struct Stats {
     pub peak_reload_bytes: usize,
 }
 /// Exclusive newly-created namespace beneath an existing private (0700) parent.
-/// Files use ordinal names and 0400 after write. No Drop cleanup or resume.
+/// FileSetV1 uses ordinal files and 0400 after write. Explicit LeasedAppendV1
+/// retains one private 0600 file under a kernel lease. No Drop cleanup or resume.
 pub struct Spool {
     resources: super::resources::Profile,
     profile: Profile,
     root: Chain,
     protected: ProtectedInputs,
     entries: Vec<Entry>,
+    archive: Option<archive::Archive>,
     limits: Limits,
     disk_bytes: usize,
     reloads: usize,
@@ -445,7 +472,37 @@ impl Spool {
         profile: Profile,
         resources: super::resources::Profile,
     ) -> Result<Self, Error> {
+        Self::create_with_backend(
+            path,
+            protected,
+            limits,
+            profile,
+            resources,
+            BackendProfile::FileSetV1,
+        )
+    }
+    /// Explicit archive capability, independent of volume and cumulative resource
+    /// policies. No fallback, reuse, cleanup, resume or product publication.
+    pub fn create_with_backend(
+        path: &Path,
+        protected: ProtectedInputs,
+        limits: Limits,
+        profile: Profile,
+        resources: super::resources::Profile,
+        backend: BackendProfile,
+    ) -> Result<Self, Error> {
         limits.validate_resources(resources)?;
+        if !backend.supported() {
+            return Err(Error::BackendUnavailable);
+        }
+        let lease_reservation = if backend == BackendProfile::LeasedAppendV1 {
+            if limits.max_disk_bytes < archive::CONTAINER_BYTES {
+                return Err(Error::Limit);
+            }
+            forever_platform::linux::lease::HELPER_RESERVATION_BYTES
+        } else {
+            0
+        };
         let leaf = path.file_name().ok_or(Error::Path)?;
         if !path.is_absolute()
             || path.components().count() > MAX_DEPTH
@@ -483,6 +540,7 @@ impl Spool {
         let projected = protected
             .bytes()?
             .checked_add(parent.bytes()?)
+            .and_then(|n| n.checked_add(lease_reservation))
             .ok_or(Error::Limit)?;
         if projected > limits.max_descriptor_bytes {
             return Err(Error::Limit);
@@ -513,6 +571,7 @@ impl Spool {
             root,
             protected,
             entries: Vec::new(),
+            archive: None,
             limits,
             disk_bytes: 0,
             reloads: 0,
@@ -520,11 +579,38 @@ impl Spool {
             peak_reload_bytes: 0,
             failed: None,
         };
-        if out.resident_bytes()? > limits.max_descriptor_bytes {
+        // Admit the helper together with the complete captured root before
+        // creating an archive or spawning its temporary setup thread.
+        if out
+            .resident_bytes()?
+            .checked_add(lease_reservation)
+            .ok_or(Error::Limit)?
+            > limits.max_descriptor_bytes
+        {
             return Err(Error::Limit);
         }
         out.verify_unchanged()?;
+        if backend == BackendProfile::LeasedAppendV1 {
+            out.archive = Some(archive::Archive::create(&out.root)?);
+            out.disk_bytes = archive::CONTAINER_BYTES;
+            if out.resident_bytes()? > limits.max_descriptor_bytes {
+                return Err(Error::Limit);
+            }
+            out.verify_unchanged()?;
+        }
         Ok(out)
+    }
+    pub const fn backend(&self) -> BackendProfile {
+        if self.archive.is_some() {
+            BackendProfile::LeasedAppendV1
+        } else {
+            BackendProfile::FileSetV1
+        }
+    }
+    fn record_count(&self) -> usize {
+        self.archive
+            .as_ref()
+            .map_or(self.entries.len(), archive::Archive::len)
     }
     pub const fn resources(&self) -> super::resources::Profile {
         self.resources
@@ -537,7 +623,7 @@ impl Spool {
     }
     pub fn stats(&self) -> Result<Stats, Error> {
         Ok(Stats {
-            records: self.entries.len(),
+            records: self.record_count(),
             disk_bytes: self.disk_bytes,
             reloads: self.reloads,
             reload_bytes: self.reload_bytes,
@@ -546,13 +632,21 @@ impl Spool {
         })
     }
     pub(crate) fn resident_bytes(&self) -> Result<usize, Error> {
+        let archive = self
+            .archive
+            .as_ref()
+            .map_or(Ok(0), archive::Archive::resident_bytes)?;
         self.root
             .bytes()?
             .checked_add(self.protected.bytes()?)
             .and_then(|n| n.checked_add(self.entries.capacity().checked_mul(size_of::<Entry>())?))
+            .and_then(|n| n.checked_add(archive))
             .ok_or(Error::Limit)
     }
     pub(crate) fn prepare_records(&mut self, count: usize, budget: usize) -> Result<(), Error> {
+        if self.archive.is_some() {
+            return self.prepare_archive_records(count, budget);
+        }
         if count > self.limits.max_records {
             return Err(Error::Limit);
         }
@@ -622,7 +716,10 @@ impl Spool {
     fn check(&self) -> Result<(), Error> {
         let root = self.root.check();
         let protected = self.protected.check();
-        let mut entries = Ok(());
+        let mut entries = self
+            .archive
+            .as_ref()
+            .map_or(Ok(()), |a| a.check(&self.root));
         for i in 0..self.entries.len() {
             let checked = self.file(i).and_then(|f| self.check_entry(i, &f));
             if let Err(e) = checked {
@@ -695,6 +792,9 @@ impl Spool {
         size: usize,
         writer: impl FnOnce(&mut RecordWriter<'_>) -> Result<(), Error>,
     ) -> Result<Record, Error> {
+        if self.archive.is_some() {
+            return self.write_archive(size, writer);
+        }
         let result = (|| {
             self.verify_unchanged()?;
             if self.entries.len() >= self.limits.max_records || size > self.limits.max_active_bytes
@@ -801,6 +901,9 @@ impl Spool {
         allocate: impl FnOnce(usize) -> Result<Vec<u8>, Error>,
         call: impl FnOnce(&[u8]) -> Result<T, Error>,
     ) -> Result<T, Error> {
+        if self.archive.is_some() {
+            return self.with_archive_record_alloc(record, budget, allocate, call);
+        }
         let result = (|| {
             self.verify_unchanged()?;
             let entry = self.entries.get(record.0).ok_or(Error::State)?;
@@ -842,6 +945,124 @@ impl Spool {
             // retain and recheck the held descriptor and its current name.
             let guard = self.check_entry(record.0, &file);
             guard.and(result)
+        })();
+        self.finish(result)
+    }
+    fn prepare_archive_records(&mut self, count: usize, budget: usize) -> Result<(), Error> {
+        if count > self.limits.max_records {
+            return Err(Error::Limit);
+        }
+        let before = self.resident_bytes()?;
+        let archive = self.archive.as_mut().ok_or(Error::State)?;
+        if count > archive.capacity() {
+            let grown = count.max(
+                archive
+                    .capacity()
+                    .checked_mul(2)
+                    .unwrap_or(self.limits.max_records)
+                    .min(self.limits.max_records),
+            );
+            let available = budget.min(
+                self.limits
+                    .max_descriptor_bytes
+                    .checked_sub(before)
+                    .ok_or(Error::Limit)?,
+            );
+            let requested = if archive::Archive::projected_capacity_bytes(grown)? <= available {
+                grown
+            } else {
+                count
+            };
+            let full = archive::Archive::projected_capacity_bytes(requested)?;
+            if full > budget
+                || before.checked_add(full).ok_or(Error::Limit)? > self.limits.max_descriptor_bytes
+            {
+                return Err(Error::Limit);
+            }
+            archive.reserve(requested)?;
+            let actual = archive.capacity_bytes()?;
+            if actual > budget
+                || before.checked_add(actual).ok_or(Error::Limit)?
+                    > self.limits.max_descriptor_bytes
+            {
+                return Err(Error::Limit);
+            }
+        }
+        Ok(())
+    }
+    fn write_archive(
+        &mut self,
+        size: usize,
+        writer: impl FnOnce(&mut RecordWriter<'_>) -> Result<(), Error>,
+    ) -> Result<Record, Error> {
+        let result = (|| {
+            self.verify_unchanged()?;
+            if self.record_count() >= self.limits.max_records || size > self.limits.max_active_bytes
+            {
+                return Err(Error::Limit);
+            }
+            let disk = self
+                .disk_bytes
+                .checked_add(archive::RECORD_BYTES)
+                .and_then(|n| n.checked_add(size))
+                .ok_or(Error::Limit)?;
+            if disk > self.limits.max_disk_bytes {
+                return Err(Error::Limit);
+            }
+            let budget = self
+                .limits
+                .max_descriptor_bytes
+                .checked_sub(self.resident_bytes()?)
+                .ok_or(Error::Limit)?;
+            self.prepare_archive_records(self.record_count() + 1, budget)?;
+            self.disk_bytes = disk;
+            self.archive
+                .as_mut()
+                .ok_or(Error::State)?
+                .append(&self.root, size, writer)
+                .map(Record)
+        })();
+        self.finish(result)
+    }
+    fn with_archive_record_alloc<T>(
+        &mut self,
+        record: Record,
+        budget: usize,
+        allocate: impl FnOnce(usize) -> Result<Vec<u8>, Error>,
+        call: impl FnOnce(&[u8]) -> Result<T, Error>,
+    ) -> Result<T, Error> {
+        let result = (|| {
+            self.verify_unchanged()?;
+            let size = self
+                .archive
+                .as_ref()
+                .ok_or(Error::State)?
+                .record_bytes(record.0)?;
+            if size > budget.min(self.limits.max_active_bytes)
+                || self.reloads >= self.limits.max_reloads
+            {
+                return Err(Error::Limit);
+            }
+            let cost = size
+                .checked_add(archive::RECORD_BYTES)
+                .ok_or(Error::Limit)?;
+            let total = self.reload_bytes.checked_add(cost).ok_or(Error::Limit)?;
+            if total > self.limits.max_reload_bytes {
+                return Err(Error::Limit);
+            }
+            self.reloads += 1;
+            self.reload_bytes = total;
+            let mut bytes = allocate(size)?;
+            if bytes.capacity() > budget.min(self.limits.max_active_bytes) {
+                return Err(Error::Limit);
+            }
+            self.peak_reload_bytes = self.peak_reload_bytes.max(bytes.capacity());
+            bytes.resize(size, 0);
+            self.archive
+                .as_ref()
+                .ok_or(Error::State)?
+                .read(record.0, &mut bytes)?;
+            call(&bytes)
         })();
         self.finish(result)
     }

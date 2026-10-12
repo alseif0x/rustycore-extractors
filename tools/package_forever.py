@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-windows-navigation-readers-source-v7"
+SOURCE_PROFILE = "forever-seven-crate-linux-collision-leased-archive-source-v8"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
     "adler2-2.0.1": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
@@ -56,7 +56,20 @@ WINDOWS_VMAP_SOURCE = ('crates/forever-vmap/Cargo.toml', 'crates/forever-vmap/sr
 INPUT_DIAGNOSTICS_SOURCE = ('crates/forever-casc/src/blte.rs', 'crates/forever-casc/src/blte/framing.rs', 'crates/forever-casc/src/blte/framing/tests.rs', 'crates/forever-casc/src/local_store.rs', 'crates/forever-casc/src/local_store/io.rs', 'crates/forever-casc/src/local_store/io/route.rs', 'crates/forever-casc/src/local_store/owned.rs', 'crates/forever-casc/src/local_store/routes.rs', 'crates/forever-casc/src/local_store/route_tests.rs', 'crates/forever-casc/src/local_store/tests.rs', 'contracts/forever-input-diagnostics-contract-v1.json', 'tests/contracts/test_forever_input_diagnostics_contract.py', 'docs/forever-blte-framing.md', 'docs/forever-required-routes.md')
 REQUIRED_FRAMING_SOURCE = ('crates/forever-casc/src/local_store.rs', 'crates/forever-casc/src/local_store/io.rs', 'crates/forever-casc/src/local_store/tests.rs', 'crates/forever-casc/src/local_store/framing.rs', 'crates/forever-casc/src/local_store/framing_tests.rs', 'crates/forever-casc/src/local_store/io/framing.rs', 'docs/forever-required-framing.md', 'contracts/forever-required-framing-contract-v1.json', 'tests/contracts/test_forever_required_framing_contract.py', 'docs/forever-required-framing-acceptance.md')
 WINDOWS_NAVIGATION_SOURCE = ('crates/forever-navigation/Cargo.toml', 'crates/forever-navigation/src/inventory.rs', 'crates/forever-navigation/src/inventory/windows.rs', 'crates/forever-navigation/src/inventory/windows/guard.rs', 'crates/forever-navigation/src/inventory/windows/run.rs', 'crates/forever-navigation/src/inventory/windows/run/tests.rs', 'crates/forever-navigation/src/inventory/windows/tests.rs', 'crates/forever-navigation/src/terrain/load.rs', 'crates/forever-navigation/src/terrain/load/windows.rs', 'crates/forever-navigation/src/terrain/load/windows/tests.rs', 'docs/forever-windows-navigation-readers.md', 'contracts/forever-windows-navigation-contract-v1.json', 'tests/contracts/test_forever_windows_navigation_contract.py')
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE
+LINUX_COLLISION_ARCHIVE_SOURCE = (
+    'crates/forever-navigation/src/inventory/fs/run/tests.rs',
+    'crates/forever-navigation/src/inventory/fs/tests.rs',
+    'crates/forever-casc/src/package/disk.rs',
+    'crates/forever-casc/src/package/disk/recover/tests.rs',
+
+    'crates/forever-navigation/src/terrain/load/fs/tests.rs',
+    'crates/forever-vmap/src/store/fs/tests.rs',
+
+    'crates/forever-casc/src/collision/resources.rs',
+    'crates/forever-casc/src/collision/resources/tests.rs',
+    'crates/forever-casc/src/local_store/tests.rs',
+'crates/forever-platform/src/lib.rs', 'crates/forever-platform/src/linux.rs', 'crates/forever-platform/src/linux/lease.rs', 'crates/forever-platform/src/linux/lease/ffi.rs', 'crates/forever-platform/src/linux/lease/tests.rs', 'crates/forever-casc/Cargo.toml', 'crates/forever-casc/src/collision/spool.rs', 'crates/forever-casc/src/collision/spool/archive.rs', 'crates/forever-casc/src/collision/spool/archive/tests.rs', 'crates/forever-casc/src/collision/payload.rs', 'crates/forever-casc/src/collision/inventory_spool.rs', 'crates/forever-casc/src/collision/run/inventory.rs', 'crates/forever-casc/src/collision/assemble/staged.rs', 'crates/forever-casc/src/collision/assemble/staged/models.rs', 'crates/forever-casc/src/collision/assemble/staged/models/package.rs', 'crates/forever-casc/src/collision/assemble/staged/models/package/tests.rs', 'contracts/forever-linux-collision-archive-contract-v1.json', 'tests/contracts/test_forever_linux_collision_archive_contract.py', 'docs/forever-collision-leased-archive.md')
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024

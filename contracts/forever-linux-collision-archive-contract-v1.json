@@ -1,0 +1,141 @@
+{
+  "contract": "forever-linux-collision-leased-archive-v1",
+  "version": 1,
+  "distribution_source_profile": "forever-seven-crate-linux-collision-leased-archive-source-v8",
+  "status": "synthetic-library-source-accepted",
+  "original_implementation": true,
+  "new_registry_dependencies": [],
+  "network": false,
+  "product_cli_enabled": false,
+  "windows_product_enabled": false,
+  "full_runtime_accepted": false,
+  "real_client_accepted": false,
+  "full_extractor_complete": false,
+  "bundle_built": false,
+  "publication_authorized": false,
+  "sources": [
+    "crates/forever-navigation/src/inventory/fs/run/tests.rs",
+    "crates/forever-navigation/src/inventory/fs/tests.rs",
+    "crates/forever-casc/src/package/disk.rs",
+    "crates/forever-casc/src/package/disk/recover/tests.rs",
+    "crates/forever-navigation/src/terrain/load/fs/tests.rs",
+    "crates/forever-vmap/src/store/fs/tests.rs",
+    "crates/forever-casc/src/collision/resources.rs",
+    "crates/forever-casc/src/collision/resources/tests.rs",
+    "crates/forever-casc/src/local_store/tests.rs",
+    "crates/forever-platform/src/lib.rs",
+    "crates/forever-platform/src/linux.rs",
+    "crates/forever-platform/src/linux/lease.rs",
+    "crates/forever-platform/src/linux/lease/ffi.rs",
+    "crates/forever-platform/src/linux/lease/tests.rs",
+    "crates/forever-casc/Cargo.toml",
+    "crates/forever-casc/src/collision/spool.rs",
+    "crates/forever-casc/src/collision/spool/archive.rs",
+    "crates/forever-casc/src/collision/spool/archive/tests.rs",
+    "crates/forever-casc/src/collision/payload.rs",
+    "crates/forever-casc/src/collision/inventory_spool.rs",
+    "crates/forever-casc/src/collision/run/inventory.rs",
+    "crates/forever-casc/src/collision/assemble/staged.rs",
+    "crates/forever-casc/src/collision/assemble/staged/models.rs",
+    "crates/forever-casc/src/collision/assemble/staged/models/package.rs",
+    "crates/forever-casc/src/collision/assemble/staged/models/package/tests.rs",
+    "contracts/forever-linux-collision-archive-contract-v1.json",
+    "tests/contracts/test_forever_linux_collision_archive_contract.py",
+    "docs/forever-collision-leased-archive.md"
+  ],
+  "profiles": {
+    "default": "linux-private-collision-file-set-v1",
+    "explicit": "linux-private-collision-leased-append-v1",
+    "platform": "linux-gnu-x64-exclusive-file-lease-v1",
+    "volume_policy_independent": true,
+    "resource_policy_independent": true,
+    "six_actual_owner_backend_equality": true
+  },
+  "lease": {
+    "target": "x86_64-unknown-linux-gnu",
+    "fresh_unshared_file_description": true,
+    "caller_mask_unchanged": true,
+    "process_signal_disposition_unchanged": true,
+    "helper_stack_bytes": 131072,
+    "helper_reservation_bytes": 262144,
+    "targeted_sigio_setup": true,
+    "pending_break_rejects": true,
+    "advisory_fallback": false,
+    "independent_name_metadata_mount_source_content_checks": true,
+    "same_description_duplicates_excluded_from_private_contract": true
+  },
+  "framing": {
+    "container_bytes": 32,
+    "record_bytes": 64,
+    "container_magic": "RCEARC1",
+    "record_magic": "RCERCD1",
+    "version": 1,
+    "digest": "SHA256",
+    "reserved_zero": true,
+    "complete_header_and_body_before_callback": true,
+    "private_intermediate_not_native_format": true
+  },
+  "accounting": {
+    "disk_includes_container_and_framing": true,
+    "reload_includes_selected_record_framing": true,
+    "global_guard_reads_are_not_all_io_counters": true,
+    "actual_capacity_and_old_new_overlap": true,
+    "geometric_descriptor_growth": true,
+    "guard_work_constant_in_record_count": true,
+    "rss_or_all_cpu_measurement": false,
+    "memory_and_active_body_ceilings_raised": false,
+    "disk_world_cache_admission_bytes": 67108864,
+    "helper_and_complete_root_before_archive_creation": true
+  },
+  "earlier_focused_acceptance": {
+    "source_freeze_sha256": "01ed12b3317061d2489a6618de36e11a17583a1abcff99ab11805d47a3874681",
+    "report_sha256": "b7229428caa69a2f66a89f08b92c9d12d50cd7dd134e793538ac690043d526cb",
+    "linux_profiles": [
+      "debug",
+      "release"
+    ],
+    "kernel_cases_each": 4,
+    "ordinary_archive_cases_each": 10,
+    "explicit_distinct_records_each": 4097,
+    "exact_archive_guards_each": 20485,
+    "same_steady_fd_count": true,
+    "six_owner_small_package_each": 1,
+    "scope": "earlier exact frozen focused source only; not acceptance of currentv8 closure or expanded package matrix"
+  },
+  "remaining": [
+    "private v8 bundle/rebuild; final publication-source static checks recorded separately",
+    "product CLI/physical disk preflight/publication/resume integration",
+    "complete encrypted mandatory real inputs",
+    "real geometry/runtime/server activation",
+    "reproducible complete Linux/Windows distribution"
+  ],
+  "package_lock_release": {
+    "explicit_unlock_on_owner_drop": true,
+    "retained_description_regression": true,
+    "formats_and_busy_failure_admission_unchanged": true
+  },
+  "workspace_acceptance": {
+    "source_freeze_sha256": "b022e4d2d072334ce9cd4fa8a196786aada270c481f6538f6531c759345c1d58",
+    "report_sha256": "7d1e36098e355e79086cbc0a035ebf6f6a8114ac772bdd6be7a9b83eddb3c831",
+    "root_review_sha256": "09c4a565c667d3708796c352aed40b92a4833141b0e355bf2c9a4b67f693778a",
+    "observation_sha256": "8f67af39a0f6e1311d1840f2e04aa7622ee3912453a934d6e0d156df6975ab9e",
+    "commands": 27,
+    "linux_profiles": [
+      "debug",
+      "release"
+    ],
+    "ordinary_passed_each": 2599,
+    "ordinary_ignored_each": 26,
+    "target_summaries_each": 41,
+    "explicit_ignored_cases_each": 4,
+    "contracts": 180,
+    "distribution_checks": 108,
+    "gnu_windows_profiles_compiled": [
+      "debug",
+      "release"
+    ],
+    "windows_runtime_executed": false,
+    "native_or_real_inputs_executed": false,
+    "scope": "frozen executable/test source and current-v8 synthetic closure; final publication documentation/static checks separate"
+  }
+}

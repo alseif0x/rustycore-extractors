@@ -620,6 +620,21 @@ fn metadata_index_and_directory_changes_invalidate_open_store() {
             _ => fixture.path.join("Data/data/new-marker"),
         };
         fs::write(path, b"changed").unwrap();
+        #[cfg(unix)]
+        if choice == 2 {
+            // This exercises metadata change detection. A newly created name
+            // may share the captured directory timestamp on a fast filesystem;
+            // force a distinct timestamp instead of depending on clock ticks.
+            // The production guard remains metadata-only, not a name snapshot.
+            let dir = fixture.path.join("Data/data");
+            let old = fs::metadata(&dir).unwrap().modified().unwrap();
+            fs::File::open(&dir)
+                .unwrap()
+                .set_times(
+                    fs::FileTimes::new().set_modified(old + std::time::Duration::from_secs(1)),
+                )
+                .unwrap();
+        }
         assert_eq!(
             store.read_file_data_id(FILE_ID).unwrap_err(),
             Error::InputChanged

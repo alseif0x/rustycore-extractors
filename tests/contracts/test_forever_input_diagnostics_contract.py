@@ -35,7 +35,7 @@ class InputDiagnosticsContract(unittest.TestCase):
         d = json.loads((ROOT / 'contracts/forever-distribution-contract-v1.json').read_text())
         self.assertEqual(self.c['distribution_source_profile'], 'forever-seven-crate-windows-vmap-diagnostics-source-v5')
         self.assertIn(self.c['distribution_source_profile'], d['source']['prior_profiles'])
-        self.assertEqual(literal('SOURCE_PROFILE'), 'forever-seven-crate-windows-navigation-readers-source-v7')
+        self.assertEqual(literal('SOURCE_PROFILE'), 'forever-seven-crate-linux-collision-leased-archive-source-v8')
         required = set(literal('INPUT_DIAGNOSTICS_SOURCE'))
         for path in self.c['sources']:
             self.assertTrue((ROOT / path).is_file(), path)

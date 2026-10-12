@@ -674,6 +674,9 @@ pub fn extract(
         if repository.resources() != startup.collector_mut().resources()
             || wdts.resources() != repository.resources()
             || caches.resources() != repository.resources()
+            || repository.backend() != startup.collector_mut().backend()
+            || wdts.backend() != repository.backend()
+            || caches.backend() != repository.backend()
         {
             return Err(StageError::InvalidLimits.into());
         }

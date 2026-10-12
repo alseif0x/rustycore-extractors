@@ -358,7 +358,8 @@ fn observed_file_changes_and_deletion_permanently_poison() {
         if remove {
             fs::remove_file(name).unwrap();
         } else {
-            fs::write(name, list(70205, &[(0, 1)])).unwrap();
+            fs::write(&name, list(70205, &[(0, 1)])).unwrap();
+            changed_mtime(&name);
         }
         assert_eq!(p.verify_unchanged(), Err(Error::InputChanged));
         assert!(p.failed());
@@ -381,6 +382,12 @@ fn new_root_entry_child_entry_and_root_replacement_poison() {
             }
             _ => unreachable!(),
         };
+        if mode == 0 {
+            changed_mtime(&t.maps());
+        }
+        if mode == 1 {
+            changed_mtime(&t.vmaps().join("0001"));
+        }
         assert_eq!(p.verify_unchanged(), Err(Error::InputChanged));
         assert!(p.failed());
     }
@@ -618,4 +625,14 @@ fn write_discovery_inventory_corpus() {
         )
         .unwrap();
     }
+}
+
+// Metadata-only verification requires a distinct observation; do not depend on
+// the filesystem clock advancing between a capture and a synthetic mutation.
+fn changed_mtime(path: &Path) {
+    let time = fs::metadata(path).unwrap().modified().unwrap();
+    fs::File::open(path)
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(time + std::time::Duration::from_secs(1)))
+        .unwrap();
 }

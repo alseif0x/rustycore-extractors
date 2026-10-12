@@ -99,7 +99,34 @@
       "crates/forever-navigation/src/terrain/load/windows/tests.rs",
       "docs/forever-windows-navigation-readers.md",
       "contracts/forever-windows-navigation-contract-v1.json",
-      "tests/contracts/test_forever_windows_navigation_contract.py"
+      "tests/contracts/test_forever_windows_navigation_contract.py",
+      "crates/forever-platform/src/lib.rs",
+      "crates/forever-platform/src/linux.rs",
+      "crates/forever-platform/src/linux/lease.rs",
+      "crates/forever-platform/src/linux/lease/ffi.rs",
+      "crates/forever-platform/src/linux/lease/tests.rs",
+      "crates/forever-casc/Cargo.toml",
+      "crates/forever-casc/src/collision/spool.rs",
+      "crates/forever-casc/src/collision/spool/archive.rs",
+      "crates/forever-casc/src/collision/spool/archive/tests.rs",
+      "crates/forever-casc/src/collision/payload.rs",
+      "crates/forever-casc/src/collision/inventory_spool.rs",
+      "crates/forever-casc/src/collision/run/inventory.rs",
+      "crates/forever-casc/src/collision/assemble/staged.rs",
+      "crates/forever-casc/src/collision/assemble/staged/models.rs",
+      "crates/forever-casc/src/collision/assemble/staged/models/package.rs",
+      "crates/forever-casc/src/collision/assemble/staged/models/package/tests.rs",
+      "contracts/forever-linux-collision-archive-contract-v1.json",
+      "tests/contracts/test_forever_linux_collision_archive_contract.py",
+      "docs/forever-collision-leased-archive.md",
+      "crates/forever-casc/src/collision/resources.rs",
+      "crates/forever-casc/src/collision/resources/tests.rs",
+      "crates/forever-navigation/src/terrain/load/fs/tests.rs",
+      "crates/forever-vmap/src/store/fs/tests.rs",
+      "crates/forever-casc/src/package/disk.rs",
+      "crates/forever-casc/src/package/disk/recover/tests.rs",
+      "crates/forever-navigation/src/inventory/fs/tests.rs",
+      "crates/forever-navigation/src/inventory/fs/run/tests.rs"
     ],
     "forbidden": [
       "client assets",
@@ -116,7 +143,7 @@
     "mutation": "reject a changed selected source snapshot",
     "scope": "production pure Rust build, synthetic checks, exact registry sources and retained notices; native oracle reference trees are external and excluded",
     "legacy_provenance": "retain existing legacy license/reference inventories as documentation; the actual pure Rust binary dependency closure is its versioned distribution manifest, not a claim native C++ dependencies are linked",
-    "profile": "forever-seven-crate-windows-navigation-readers-source-v7",
+    "profile": "forever-seven-crate-linux-collision-leased-archive-source-v8",
     "workspace_crates": 7,
     "windows_dependency_edges": {
       "forever-casc": [
@@ -132,7 +159,7 @@
         "forever-platform"
       ]
     },
-    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge",
+    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph",
     "windows_producer_scope": "original loaded-main-module seal acquisition and pure PE verifier/sealer source, synthetic checks and scope documentation are mandatory corresponding source; this Linux recipe does not seal or enable a Windows product",
     "windows_vmap_scope": "original guarded Windows RootedSource and safe EOF source/tests; preliminary synthetic Wine evidence does not accept actual Windows/NTFS or enable the product",
     "input_diagnostics_scope": "metadata-only fixed routes and pure whole-span BLTE inspector remain distinct APIs; v6 additionally mandates the key-free fixed-three-input complete-span framing adapter with static contract and qualified executed Linux observations; no full EKey/CKey/plaintext or key sufficiency claim",
@@ -152,7 +179,13 @@
       "actual_windows_ntfs_accepted": false,
       "windows_product_enabled": false,
       "qualification": "Original trace_evidence_complete=true is rejected by root; 40 unknown syscall classes remain unresolved independently of 783 visible denied NETLINK attempts. Synthetic semantics only; no zero-attempt or full runtime claim."
-    }
+    },
+    "linux_dependency_edges": {
+      "forever-casc": [
+        "forever-platform"
+      ]
+    },
+    "linux_collision_archive_scope": "original GNU/Linux x86_64 scoped file-lease FFI and private append archive with six-owner backend equality, framing/hash/guard/cap tests and qualified synthetic scope documentation; optional library only, no new product CLI or bundle/runtime acceptance"
   },
   "registry_dependencies": [
     {

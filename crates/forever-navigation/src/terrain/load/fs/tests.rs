@@ -84,7 +84,17 @@ fn changed_contents_and_deleted_files_poison_recorded_snapshots() {
         if remove {
             fs::remove_file(t.0.join(name())).unwrap();
         } else {
-            fs::write(t.0.join(name()), b"modified").unwrap();
+            // Exercise metadata verification without relying on clock granularity.
+            // Post-read verification does not rehash contents or freeze the filesystem.
+            let changed = t.0.join(name());
+            let captured = fs::metadata(&changed).unwrap().modified().unwrap();
+            fs::write(&changed, b"modified").unwrap();
+            fs::File::open(&changed)
+                .unwrap()
+                .set_times(
+                    fs::FileTimes::new().set_modified(captured + std::time::Duration::from_secs(1)),
+                )
+                .unwrap();
         }
         assert_eq!(s.verify_unchanged(), Err(SourceError::InputChanged));
     }
@@ -166,6 +176,7 @@ fn unrelated_root_entry_mutation_invalidates_inventory_identity() {
     let mut s = RootedSource::new(&t.0, FsLimits::default()).unwrap();
     read(&mut s, 44).unwrap();
     fs::write(t.0.join("other"), b"unrelated").unwrap();
+    changed_mtime(&t.0);
     assert_eq!(s.verify_unchanged(), Err(SourceError::InputChanged));
 }
 #[test]
@@ -178,4 +189,14 @@ fn dotted_root_aliases_reject_and_empty_complete_file_is_present() {
     ));
     let mut s = RootedSource::new(&t.0, FsLimits::default()).unwrap();
     assert_eq!(read(&mut s, 0).unwrap(), (Presence::Present, vec![]));
+}
+
+// Metadata-only verification requires a distinct observation; do not depend on
+// the filesystem clock advancing between a capture and a synthetic mutation.
+fn changed_mtime(path: &Path) {
+    let time = fs::metadata(path).unwrap().modified().unwrap();
+    fs::File::open(path)
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(time + std::time::Duration::from_secs(1)))
+        .unwrap();
 }

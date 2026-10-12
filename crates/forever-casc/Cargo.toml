@@ -20,6 +20,9 @@ miniz_oxide = { version = "=0.8.9", default-features = false }
 [target.'cfg(windows)'.dependencies]
 forever-platform = { path = "../forever-platform" }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+forever-platform = { path = "../forever-platform" }
+
 [lints.rust]
 unsafe_code = "deny"
 

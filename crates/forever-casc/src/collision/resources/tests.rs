@@ -42,7 +42,18 @@ fn expanded_factories_preserve_file_parser_memory_and_format_ceilings() {
             b.max_decode_allowance_bytes
         )
     );
+    let i = p.inventory_limits();
+    assert_eq!(i.cache.max_memory_bytes, 64 * 1024 * 1024);
+    assert!(
+        2 * p.spool_limits().max_descriptor_bytes
+            + 512 * 1024
+            + i.cache.max_memory_bytes
+            + 1024 * 1024
+            < i.max_heap_bytes
+    );
+    assert!(i.cache.max_memory_bytes < d.inventory_limits().cache.max_memory_bytes);
     let a = p.stage_limits();
+    assert_eq!(a.world.world.run.cache, i.cache);
     let b = d.stage_limits();
     assert_eq!((a.max_heap_bytes, a.records), (b.max_heap_bytes, b.records));
     let a = p.model_limits();

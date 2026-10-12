@@ -1200,7 +1200,9 @@ pub fn assemble(
     limits: Limits,
 ) -> Result<Completed, Error> {
     let admission: Result<(usize, Stats), Error> = (|| {
-        if repository.resources() != models.repository.resources() {
+        if repository.resources() != models.repository.resources()
+            || repository.backend() != models.repository.backend()
+        {
             return Err(Kind::InvalidLimits.into());
         }
         limits.validate_resources(repository.resources())?;

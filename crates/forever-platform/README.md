@@ -69,7 +69,8 @@ Debug implementation.
 ## Safety and validation
 
 Unsafe code is denied for the crate and permitted only inside the original
-minimal Win32 filesystem FFI module and the scoped producer-seal FFI module. It borrows live std File handles and supplies exact
+minimal Win32 filesystem FFI module, the scoped producer-seal FFI module, and
+the GNU/Linux x86_64 file-lease FFI module. It borrows live std File handles and supplies exact
 repr(C), initialized, correctly sized output buffers. Structure size/alignment
 assertions are compiled for Windows. Calls are synchronous and never retain or
 close handles. No raw handle escapes the module.
@@ -175,3 +176,30 @@ and check actual payload/RVA, chunked reads, write-sharing rejection, limits and
 permanent invalidation. Wine evidence is preliminary and does not establish
 actual Windows/NTFS or complete product support. Product enablement remains a
 separate integration gate.
+
+
+## Explicit GNU/Linux private file lease
+
+The original `linux::lease` primitive is versioned as
+`linux-gnu-x64-exclusive-file-lease-v1`. It is available only for the admitted
+GNU/Linux x86_64 ABI, and establishes an actual kernel write lease through a
+short-lived 128 KiB scoped helper. A conservative 256 KiB helper reservation is
+exposed for caller admission; it is not RSS or an exact allocator measurement.
+The helper blocks SIGIO locally, targets its own TID before lease acquisition,
+rejects pending SIGIO, clears the owner and exits without unblocking pending
+thread signals. Caller masks and process signal dispositions remain unchanged.
+Unsupported/unavailable states reject without advisory fallback.
+
+Callers needing private content must create a fresh unshared File description,
+retain it and never expose/duplicate/map it. Same-description duplicates share
+a lease; the primitive cannot deny trusted caller writes. `verify` requires the
+exact exclusive lease and no signal recipient, including rejection of pending
+breaks. Independent name, owner/mode/link/full metadata/mount/content and source
+guards remain necessary. This is not an atomic filesystem snapshot or a defence
+against privileged process/debugger interference. No sysctl, host signal handler,
+network, cleanup, publication or resume behavior is introduced.
+
+The optional collision archive uses that primitive with its private framing;
+its source profile v8 and scope are described in
+`docs/forever-collision-leased-archive.md`. Source inclusion and earlier focused
+synthetic evidence do not enable a product storage mode or build a new bundle.

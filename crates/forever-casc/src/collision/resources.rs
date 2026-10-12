@@ -75,6 +75,10 @@ impl Profile {
         if self == Self::DiskWorldV1 {
             d.max_entries = self.spool_limits().max_records;
             d.max_heap_bytes = 256 * 1024 * 1024;
+            // Two 64 MiB descriptor ceilings plus guards leave less than
+            // 128 MiB inside this inventory. Keep the cache admission allowance
+            // below that remainder; this only reduces the existing parser cap.
+            d.cache.max_memory_bytes = 64 * 1024 * 1024;
         }
         d
     }
@@ -82,6 +86,7 @@ impl Profile {
         let mut d = staged::Limits::default();
         if self == Self::DiskWorldV1 {
             d.max_callbacks = self.spool_limits().max_records;
+            d.world.world.run.cache = self.inventory_limits().cache;
             d.max_records = 8_000_000;
             d.world.world.run.placements.max_models = self.collector_limits().max_models;
         }

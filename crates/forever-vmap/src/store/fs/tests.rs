@@ -226,7 +226,15 @@ fn same_size_inplace_change_is_terminal_even_after_bytes_restored() {
     dir.file("model.vmo", b"original");
     let mut source = dir.open();
     read(&mut source, model(b"model"), 64).unwrap();
-    fs::write(dir.0.join("model.vmo"), b"modified").unwrap();
+    // Exercise metadata verification without relying on clock granularity.
+    // Post-read verification does not rehash contents or freeze the filesystem.
+    let changed = dir.0.join("model.vmo");
+    let captured = fs::metadata(&changed).unwrap().modified().unwrap();
+    fs::write(&changed, b"modified").unwrap();
+    fs::File::open(&changed)
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(captured + std::time::Duration::from_secs(1)))
+        .unwrap();
     assert_eq!(source.verify_unchanged(), Err(SourceError::InputChanged));
     fs::write(dir.0.join("model.vmo"), b"original").unwrap();
     assert_eq!(

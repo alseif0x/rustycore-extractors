@@ -1519,3 +1519,40 @@ candidate is not integrated into the product. Resident product/default CLI and
 v7 corresponding-source profile remain. Physical-disk preflight, scalable product
 publication/resume, encrypted mandatory complete inputs, geometry/runtime and
 reproducible distribution remain gates. The full extractor is not complete.
+
+
+## Linux private collision archive source profile v8 (2026-10-12)
+
+The current mandatory corresponding-source profile is
+`forever-seven-crate-linux-collision-leased-archive-source-v8`. GNU/Linux x86_64
+write leases protect one private append archive per owner. All six actual
+RAW/WDT/cache/placement/VMO/map owners bind the same backend, volume and resource
+policies. FileSetV1 remains default. Complete framing/digests, source/namespace /
+mount guards and terminal poisoning remain. Geometric descriptors and constant
+archive guard counts do not claim whole-world linear work or throughput.
+
+The disk-profile cache parser allowance is reduced to 64 MiB in the inventory
+and world runner; no memory ceiling is raised. Metadata-only fixtures
+force distinct UNIX timestamps. Production reader behavior is unchanged.
+The complete captured root plus helper reservation is admitted before archive
+creation; a downward-budget regression retains only the empty private namespace.
+
+Frozen executable/test source passes 2,599 ordinary tests across 41 targets per
+Linux debug/release profile (26 ignored), four explicitly executed ignored
+corpora per profile, 180 contracts and 108 distribution/sealer checks. Workspace
+all-target Linux/GNU-Windows Clippy, both Windows compile profiles and scoped
+formatting pass. Each 4,097-record corpus performs 20,485 archive guards with
+bounded steady FDs. Four complete six-owner M2/WMO/parent packages match 27
+resident-Rust artifacts / 2,684 bytes; one exact terminal nearer-parent
+Association is checked, also on a second filesystem. All 27 command traces,
+immutable source/tools and live terminal observations pass independent review.
+Earlier failed reports remain retained and rejected.
+
+Seven crates, nine packages and two exact registry archives remain. A Linux-local
+CASC-to-platform edge and 28 mandatory source paths enter v8. Historical v7
+contracts/import pins retain their scope. No new bundle/rebuild, Windows runtime,
+native/client/runtime or product acceptance is established. The product still
+uses resident assembly. Physical-disk preflight, publication/resume integration,
+encrypted mandatory complete inputs, real geometry/runtime and full distribution
+remain gates. The extractor is not complete. See
+`docs/forever-collision-leased-archive.md` for hashes and retained history.

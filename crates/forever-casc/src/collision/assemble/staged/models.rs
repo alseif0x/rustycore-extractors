@@ -838,7 +838,9 @@ pub fn prepare(
     limits: Limits,
 ) -> Result<Prepared, Error> {
     let admission: Result<usize, Error> = (|| {
-        if repository.resources() != stage.stage.repository.resources() {
+        if repository.resources() != stage.stage.repository.resources()
+            || repository.backend() != stage.stage.repository.backend()
+        {
             return Err(Kind::InvalidLimits.into());
         }
         limits.validate_resources(repository.resources())?;

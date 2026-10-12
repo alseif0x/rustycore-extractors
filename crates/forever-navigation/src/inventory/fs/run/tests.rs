@@ -510,7 +510,8 @@ fn new_entry_after_last_tile_rejects_final_verification() {
     let mut s = Recording {
         action: Some(Box::new(move |(_, tile)| {
             if tile.is_some() {
-                fs::write(&path, b"new").unwrap()
+                fs::write(&path, b"new").unwrap();
+                changed_mtime(path.parent().unwrap());
             }
         })),
         ..Default::default()
@@ -877,6 +878,7 @@ fn bound_collision_file_and_directory_identities_use_original_enumeration() {
         Err(super::super::Error::InputChanged)
     );
     fs::write(tmp.vmaps().join("0001/new"), []).unwrap();
+    changed_mtime(&tmp.vmaps().join("0001"));
     assert_eq!(
         p.guard.artifact(1, missing.bytes(), &mut p.budget),
         Err(super::super::Error::InputChanged)
@@ -968,3 +970,13 @@ fn cumulative_output_arithmetic_checks_exact_ceiling_and_overflow() {
 }
 
 mod world;
+
+// Mutation fixtures require an observable directory metadata change. This does
+// not strengthen production metadata-only verification into content hashing.
+fn changed_mtime(path: &Path) {
+    let time = fs::metadata(path).unwrap().modified().unwrap();
+    fs::File::open(path)
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(time + std::time::Duration::from_secs(1)))
+        .unwrap();
+}

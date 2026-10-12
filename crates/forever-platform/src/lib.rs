@@ -6,6 +6,9 @@ compile_error!("forever-platform Windows profile requires x86_64");
 
 pub mod path;
 
+#[cfg(target_os = "linux")]
+pub mod linux;
+
 #[cfg(windows)]
 pub mod windows;
 
