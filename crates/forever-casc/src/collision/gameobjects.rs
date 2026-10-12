@@ -34,6 +34,9 @@ use crate::local_store::LocalStore;
 use forever_db2::{RecordError, terrain_sources};
 use forever_vmap::{gameobject_models, wmo::liquid::LiquidLookup};
 
+#[cfg(target_os = "linux")]
+pub mod spooled;
+
 #[cfg(test)]
 mod tests;
 

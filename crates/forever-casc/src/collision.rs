@@ -15,9 +15,13 @@
 pub mod assemble;
 pub mod gameobjects;
 mod names;
+#[cfg(target_os = "linux")]
+pub mod payload;
 pub mod placements;
 pub mod plan;
 pub mod run;
+#[cfg(target_os = "linux")]
+pub mod spool;
 #[cfg(test)]
 mod tests;
 pub mod world;
@@ -332,6 +336,8 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
     source_bytes: usize,
     raw_bytes: usize,
     failed: Option<Error>,
+    #[cfg(target_os = "linux")]
+    payloads: Option<payload::Repository>,
 }
 impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub fn new(store: &'s mut LocalStore, lookup: &'l L, limits: Limits) -> Result<Self, Error> {
@@ -356,6 +362,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: 0,
             raw_bytes: 0,
             failed: None,
+            #[cfg(target_os = "linux")]
+            payloads: None,
         })
     }
     /// Acquire and convert now, retaining everything internally. After any
@@ -403,9 +411,18 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         Ok(())
     }
     fn record_request(&mut self, handle: ModelHandle) -> Result<(), Error> {
-        let cap = self.available_total()?;
+        let cap = self.vector_reservation_cap(&self.requests, 1, true)?;
         reserve(&mut self.requests, 1, &mut self.live, cap)?;
         self.requests.push(handle);
+        #[cfg(target_os = "linux")]
+        if self.payloads.is_some() {
+            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            self.payloads
+                .as_mut()
+                .ok_or(Error::State)?
+                .admit_descriptors(compact)
+                .map_err(|_| Error::Aborted)?;
+        }
         Ok(())
     }
     fn ready(&self) -> Result<(), Error> {
@@ -441,6 +458,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: self.source_bytes,
             raw_bytes: self.raw_bytes,
             failed: self.failed,
+            #[cfg(target_os = "linux")]
+            payloads: self.payloads,
         })
     }
     /// Recheck the store snapshot and transfer all retained results together.
@@ -601,11 +620,65 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         })();
         self.remember(result)
     }
+    fn vector_reservation_cap<T>(
+        &self,
+        values: &Vec<T>,
+        additional: usize,
+        compact_vector: bool,
+    ) -> Result<usize, Error> {
+        let cap = self.available_total()?;
+        #[cfg(target_os = "linux")]
+        if let Some(repository) = &self.payloads
+            && add(values.len(), additional)? > values.capacity()
+        {
+            let old = capacity(values)?;
+            let mut cap = if compact_vector {
+                self.limits
+                    .max_memory_bytes
+                    .checked_sub(self.store.stats().resident_bytes)
+                    .and_then(|n| n.checked_sub(repository.resident_bytes()))
+                    .ok_or(Error::Limit)?
+            } else {
+                cap
+            };
+            cap = cap.checked_sub(old).ok_or(Error::Limit)?;
+            if compact_vector {
+                let compact = payload::compact_bytes(&self.models, &self.requests)?;
+                let remaining = repository
+                    .descriptor_limit()
+                    .checked_sub(repository.resident_bytes())
+                    .and_then(|n| n.checked_sub(compact))
+                    .ok_or(Error::Limit)?;
+                cap = cap.min(
+                    add(self.live, remaining)?
+                        .checked_sub(old)
+                        .ok_or(Error::Limit)?,
+                );
+            }
+            return Ok(cap);
+        }
+        #[cfg(not(target_os = "linux"))]
+        let _ = (values, additional, compact_vector);
+        Ok(cap)
+    }
     fn available_total(&self) -> Result<usize, Error> {
-        self.limits
+        let total = self
+            .limits
             .max_memory_bytes
             .checked_sub(self.store.stats().resident_bytes)
-            .ok_or(Error::Limit)
+            .ok_or(Error::Limit)?;
+        #[cfg(target_os = "linux")]
+        if let Some(repository) = &self.payloads {
+            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            repository
+                .check_descriptors(compact)
+                .map_err(|_| Error::Aborted)?;
+            return Ok(total
+                .checked_sub(repository.resident_bytes())
+                .ok_or(Error::Limit)?
+                .min(add(compact, repository.active_limit())?));
+        }
+        Ok(total)
     }
     fn free(&self) -> Result<usize, Error> {
         self.available_total()?
@@ -662,10 +735,37 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             return Err(Error::Limit);
         }
         let cap = self.available_total()?;
+        #[cfg(target_os = "linux")]
+        let cap = if let Some(repository) = &self.payloads {
+            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let remaining = repository
+                .descriptor_limit()
+                .checked_sub(repository.resident_bytes())
+                .and_then(|n| n.checked_sub(compact))
+                .ok_or(Error::Limit)?;
+            let global = self
+                .limits
+                .max_memory_bytes
+                .checked_sub(self.store.stats().resident_bytes)
+                .and_then(|n| n.checked_sub(repository.resident_bytes()))
+                .ok_or(Error::Limit)?;
+            global.min(add(self.live, remaining)?)
+        } else {
+            cap
+        };
         let name = copy(prepared.name(), &mut self.live, cap)?;
         let origin = match prepared.id {
             Some(id) => Origin::Id(id),
             None => Origin::Name(copy(prepared.canonical(), &mut self.live, cap)?),
+        };
+        #[cfg(target_os = "linux")]
+        let cap = if self.payloads.is_some() && self.models.len() == self.models.capacity() {
+            // Admit full new Model allocation while old allocation and the
+            // just-created name/origin vectors are still resident.
+            cap.checked_sub(capacity(&self.models)?)
+                .ok_or(Error::Limit)?
+        } else {
+            cap
         };
         reserve(&mut self.models, 1, &mut self.live, cap)?;
         let handle = ModelHandle(self.models.len());
@@ -679,6 +779,24 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source: None,
             wmo: None,
         });
+        #[cfg(target_os = "linux")]
+        if self.payloads.is_some() {
+            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let repository_bytes = self.payloads.as_ref().ok_or(Error::State)?.resident_bytes();
+            let budget = self
+                .limits
+                .max_memory_bytes
+                .checked_sub(self.store.stats().resident_bytes)
+                .and_then(|n| n.checked_sub(self.live))
+                .and_then(|n| n.checked_sub(repository_bytes))
+                .ok_or(Error::Limit)?;
+            self.payloads
+                .as_mut()
+                .ok_or(Error::State)?
+                .prepare(self.models.len(), compact, budget)
+                .map_err(|_| Error::Aborted)?;
+            self.available_total()?;
+        }
         Ok(handle)
     }
     fn complete_model(
@@ -693,6 +811,18 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             Class::Wmo => self.convert_wmo(handle, bytes)?,
         }
         self.models[handle.0].pending = false;
+        #[cfg(target_os = "linux")]
+        if self.payloads.is_some() {
+            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let repository = self.payloads.as_mut().ok_or(Error::State)?;
+            // Persist each completed child/model at its conversion boundary.
+            // No successful RAW/root/selection accumulates behind the wrapper.
+            let released = repository
+                .store(handle, &mut self.models[handle.0], compact, self.live)
+                .map_err(|_| Error::Aborted)?;
+            self.release(released);
+            self.available_total()?;
+        }
         Ok(())
     }
     fn obtain_gameobject(&mut self, id: u32) -> Result<GameObjectOutcome, Error> {
@@ -721,12 +851,37 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 Some(_) => Err(Error::Alias),
             };
         }
+        #[cfg(target_os = "linux")]
+        let provisional = if self.payloads.is_some() {
+            Some(self.insert_model(Class::M2, &prepared)?)
+        } else {
+            None
+        };
+        #[cfg(not(target_os = "linux"))]
+        let provisional: Option<ModelHandle> = None;
         let (bytes, facts) = self.read(InputRef::FileDataId(id))?;
         let Some(class) = classify(facts.first_magic)? else {
             self.release(bytes.capacity());
+            if let Some(handle) = provisional {
+                if handle.index() + 1 != self.models.len() {
+                    return Err(Error::State);
+                }
+                let model = self.models.pop().ok_or(Error::State)?;
+                self.release(model.name.capacity());
+                if let Origin::Name(name) = model.origin {
+                    self.release(name.capacity());
+                }
+                // Slot capacities remain reserved. Read/request/source work is
+                // never refunded; a texture does not create a model handle.
+            }
             return Ok(GameObjectOutcome::Texture);
         };
-        let handle = self.insert_model(class, &prepared)?;
+        let handle = if let Some(handle) = provisional {
+            self.models[handle.index()].class = class;
+            handle
+        } else {
+            self.insert_model(class, &prepared)?
+        };
         self.complete_model(handle, bytes, facts)?;
         Ok(GameObjectOutcome::Model(handle))
     }
@@ -751,19 +906,20 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             return Err(Error::Limit);
         }
         self.reads += 1;
+        // Identical to the resident ceiling on the original route; the explicit
+        // spool route additionally partitions current scratch from descriptors.
+        let memory_limit = add(self.store.stats().resident_bytes, self.available_total()?)?;
         let file = match input {
             InputRef::FileDataId(id) => self.store.read_file_data_id_with_external_budget(
                 id,
                 cap as u64,
                 self.live,
-                self.limits.max_memory_bytes,
+                memory_limit,
             ),
-            InputRef::LogicalName(name) => self.store.read_name_with_external_budget(
-                name,
-                cap as u64,
-                self.live,
-                self.limits.max_memory_bytes,
-            ),
+            InputRef::LogicalName(name) => {
+                self.store
+                    .read_name_with_external_budget(name, cap as u64, self.live, memory_limit)
+            }
         }
         .map_err(Error::Store)?;
         if file.bytes.len() > cap {
@@ -812,13 +968,15 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             };
             let child = self.obtain(Class::M2, input)?;
             let cap = self.available_total()?;
-            reserve(&mut bindings, 1, &mut self.live, cap)?;
+            let reservation = cap.min(self.vector_reservation_cap(&bindings, 1, false)?);
+            reserve(&mut bindings, 1, &mut self.live, reservation)?;
             bindings.push(NameBinding {
                 name_index: request.name_index,
                 model: child,
             });
             if self.models[child.0].status == Status::Collision {
-                reserve(&mut valid, 1, &mut self.live, cap)?;
+                let reservation = cap.min(self.vector_reservation_cap(&valid, 1, false)?);
+                reserve(&mut valid, 1, &mut self.live, reservation)?;
                 valid.push(request.name_index);
             }
         }
@@ -827,19 +985,24 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         for id in root.detailed_group_ids() {
             let (source, facts) = self.read(InputRef::FileDataId(id))?;
             let cap = self.available_total()?;
-            reserve(&mut group_bytes, 1, &mut self.live, cap)?;
+            let reservation = cap.min(self.vector_reservation_cap(&group_bytes, 1, false)?);
+            reserve(&mut group_bytes, 1, &mut self.live, reservation)?;
             group_bytes.push(source);
-            reserve(&mut group_facts, 1, &mut self.live, cap)?;
+            let reservation = cap.min(self.vector_reservation_cap(&group_facts, 1, false)?);
+            reserve(&mut group_facts, 1, &mut self.live, reservation)?;
             group_facts.push(facts);
         }
         let mut groups = Vec::new();
         let mut inputs = Vec::new();
         let cap = self.available_total()?;
-        reserve(&mut groups, group_bytes.len(), &mut self.live, cap)?;
+        let reservation =
+            cap.min(self.vector_reservation_cap(&groups, group_bytes.len(), false)?);
+        reserve(&mut groups, group_bytes.len(), &mut self.live, reservation)?;
         for source in &group_bytes {
             groups.push(wmo::Group::parse(source, self.limits.wmo).map_err(Error::Wmo)?);
         }
-        reserve(&mut inputs, groups.len(), &mut self.live, cap)?;
+        let reservation = cap.min(self.vector_reservation_cap(&inputs, groups.len(), false)?);
+        reserve(&mut inputs, groups.len(), &mut self.live, reservation)?;
         for (source, group) in group_facts.iter().zip(&groups) {
             inputs.push(wmo::GroupInput {
                 file_data_id: source.id,

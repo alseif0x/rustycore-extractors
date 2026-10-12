@@ -15,6 +15,9 @@ use forever_vmap::{
     placement::{self, Placement, ids},
     wmo,
 };
+#[cfg(target_os = "linux")]
+pub mod spooled;
+
 #[cfg(test)]
 mod tests;
 

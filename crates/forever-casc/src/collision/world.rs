@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Authored 2026-10-11: complete startup-to-world acquisition with one collector.
+// Modified 2026-10-12: typed shared preparation; original authored 2026-10-11: complete startup-to-world acquisition with one collector.
 //! Consumes a successful empty-lookup GameObject startup, then acquires Map,
 //! LiquidMaterial and LiquidType in pinned vmapexport.cpp:713-723 order. All
 //! reads share the existing LocalStore, model cache and cumulative budgets.
@@ -28,6 +28,9 @@ use forever_db2::{RecordError, terrain_sources as source};
 use forever_vmap::wmo::liquid::LiquidLookup;
 use std::mem::size_of;
 
+mod input;
+#[cfg(target_os = "linux")]
+pub mod spooled;
 #[cfg(test)]
 mod tests;
 
@@ -207,48 +210,7 @@ impl Topology {
         collector: &mut super::Extractor<'_, '_, L>,
         max_bytes: usize,
     ) -> Result<Self, Error> {
-        let count = maps.all().len();
-        let requested = count
-            .checked_mul(size_of::<TopologyEntry>() + size_of::<usize>())
-            .ok_or(Error::Limit)?;
-        if requested > max_bytes {
-            return Err(Error::Limit);
-        }
-        collector
-            .reserve_external(requested)
-            .map_err(Error::Collision)?;
-        let mut rows = Vec::new();
-        let mut by_id = Vec::new();
-        rows.try_reserve_exact(count)
-            .map_err(|_| Error::Allocation)?;
-        by_id
-            .try_reserve_exact(count)
-            .map_err(|_| Error::Allocation)?;
-        let resident_bytes = add(capacity(&rows)?, capacity(&by_id)?)?;
-        if resident_bytes > max_bytes {
-            return Err(Error::Limit);
-        }
-        collector
-            .reserve_external(resident_bytes.checked_sub(requested).ok_or(Error::State)?)
-            .map_err(Error::Collision)?;
-        for map in maps.all() {
-            by_id.push(rows.len());
-            rows.push(TopologyEntry {
-                id: map.id(),
-                parent_map_id: map.parent_map_id(),
-                wdt_file_data_id: map.wdt_file_data_id(),
-                physical_ordinal: map.physical_ordinal(),
-                depth: map.depth(),
-                is_parent: map.is_parent(),
-            });
-        }
-        by_id.sort_unstable_by_key(|&i| rows[i].id);
-        Ok(Self {
-            rows,
-            by_id,
-            direct_count: maps.stats().direct_rows,
-            resident_bytes,
-        })
+        input::topology(maps, collector, max_bytes).map_err(native_failure)
     }
 }
 pub struct Completed {
@@ -438,212 +400,23 @@ impl LiquidLookup for Lookups {
             .map(|i| self.materials[i].1.flags_bits)
     }
 }
+fn native_failure(e: input::Failure<super::Error>) -> Error {
+    match e {
+        input::Failure::World(e) => e,
+        input::Failure::Collector(e) => Error::Collision(e),
+    }
+}
 fn prepare(startup: &mut gameobjects::Startup<'_>, limits: Limits) -> Result<Prepared, Error> {
-    let (snapshot, mut map_facts) = decode(
-        startup,
-        MAP_FILE_DATA_ID,
-        true,
-        limits,
-        source::read_vmap_maps,
-    )?;
-    for row in snapshot.direct_records() {
-        if row.fields.name.len() > limits.maps.max_name_bytes
-            || row.fields.directory.len() > limits.maps.max_name_bytes
-        {
-            return Err(Error::Limit);
-        }
-    }
-    let direct_count = snapshot.direct_records().len();
-    // The snapshot and materializer's index/growth/cloned strings remain under
-    // the same allowance until materialize returns and destroys its scratch.
-    let rows = snapshot.materialize().map_err(Error::Db2)?;
-    let mut retained = capacity(&rows)?;
-    for row in &rows {
-        retained = add(
-            retained,
-            add(row.fields.name.capacity(), row.fields.directory.capacity())?,
-        )?;
-    }
-    if rows.len() > limits.maps.max_rows
-        || retained > limits.max_table_memory_bytes
-        || retained > map_facts.decode_allowance_bytes
-    {
-        return Err(Error::Limit);
-    }
-    startup
-        .collector_mut()
-        .release_external(map_facts.decode_allowance_bytes - retained)
-        .map_err(Error::Collision)?;
-    map_facts.materialized_rows = rows.len();
-    map_facts.retained_bytes = retained;
-
-    let (snapshot, mut material_facts) = decode(
-        startup,
-        MATERIAL_FILE_DATA_ID,
-        false,
-        limits,
-        source::read_liquid_materials,
-    )?;
-    let materials = replay(startup, &snapshot, limits, retained)?;
-    material_facts.materialized_rows = materials.len();
-    material_facts.retained_bytes = capacity(&materials)?;
-    retained = add(retained, material_facts.retained_bytes)?;
-    drop(snapshot);
-    startup
-        .collector_mut()
-        .release_external(material_facts.decode_allowance_bytes)
-        .map_err(Error::Collision)?;
-
-    let (snapshot, mut type_facts) = decode(
-        startup,
-        TYPE_FILE_DATA_ID,
-        true,
-        limits,
-        source::read_liquid_types,
-    )?;
-    let types = replay(startup, &snapshot, limits, retained)?;
-    type_facts.materialized_rows = types.len();
-    type_facts.retained_bytes = capacity(&types)?;
-    retained = add(retained, type_facts.retained_bytes)?;
-    drop(snapshot);
-    startup
-        .collector_mut()
-        .release_external(type_facts.decode_allowance_bytes)
-        .map_err(Error::Collision)?;
-    Ok(Prepared {
-        rows,
-        direct_count,
-        lookup: Lookups { materials, types },
-        tables: [map_facts, material_facts, type_facts],
-        retained,
-    })
+    input::prepare(startup.collector_mut(), limits).map_err(native_failure)
 }
-fn decode<T>(
-    startup: &mut gameobjects::Startup<'_>,
-    id: u32,
-    text: bool,
-    limits: Limits,
-    reader: fn(&[u8]) -> Result<source::SourceRecords<T>, RecordError>,
-) -> Result<(source::SourceRecords<T>, TableFacts), Error> {
-    let (bytes, facts) = startup
-        .collector_mut()
-        .read_source(id, limits.max_db2_bytes)
-        .map_err(Error::Collision)?;
-    if word(&bytes, 136).is_some_and(|n| n as usize > limits.max_direct_rows)
-        || (word(&bytes, 200) == Some(1)
-            && word(&bytes, 240).is_some_and(|n| n as usize > limits.max_copy_records))
-    {
-        return Err(Error::Limit);
-    }
-    let allowance = add(
-        add(
-            bytes.len().checked_mul(32).ok_or(Error::Limit)?,
-            2 * 1024 * 1024,
-        )?,
-        if text { TEXT_ALLOWANCE } else { 0 },
-    )?;
-    if allowance > limits.max_decode_allowance_bytes {
-        return Err(Error::Limit);
-    }
-    startup
-        .collector_mut()
-        .reserve_external(allowance)
-        .map_err(Error::Collision)?;
-    let snapshot = reader(&bytes).map_err(Error::Db2)?;
-    let direct_rows = snapshot.direct_records().len();
-    let copy_records = snapshot.copies().len();
-    if direct_rows > limits.max_direct_rows || copy_records > limits.max_copy_records {
-        return Err(Error::Limit);
-    }
-    let source_capacity = bytes.capacity();
-    drop(bytes);
-    startup
-        .collector_mut()
-        .release_source(source_capacity)
-        .map_err(Error::Collision)?;
-    Ok((
-        snapshot,
-        TableFacts {
-            source: facts,
-            direct_rows,
-            copy_records,
-            materialized_rows: 0,
-            retained_bytes: 0,
-            decode_allowance_bytes: allowance,
-        },
-    ))
-}
-/// Precollect every eventual key, then replay against a sorted vector. Default
-/// entries are logically inserted only when observed by copies; preinitializing
-/// them is equivalent because direct assignment runs first and no queries occur
-/// until replay ends. Retained capacity includes duplicate-key scratch slots.
+#[cfg(test)]
 fn replay<T: Copy + Default>(
     startup: &mut gameobjects::Startup<'_>,
     snapshot: &source::SourceRecords<T>,
     limits: Limits,
     retained: usize,
 ) -> Result<Vec<(u32, T)>, Error> {
-    let count = add(
-        snapshot.direct_records().len(),
-        snapshot.copies().len().checked_mul(2).ok_or(Error::Limit)?,
-    )?;
-    if count > MAX_LOOKUP_ROWS {
-        return Err(Error::Limit);
-    }
-    let requested = count
-        .checked_mul(size_of::<(u32, T)>())
-        .ok_or(Error::Limit)?;
-    if add(retained, requested)? > limits.max_table_memory_bytes {
-        return Err(Error::Limit);
-    }
-    startup
-        .collector_mut()
-        .reserve_external(requested)
-        .map_err(Error::Collision)?;
-    let mut rows = Vec::new();
-    rows.try_reserve_exact(count)
-        .map_err(|_| Error::Allocation)?;
-    let actual = capacity(&rows)?;
-    if actual > requested {
-        startup
-            .collector_mut()
-            .reserve_external(actual - requested)
-            .map_err(Error::Collision)?;
-    }
-    if add(retained, actual)? > limits.max_table_memory_bytes {
-        return Err(Error::Limit);
-    }
-    rows.extend(
-        snapshot
-            .direct_records()
-            .iter()
-            .map(|r| (r.id, T::default())),
-    );
-    for copy in snapshot.copies() {
-        rows.push((copy.source_id, T::default()));
-        rows.push((copy.new_id, T::default()));
-    }
-    rows.sort_unstable_by_key(|row| row.0);
-    rows.dedup_by_key(|row| row.0);
-    if rows.len() > limits.max_lookup_rows {
-        return Err(Error::Limit);
-    }
-    for row in snapshot.direct_records() {
-        let index = rows
-            .binary_search_by_key(&row.id, |r| r.0)
-            .map_err(|_| Error::State)?;
-        rows[index].1 = row.fields;
-    }
-    for copy in snapshot.copies() {
-        let source = rows
-            .binary_search_by_key(&copy.source_id, |r| r.0)
-            .map_err(|_| Error::State)?;
-        let dest = rows
-            .binary_search_by_key(&copy.new_id, |r| r.0)
-            .map_err(|_| Error::State)?;
-        rows[dest].1 = rows[source].1;
-    }
-    Ok(rows)
+    input::replay(startup.collector_mut(), snapshot, limits, retained).map_err(native_failure)
 }
 fn capacity<T>(rows: &Vec<T>) -> Result<usize, Error> {
     rows.capacity()

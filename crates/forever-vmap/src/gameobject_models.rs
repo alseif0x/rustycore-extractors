@@ -21,6 +21,8 @@
 //! absent, malformed or vertex-empty models, unlike native row omission or
 //! partial-success behavior. There is no originating-build/runtime claim.
 
+pub mod streaming;
+
 #[cfg(test)]
 mod tests;
 

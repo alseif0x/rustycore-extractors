@@ -35,6 +35,8 @@ use forever_vmap::{
 
 mod shared;
 pub use shared::{SharedLimits, SharedReport, extract_shared};
+#[cfg(target_os = "linux")]
+pub mod spooled;
 
 #[cfg(test)]
 mod tests;

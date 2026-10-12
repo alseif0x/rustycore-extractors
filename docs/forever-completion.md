@@ -186,6 +186,34 @@ The preceding 161-contract/63-packaging subset and two earlier failed static
 attempts are retained. The final broader checks additionally include package
 state and Windows sealer regressions.
 
+## Private spooled collision source integration — 2026-10-12
+
+The optional Linux library joins disk-backed immutable collision payloads,
+row-wise startup lists, placement/shared-run consumers and authenticated world
+preparation under one collector. Successful completion retains startup data and
+validated topology with their exact logical reservations. Failed owned-Sink
+paths destroy the Sink before final source/spool checks. Existing resident
+product extraction and v7 source/format contracts remain in force.
+
+The accepted union passes 2,391 synthetic tests across 41 targets per Linux
+debug/release profile (22 ignored), Linux/GNU-Windows all-target Clippy and both
+GNU-Windows compilation profiles. All 171 source/state and 104 distribution/
+sealer checks pass. The world-only step passes 387 collision tests/profile,
+including 19 new tests against the unchanged resident Rust world over complete
+authored toy CASC. It adds no new C++ or real-client comparison. Detailed scopes,
+limits and retained report hashes are in the
+[world owner contract](forever-collision-spooled-world.md). Later Windows-only
+test fixture and exact-JSON-checkout corrections have separate hosted CI
+evidence; cross compilation alone does not execute those tests.
+
+The product driver still collects resident final assembly. WDT/cache inventories,
+selected VMO/map/proof output staging and product integration remain required.
+The current 4,096 cumulative read ceiling cannot admit a full 4,096-own-tile map
+with its startup dependencies. The private spool's same-mount requirement also
+remains; a separate-volume policy requires its own contract and acceptance. No
+real input, full-world, product publication/resume, live runtime or distribution
+gate is closed by this library integration.
+
 ## Additional executed evidence — 2026-10-11
 
 - **Unified product interface:** `forever-extractor` now connects all six Rust producers with canonical explicit plans, dependency/selection gates, logical collection/loaded executable identities, shared package publication and explicit same-context recovery. Complete empty Map worlds use a validated pure empty navigation plan. Debug/release each pass 2,023 library + four example + three binary tests, 72 contract checks and 17 synthetic CLI scenarios, with six actual SIGKILL recoveries across profiles. Finished DB2 skipping is tested after corrupting only its private toy archive region; recovered outputs match uninterrupted packages. One-tile all-component packages publish 31 files/141,786 bytes/profile. Bounded real 70205/esES extraction matches 33 prior accepted DB2/GT/camera files/193,794 bytes; Map still fails before payload publication and the verifier rejects its marker. There are 74 empty network traces and six fsync/SIGKILL traces without network calls. This is product integration and bounded intrinsic verification, without new C++/RustyCore consumer execution or full real geometry/runtime/distribution acceptance. See the [product contract](forever-product.md).

@@ -1253,3 +1253,31 @@ are rejected by RustyCore at its first inline-ID table; preserve this separate
 reader-admission difference and every earlier failed report. Complete real spell
 inputs, physical-variant coverage, finish/SQL/hotfix/gameplay and full extraction
 remain unproven. Exact reports and limits are in docs/forever-completion.md.
+
+### Private spooled collision source integration (2026-10-12)
+
+The optional Linux collision library now provides immutable disk-backed model
+payloads, row-wise GameObject list construction, spooled placement/shared-run
+consumers and an authenticated world owner. The same collector, model handles,
+cache flags and cumulative counters survive startup and Map/liquid preparation.
+The owned Sink is precharged before preparation; failed paths destroy it before
+rechecking both source and spool. Completed startup data and validated topology
+remain charged through subsequent RAW reloads. The resident product driver,
+formats, CLI and v7 corresponding-source profile retain their contracts.
+
+The exact source union passes 2,391 synthetic tests across 41 targets per Linux
+debug/release profile (22 ignored), Linux/GNU-Windows all-target Clippy, both
+GNU-Windows compilation profiles, 171 source/state contracts and 104
+distribution/sealer checks. The scoped world step passes 387 collision tests
+per profile, including 19 new tests compared with the resident Rust world.
+This adds no new original C++ or real-client acceptance. Separate hosted
+Windows debug CI exposed checkout/fixture defects; their corrections retain
+the original mutation assertions and require their own executed CI result.
+
+WDT and parent-cache inventories remain resident. The 4,096 cumulative source
+read ceiling and current same-mount private-spool policy remain explicit; this
+is not scalable whole-world execution. Disk-backed inventories, selected
+VMO/map assembly, product publication/resume integration, real mandatory DB2
+and complete model inputs, runtime activation and reproducible Linux/Windows
+distribution remain completion gates. See
+docs/forever-collision-spooled-world.md and docs/forever-completion.md.
