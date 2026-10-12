@@ -43,8 +43,8 @@ writable mappings, kernel attackers or DOS drive remapping. Directory-entry
 changes cannot normally replace retained components because delete sharing is
 denied; identity verification additionally checks exact named paths. Callers
 must authenticate content where required and discard buffers after any error.
-No network requests, key discovery, hidden cache, output writes, DACL creation
-or publication protocol is implemented.
+The read profile implements no network requests, key discovery, hidden cache,
+output writes, DACL creation or publication protocol.
 
 ## API and explicit limits
 
@@ -69,11 +69,14 @@ Debug implementation.
 ## Safety and validation
 
 Unsafe code is denied for the crate and permitted only inside the original
-minimal Win32 filesystem FFI module, the scoped producer-seal FFI module, and
-the GNU/Linux x86_64 file-lease FFI module. It borrows live std File handles and supplies exact
+minimal Win32 filesystem FFI module, the scoped producer-seal and private-output
+FFI modules, and the GNU/Linux x86_64 file-lease FFI module. The read/producer
+helpers borrow live std File handles and supply exact
 repr(C), initialized, correctly sized output buffers. Structure size/alignment
-assertions are compiled for Windows. Calls are synchronous and never retain or
-close handles. No raw handle escapes the module.
+assertions are compiled for Windows. Read/producer calls are synchronous and do
+not retain or close their borrowed handles. The private-output FFI owns newly
+created handles through RAII and supplies only safe owning wrappers to its
+parent module; no raw handle is part of the public API.
 
 Host-independent path tests run on Linux. Windows tests cover ordinary reads,
 identity, ranges/limits, explicit hardlink policies, existing writer rejection,
@@ -203,3 +206,23 @@ The optional collision archive uses that primitive with its private framing;
 its source profile v8 and scope are described in
 `docs/forever-collision-leased-archive.md`. Source inclusion and earlier focused
 synthetic evidence do not enable a product storage mode or build a new bundle.
+
+
+## Separate Windows private-output foundation
+
+`windows::output` creates a new owner-SID private root below a retained
+`ReadDirectory`, with protected explicit DACLs, handle-relative exclusive child
+creation, bounded append/flush and same-root no-overwrite rename. Directory
+keepers share read/write, deny delete and verify observed identity/security
+changes; directory write exclusion and an atomic namespace against same-SID or
+privileged mutation are not claimed. File writers share read only, excluding
+competing data-write/delete opens; same-SID metadata/ACL mutation is checked,
+not prevented by that sharing mode.
+Limits only reduce 128 objects, depth 16, 64 MiB/file, 256 MiB total writes,
+1 MiB/append and 16,384 operations; names have a lowercase ASCII grammar and
+at most 64 bytes. Full paths remain bounded by 32,760 UTF16 units.
+Actual Windows/NTFS execution acceptance is pending. This separate API does not
+enable the Windows product, package publication/recovery, distribution or crash
+durability. See [the versioned scope](../../docs/forever-windows-output.md) and
+`contracts/forever-windows-output-contract-v1.json`; the Linux hardlink/recovery
+protocol and accepted v9 bundle retain their original scope.

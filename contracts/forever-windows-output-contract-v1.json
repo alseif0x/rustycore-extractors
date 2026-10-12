@@ -1,0 +1,227 @@
+{
+  "contract": "forever-windows-private-output-v1",
+  "version": 1,
+  "authored": "2026-10-12",
+  "license": "GPL-3.0-or-later",
+  "api_profile": "forever-windows-private-output-v1",
+  "status": "separate private-output foundation; native Windows/NTFS execution acceptance pending",
+  "foundation_contract": "forever-windows-read-v1",
+  "read_api_profile": "forever-windows-read-ntfs-v1",
+  "sources": {
+    "module": "crates/forever-platform/src/windows/output.rs",
+    "ffi": "crates/forever-platform/src/windows/output/ffi.rs",
+    "native_tests": "crates/forever-platform/src/windows/output/tests.rs"
+  },
+  "documentation": "docs/forever-windows-output.md",
+  "target": {
+    "os": "Windows",
+    "architecture": "x86_64",
+    "volume": "fixed local NTFS",
+    "parent": "existing retained ReadDirectory; original read-profile ancestor, reparse and identity guards",
+    "directory_case_sensitivity": "FileCaseSensitiveInformation class 71 must report flags zero for parent and owned directories"
+  },
+  "security": {
+    "owner": "process TokenUser SID",
+    "dacl": "protected; one non-inheriting ACCESS_ALLOWED_ACE for the owner SID with FILE_ALL_ACCESS",
+    "validate_created_handle": true,
+    "thread_impersonation": "reject at each filesystem operation",
+    "privileged_mutation_protection": false,
+    "same_user_isolation": false,
+    "scope": "discretionary ACL boundary; not authentication, atomic snapshot or isolation from other processes with the same SID",
+    "checks": "pre/post retained and named identity, attributes and owner/DACL checks on files and directories; observed failures poison, no atomic snapshot or closed inventory"
+  },
+  "creation": {
+    "api": "NtCreateFile",
+    "disposition": "FILE_CREATE",
+    "relative_to": "held parent directory handle in OBJECT_ATTRIBUTES.RootDirectory",
+    "existing_name": "fail; no open, adoption or overwrite",
+    "explicit_security_descriptor": true
+  },
+  "rename": {
+    "api": "NtSetInformationFile",
+    "class": "FileRenameInformation",
+    "replace_if_exists": false,
+    "scope": "same private root only; not a package publication/recovery protocol",
+    "object_type": "OutputFile only; directories are not renamed",
+    "token": "retained token binds the new name and parent after success"
+  },
+  "limits": {
+    "downward_only": true,
+    "objects": 128,
+    "depth": 16,
+    "name_ascii_bytes": 64,
+    "file_bytes": 67108864,
+    "total_bytes": 268435456,
+    "append_bytes": 1048576,
+    "scope": "admission counters; not allocator/RSS, total CPU work or physical capacity guarantee",
+    "operations": 16384,
+    "objects_scope": "includes private root; successful rename creates no new entry",
+    "depth_scope": "root depth zero; directories and files count one edge per child; file rename checks destination depth",
+    "operations_scope": "root creation starts at one; child creation, append, flush and rename charge before mutation; metadata-only verify calls are not charged",
+    "total_scope": "entire admitted append request charged before write; a partial I/O failure never refunds bytes",
+    "path_utf16_units": 32760,
+    "path_scope": "full admitted parent path plus separators/private root/relative descendants; checked before create or rename"
+  },
+  "validation": {
+    "contract_tests": "static source/contract/workflow consistency only; not execution acceptance",
+    "native_runner": "actual Windows x86_64 and fixed local NTFS temporary directory",
+    "native_windows_ntfs_accepted": false,
+    "hosted_ci_executed": false,
+    "focused_filter": "windows::output::tests::",
+    "profiles": [
+      "debug",
+      "release"
+    ],
+    "count_policy": "exact listed inventory and successful runtime summary; zero or ignored tests fail",
+    "wine": "preliminary only; cannot close actual Windows/NTFS gate",
+    "native_test_names": [
+      "private_create_write_flush_and_relative_rename",
+      "competing_file_write_delete_and_rename_are_denied",
+      "parent_and_live_directory_deletion_are_denied",
+      "rename_never_overwrites_known_destination",
+      "native_collision_retains_objects_and_poisons_root",
+      "dacl_changed_then_restored_stays_poisoned",
+      "tokens_cannot_cross_private_roots",
+      "budgets_reject_before_mutation_and_leave_valid_root",
+      "operation_budget_counts_mutation_admission_only",
+      "conservative_names_and_downward_limits",
+      "existing_case_alias_root_is_never_adopted",
+      "unknown_child_creation_is_observation_not_inventory_closure",
+      "independent_powershell_dacl_oracle",
+      "thread_impersonation_rejects_before_create_and_poisons_existing_root"
+    ],
+    "native_test_count": 14,
+    "privileged_reparse_gate": {
+      "filter": "windows::output::privileged_tests::privileged_reparse_root_is_never_adopted",
+      "ignored_by_default": true,
+      "separate_explicit_native_execution_required": true,
+      "accepted": false
+    },
+    "independent_acl_oracle": "ordinary native PowerShell Get-Acl and SecurityIdentifier comparison for directory/file owner, protected DACL, one explicit FullControl ALLOW ACE, no inherited or inheriting ACE; child stdout/stderr suppressed; no SID/path output; source presence is not execution evidence",
+    "impersonation_case": "ordinary native ImpersonateSelf with RAII RevertToSelf; create rejects before mutation and verification permanently poisons existing root"
+  },
+  "new_registry_dependencies": [],
+  "upstream_implementation_imported": false,
+  "network_api": false,
+  "client_data_in_git": false,
+  "windows_product_enabled": false,
+  "package_protocol_enabled": false,
+  "recovery_enabled": false,
+  "publication_authorized": false,
+  "full_extractor_complete": false,
+  "not_claimed": [
+    "native Windows/NTFS execution acceptance",
+    "Windows product driver integration",
+    "complete package publication, sealing or receipts",
+    "Windows package recovery or durable directory entries",
+    "migration of Linux hardlink/recovery protocol",
+    "crash durability",
+    "source/key/output separation inferred from names",
+    "free-space reservation",
+    "same-user or privileged-attacker isolation",
+    "full real Forever extraction",
+    "RustyCore runtime acceptance",
+    "goal completion"
+  ],
+  "sharing": {
+    "directory_keeper": {
+      "access": [
+        "FILE_LIST_DIRECTORY",
+        "FILE_READ_ATTRIBUTES",
+        "READ_CONTROL",
+        "SYNCHRONIZE"
+      ],
+      "share": [
+        "FILE_SHARE_READ",
+        "FILE_SHARE_WRITE"
+      ],
+      "delete_sharing": false
+    },
+    "directory_target_probe": {
+      "access": [
+        "FILE_TRAVERSE",
+        "FILE_READ_ATTRIBUTES",
+        "READ_CONTROL",
+        "SYNCHRONIZE"
+      ],
+      "share": [
+        "FILE_SHARE_READ",
+        "FILE_SHARE_WRITE",
+        "FILE_SHARE_DELETE"
+      ],
+      "reason": "compatible with the internal relative rename target open"
+    },
+    "file_writer": {
+      "access": [
+        "FILE_READ_DATA",
+        "FILE_WRITE_DATA",
+        "DELETE",
+        "FILE_READ_ATTRIBUTES",
+        "READ_CONTROL",
+        "SYNCHRONIZE"
+      ],
+      "share": [
+        "FILE_SHARE_READ"
+      ]
+    },
+    "file_probe": {
+      "access": [
+        "FILE_READ_ATTRIBUTES",
+        "READ_CONTROL",
+        "SYNCHRONIZE"
+      ],
+      "share": [
+        "FILE_SHARE_READ",
+        "FILE_SHARE_WRITE",
+        "FILE_SHARE_DELETE"
+      ]
+    },
+    "directory_limit": "write sharing admits directory write/reparse/metadata handles; pre/post identity, attributes and security checks detect observed changes and permanently poison; no atomic namespace against the same SID or administrators",
+    "file_limit": "keeper excludes competing data-write/delete opens; WRITE_ATTRIBUTES, WRITE_DAC and WRITE_OWNER are not data-write sharing access; same-SID metadata/ACL mutation remains possible, checked before/after; compatible readers admitted"
+  },
+  "failure": {
+    "admission": "invalid args/token/name/limits and a known entry collision reject without poisoning",
+    "observed": "I/O or observed guard failure permanently poisons the owner",
+    "rollback": "no successful partial result or pathname cleanup/recovery guarantee"
+  },
+  "api": [
+    "PrivateRoot::create(&ReadDirectory, &str, Limits)",
+    "PrivateRoot::root() -> Directory",
+    "PrivateRoot::stats() -> Stats",
+    "PrivateRoot::verify_unchanged()",
+    "PrivateRoot::create_directory(Directory, &str) -> Directory",
+    "PrivateRoot::create_file(Directory, &str) -> OutputFile",
+    "PrivateRoot::append(OutputFile, &[u8])",
+    "PrivateRoot::flush(OutputFile)",
+    "PrivateRoot::rename(OutputFile, Directory, &str)"
+  ],
+  "tokens": {
+    "ownership": "opaque root identifier plus object index; both validate before I/O",
+    "directory": "Copy token; keeper and rename-target handles stay owned by PrivateRoot",
+    "file": "Copy token; file handle stays owned by PrivateRoot; successful rename preserves token",
+    "parent_lifetime": "PrivateRoot borrows ReadDirectory; parent lease cannot be dropped first",
+    "not_sync": true,
+    "raw_handles_public": false
+  },
+  "names": {
+    "grammar": "ASCII lowercase a-z, digits 0-9, dot, underscore, hyphen; one nonempty component",
+    "reject": [
+      ".",
+      "..",
+      ".git",
+      "trailing dot",
+      "DOS reserved stems con/prn/aux/nul/com1..9/lpt1..9 including extensions",
+      "uppercase",
+      "non-ASCII",
+      "separators",
+      "streams",
+      "spaces"
+    ]
+  },
+  "flush": {
+    "append": "each admitted append flushes the file handle before success",
+    "explicit": "flush checks identity/security before and after and consumes one operation",
+    "durable_directory_entries": false
+  },
+  "diagnostics": "static windows_output_* codes only; no path, SID or native OS error strings"
+}

@@ -15,6 +15,7 @@ use std::{
 #[allow(unsafe_code)]
 mod ffi;
 
+pub mod output;
 pub mod producer;
 
 /// Conservative readonly NTFS lease profile; not a product support claim.
