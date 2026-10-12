@@ -1692,3 +1692,34 @@ targets and 20 ignored. Hosted workflow downloads are distinct from local
 IPC-only trace evidence. That run precedes this Linux inventory increment and
 does not establish real-client, general NTFS, Windows release/product or full
 extractor acceptance. No new bundle is built here.
+
+## Authenticated WDT/cache disk world — 2026-10-12
+
+The new optional Linux [shared disk runner](forever-collision-disk-run.md)
+acquires WDT/Obj0ADT through the same collector, stores complete WDT and own-tile
+cache bodies on disk and skips absent parent ranges by sorted existing keys.
+Its [consuming world owner](forever-collision-disk-world.md) also authenticates
+closed Map/liquid inputs and retains the validated graph/topology and startup
+Data. Exact owned Sink precharge transfers through preparation/run; it drops
+before independent final source/model/WDT/cache checks. The explicit 2 GiB
+combined logical limit does not raise any component ceiling or claim RSS bounds.
+
+The preceding runner passes 26 focused and 438 complete collision tests per
+debug/release profile. Final source rechecks all 26 public runner cases plus
+25 complete-world cases in both profiles, CASC library/test Clippy, scoped
+formatting, 171 source/state contracts and 104 distribution/sealer checks.
+Exact hashes, source scopes and retained interrupted/failed fixture histories
+are in the companion docs. Comparisons use authored toy CASC against unchanged
+resident Rust; no new original C++ or real-client acceptance is established.
+
+The earlier v1 resident inventories remain supported. The product driver's
+final VMap assembly is still resident. Selected VMO/map/proof disk staging,
+unified product publication/resume, realistic full-world read/disk/reload and
+cross-volume policies, complete encrypted mandatory DB2/model inputs, runtime
+activation and reproducible Linux/Windows distribution remain open.
+
+Preceding canonical `26f037d` independently passes hosted
+[Rust run 38191467007](https://github.com/alseif0x/rustycore-extractors/actions/runs/38191467007),
+including Linux debug/release and 2,116 Windows debug tests across 41 targets
+(20 ignored). That result predates this source. No new bundle, real geometry,
+runtime activation or full extractor completion is claimed.

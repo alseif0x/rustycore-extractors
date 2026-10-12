@@ -30,6 +30,8 @@ use std::mem::size_of;
 
 mod input;
 #[cfg(target_os = "linux")]
+pub mod inventory;
+#[cfg(target_os = "linux")]
 pub mod spooled;
 #[cfg(test)]
 mod tests;

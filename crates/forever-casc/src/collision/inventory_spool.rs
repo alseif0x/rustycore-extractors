@@ -246,6 +246,9 @@ impl Inventory {
     pub fn verify_unchanged(&mut self) -> Result<(), Error> {
         self.finish(Ok(()))
     }
+    pub const fn limits(&self) -> Limits {
+        self.limits
+    }
     pub const fn failed(&self) -> bool {
         self.failed.is_some()
     }
@@ -462,6 +465,33 @@ impl Inventory {
                 .entries
                 .binary_search_by_key(&Key::Tile(tile), |e| e.key)
                 .is_ok())
+        })();
+        self.finish(result)
+    }
+    /// First existing own tile at or after a cell, in x/y order. No body read
+    /// or ordinal handle escapes. Allows absent ranges to skip empty cells;
+    /// final store checks still execute for every lookup, including absence.
+    pub fn next_own_tile(&mut self, map_id: u32, first_cell: u16) -> Result<Option<Tile>, Error> {
+        let result = (|| {
+            self.check()?;
+            if first_cell > 4096 {
+                return Err(Error::Binding);
+            }
+            if first_cell == 4096 {
+                return Ok(None);
+            }
+            let first = Tile {
+                map_id,
+                x: (first_cell / 64) as u8,
+                y: (first_cell % 64) as u8,
+            };
+            let at = self
+                .entries
+                .partition_point(|entry| entry.key < Key::Tile(first));
+            Ok(match self.entries.get(at).map(|entry| entry.key) {
+                Some(Key::Tile(tile)) if tile.map_id == map_id => Some(tile),
+                _ => None,
+            })
         })();
         self.finish(result)
     }

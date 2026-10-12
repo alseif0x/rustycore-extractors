@@ -1305,3 +1305,40 @@ Separately, hosted Rust run 38189148916 at 9e97d48 passes Linux debug/release
 and Windows debug (2,116 tests, 41 targets, 20 ignored on Windows). This is
 synthetic hosted execution of the preceding source, not acceptance of the new
 Linux-only owner, actual-client NTFS behavior or Windows product publication.
+
+### Authenticated disk-inventory world (2026-10-12)
+
+The optional Linux `collision::run::inventory` now acquires complete WDT/own
+Obj0ADT inputs through the established model collector and stores WDT/cache
+bodies in disjoint private typed inventories. Sorted parent-key range lookup
+retains x/y order, empty-own barriers and lazy inactive-parent failure without
+per-absent-cell repository checks. The consuming `world::inventory` joins the
+same closed Map/liquid preparation and validated topology to that runner.
+
+Its explicit downward-only combined logical ceiling is 2 GiB: the established
+collector ceiling plus both complete inventory heap ceilings, admitted before
+DB2 I/O. Each inventory must fit the existing 256 MiB component cap. Owned
+Sink/IDs/source/parser allocations remain in the collector; exact Sink precharge
+transfers without a gap or double reservation. Returned cache bytes have a
+separate pre-I/O output allowance. Data/topology remain retained through RAW
+reloads. These are conservative reservations, not RSS or all CPU operations.
+The actual owned Sink drops before all independent final source/model/WDT/cache
+guards; typed causes survive observed changes.
+
+The preceding runner passes 26 focused and 438 full collision cases per Linux
+profile. Final world source passes 25 complete-world and 26 public-runner cases
+per profile, CASC library/test Clippy, four scoped formatting checks, 171
+source/state contracts and 104 distribution/sealer checks. Full 438-case scope
+belongs to the preceding source; no final whole-workspace result is inferred.
+All comparisons here use authored toy CASC against unchanged resident Rust;
+no new native or real-client acceptance is added. Exact reports and preserved
+interrupted/failed fixture history are in docs/forever-collision-disk-run.md and
+docs/forever-collision-disk-world.md.
+
+Resident/spooled v1 APIs and the product driver remain supported. The final
+product still uses resident assembly. Scalable read/disk/reload policies,
+cross-volume support, selected VMO/map/proof disk staging, product integration,
+complete real inputs, runtime activation and distribution remain gates.
+Hosted CI 38191467007 separately passes Linux debug/release and Windows debug
+at preceding canonical 26f037d (2,116 Windows tests, 41 targets, 20 ignored).
+That hosted result predates this source increment.

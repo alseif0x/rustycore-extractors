@@ -895,6 +895,9 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         let r = self.inner.release_external(bytes);
         self.checked(r)
     }
+    pub(crate) const fn memory_ceiling(&self) -> usize {
+        self.inner.memory_limit()
+    }
     pub(crate) fn free_bytes(&self) -> Result<usize, CollectorError> {
         self.ready()?;
         self.inner.free_bytes().map_err(CollectorError::Collision)
