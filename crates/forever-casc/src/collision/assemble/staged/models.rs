@@ -232,6 +232,30 @@ fn bump64(n: &mut u64, a: u64, cap: u64) -> Result<(), Kind> {
     if *n > cap { Err(Kind::Limit) } else { Ok(()) }
 }
 impl Limits {
+    fn validate_resources(self, profile: crate::collision::resources::Profile) -> Result<(), Kind> {
+        let cap = profile.model_limits();
+        if !profile.supported()
+            || self.max_models > cap.max_models
+            || self.max_output_bytes > cap.max_output_bytes
+            || self.max_vertices > cap.max_vertices
+            || self.max_triangles > cap.max_triangles
+            || self.max_raw_visit_bytes > cap.max_raw_visit_bytes
+            || self.max_bih_work > cap.max_bih_work
+            || self.max_validation_bytes > cap.max_validation_bytes
+        {
+            return Err(Kind::InvalidLimits);
+        }
+        let d = Self::default();
+        let mut bounded = self;
+        bounded.max_models = bounded.max_models.min(d.max_models);
+        bounded.max_output_bytes = bounded.max_output_bytes.min(d.max_output_bytes);
+        bounded.max_vertices = bounded.max_vertices.min(d.max_vertices);
+        bounded.max_triangles = bounded.max_triangles.min(d.max_triangles);
+        bounded.max_raw_visit_bytes = bounded.max_raw_visit_bytes.min(d.max_raw_visit_bytes);
+        bounded.max_bih_work = bounded.max_bih_work.min(d.max_bih_work);
+        bounded.max_validation_bytes = bounded.max_validation_bytes.min(d.max_validation_bytes);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Kind> {
         let d = Self::default();
         let c = self.conversion;
@@ -414,7 +438,7 @@ impl Prepared {
             .extraction()
             .phase_compact()?
             .model_count();
-        if count > super::super::MAX_MODELS {
+        if count > self.repository.resources().collector_limits().max_models {
             return Err(Kind::Limit.into());
         }
         self.admit(mul(count, size_of::<Entry>())?)?;
@@ -814,7 +838,10 @@ pub fn prepare(
     limits: Limits,
 ) -> Result<Prepared, Error> {
     let admission: Result<usize, Error> = (|| {
-        limits.validate()?;
+        if repository.resources() != stage.stage.repository.resources() {
+            return Err(Kind::InvalidLimits.into());
+        }
+        limits.validate_resources(repository.resources())?;
         stage.verify_unchanged()?;
         repository.verify_unchanged().map_err(Kind::Spool)?;
         if repository.stats().map_err(Kind::Spool)?.records != 0 {

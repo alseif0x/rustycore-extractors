@@ -1831,3 +1831,34 @@ The product VMap driver remains resident. Versioned scalable source/read/disk /
 reload ceilings, product integration/publication/resume with live LocalStore
 verification, complete encrypted mandatory inputs, real geometry/runtime and
 reproducible distribution remain open. No full goal completion is claimed.
+
+
+## Explicit collision cumulative resource policies — 2026-10-12
+
+The optional Linux library now carries `resources::Profile::DiskWorldV1` through
+all six actual private spool owners. Default `BoundedV1` ceilings remain exact;
+64-bit opt-in raises only declared cumulative source/read/request/model, disk /
+record/reload, placement/model/package and repeated-row list work capacities.
+Mixed policies and upward overrides reject before the relevant acquisition or
+output. Per-file/parser/format, complete-input, component heap/overlap and combined
+2 GiB logical ceilings remain. Counters are not RSS or every CPU operation.
+
+GNU/Linux x64 Rust 1.98 debug/release each pass the complete 1,204 ordinary CASC
+inventory plus two explicit ignored corpora, 20 pure streaming tests, 171 source /
+state contracts and 104 distribution/sealer checks; Linux/GNU-Windows library /
+test Clippy and scoped formatting pass. The 4,100-row repeated-model corpus has
+1,612,694,000 RAW visit bytes and 134,352,900 vertex visits, without 4,100 distinct
+model acquisition. Four complete second-filesystem toy-CASC packages match the
+resident Rust bytes/inventory; one exact nearer-parent Association rejects.
+All 203 final raw traces, source/tool inventories and exact terminal service
+observations pass independent review. Prior partial/failed/cancelled validation
+remains retained and unaccepted. Scope, caps and hashes are in
+`docs/forever-collision-disk-resources.md`.
+
+This is synthetic library source acceptance, not a final whole-workspace, new
+native/client, Windows runtime or full-world throughput result. The current
+file-per-record backend retains prior-record scans; the separate private append
+candidate is not integrated into the product. Resident product/default CLI and
+v7 corresponding-source profile remain. Physical-disk preflight, scalable product
+publication/resume, encrypted mandatory complete inputs, geometry/runtime and
+reproducible distribution remain gates. The full extractor is not complete.

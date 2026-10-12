@@ -75,6 +75,32 @@ impl Default for Limits {
     }
 }
 impl Limits {
+    #[cfg(target_os = "linux")]
+    fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
+        let cap = profile.startup_limits();
+        if self.max_candidate_requests > cap.max_candidate_requests {
+            return Err(Error::InvalidLimits);
+        }
+        self.collision
+            .validate_resources(profile)
+            .map_err(Error::Collision)?;
+        profile
+            .list_profile()
+            .validate_limits(self.lists)
+            .map_err(Error::Lists)?;
+        let mut bounded = self;
+        bounded.max_candidate_requests = bounded.max_candidate_requests.min(MAX_CANDIDATE_REQUESTS);
+        bounded.collision = super::Limits::default();
+        bounded.lists.max_raw_visit_bytes = bounded
+            .lists
+            .max_raw_visit_bytes
+            .min(gameobject_models::MAX_RAW_VISIT_BYTES);
+        bounded.lists.max_vertex_visits = bounded
+            .lists
+            .max_vertex_visits
+            .min(gameobject_models::MAX_VERTEX_VISITS);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Error> {
         let defaults = Self::default();
         let l = self.lists;

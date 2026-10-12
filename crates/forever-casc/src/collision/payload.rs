@@ -647,7 +647,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         mut spool: Spool,
     ) -> Result<Self, CollectorError> {
         spool.verify_unchanged()?;
-        let mut inner = Extractor::new(store, lookup, limits)?;
+        limits.validate_resources(spool.resources())?;
+        let mut inner = Extractor::new_validated(store, lookup, limits)?;
         inner.payloads = Some(Repository {
             spool,
             mapping: Vec::new(),
@@ -660,6 +661,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             inner,
             failed: None,
         })
+    }
+    pub fn resources(&self) -> super::resources::Profile {
+        self.inner
+            .payloads
+            .as_ref()
+            .expect("spooled collector")
+            .spool
+            .resources()
     }
     fn ready(&self) -> Result<(), CollectorError> {
         self.failed.map_or(Ok(()), Err)?;
@@ -1095,6 +1104,9 @@ pub struct SpoolingExtraction {
     failed: Option<CollectorError>,
 }
 impl SpoolingExtraction {
+    pub const fn resources(&self) -> super::resources::Profile {
+        self.repository.spool.resources()
+    }
     /// Immutable completed-phase source accounting, including the caller-owned
     /// store residency recorded at finish and the exact retained Data/topology.
     /// No external charge can be removed or forged through this read-only API.

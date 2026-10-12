@@ -168,7 +168,7 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
         limits: Limits,
     ) -> Result<Self, Error<S::Error>> {
         let result = (|| {
-            limits.validate()?;
+            limits.validate_resources(collector.resources())?;
             if precharged > sink_heap_allowance {
                 return Err(ProjectionError::Limit.into());
             }

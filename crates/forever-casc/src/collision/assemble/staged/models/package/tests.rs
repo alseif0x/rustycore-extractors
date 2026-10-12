@@ -365,6 +365,7 @@ static PRIVATE_FIXTURE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 struct Private {
     base: PathBuf,
     profile: spool::Profile,
+    resources: crate::collision::resources::Profile,
     _lease: std::sync::MutexGuard<'static, ()>,
 }
 impl Private {
@@ -379,6 +380,7 @@ impl Private {
         Self {
             base,
             profile: spool::Profile::SameMountV1,
+            resources: crate::collision::resources::Profile::BoundedV1,
             _lease: lease,
         }
     }
@@ -410,15 +412,17 @@ impl Private {
         Self {
             base,
             profile: spool::Profile::CapturedVolumesV2,
+            resources: crate::collision::resources::Profile::BoundedV1,
             _lease: lease,
         }
     }
     fn spool(&self, f: &CollisionFixture, name: &str, l: SpoolLimits) -> Spool {
-        let spool = Spool::create_with_profile(
+        let spool = Spool::create_with_policy(
             &self.base.join(name),
             ProtectedInputs::capture(f.path(), &[]).unwrap(),
             l,
             self.profile,
+            self.resources,
         )
         .unwrap();
         assert_eq!(spool.profile(), self.profile);
@@ -434,34 +438,34 @@ fn prepared(f: &CollisionFixture, p: &Private) -> Prepared {
     let mut store = f.open(false);
     let startup = gameobjects::spooled::extract_startup_fdid(
         &mut store,
-        gameobjects::Limits::default(),
-        p.spool(f, "models", SpoolLimits::default()),
+        p.resources.startup_limits(),
+        p.spool(f, "models", p.resources.spool_limits()),
     )
     .unwrap();
     let inv = |name| {
         inventory::Inventory::new(
-            p.spool(f, name, SpoolLimits::default()),
+            p.spool(f, name, p.resources.spool_limits()),
             inventory::Limits {
                 max_heap_bytes: 256 * 1024 * 1024,
-                ..Default::default()
+                ..p.resources.inventory_limits()
             },
         )
         .unwrap()
     };
-    let mut limits = placements::Limits::default();
+    let mut limits = p.resources.stage_limits();
     limits.world.world.run.placements.ids.max_memory_bytes = 1024 * 1024;
     let staged = placements::extract(
         startup,
         inv("wdts"),
         inv("caches"),
-        p.spool(f, "placements", SpoolLimits::default()),
+        p.spool(f, "placements", p.resources.spool_limits()),
         limits,
     )
     .unwrap();
     selected::prepare(
         staged,
-        p.spool(f, "vmos", SpoolLimits::default()),
-        selected::Limits::default(),
+        p.spool(f, "vmos", p.resources.spool_limits()),
+        p.resources.model_limits(),
     )
     .unwrap()
 }
@@ -1451,4 +1455,282 @@ fn explicit_cross_volume_closed_package_matches_resident_rust() {
     println!(
         "captured-volume corpus: 4 exact complete packages, 1 exact terminal Association; {total_files} files, {total_bytes} bytes"
     );
+}
+
+fn resource_private() -> Private {
+    let mut p = Private::new();
+    p.resources = crate::collision::resources::Profile::DiskWorldV1;
+    p
+}
+#[test]
+fn explicit_disk_resources_complete_small_package_matches_bounded_bytes() {
+    let f = one_m2();
+    let expected = old(&f).unwrap();
+    let p = resource_private();
+    let c = assemble(
+        prepared(&f, &p),
+        p.spool(&f, "maps", p.resources.spool_limits()),
+        p.resources.package_limits(),
+    )
+    .unwrap();
+    let (c, _p, _expected) = compare_completed(c, p, expected);
+    assert_eq!(
+        c.prepared().repository.resources(),
+        crate::collision::resources::Profile::DiskWorldV1
+    );
+}
+#[test]
+fn resource_policy_mixing_rejects_world_before_map_acquisition() {
+    let f = one_m2();
+    let p = resource_private();
+    let mut store = f.open(false);
+    let startup = gameobjects::spooled::extract_startup_fdid(
+        &mut store,
+        p.resources.startup_limits(),
+        p.spool(&f, "models", p.resources.spool_limits()),
+    )
+    .unwrap();
+    let inv = |name| {
+        inventory::Inventory::new(
+            p.spool(&f, name, p.resources.spool_limits()),
+            p.resources.inventory_limits(),
+        )
+        .unwrap()
+    };
+    let mismatched = Spool::create(
+        &p.base.join("placements"),
+        ProtectedInputs::capture(f.path(), &[]).unwrap(),
+        SpoolLimits::default(),
+    )
+    .unwrap();
+    let e = placements::extract(
+        startup,
+        inv("wdts"),
+        inv("caches"),
+        mismatched,
+        p.resources.stage_limits(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(
+        e.cause,
+        placements::Cause::Stage(placements::StageError::InvalidLimits)
+    );
+    assert_eq!(fs::read_dir(p.base.join("placements")).unwrap().count(), 0);
+}
+#[test]
+fn resource_policy_mixing_rejects_selected_models_and_final_map_archive() {
+    for phase in 0..2 {
+        let f = one_m2();
+        let p = resource_private();
+        let ready = prepared(&f, &p);
+        let wrong = Spool::create(
+            &p.base.join("wrong-archive"),
+            ProtectedInputs::capture(f.path(), &[]).unwrap(),
+            SpoolLimits::default(),
+        )
+        .unwrap();
+        if phase == 0 {
+            let Prepared { stage, .. } = ready;
+            assert_eq!(
+                selected::prepare(stage, wrong, p.resources.model_limits())
+                    .err()
+                    .unwrap()
+                    .cause,
+                selected::Cause::Kind(selected::Kind::InvalidLimits)
+            );
+        } else {
+            assert_eq!(
+                assemble(ready, wrong, p.resources.package_limits())
+                    .err()
+                    .unwrap()
+                    .cause,
+                Cause::Kind(Kind::InvalidLimits)
+            );
+        }
+        assert_eq!(
+            fs::read_dir(p.base.join("wrong-archive")).unwrap().count(),
+            0
+        );
+    }
+}
+
+#[test]
+fn expanded_spool_descriptor_admission_crosses_old_record_ceiling_without_files() {
+    let f = one_m2();
+    let p = resource_private();
+    let mut repo = p.spool(&f, "admission", p.resources.spool_limits());
+    repo.prepare_records(4097, 16 * 1024 * 1024).unwrap();
+    assert_eq!(repo.stats().unwrap().records, 0);
+    assert_eq!(fs::read_dir(p.base.join("admission")).unwrap().count(), 0);
+    assert!(
+        repo.stats().unwrap().descriptor_bytes < p.resources.spool_limits().max_descriptor_bytes
+    );
+}
+#[test]
+fn expanded_spool_resource_fields_reject_upward_before_creation() {
+    let f = one_m2();
+    let p = resource_private();
+    for axis in 0..6 {
+        let mut l = p.resources.spool_limits();
+        match axis {
+            0 => l.max_records += 1,
+            1 => l.max_disk_bytes += 1,
+            2 => l.max_descriptor_bytes += 1,
+            3 => l.max_reloads += 1,
+            4 => l.max_reload_bytes += 1,
+            _ => l.max_active_bytes += 1,
+        }
+        let path = p.base.join(format!("upward-{axis}"));
+        assert_eq!(
+            Spool::create_with_policy(
+                &path,
+                ProtectedInputs::capture(f.path(), &[]).unwrap(),
+                l,
+                spool::Profile::SameMountV1,
+                p.resources
+            )
+            .err(),
+            Some(payload::Error::InvalidLimits)
+        );
+        assert!(!path.exists());
+    }
+}
+#[test]
+fn explicit_collector_reads_and_requests_cross_old_4096_without_reset() {
+    let f = CollisionFixture::new(&[(201, None, b"BLP2synthetic".to_vec())]);
+    let p = resource_private();
+    let mut store = f.open(false);
+    let mut l = p.resources.collector_limits();
+    l.max_reads = 4100;
+    l.max_requests = 4100;
+    let mut col = payload::SpoolingExtractor::new(
+        &mut store,
+        &gameobjects::EmptyLookup,
+        l,
+        p.spool(&f, "models", p.resources.spool_limits()),
+    )
+    .unwrap();
+    for _ in 0..4100 {
+        assert_eq!(
+            col.extract_gameobject_fdid(201).unwrap(),
+            crate::collision::GameObjectOutcome::Texture
+        );
+    }
+    assert_eq!(col.facts().unwrap().reads, 4100);
+    assert_eq!(
+        col.extract_gameobject_fdid(201).err(),
+        Some(payload::CollectorError::Collision(
+            crate::collision::Error::Limit
+        ))
+    );
+    assert_eq!(
+        col.facts().err(),
+        Some(payload::CollectorError::Collision(
+            crate::collision::Error::Limit
+        ))
+    );
+}
+#[test]
+fn disk_model_and_package_aggregate_ceilings_only_reduce() {
+    let r = crate::collision::resources::Profile::DiskWorldV1;
+    r.model_limits().validate_resources(r).unwrap();
+    r.package_limits().validate_resources(r).unwrap();
+    assert_eq!(
+        r.model_limits().validate(),
+        Err(selected::Kind::InvalidLimits)
+    );
+    assert_eq!(r.package_limits().validate(), Err(Kind::InvalidLimits));
+    for axis in 0..11 {
+        let mut l = r.package_limits();
+        match axis {
+            0 => l.max_models += 1,
+            1 => l.max_output_bytes += 1,
+            2 => l.max_vertices += 1,
+            3 => l.max_triangles += 1,
+            4 => l.max_raw_visit_bytes += 1,
+            5 => l.max_bih_work += 1,
+            6 => l.max_validation_bytes += 1,
+            7 => l.max_files += 1,
+            8 => l.max_records += 1,
+            9 => l.max_associations += 1,
+            _ => l.max_ancestor_steps += 1,
+        }
+        assert_eq!(l.validate_resources(r), Err(Kind::InvalidLimits));
+    }
+    for axis in 0..3 {
+        let mut l = r.package_limits();
+        match axis {
+            0 => l.max_memory_bytes += 1,
+            1 => l.assembly.max_spawns += 1,
+            _ => l.assembly.bih.max_depth += 1,
+        }
+        assert_eq!(l.validate_resources(r), Err(Kind::InvalidLimits));
+    }
+}
+
+#[test]
+#[ignore = "explicit cumulative 4100-row and repeated-geometry corpus"]
+fn explicit_disk_resources_startup_crosses_candidate_raw_and_vertex_work_limits() {
+    let rows: Vec<_> = (1..=4100).map(|id| (id, 201)).collect();
+    let vertices = 32769usize;
+    let mut model = m2(true);
+    model.resize(310 + vertices * 12, 0);
+    put(&mut model, 224, vertices as u32);
+    let f = CollisionFixture::new(&[
+        (
+            gameobjects::TABLE_FILE_DATA_ID,
+            None,
+            gameobject_db2(&rows, &[]),
+        ),
+        (201, None, model),
+    ]);
+    {
+        let p = Private::new();
+        let mut store = f.open(false);
+        assert!(
+            gameobjects::spooled::extract_startup_fdid(
+                &mut store,
+                gameobjects::Limits::default(),
+                p.spool(&f, "models", SpoolLimits::default())
+            )
+            .is_err()
+        );
+    }
+    let p = resource_private();
+    let mut store = f.open(false);
+    let mut startup = gameobjects::spooled::extract_startup_fdid(
+        &mut store,
+        p.resources.startup_limits(),
+        p.spool(&f, "models", p.resources.spool_limits()),
+    )
+    .unwrap();
+    assert_eq!(startup.collector_mut().resources(), p.resources);
+    let data = startup.data().unwrap();
+    let lists = data.lists();
+    let s = lists.stats();
+    assert_eq!(s.rows, 4100);
+    assert_eq!(s.vertex_visits, 4100 * vertices as u64);
+    assert!(s.raw_visit_bytes > forever_vmap::gameobject_models::MAX_RAW_VISIT_BYTES);
+    assert!(s.vertex_visits > forever_vmap::gameobject_models::MAX_VERTEX_VISITS);
+    let temp =
+        forever_vmap::gameobject_models::TempList::parse(lists.temp_bytes(), Default::default())
+            .unwrap();
+    let dtree =
+        forever_vmap::gameobject_models::Dtree::parse(lists.dtree_bytes(), Default::default())
+            .unwrap();
+    assert_eq!((temp.row_count(), dtree.row_count()), (4100, 4100));
+    for (at, row) in dtree.rows().enumerate() {
+        assert_eq!(row.display_id(), at as u32 + 1);
+        assert_eq!(row.name(), b"FILE000000C9.xxx");
+        assert_eq!(
+            row.bounds_bits(),
+            [0, 0, 0, 1f32.to_bits(), 1f32.to_bits(), 0]
+        );
+    }
+    println!(
+        "disk-resource corpus: 4100 exact list rows; {} RAW bytes; {} vertex visits",
+        s.raw_visit_bytes, s.vertex_visits
+    );
+    startup.collector_mut().verify_unchanged().unwrap();
 }

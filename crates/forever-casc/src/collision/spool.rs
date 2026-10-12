@@ -141,6 +141,26 @@ impl Default for Limits {
     }
 }
 impl Limits {
+    fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
+        let cap = profile.spool_limits();
+        if !profile.supported()
+            || self.max_records > cap.max_records
+            || self.max_disk_bytes > cap.max_disk_bytes
+            || self.max_descriptor_bytes > cap.max_descriptor_bytes
+            || self.max_reloads > cap.max_reloads
+            || self.max_reload_bytes > cap.max_reload_bytes
+        {
+            return Err(Error::InvalidLimits);
+        }
+        let mut bounded = self;
+        let d = Self::default();
+        bounded.max_records = bounded.max_records.min(d.max_records);
+        bounded.max_disk_bytes = bounded.max_disk_bytes.min(d.max_disk_bytes);
+        bounded.max_descriptor_bytes = bounded.max_descriptor_bytes.min(d.max_descriptor_bytes);
+        bounded.max_reloads = bounded.max_reloads.min(d.max_reloads);
+        bounded.max_reload_bytes = bounded.max_reload_bytes.min(d.max_reload_bytes);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Error> {
         let d = Self::default();
         if self.max_records > d.max_records
@@ -383,6 +403,7 @@ pub struct Stats {
 /// Exclusive newly-created namespace beneath an existing private (0700) parent.
 /// Files use ordinal names and 0400 after write. No Drop cleanup or resume.
 pub struct Spool {
+    resources: super::resources::Profile,
     profile: Profile,
     root: Chain,
     protected: ProtectedInputs,
@@ -407,7 +428,24 @@ impl Spool {
         limits: Limits,
         profile: Profile,
     ) -> Result<Self, Error> {
-        limits.validate()?;
+        Self::create_with_policy(
+            path,
+            protected,
+            limits,
+            profile,
+            super::resources::Profile::BoundedV1,
+        )
+    }
+    /// Explicit storage AND cumulative-resource capabilities. Every configured
+    /// ceiling is downward-only; the actual owner carries the immutable policy.
+    pub fn create_with_policy(
+        path: &Path,
+        protected: ProtectedInputs,
+        limits: Limits,
+        profile: Profile,
+        resources: super::resources::Profile,
+    ) -> Result<Self, Error> {
+        limits.validate_resources(resources)?;
         let leaf = path.file_name().ok_or(Error::Path)?;
         if !path.is_absolute()
             || path.components().count() > MAX_DEPTH
@@ -470,6 +508,7 @@ impl Spool {
             return Err(Error::Privacy);
         }
         let mut out = Self {
+            resources,
             profile,
             root,
             protected,
@@ -486,6 +525,9 @@ impl Spool {
         }
         out.verify_unchanged()?;
         Ok(out)
+    }
+    pub const fn resources(&self) -> super::resources::Profile {
+        self.resources
     }
     pub const fn profile(&self) -> Profile {
         self.profile

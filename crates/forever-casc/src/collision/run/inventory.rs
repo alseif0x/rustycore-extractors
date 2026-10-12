@@ -665,7 +665,10 @@ pub(crate) fn admit_inventories<L: LiquidLookup + ?Sized, E>(
     caches: &mut Inventory,
     limits: Limits,
 ) -> Result<usize, Error<E>> {
-    limits.run.validate()?;
+    limits.run.validate_resources(collector.resources())?;
+    if wdts.resources() != collector.resources() || caches.resources() != collector.resources() {
+        return Err(super::Error::InvalidLimits.into());
+    }
     if limits.max_combined_memory_bytes > MAX_COMBINED_MEMORY_BYTES {
         return Err(super::Error::InvalidLimits.into());
     }

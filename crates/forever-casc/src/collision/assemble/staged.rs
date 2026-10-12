@@ -289,8 +289,8 @@ fn mul(a: usize, b: usize) -> Result<usize, StageError> {
 impl Stage {
     fn new(repository: spool::Spool, limits: Limits) -> Result<Self, StageError> {
         if limits.max_heap_bytes > MAX_HEAP_BYTES
-            || limits.max_callbacks > MAX_CALLBACKS
-            || limits.max_records > super::MAX_RECORDS
+            || limits.max_callbacks > repository.resources().stage_limits().max_callbacks
+            || limits.max_records > repository.resources().stage_limits().max_records
         {
             return Err(StageError::InvalidLimits);
         }
@@ -671,9 +671,15 @@ pub fn extract(
     limits: Limits,
 ) -> Result<Staged, Error> {
     let admission: Result<usize, Error> = (|| {
+        if repository.resources() != startup.collector_mut().resources()
+            || wdts.resources() != repository.resources()
+            || caches.resources() != repository.resources()
+        {
+            return Err(StageError::InvalidLimits.into());
+        }
         if limits.max_heap_bytes > MAX_HEAP_BYTES
-            || limits.max_callbacks > MAX_CALLBACKS
-            || limits.max_records > super::MAX_RECORDS
+            || limits.max_callbacks > repository.resources().stage_limits().max_callbacks
+            || limits.max_records > repository.resources().stage_limits().max_records
             || limits.world.max_combined_memory_bytes > run::inventory::MAX_COMBINED_MEMORY_BYTES
         {
             return Err(StageError::InvalidLimits.into());

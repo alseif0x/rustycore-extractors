@@ -78,6 +78,17 @@ impl Default for Limits {
     }
 }
 impl Limits {
+    #[cfg(target_os = "linux")]
+    fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
+        self.run.validate_resources(profile).map_err(Error::Run)?;
+        let mut bounded = self;
+        bounded.run.placements.max_models = bounded
+            .run
+            .placements
+            .max_models
+            .min(super::placements::MAX_MODELS);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Error> {
         if self.max_db2_bytes > MAX_DB2_BYTES
             || self.max_direct_rows > MAX_DIRECT_ROWS

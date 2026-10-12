@@ -455,3 +455,98 @@ fn old_codec_error_is_still_exhaustively_matchable() {
     }
     assert_eq!(exact(CodecError::Name), 4);
 }
+
+#[test]
+fn explicit_repeated_work_profile_preserves_default_and_small_bytes() {
+    assert_eq!(BudgetProfile::default(), BudgetProfile::BoundedV1);
+    assert_eq!(BudgetProfile::BoundedV1.limits(), Limits::default());
+    let raw = m2(&triangle());
+    let rows = [row(1, b"same", &raw), row(1, b"same", &raw)];
+    let metadata = meta(&rows);
+    let p = BudgetProfile::RepeatedRowsV1;
+    let limits = p.limits();
+    let plan = Plan::preflight_with_profile(&metadata, limits, p).unwrap();
+    let mut builder = Builder::new_with_profile(plan, &metadata, limits, p).unwrap();
+    for r in &rows {
+        builder.push(r.model.unwrap()).unwrap();
+    }
+    let got = builder.finish().unwrap();
+    let expected = old::build(&rows, Limits::default()).unwrap();
+    assert_eq!(got.temp_bytes(), expected.temp_bytes());
+    assert_eq!(got.dtree_bytes(), expected.dtree_bytes());
+}
+#[test]
+fn repeated_work_cannot_enter_default_plan_or_builder() {
+    let raw = m2(&triangle());
+    let rows = [row(1, b"one", &raw)];
+    let metadata = meta(&rows);
+    let p = BudgetProfile::RepeatedRowsV1;
+    let limits = p.limits();
+    assert_eq!(
+        Plan::preflight(&metadata, limits).err(),
+        Some(Error::Codec(CodecError::InvalidLimits))
+    );
+    let plan = Plan::preflight_with_profile(&metadata, Limits::default(), p).unwrap();
+    assert_eq!(
+        Builder::new(plan, &metadata, Limits::default()).err(),
+        Some(Error::State)
+    );
+}
+#[test]
+fn repeated_work_only_raises_two_declared_cumulative_fields() {
+    let p = BudgetProfile::RepeatedRowsV1;
+    for axis in 0..9 {
+        let mut l = p.limits();
+        match axis {
+            0 => l.max_raw_visit_bytes += 1,
+            1 => l.max_vertex_visits += 1,
+            2 => l.max_list_bytes += 1,
+            3 => l.max_raw_bytes += 1,
+            4 => l.max_rows += 1,
+            5 => l.max_name_bytes += 1,
+            6 => l.max_memory_bytes += 1,
+            7 => {
+                l.max_raw_visit_bytes = 0;
+                l.max_vertex_visits = 0;
+                p.validate_limits(l).unwrap();
+                continue;
+            }
+            _ => {
+                p.validate_limits(l).unwrap();
+                continue;
+            }
+        }
+        assert_eq!(p.validate_limits(l), Err(CodecError::InvalidLimits));
+    }
+}
+#[test]
+fn repeated_raw_visits_cross_old_ceiling_before_any_builder_allocation() {
+    let metadata: Vec<_> = (0..5)
+        .map(|id| Metadata {
+            display_id: id,
+            name: b"same",
+            model: Some(ModelInfo {
+                class: Class::M2,
+                raw_bytes: 64 * 1024 * 1024,
+            }),
+        })
+        .collect();
+    assert_eq!(
+        Plan::preflight(&metadata, Limits::default()).err(),
+        Some(Error::Codec(CodecError::Limit))
+    );
+    let p = BudgetProfile::RepeatedRowsV1;
+    let mut l = p.limits();
+    l.max_raw_visit_bytes = 5 * 64 * 1024 * 1024;
+    assert_eq!(
+        Plan::preflight_with_profile(&metadata, l, p)
+            .unwrap()
+            .raw_visit_bytes(),
+        l.max_raw_visit_bytes
+    );
+    l.max_raw_visit_bytes -= 1;
+    assert_eq!(
+        Plan::preflight_with_profile(&metadata, l, p).err(),
+        Some(Error::Codec(CodecError::Limit))
+    );
+}

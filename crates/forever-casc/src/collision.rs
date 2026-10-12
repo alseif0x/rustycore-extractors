@@ -21,6 +21,8 @@ mod names;
 pub mod payload;
 pub mod placements;
 pub mod plan;
+#[cfg(target_os = "linux")]
+pub mod resources;
 pub mod run;
 #[cfg(target_os = "linux")]
 pub mod spool;
@@ -108,6 +110,31 @@ impl Default for Limits {
     }
 }
 impl Limits {
+    #[cfg(target_os = "linux")]
+    fn validate_resources(self, profile: resources::Profile) -> Result<(), Error> {
+        let cap = profile.collector_limits();
+        if !profile.supported()
+            || self.max_reads > cap.max_reads
+            || self.max_models > cap.max_models
+            || self.max_requests > cap.max_requests
+            || self.max_dependency_requests > cap.max_dependency_requests
+            || self.max_source_bytes > cap.max_source_bytes
+            || self.max_raw_bytes > cap.max_raw_bytes
+        {
+            return Err(Error::InvalidLimits);
+        }
+        let d = Self::default();
+        let mut bounded = self;
+        bounded.max_reads = bounded.max_reads.min(d.max_reads);
+        bounded.max_models = bounded.max_models.min(d.max_models);
+        bounded.max_requests = bounded.max_requests.min(d.max_requests);
+        bounded.max_dependency_requests = bounded
+            .max_dependency_requests
+            .min(d.max_dependency_requests);
+        bounded.max_source_bytes = bounded.max_source_bytes.min(d.max_source_bytes);
+        bounded.max_raw_bytes = bounded.max_raw_bytes.min(d.max_raw_bytes);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Error> {
         let d = Self::default();
         if self.max_file_bytes > d.max_file_bytes
@@ -344,6 +371,13 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
 impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub fn new(store: &'s mut LocalStore, lookup: &'l L, limits: Limits) -> Result<Self, Error> {
         limits.validate()?;
+        Self::new_validated(store, lookup, limits)
+    }
+    fn new_validated(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+    ) -> Result<Self, Error> {
         if store.stats().resident_bytes > limits.max_memory_bytes {
             return Err(Error::Limit);
         }

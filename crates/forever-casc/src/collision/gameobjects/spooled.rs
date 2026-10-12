@@ -205,7 +205,7 @@ pub fn extract_startup_fdid(
     limits: Limits,
     spool: Spool,
 ) -> Result<Startup<'_>, Error> {
-    limits.validate()?;
+    limits.validate_resources(spool.resources())?;
     let mut collector = SpoolingExtractor::new(store, &EMPTY_LOOKUP, limits.collision, spool)?;
     let result = extract_data(&mut collector, limits);
     let data = collector
@@ -376,8 +376,9 @@ fn build_lists<L: LiquidLookup + ?Sized>(
         max_memory_bytes: allowance,
         ..limits
     };
-    let plan = streaming::Plan::preflight(&metadata, list_limits)?;
-    let mut builder = streaming::Builder::new(plan, &metadata, list_limits)?;
+    let profile = collector.resources().list_profile();
+    let plan = streaming::Plan::preflight_with_profile(&metadata, list_limits, profile)?;
+    let mut builder = streaming::Builder::new_with_profile(plan, &metadata, list_limits, profile)?;
     if builder.resident_bytes()? > allowance {
         return Err(super::Error::State.into());
     }

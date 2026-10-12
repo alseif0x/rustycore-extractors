@@ -8,6 +8,50 @@
 use super::{Error as CodecError, Limits, Lists, RawModel, Stats, add, push};
 
 pub const PROFILE: &str = "gameobject-model-lists-rowwise-v1";
+/// Explicit repeated-row work capability. All per-RAW, list, row/name, reader
+/// and memory ceilings remain unchanged; this does not assert actual RSS/CPU.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum BudgetProfile {
+    #[default]
+    BoundedV1,
+    RepeatedRowsV1,
+}
+impl BudgetProfile {
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::BoundedV1 => PROFILE,
+            Self::RepeatedRowsV1 => "gameobject-model-lists-repeated-row-work-v1",
+        }
+    }
+    pub fn limits(self) -> Limits {
+        let mut d = Limits::default();
+        if self == Self::RepeatedRowsV1 {
+            d.max_raw_visit_bytes = 256 * 1024 * 1024 * 1024;
+            d.max_vertex_visits = 4_000_000_000;
+        }
+        d
+    }
+    pub fn validate_limits(self, mut limits: Limits) -> Result<(), CodecError> {
+        let cap = self.limits();
+        if limits.max_raw_visit_bytes > cap.max_raw_visit_bytes
+            || limits.max_vertex_visits > cap.max_vertex_visits
+        {
+            return Err(CodecError::InvalidLimits);
+        }
+        let d = Limits::default();
+        limits.max_raw_visit_bytes = limits.max_raw_visit_bytes.min(d.max_raw_visit_bytes);
+        limits.max_vertex_visits = limits.max_vertex_visits.min(d.max_vertex_visits);
+        limits.validate()
+    }
+    fn reader_limits(self, mut limits: Limits) -> Limits {
+        // These cumulative counters are unused by the complete list codecs;
+        // only the admitted streaming Plan/Builder owns their expanded values.
+        let d = Limits::default();
+        limits.max_raw_visit_bytes = limits.max_raw_visit_bytes.min(d.max_raw_visit_bytes);
+        limits.max_vertex_visits = limits.max_vertex_visits.min(d.max_vertex_visits);
+        limits
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Class {
     M2,
@@ -50,6 +94,7 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Plan {
+    profile: BudgetProfile,
     rows: usize,
     temp: usize,
     dtree: usize,
@@ -60,7 +105,14 @@ impl Plan {
     /// No allocations or RAW parsing. All names/lengths and repeated RAW visits
     /// are admitted before Builder allocates anything. Model content is not proof.
     pub fn preflight(rows: &[Metadata<'_>], limits: Limits) -> Result<Self, Error> {
-        limits.validate()?;
+        Self::preflight_with_profile(rows, limits, BudgetProfile::BoundedV1)
+    }
+    pub fn preflight_with_profile(
+        rows: &[Metadata<'_>],
+        limits: Limits,
+        profile: BudgetProfile,
+    ) -> Result<Self, Error> {
+        profile.validate_limits(limits)?;
         if rows.len() > limits.max_rows {
             return Err(CodecError::Limit.into());
         }
@@ -96,6 +148,7 @@ impl Plan {
             return Err(CodecError::Limit.into());
         }
         Ok(Self {
+            profile,
             rows: rows.len(),
             temp,
             dtree,
@@ -120,6 +173,7 @@ struct Entry {
 /// No output access until finish succeeds. Failure is sticky; no row replay or
 /// partial Lists is exposed. Buffers reserve once with full capacity accounting.
 pub struct Builder {
+    profile: BudgetProfile,
     entries: Vec<Entry>,
     temp: Vec<u8>,
     dtree: Vec<u8>,
@@ -130,7 +184,15 @@ pub struct Builder {
 }
 impl Builder {
     pub fn new(plan: Plan, rows: &[Metadata<'_>], limits: Limits) -> Result<Self, Error> {
-        if Plan::preflight(rows, limits)? != plan {
+        Self::new_with_profile(plan, rows, limits, BudgetProfile::BoundedV1)
+    }
+    pub fn new_with_profile(
+        plan: Plan,
+        rows: &[Metadata<'_>],
+        limits: Limits,
+        profile: BudgetProfile,
+    ) -> Result<Self, Error> {
+        if Plan::preflight_with_profile(rows, limits, profile)? != plan {
             return Err(Error::State);
         }
         let mut memory = super::Memory {
@@ -167,6 +229,7 @@ impl Builder {
             return Err(Error::State);
         }
         Ok(Self {
+            profile,
             entries,
             temp,
             dtree,
@@ -268,8 +331,9 @@ impl Builder {
         if self.next != self.entries.len() {
             return Err(Error::State);
         }
-        super::TempList::parse(&self.temp, self.limits)?;
-        super::Dtree::parse(&self.dtree, self.limits)?;
+        let reader_limits = self.profile.reader_limits(self.limits);
+        super::TempList::parse(&self.temp, reader_limits)?;
+        super::Dtree::parse(&self.dtree, reader_limits)?;
         self.stats.resident_bytes = add(self.temp.capacity(), self.dtree.capacity())?;
         Ok(Lists {
             temp: self.temp,

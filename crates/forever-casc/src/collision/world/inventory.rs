@@ -287,7 +287,7 @@ pub fn extract<S: run::inventory::Sink>(
     let mut owners = Inventories { wdts, caches };
     let mut sink = Some(sink);
     let result = (|| {
-        limits.validate()?;
+        limits.validate_resources(startup.collector_mut().resources())?;
         run::inventory::admit_inventories::<_, S::Error>(
             startup.collector_mut(),
             &mut owners.wdts,

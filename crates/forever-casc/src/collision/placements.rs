@@ -56,6 +56,18 @@ impl Default for Limits {
     }
 }
 impl Limits {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn validate_resources(
+        self,
+        profile: super::resources::Profile,
+    ) -> Result<(), Error> {
+        if !profile.supported() || self.max_models > profile.collector_limits().max_models {
+            return Err(Error::InvalidLimits);
+        }
+        let mut bounded = self;
+        bounded.max_models = bounded.max_models.min(MAX_MODELS);
+        bounded.validate()
+    }
     fn validate(self) -> Result<(), Error> {
         if self.max_batches > MAX_BATCHES
             || self.max_maps > MAX_MAPS

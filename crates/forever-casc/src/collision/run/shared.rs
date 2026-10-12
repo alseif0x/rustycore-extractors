@@ -57,6 +57,18 @@ impl Default for SharedLimits {
     }
 }
 impl SharedLimits {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn validate_resources(
+        self,
+        profile: super::super::resources::Profile,
+    ) -> Result<(), Error> {
+        self.placements
+            .validate_resources(profile)
+            .map_err(Error::Placements)?;
+        let mut bounded = self;
+        bounded.placements.max_models = bounded.placements.max_models.min(placements::MAX_MODELS);
+        bounded.validate()
+    }
     // Component-only use of existing validators/output accounting. The dummy
     // collision limits are never installed on or used to construct a collector.
     fn components(self) -> Limits {

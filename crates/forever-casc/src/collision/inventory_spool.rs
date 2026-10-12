@@ -182,7 +182,7 @@ fn mul(a: usize, b: usize) -> Result<usize, Error> {
 }
 impl Inventory {
     pub fn new(mut repository: spool::Spool, limits: Limits) -> Result<Self, Error> {
-        if limits.max_entries > MAX_ENTRIES
+        if limits.max_entries > repository.resources().inventory_limits().max_entries
             || limits.max_heap_bytes > MAX_HEAP_BYTES
             || limits.max_active_bytes > MAX_ACTIVE_BYTES
         {
@@ -245,6 +245,9 @@ impl Inventory {
     }
     pub fn verify_unchanged(&mut self) -> Result<(), Error> {
         self.finish(Ok(()))
+    }
+    pub const fn resources(&self) -> super::resources::Profile {
+        self.repository.resources()
     }
     pub const fn limits(&self) -> Limits {
         self.limits
