@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: temporary MAPS-root identities, bounds and absence checks.
+// Modified 2026-10-12: give mutation fixtures a distinct pre-capture write time.
 use super::super::{Artifact, Memory};
 use super::*;
 use crate::tilebuilder::Coordinate;
@@ -21,6 +22,26 @@ impl Drop for Temp {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.0).unwrap();
     }
+}
+// These tests need an observable metadata change, not two operations that may
+// receive the same filesystem timestamp. Set the fixture's directory write time
+// well in the past BEFORE any readonly lease, and close the attribute writer.
+// SetFileTime requires FILE_WRITE_ATTRIBUTES; directories need BACKUP_SEMANTICS.
+// https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime
+fn seed_directory_write_time(path: &Path) {
+    use std::os::windows::fs::OpenOptionsExt;
+    let past = std::time::UNIX_EPOCH + std::time::Duration::from_secs(86_400);
+    let directory = fs::OpenOptions::new()
+        .access_mode(0x0100) // FILE_WRITE_ATTRIBUTES
+        .share_mode(7)
+        .custom_flags(0x0200_0000) // FILE_FLAG_BACKUP_SEMANTICS
+        .open(path)
+        .unwrap();
+    directory
+        .set_times(fs::FileTimes::new().set_modified(past))
+        .unwrap();
+    drop(directory);
+    assert_eq!(fs::metadata(path).unwrap().modified().unwrap(), past);
 }
 fn artifact() -> Artifact {
     Artifact {
@@ -233,6 +254,7 @@ fn observed_open_changes_and_recorded_artifact_failures_win_over_guard_limits() 
 fn protected_read_cleanup_detects_change_after_body_budget_is_exhausted() {
     let t = Temp::new();
     fs::write(t.0.join(name()), b"complete").unwrap();
+    seed_directory_write_time(&t.0);
     let mut source = RootedSource::new(&t.0, Default::default()).unwrap();
     let path = source
         .named_path(&request(artifact()).unwrap().full)
@@ -283,6 +305,7 @@ fn protected_read_cleanup_preserves_plain_limits_and_observed_changes() {
 #[test]
 fn protected_enumeration_recheck_changes_override_collection_limits() {
     let t = Temp::new();
+    seed_directory_write_time(&t.0);
     let lease = ReadDirectory::open(&t.0, PlatformLimits::default()).unwrap();
     fs::write(t.0.join("new-after-enumeration"), b"other").unwrap();
     let result: Result<bool, SourceError> = finish_directory(lease, Err(SourceError::Limit));
