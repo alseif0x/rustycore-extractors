@@ -1716,8 +1716,11 @@ three frames for Map, five for SkillLineAbility and one for
 GameObjectDisplayInfo. The local build's joined TactKey/TactKeyLookup tables
 provide zero of those eight names in both esES and enUS. The installed DBCache
 from build 70170 has 128 invalid TactKey rows, zero valid TactKey rows and no
-TactKeyLookup rows;
-all tested merge variants still provide zero required names. The public
+TactKeyLookup rows. A separate RustyCore fixture cache from build 70170 has 112
+valid TactKey rows among 700, 588 invalidations and no TactKeyLookup rows. The
+70205 baseline and both cache-merge variants still match zero required names;
+all three reject all three files with `local_store_no_verified_encoding`. The
+public
 [wowdev/TACTKeys snapshot at f800811](https://github.com/wowdev/TACTKeys/tree/f800811762b2e9ea638bf6dfdb4707382c497943)
 contains one of the eight names, which is insufficient for the three files.
 
@@ -1726,7 +1729,9 @@ does not decrypt a frame, validate plaintext, decode a DB2 or establish that
 other target-build key sources do not exist. The private report's SHA-256 is
 `cfc6153cbd9c69607814c9654ad87ca03a2126d33aac44acc1139b65c814d078`; the
 separate enUS static-table report's SHA-256 is
-`35fe16f68e92e4dedf43bb095374f7fae8f8d208e8d284b3bbc9307299051310`.
+`35fe16f68e92e4dedf43bb095374f7fae8f8d208e8d284b3bbc9307299051310`; the
+private fixture-cache intersection report's SHA-256 is
+`5035c7c494329f326ec61bac42bc4bdfd120135e04b312dbbc3f34516760da50`.
 
 Earlier `local_file_incomplete` statements for these three inputs describe
 their historical attempts; they are not the current acquisition category. Old
