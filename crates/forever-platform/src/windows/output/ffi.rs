@@ -101,6 +101,8 @@ const _: () = {
 };
 #[link(name = "ntdll")]
 unsafe extern "system" {
+    #[cfg(test)]
+    fn NtSetSecurityObject(handle: Handle, information: u32, descriptor: Handle) -> i32;
     fn NtCreateFile(
         handle: *mut Handle,
         access: u32,
@@ -192,16 +194,6 @@ unsafe extern "system" {
     fn IsValidAcl(acl: Handle) -> i32;
     fn GetAclInformation(acl: Handle, information: Handle, len: u32, class: i32) -> i32;
     fn GetAce(acl: Handle, index: u32, ace: *mut Handle) -> i32;
-    #[cfg(test)]
-    fn SetSecurityInfo(
-        handle: Handle,
-        kind: i32,
-        information: u32,
-        owner: Handle,
-        group: Handle,
-        dacl: Handle,
-        sacl: Handle,
-    ) -> u32;
 }
 struct Owned(Handle);
 impl Drop for Owned {
@@ -527,25 +519,63 @@ pub(super) fn private(file: &File, sid: &Sid) -> Result<(), Error> {
 }
 #[cfg(test)]
 pub(super) fn test_dacl(file: &File, sid: &Sid, mask: u32) -> Result<(), u32> {
+    // Avoid SetSecurityInfo's automatic inheritance processing when restoring
+    // the profile's exact no-auto-inheritance descriptor. The native user-mode
+    // setter accepts this exact absolute SD; the test checks restored control.
     let mut storage = [0_u32; 24];
     let pointer = storage.as_mut_ptr().cast();
-    // Test-only numeric diagnostics never include a SID, path or OS message.
     acl(pointer, sid, mask).map_err(|_| u32::MAX)?;
+    let mut descriptor = Descriptor {
+        revision: 0,
+        sbz: 0,
+        control: 0,
+        owner: null_mut(),
+        group: null_mut(),
+        sacl: null_mut(),
+        dacl: null_mut(),
+    };
+    let sd = (&mut descriptor as *mut Descriptor).cast();
+    if unsafe { InitializeSecurityDescriptor(sd, 1) } == 0
+        || unsafe { SetSecurityDescriptorDacl(sd, 1, pointer, 0) } == 0
+        || unsafe { SetSecurityDescriptorControl(sd, 0x1500, 0x1000) } == 0
+    {
+        return Err(unsafe { GetLastError() });
+    }
+    // Only the DACL is changed. The existing owner SID is never replaced.
+    let status = unsafe { NtSetSecurityObject(file.as_raw_handle(), 4, sd) };
+    if status != 0 {
+        return Err(status as u32);
+    }
+    Ok(())
+}
+#[cfg(test)]
+pub(super) fn test_security_control(file: &File) -> Result<u16, u32> {
+    let mut raw = null_mut();
     let status = unsafe {
-        SetSecurityInfo(
+        GetSecurityInfo(
             file.as_raw_handle(),
             1,
-            0x8000_0004,
+            5,
             null_mut(),
             null_mut(),
-            pointer,
             null_mut(),
+            null_mut(),
+            &mut raw,
         )
     };
+    let _owned = Security(raw);
     if status != 0 {
         return Err(status);
     }
-    Ok(())
+    if raw.is_null() {
+        return Err(u32::MAX);
+    }
+    let mut control = 0;
+    let mut revision = 0;
+    if unsafe { GetSecurityDescriptorControl(raw, &mut control, &mut revision) } == 0 {
+        return Err(unsafe { GetLastError() });
+    }
+    Ok(control)
 }
 
 #[cfg(test)]

@@ -149,8 +149,40 @@ class WindowsPrivateOutputContract(unittest.TestCase):
                        'ffi::test_impersonate()', 'Err(Error::Impersonation)',
                        'Err(Error::Changed)'):
             self.assertIn(marker, native)
-        self.assertIn('.stdout(std::process::Stdio::null())', compact(native))
-        self.assertIn('.stderr(std::process::Stdio::null())', compact(native))
+        for marker in ('$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value',
+                       '$rule.IdentityReference.Value -ne $sid.Value',
+                       'AccessControlType]::Allow', '$rule.IsInherited'):
+            self.assertIn(marker, native)
+        oracle = compact(native[native.index('fn independent_powershell_dacl_oracle()'):
+                                native.index('fn acl_oracle(')])
+        verified = oracle.index('root.verify_unchanged().unwrap();')
+        dropped_root = oracle.index('drop(root);')
+        dropped_parent = oracle.index('drop(parent);')
+        persisted = oracle.index('for(fixture,path)in[')
+        asserted = oracle.index('assert!(status.success()')
+        self.assertLess(verified, dropped_root)
+        self.assertLess(dropped_root, dropped_parent)
+        self.assertLess(dropped_parent, persisted)
+        self.assertLess(persisted, asserted)
+        self.assertIn('let(status,numeric)=acl_oracle(script,&path);', oracle)
+        live = oracle[oracle.index('letlive=acl_oracle('):verified]
+        self.assertIn('if!live.0.success()', live)
+        self.assertNotRegex(live, r'\bassert(?:_eq|_ne)?!\(')
+        helper = compact(native[native.index('fn acl_oracle('):
+                                native.index('fn thread_impersonation_rejects_before_create_and_poisons_existing_root()')])
+        for marker in ('.stdout(std::process::Stdio::piped())',
+                       '.stderr(std::process::Stdio::null())',
+                       'Option<[i64;2]>', 'ifoutput.stdout.len()<=128',
+                       'std::str::from_utf8(&output.stdout).ok()',
+                       'text.split_ascii_whitespace()',
+                       'letfirst=words.next()?.parse::<i64>().ok()?;',
+                       'letsecond=words.next()?.parse::<i64>().ok()?;',
+                       'ifwords.next().is_some(){None}else{Some([first,second])}',
+                       '(output.status,numeric)'):
+            self.assertIn(marker, helper)
+        self.assertEqual(helper.count('.parse::<i64>()'), 2)
+        self.assertNotRegex(helper, r'\b(?:e?print(?:ln)?|dbg|format|panic)!\(')
+        self.assertNotIn('String::from_utf8_lossy', helper)
         self.assertIn('ImpersonateSelf(2)', ffi)
         self.assertIn('RevertToSelf()', ffi)
         self.assertIn('implDropforImpersonation', ffi)

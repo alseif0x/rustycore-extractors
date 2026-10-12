@@ -147,9 +147,15 @@ fn dacl_changed_then_restored_stays_poisoned() {
         .custom_flags(0x0200_0000 | 0x0020_0000)
         .open(tmp.0.join("private"))
         .unwrap();
+    let original_control = ffi::test_security_control(root.entries[0].file()).unwrap();
     ffi::test_dacl(&mutation, &root.sid, 0x0012_0089).unwrap();
     assert!(root.verify_unchanged().is_err());
     ffi::test_dacl(&mutation, &root.sid, 0x001f_01ff).unwrap();
+    assert_eq!(
+        ffi::test_security_control(root.entries[0].file()).unwrap(),
+        original_control,
+        "restored descriptor control must match exactly"
+    );
     ffi::private(root.entries[0].file(), &root.sid).unwrap();
     assert_eq!(root.verify_unchanged(), Err(Error::Changed));
 }
@@ -293,25 +299,69 @@ fn independent_powershell_dacl_oracle() {
       $stage=7; $rule=$rules[0];
       if ($rule.IdentityReference.Value -ne $sid.Value -or $rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow -or $rule.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or $rule.InheritanceFlags -ne [System.Security.AccessControl.InheritanceFlags]::None -or $rule.PropagationFlags -ne [System.Security.AccessControl.PropagationFlags]::None -or $rule.IsInherited) {exit 84};
       exit 0;
-    } catch {exit (90+$stage)}"#;
+    } catch {
+      $exception=$_.Exception;
+      for ($i=0; $i -lt 8 -and $null -ne $exception.InnerException; $i++) { $exception=$exception.InnerException };
+      $native=-1; if ($exception -is [System.ComponentModel.Win32Exception]) { $native=$exception.NativeErrorCode };
+      [Console]::Out.WriteLine(('{0} {1}' -f [long]$exception.HResult,[long]$native));
+      exit (90+$stage)
+    }"#;
+    // Probe while held only to retain numeric diagnostics about a path-reader
+    // acquisition failure. No sharing cause is inferred from its exit status.
+    let live = acl_oracle(script, &tmp.0.join("private"));
+    if !live.0.success() {
+        eprintln!(
+            "live ACL path probe: static_status={:?}, numeric_exception={:?}",
+            live.0.code(),
+            live.1
+        );
+    }
+    root.verify_unchanged().unwrap();
+    drop(root);
+    drop(parent);
+    // Independent oracle scope: persisted exact owner/DACL after all leases are
+    // closed. The other tests exercise compatible owner reads while held.
     for (fixture, path) in [tmp.0.join("private"), tmp.0.join("private/file")]
         .into_iter()
         .enumerate()
     {
-        let status = std::process::Command::new("powershell.exe")
-            .args(["-NoProfile", "-NonInteractive", "-Command", script])
-            .env("RCE_OUTPUT_ACL_PATH", path)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .expect("native PowerShell ACL oracle must exist");
+        let (status, numeric) = acl_oracle(script, &path);
         assert!(
             status.success(),
-            "independent ACL oracle rejected private DACL: fixture={fixture}, static_status={:?}",
+            "persisted ACL oracle rejected private DACL: fixture={fixture}, static_status={:?}, numeric_exception={numeric:?}",
             status.code()
         );
     }
-    root.verify_unchanged().unwrap();
+}
+
+// The child script emits at most two decimal exception codes on failure. Never
+// format raw child bytes: even unexpected provider output remains redacted.
+fn acl_oracle(
+    script: &str,
+    path: &std::path::Path,
+) -> (std::process::ExitStatus, Option<[i64; 2]>) {
+    let output = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", script])
+        .env("RCE_OUTPUT_ACL_PATH", path)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .expect("native PowerShell ACL oracle must exist");
+    let numeric = if output.stdout.len() <= 128 {
+        std::str::from_utf8(&output.stdout).ok().and_then(|text| {
+            let mut words = text.split_ascii_whitespace();
+            let first = words.next()?.parse::<i64>().ok()?;
+            let second = words.next()?.parse::<i64>().ok()?;
+            if words.next().is_some() {
+                None
+            } else {
+                Some([first, second])
+            }
+        })
+    } else {
+        None
+    };
+    (output.status, numeric)
 }
 
 #[test]
