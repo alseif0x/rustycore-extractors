@@ -1380,3 +1380,43 @@ inputs, runtime and reproducible distribution remain completion gates.
 Preceding canonical 3629e8d passes hosted Rust/C++ CI independently, including
 2,116 Windows debug tests across 41 targets (20 ignored); that result predates
 this Linux source increment. The full extractor goal remains active.
+
+### Selected VMO private disk preparation (2026-10-12)
+
+The optional Linux `collision::assemble::staged::models::prepare` consumes the
+actual closed placement/world owner and a fresh private Spool. Its exact-name
+union includes every placement before ID deduplication plus every successful
+startup TempList row; unused acquired dependencies are excluded. All selected
+RAW geometry/bounds are scanned before the first conversion/write. Each complete
+verified RAW is then converted individually, written under a bound RCEVMO1
+envelope and dropped. Reload validates exact source identity/name/class, complete
+VMO structure and M2 group bounds. Native VMAP_4.E bytes remain unchanged.
+
+The ledger retains recorded store residency, exact compact/repository/Data and
+topology, the full placement reservation, twice the archive descriptor ceiling,
+a fixed guard allowance and actual catalog capacity. RAW/conversion/reader and
+declared callback overlap are admitted before I/O. New crate-private completed
+RAW access subtracts conversion allowance from the existing downward collector
+budget without removing Data/topology charges. These remain logical admission
+counters, not allocator/RSS or all CPU work. Typed callback causes survive;
+uninvoked captures, buffers/readers and rejected successful values drop before
+independent RAW, placement and VMO guards. All prior production bodies remain
+byte-exact apart from the new module export and added private helper methods.
+
+Final source passes 21 new VMO and 28 affected parent placement tests per Linux
+debug/release profile, CASC library/test Clippy, four scoped formatting checks,
+171 source/state and 104 distribution/sealer checks, with eight strict IPC-only
+traces. The parent 491-case full collision acceptance remains a separate source
+checkpoint. No new full-collision/workspace/Wine, original C++ or real-client
+result is inferred. Tests use authored toy CASC versus resident Rust assembly;
+only their five-repository fixture lifetime is bounded by a test-only mutex.
+Exact hashes and retained failed attempts are in docs/forever-collision-vmo-stage.md.
+
+This is selected-model preparation, not a final map/proof package or product
+mode. Original same-mount/read/disk/reload v1 limits and the v7 corresponding-source
+graph remain unchanged. Final per-map artifacts/first-present-ancestor proof
+resolution on disk, scalable explicit policies, cross-volume, product publication /
+resume, complete real inputs, runtime and reproducible distribution remain gates.
+Preceding canonical 8596820 independently passes hosted Rust/C++ CI, including
+2,116 Windows debug tests / 41 targets / 20 ignored, before this increment.
+The full extractor goal remains active.

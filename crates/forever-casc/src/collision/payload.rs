@@ -1095,6 +1095,126 @@ pub struct SpoolingExtraction {
     failed: Option<CollectorError>,
 }
 impl SpoolingExtraction {
+    /// Immutable completed-phase source accounting, including the caller-owned
+    /// store residency recorded at finish and the exact retained Data/topology.
+    /// No external charge can be removed or forged through this read-only API.
+    pub(crate) fn phase_resident_bytes(&self) -> Result<usize, CollectorError> {
+        self.ready()?;
+        let stats = self.stats()?;
+        Ok(plus(
+            plus(
+                plus(stats.compact_bytes, stats.repository_bytes)?,
+                self.external_resident,
+            )?,
+            self.store_resident,
+        )?)
+    }
+    pub(crate) fn phase_compact(&self) -> Result<CompactView<'_>, CollectorError> {
+        self.ready()?;
+        Ok(CompactView {
+            models: &self.models,
+            requests: &self.requests,
+        })
+    }
+    pub(crate) fn phase_shape(&self, handle: ModelHandle) -> Result<PayloadShape, CollectorError> {
+        self.ready()?;
+        let model = self
+            .models
+            .get(handle.index())
+            .ok_or(CollisionError::State)?;
+        let shape = self
+            .repository
+            .mapping
+            .iter()
+            .find(|m| m.model == handle)
+            .ok_or(CollisionError::State)?
+            .shape;
+        if model.pending
+            || model.class != shape.class
+            || (model.status == Status::Collision) != shape.raw_bytes.is_some()
+        {
+            return Err(CollisionError::State.into());
+        }
+        Ok(shape)
+    }
+    /// Closed phases admit caller conversion/retained allowance before reload.
+    /// This reduces only the remaining collector memory budget; the repository
+    /// active ceiling continues to cover the source record, not caller geometry.
+    /// Both must also fit the enclosing phase ledger enforced by the caller.
+    pub(crate) fn with_payload_phase<T, E: Copy>(
+        &mut self,
+        handle: ModelHandle,
+        source_allowance: usize,
+        callback_heap_allowance: usize,
+        call: impl FnOnce(Payload<'_>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let setup = (|| {
+            self.verify_unchanged()?;
+            self.ready()?;
+            let shape = self.phase_shape(handle)?;
+            let memory = self
+                .memory
+                .checked_sub(self.phase_resident_bytes()?)
+                .and_then(|n| n.checked_sub(callback_heap_allowance))
+                .ok_or(CollisionError::Limit)?;
+            let active = self
+                .repository
+                .active_limit()
+                .checked_sub(self.external_resident)
+                .ok_or(CollisionError::Limit)?;
+            let budget = memory.min(active).min(source_allowance);
+            if shape.record_bytes > budget {
+                return Err(CollisionError::Limit.into());
+            }
+            Ok(budget)
+        })();
+        let budget = match setup {
+            Ok(n) => n,
+            Err(e) => {
+                // A refused callback may own a mutating Drop. Check after it.
+                drop(call);
+                let final_error = self.verify_unchanged().err().unwrap_or(e);
+                self.failed = Some(final_error);
+                return Err(CallbackFailure::Collector(final_error));
+            }
+        };
+        let mut outcome = None;
+        let io = self
+            .repository
+            .with_payload(handle, budget, |payload| {
+                outcome = Some(call(payload));
+                Ok(())
+            })
+            .map_err(CollectorError::Payload);
+        match outcome {
+            Some(Err(cause)) => {
+                let guard = self.verify_unchanged().err().or(io.err());
+                self.failed = Some(guard.unwrap_or(CollectorError::Payload(Error::Callback)));
+                Err(CallbackFailure::Callback { cause, guard })
+            }
+            Some(Ok(value)) => {
+                let guard = self.verify_unchanged();
+                match io.and(guard) {
+                    Ok(()) => Ok(value),
+                    Err(e) => {
+                        drop(value);
+                        let final_error = self.verify_unchanged().err().unwrap_or(e);
+                        self.failed = Some(final_error);
+                        Err(CallbackFailure::Collector(final_error))
+                    }
+                }
+            }
+            None => {
+                let e = self
+                    .verify_unchanged()
+                    .err()
+                    .or(io.err())
+                    .unwrap_or(CollectorError::Payload(Error::State));
+                self.failed = Some(e);
+                Err(CallbackFailure::Collector(e))
+            }
+        }
+    }
     #[cfg(test)]
     pub(crate) const fn retained_external_for_test(&self) -> usize {
         self.external_resident

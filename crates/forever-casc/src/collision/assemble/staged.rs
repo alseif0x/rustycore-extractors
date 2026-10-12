@@ -17,6 +17,7 @@
 use crate::collision::{gameobjects, inventory_spool as inventory, payload, run, spool, world};
 use forever_vmap::placement::{self, DirBin};
 use std::mem::size_of;
+pub mod models;
 #[cfg(test)]
 mod tests;
 pub const PROFILE: &str = "linux-private-authenticated-placement-stage-v1";

@@ -1749,3 +1749,31 @@ continues to use resident assembly. Scalable source/read/disk/reload policies,
 cross-volume support, publication/resume, complete mandatory encrypted inputs,
 real geometry/runtime and reproducible Linux/Windows distribution remain open.
 No new bundle, server activation or full extractor completion is claimed.
+
+## Selected VMO disk preparation — 2026-10-12
+
+The optional Linux [selected VMO phase](forever-collision-vmo-stage.md) consumes
+the authenticated placement/world owner, derives the pre-ID-dedup placement/list
+name union and excludes unused acquired dependencies. It scans all aggregate
+RAW geometry before writing, then converts and verifies one complete selected
+model at a time in a private bound archive. Exact source/name/class/M2-bounds
+association and complete VMO reader checks survive reload. No caller model or
+proof inventory can construct the owner.
+
+Final source passes 21 new VMO and 28 affected placement tests per debug/release
+profile, CASC library/test Clippy, scoped formatting, 171 source/state and 104
+distribution/sealer checks, with eight strict IPC-only traces. Exact hashes and
+retained failed checker/fixture history are in the companion. The preceding
+placement source retains its separate 491-case full collision acceptance;
+full-workspace/full-collision execution is not inferred for this increment.
+Comparisons use authored toy CASC versus resident Rust; no new original C++ or
+real-client result is added. The logical ledger retains all recorded world /
+store/stage ownership and admits source/conversion/reader/callback overlap.
+
+Final per-map artifacts and first-present-ancestor proofs still need disk
+integration. The product driver remains resident, and v1 same-mount/read/disk /
+reload limits are unchanged. Scalable explicit policies, cross-volume support,
+product publication/resume, complete mandatory encrypted inputs, real geometry /
+runtime and reproducible Linux/Windows distribution remain open. Preceding
+8596820 independently passes hosted Rust/C++ CI, including 2,116 Windows debug
+tests across 41 targets (20 ignored). No new bundle or full completion is claimed.
