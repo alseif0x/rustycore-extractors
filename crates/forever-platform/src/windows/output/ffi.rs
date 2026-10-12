@@ -526,11 +526,12 @@ pub(super) fn private(file: &File, sid: &Sid) -> Result<(), Error> {
     Ok(())
 }
 #[cfg(test)]
-pub(super) fn test_dacl(file: &File, sid: &Sid, mask: u32) -> Result<(), Error> {
+pub(super) fn test_dacl(file: &File, sid: &Sid, mask: u32) -> Result<(), u32> {
     let mut storage = [0_u32; 24];
     let pointer = storage.as_mut_ptr().cast();
-    acl(pointer, sid, mask)?;
-    if unsafe {
+    // Test-only numeric diagnostics never include a SID, path or OS message.
+    acl(pointer, sid, mask).map_err(|_| u32::MAX)?;
+    let status = unsafe {
         SetSecurityInfo(
             file.as_raw_handle(),
             1,
@@ -540,9 +541,9 @@ pub(super) fn test_dacl(file: &File, sid: &Sid, mask: u32) -> Result<(), Error> 
             pointer,
             null_mut(),
         )
-    } != 0
-    {
-        return Err(Error::Privacy);
+    };
+    if status != 0 {
+        return Err(status);
     }
     Ok(())
 }

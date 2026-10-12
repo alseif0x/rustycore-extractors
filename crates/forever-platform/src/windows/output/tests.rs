@@ -140,7 +140,9 @@ fn dacl_changed_then_restored_stays_poisoned() {
     let parent = tmp.parent();
     let root = PrivateRoot::create(&parent, "private", Limits::default()).unwrap();
     let mutation = OpenOptions::new()
-        .access_mode(0x0004_0000)
+        // Protected-DACL updates may query the existing descriptor as well as
+        // setting it. Keep these metadata rights separate from data writes.
+        .access_mode(0x0002_0000 | 0x0004_0000)
         .share_mode(7)
         .custom_flags(0x0200_0000 | 0x0020_0000)
         .open(tmp.0.join("private"))
@@ -278,20 +280,24 @@ fn independent_powershell_dacl_oracle() {
     root.create_file(root.root(), "file").unwrap();
     // Independent managed ACL reader. Only static exit status is exposed;
     // fixture paths are passed as a child-only environment value, never code.
-    let script = r#"$ErrorActionPreference='Stop'; try {
+    let script = r#"$ErrorActionPreference='Stop'; $stage=1; try {
       $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User;
-      $acl=Get-Acl -LiteralPath $env:RCE_OUTPUT_ACL_PATH;
+      $stage=2; $acl=Get-Acl -LiteralPath $env:RCE_OUTPUT_ACL_PATH;
+      $stage=3;
       if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) {exit 81};
-      if (-not $acl.AreAccessRulesProtected) {exit 82};
-      $inherited=@($acl.GetAccessRules($false,$true,[System.Security.Principal.SecurityIdentifier]));
+      $stage=4; if (-not $acl.AreAccessRulesProtected) {exit 82};
+      $stage=5; $inherited=@($acl.GetAccessRules($false,$true,[System.Security.Principal.SecurityIdentifier]));
       if ($inherited.Count -ne 0) {exit 86};
-      $rules=@($acl.GetAccessRules($true,$false,[System.Security.Principal.SecurityIdentifier]));
+      $stage=6; $rules=@($acl.GetAccessRules($true,$false,[System.Security.Principal.SecurityIdentifier]));
       if ($rules.Count -ne 1) {exit 83};
-      $rule=$rules[0];
+      $stage=7; $rule=$rules[0];
       if ($rule.IdentityReference.Value -ne $sid.Value -or $rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow -or $rule.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or $rule.InheritanceFlags -ne [System.Security.AccessControl.InheritanceFlags]::None -or $rule.PropagationFlags -ne [System.Security.AccessControl.PropagationFlags]::None -or $rule.IsInherited) {exit 84};
       exit 0;
-    } catch {exit 85}"#;
-    for path in [tmp.0.join("private"), tmp.0.join("private/file")] {
+    } catch {exit (90+$stage)}"#;
+    for (fixture, path) in [tmp.0.join("private"), tmp.0.join("private/file")]
+        .into_iter()
+        .enumerate()
+    {
         let status = std::process::Command::new("powershell.exe")
             .args(["-NoProfile", "-NonInteractive", "-Command", script])
             .env("RCE_OUTPUT_ACL_PATH", path)
@@ -301,7 +307,8 @@ fn independent_powershell_dacl_oracle() {
             .expect("native PowerShell ACL oracle must exist");
         assert!(
             status.success(),
-            "independent ACL oracle rejected private DACL"
+            "independent ACL oracle rejected private DACL: fixture={fixture}, static_status={:?}",
+            status.code()
         );
     }
     root.verify_unchanged().unwrap();
