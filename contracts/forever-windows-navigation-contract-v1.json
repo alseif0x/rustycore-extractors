@@ -130,6 +130,14 @@
     "server activation",
     "full extraction"
   ],
+  "reviewed_fixture_correction": {
+    "path": "crates/forever-navigation/src/terrain/load/windows/tests.rs",
+    "date": "2026-10-12",
+    "historical_import_sha256": "56ff0049c76d7cb2039e703b5dba5885dda0f1e4a7c4d733175e7e9a0a63c680",
+    "current_sha256": "95127d88e88e99ac55c26deb720ad5b14f86f8d367097018d8b491dda21ec760",
+    "production_changed": false,
+    "scope": "test-only explicit pre-snapshot write-time seeding; actual mutation and InputChanged assertions retained; original import and Wine reports remain historical; executed hosted CI result required separately"
+  },
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",

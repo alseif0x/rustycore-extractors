@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Authored 2026-10-11: original static Windows navigation source checks.
+# Modified 2026-10-12: retain import pins and admit one reviewed test-only delta.
 """Source consistency only; no runtime, client reads or actual NTFS proof."""
 import ast
 import hashlib
@@ -49,10 +50,19 @@ class WindowsNavigationContract(unittest.TestCase):
         for profile in ['forever-seven-crate-windows-producer-source-v4', 'forever-seven-crate-windows-vmap-diagnostics-source-v5', 'forever-seven-crate-windows-vmap-required-framing-source-v6']:
             self.assertIn(profile, d['source']['prior_profiles'])
 
-    def test_validated_twelve_imports_are_byte_exact(self):
+    def test_validated_twelve_imports_and_reviewed_fixture_delta_are_byte_exact(self):
         pins = self.c['validated_import_sha256']
         self.assertEqual(len(pins), 12)
+        fixture = 'crates/forever-navigation/src/terrain/load/windows/tests.rs'
+        correction = self.c['reviewed_fixture_correction']
+        self.assertEqual(correction['path'], fixture)
+        self.assertEqual(correction['historical_import_sha256'], pins[fixture])
+        self.assertEqual(pins[fixture], '56ff0049c76d7cb2039e703b5dba5885dda0f1e4a7c4d733175e7e9a0a63c680')
+        self.assertEqual(correction['current_sha256'], '95127d88e88e99ac55c26deb720ad5b14f86f8d367097018d8b491dda21ec760')
+        self.assertFalse(correction['production_changed'])
         for name, expected in pins.items():
+            if name == fixture:
+                expected = correction['current_sha256']
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)
 
     def test_only_reviewed_local_dependency_and_exact_registry_closure(self):
