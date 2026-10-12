@@ -24,7 +24,7 @@ or client-data upload is authorized by this checklist.
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
 | Product interface | Canonical v1 N/Z and separate v2 explicit supplied-key plans; Linux inspect/extract/resume/verify connect all six Rust producers; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
-| Distribution | Legacy C++ suite; explicit local Linux Rust candidate recipe with frozen corresponding source, exact admitted registry archives/notices and offline reconstruction; a dependency-free Windows NTFS read foundation and synthetic CI source are present, with remaining Windows filesystem gates [recorded](forever-distribution.md) | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
+| Distribution | Legacy C++ suite; Linux v9 bundle of `b692ed3` has two identical fresh archives/manifests/binaries, an exact moved-source offline rebuild and 50 packaged synthetic CLI cases; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation and remaining filesystem gates are [recorded](forever-distribution.md) | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
 
 ## Version differences that must be resolved
 
@@ -1925,5 +1925,31 @@ is claimed.
 This closes the bounded synthetic product disk preflight/publication/resume gate.
 Complete encrypted mandatory inputs, real geometry and whole-world resources,
 RustyCore runtime/server integration, complete Windows product execution and
-reproducible v9 distribution remain open. The extractor is not complete. See
-`docs/forever-product-disk.md` for the versioned contract, hashes and exact scope.
+reproducible v9 distribution remained open at that source-validation checkpoint;
+the later bounded Linux bundle closeout is recorded below. The extractor is not
+complete. See `docs/forever-product-disk.md` for the versioned contract, hashes and exact scope.
+
+
+## Accepted Linux v9 bundle of b692ed3 — 2026-10-12
+
+A subsequent terminal run closes the bounded Linux reproducibility gate for
+commit `b692ed3eb189f790dbf79609f8cd0958411ffac6`, source freeze
+`495d58c7ab7345b5c65461d235c66bb1efd7c3bc772aa8e3872c5b5d179f8358`.
+Two fresh builds produce identical archives/manifests/binaries; a moved-source
+offline rebuild reproduces the binary. All 50 shipped v1/v2/v3 synthetic CLI
+cases pass, with 129 retained actual CLI traces and 33 complete package contexts
+bound to the shipped binary. The outer Python CLI harness is not syscall traced.
+Archive SHA-256 is
+`a99989e79e956822fb80d19668890096e6b1879093eac71ecf82e7d3606f91ab`;
+independent terminal review SHA-256 is
+`53b660e03bed16187bf4580e1921fc18ba7587e49a89300ac7d085dd61336d5e`.
+Complete hashes, runtime dependencies, resource observations and qualified scope
+are recorded in `docs/forever-product-disk.md` under this same heading.
+
+This is acceptance of the frozen `b692ed3` bundle. Its contract flags
+`bundle_built=false`, `validation.v9_reproducible_bundle_accepted=false` and the
+pending distribution record retain their preceding checkpoint values. The later
+documentation commit is not rebuilt and replaces no accepted archive bytes.
+Historical source profiles and reports retain their original scope. Real complete
+inputs/geometry, full-world resources, RustyCore runtime and complete Windows
+product/distribution acceptance remain gates. The extractor is not complete.

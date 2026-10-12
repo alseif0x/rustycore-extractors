@@ -553,3 +553,28 @@ real-client/native acceptance, Windows product or RustyCore runtime acceptance
 is claimed. Complete encrypted inputs, real geometry, runtime/server integration
 and reproducible distribution remain gates. The extractor is not complete. See
 `docs/forever-product-disk.md` and the versioned disk contract.
+
+
+## Accepted Linux v9 bundle of b692ed3 — 2026-10-12
+
+A subsequent terminal run closes the bounded Linux reproducibility gate for
+commit `b692ed3eb189f790dbf79609f8cd0958411ffac6`, source freeze
+`495d58c7ab7345b5c65461d235c66bb1efd7c3bc772aa8e3872c5b5d179f8358`.
+Two fresh builds produce identical archives/manifests/binaries; a moved-source
+offline rebuild reproduces the binary. All 50 shipped v1/v2/v3 synthetic CLI
+cases pass, with 129 retained actual CLI traces and 33 complete package contexts
+bound to the shipped binary. The outer Python CLI harness is not syscall traced.
+Archive SHA-256 is
+`a99989e79e956822fb80d19668890096e6b1879093eac71ecf82e7d3606f91ab`;
+independent terminal review SHA-256 is
+`53b660e03bed16187bf4580e1921fc18ba7587e49a89300ac7d085dd61336d5e`.
+Complete hashes, runtime dependencies, resource observations and qualified scope
+are recorded in `docs/forever-product-disk.md` under this same heading.
+
+This is acceptance of the frozen `b692ed3` bundle. Its contract flags
+`bundle_built=false`, `validation.v9_reproducible_bundle_accepted=false` and the
+pending distribution record retain their preceding checkpoint values. The later
+documentation commit is not rebuilt and replaces no accepted archive bytes.
+Historical source profiles and reports retain their original scope. Real complete
+inputs/geometry, full-world resources, RustyCore runtime and complete Windows
+product/distribution acceptance remain gates. The extractor is not complete.

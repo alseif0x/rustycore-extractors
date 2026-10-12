@@ -141,7 +141,9 @@ These are offline synthetic source/product checks with immutable tools and exact
 live invocation observations, under 2 GiB service memory, zero swap, 900-second
 command and 3,600-second service ceilings. No available-prefix fallback, native
 CASC-routing parity, real-world resource throughput or server activation is
-established. A reproducible v9 source/binary bundle is a separate gate.
+established. At this source-validation checkpoint, a reproducible v9
+source/binary bundle remained a separate gate; its later acceptance is recorded
+below.
 
 ## Corresponding source and open gates
 
@@ -151,10 +153,75 @@ and this document. Seven crates, nine lock packages and two registry archives
 remain; only the local Linux extractor-to-platform edge is added. Historical v7
 and v8 contracts, bundles, frozen verifiers and acceptance retain their original
 scope. In particular, the v8 library archive acceptance does not validate this
-new product driver. No new reproducible bundle or moved-source rebuild is claimed.
+new product driver. That preceding source-validation increment did not claim
+a new reproducible bundle or moved-source rebuild. The later bundle closeout
+below is bound to its own exact source snapshot.
 
 Complete real `Map`, `SkillLineAbility` and `GameObjectDisplayInfo` inputs remain
 unavailable under the retained accepted evidence. Real geometry and full-world
 resource acceptance, RustyCore server activation/gameplay, complete Windows
-product execution and reproducible distribution remain gates. The extractor is
+product execution and full distribution acceptance remain gates. The extractor is
 **not complete**.
+
+
+## Accepted Linux v9 bundle of b692ed3 — 2026-10-12
+
+The subsequent terminal distribution run accepts the exact source snapshot of
+commit `b692ed3eb189f790dbf79609f8cd0958411ffac6`. Its full source-freeze SHA-256
+is `495d58c7ab7345b5c65461d235c66bb1efd7c3bc772aa8e3872c5b5d179f8358`;
+the bundle's selected corresponding-source SHA-256 is
+`275629293ba5592032ffb76e5428589caabdd9c566ca03ab185172dfaf894ab6`.
+Two fresh offline builds, including an output path with spaces, produce identical
+archives, manifests and binaries with epoch `1791720000`. A third build from
+moved/unpacked corresponding source reproduces the binary exactly. The archive
+contains 644 inventory files and 587 selected project source files, retaining the
+seven-crate/nine-package closure, both exact registry archives and all 13 pinned
+Rust notice documents.
+
+- Archive: `a99989e79e956822fb80d19668890096e6b1879093eac71ecf82e7d3606f91ab`, 3,276,232 bytes.
+- Manifest: `85f6026d7dc83b4c22adf70508460e425da12256eb3eeb6e7a4c028f2a285f54`.
+- Binary: `4f1612e8f74c0ce0c6f872d3050865b276e964b0efea4ebf2959feff7e675dfe`.
+- Terminal report: `086fa10ad13bd88bdcb68df4036ebcb276b5da110cd1ae44cee6cb3847500f7a`.
+- Independent root review: `53b660e03bed16187bf4580e1921fc18ba7587e49a89300ac7d085dd61336d5e`.
+- Live terminal observer: `751318559a602ac2fe12a85c47dae80fa38be61c88da2d687456ac4aaeccd171`.
+
+The shipped binary passes all 50 authored packaged CLI cases: 17 v1, 20 v2 and
+13 v3, retaining 129 actual CLI traces (38/49/42 respectively). Thirty-three
+complete package contexts bind to that exact binary. V3 includes actual injected
+SIGKILL/resume and second-filesystem scratch evidence; these use authored toy
+clients and public synthetic keys. Source/tool identities, raw traces and the
+exact live-to-terminal service invocation are independently reviewed. The outer
+Python CLI harness is not syscall traced; network-absence evidence does not
+extend to that harness. These results execute no real client, production keys,
+native CASC routing or RustyCore runtime.
+
+The run inherits affinity to one CPU without changing the packaged build recipe.
+Service memory remains 2 GiB with zero swap; target/log limits remain 768/128 MiB.
+Observed allocated peaks are 105,504,768 target bytes and 811,008 log bytes;
+minimum free disk is 67,370,876,928 bytes. These observations are not allocator
+RSS or full-world resource acceptance. The ELF NEEDED list is
+`libgcc_s.so.1`, `libm.so.6`, `libc.so.6`, `ld-linux-x86-64.so.2`. Its recorded
+symbol requirements include GLIBC_2.34; that is not proof of whole-machine or
+universal Linux ABI compatibility. This remains a dynamically linked candidate.
+CI at `b692ed3` also succeeds for Rust Linux debug/release, Windows read-consumer
+and guard checks, and C++ Linux/Windows; no new hosted test counts are asserted.
+
+Evidence remains outside Git in candidate
+`product-disk-bundle-20261012T113511Z`; its accepted remote runner is
+`/var/tmp/rustycore-extractor-work/runs/candidate/product-disk-bundle-20261012T113835Z`.
+The local root review is `bundle-root-review.json` in that candidate.
+
+The bundled contracts deliberately preserve their earlier checkpoint values:
+`bundle_built=false`, `validation.v9_reproducible_bundle_accepted=false`, and the
+distribution contract's pending `product_collision_disk_acceptance` record.
+This later external closeout records the accepted bundle of `b692ed3`; it does
+not rewrite those frozen contract bytes or their static tests. The subsequent
+documentation commit is not a rebuilt source snapshot, and no documentation or
+other bytes are replaced inside the accepted archive. Earlier v4–v8 bundles,
+reports and acceptance scopes remain historical.
+
+The bounded Linux v9 reproducibility gate for `b692ed3` is closed. Complete real
+mandatory inputs and geometry, realistic full-world resource acceptance,
+RustyCore runtime/server integration and complete Windows product/distribution
+acceptance remain open. The extractor is not complete; no release publication
+is established by this local candidate.
