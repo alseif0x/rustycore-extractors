@@ -60,9 +60,17 @@ class WindowsNavigationContract(unittest.TestCase):
         self.assertEqual(pins[fixture], '56ff0049c76d7cb2039e703b5dba5885dda0f1e4a7c4d733175e7e9a0a63c680')
         self.assertEqual(correction['current_sha256'], '95127d88e88e99ac55c26deb720ad5b14f86f8d367097018d8b491dda21ec760')
         self.assertFalse(correction['production_changed'])
+        reviewed = {fixture: correction['current_sha256']}
+        additional = self.c['additional_reviewed_fixture_corrections']
+        expected_additional = {'crates/forever-navigation/src/inventory/windows/tests.rs': 'a577712f25b2fdf63d74c740a2fb16bab45082aa17535c2ddba35e1b85c428ce', 'crates/forever-navigation/src/inventory/windows/run/tests.rs': 'fdf8cd0330a1b00fc944ccb8b4c8d986f8d060c5c5853d5f7a25de3a6b200176'}
+        self.assertEqual({e['path']: e['current_sha256'] for e in additional}, expected_additional)
+        self.assertEqual(len(additional), 2)
+        for entry in additional:
+            self.assertEqual(entry['historical_import_sha256'], pins[entry['path']])
+            self.assertFalse(entry['production_changed'])
+            reviewed[entry['path']] = entry['current_sha256']
         for name, expected in pins.items():
-            if name == fixture:
-                expected = correction['current_sha256']
+            expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)
 
     def test_only_reviewed_local_dependency_and_exact_registry_closure(self):

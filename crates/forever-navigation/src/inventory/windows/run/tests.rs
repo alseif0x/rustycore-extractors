@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: sequential selection, provisional sinks and source binding.
+// Modified 2026-10-12: seed distinct directory times before mutation snapshots.
 use super::*;
 use forever_db2::terrain_sources::{DirectRecord, NavigationMapFields};
 use std::fs;
@@ -507,6 +508,7 @@ fn new_entry_after_last_tile_rejects_final_verification() {
     let tmp = Temp::new();
     tmp.map(1, &[(0, 0)]);
     let path = tmp.vmaps().join("new-entry");
+    crate::inventory::windows::tests::seed_write_time(&tmp.vmaps());
     let mut p = tmp.open(&[row(1, -1)]);
     let mut s = Recording {
         action: Some(Box::new(move |(_, tile)| {
@@ -663,6 +665,7 @@ fn bound_collision_file_and_directory_identities_use_original_enumeration() {
     fs::create_dir(tmp.vmaps().join("0001")).unwrap();
     let path = tmp.vmaps().join("foo.vmo");
     fs::write(&path, b"original").unwrap();
+    crate::inventory::windows::tests::seed_write_time(&tmp.vmaps().join("0001"));
     let mut p = tmp.open(&[row(1, -1)]);
     let name = collision_name(store::Artifact::Model { name: b"foo" }).unwrap();
     p.budget.used = 0;

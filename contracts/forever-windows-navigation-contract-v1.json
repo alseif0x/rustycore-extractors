@@ -138,6 +138,24 @@
     "production_changed": false,
     "scope": "test-only explicit pre-snapshot write-time seeding; actual mutation and InputChanged assertions retained; original import and Wine reports remain historical; executed hosted CI result required separately"
   },
+  "additional_reviewed_fixture_corrections": [
+    {
+      "path": "crates/forever-navigation/src/inventory/windows/tests.rs",
+      "date": "2026-10-12",
+      "historical_import_sha256": "aa133f32639fa52722ee1c92e53e0b3ddd6a9c5137d25d691464d296f1849178",
+      "current_sha256": "a577712f25b2fdf63d74c740a2fb16bab45082aa17535c2ddba35e1b85c428ce",
+      "production_changed": false,
+      "scope": "test-only distinct pre-capture write time; actual mutation and original result/progress/poison assertions retained"
+    },
+    {
+      "path": "crates/forever-navigation/src/inventory/windows/run/tests.rs",
+      "date": "2026-10-12",
+      "historical_import_sha256": "b263c5face7e9f36c0d641b0023b1e4eef08afc0b7d3dcd081d1748fa89c982f",
+      "current_sha256": "fdf8cd0330a1b00fc944ccb8b4c8d986f8d060c5c5853d5f7a25de3a6b200176",
+      "production_changed": false,
+      "scope": "test-only distinct pre-capture write time; actual mutation and original result/progress/poison assertions retained"
+    }
+  ],
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",

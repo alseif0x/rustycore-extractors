@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: isolated synthetic Windows VMap read-source fixtures.
 // Modified 2026-10-12: isolate the renamed source beneath a private parent.
+// Modified 2026-10-12: seed observable directory times before mutation snapshots.
 use super::*;
 use crate::store::{self, memory};
 use std::{
@@ -38,6 +39,23 @@ impl Drop for Directory {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.0).unwrap();
     }
+}
+// Seed a distinct pre-capture timestamp and close the attribute writer before
+// readonly leases. Actual file creation must then invalidate the snapshot.
+fn seed_directory_write_time(path: &Path) {
+    use std::os::windows::fs::OpenOptionsExt;
+    let past = std::time::UNIX_EPOCH + std::time::Duration::from_secs(86_400);
+    let directory = fs::OpenOptions::new()
+        .access_mode(0x0100) // FILE_WRITE_ATTRIBUTES
+        .share_mode(7)
+        .custom_flags(0x0200_0000) // FILE_FLAG_BACKUP_SEMANTICS
+        .open(path)
+        .unwrap();
+    directory
+        .set_times(fs::FileTimes::new().set_modified(past))
+        .unwrap();
+    drop(directory);
+    assert_eq!(fs::metadata(path).unwrap().modified().unwrap(), past);
 }
 fn model(name: &[u8]) -> Artifact<'_> {
     Artifact::Model { name }
@@ -222,6 +240,7 @@ fn genuine_missing_files_and_directories_are_recorded_and_verified() {
 #[test]
 fn missing_to_present_poison_is_permanent() {
     let dir = Directory::new();
+    seed_directory_write_time(&dir.0);
     let mut source = dir.open();
     assert_eq!(read(&mut source, model(b"missing"), 1).unwrap(), None);
     dir.file("missing.vmo", b"x");
@@ -238,6 +257,7 @@ fn missing_to_present_poison_is_permanent() {
 fn unrelated_root_entry_change_invalidates_full_directory_snapshot() {
     let dir = Directory::new();
     dir.file("model.vmo", b"x");
+    seed_directory_write_time(&dir.0);
     let mut source = dir.open();
     read(&mut source, model(b"model"), 1).unwrap();
     dir.file("other", b"y");
@@ -248,6 +268,7 @@ fn unrelated_root_entry_change_invalidates_full_directory_snapshot() {
 fn unrelated_nested_entry_change_invalidates_map_snapshot() {
     let dir = Directory::new();
     dir.file("0001/0001.vmtree", b"tree");
+    seed_directory_write_time(&dir.0.join("0001"));
     let mut source = dir.open();
     read(&mut source, Artifact::Tree { map_id: 1 }, 4).unwrap();
     dir.file("0001/other", b"y");
@@ -294,6 +315,7 @@ fn repeat_digest_rejects_even_when_metadata_snapshot_is_supplied_current() {
 #[test]
 fn missing_directory_creation_and_file_deletion_poison() {
     let dir = Directory::new();
+    seed_directory_write_time(&dir.0);
     let mut source = dir.open();
     read(&mut source, Artifact::Tree { map_id: 7 }, 16).unwrap();
     dir.file("0007/0007.vmtree", b"t");

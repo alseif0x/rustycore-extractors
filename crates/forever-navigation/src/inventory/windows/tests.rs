@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: canonical rooted package inventories and mutation guards.
+// Modified 2026-10-12: seed distinct metadata times before mutation snapshots.
 use super::*;
 use std::fs;
 use std::{
@@ -31,6 +32,21 @@ impl Drop for Temp {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.0).unwrap();
     }
+}
+// Close the attribute writer before any readonly snapshot is captured.
+pub(super) fn seed_write_time(path: &Path) {
+    use std::os::windows::fs::OpenOptionsExt;
+    let past = std::time::UNIX_EPOCH + std::time::Duration::from_secs(86_400);
+    let file = fs::OpenOptions::new()
+        .access_mode(0x0100) // FILE_WRITE_ATTRIBUTES
+        .share_mode(7)
+        .custom_flags(0x0200_0000) // FILE_FLAG_BACKUP_SEMANTICS
+        .open(path)
+        .unwrap();
+    file.set_times(fs::FileTimes::new().set_modified(past))
+        .unwrap();
+    drop(file);
+    assert_eq!(fs::metadata(path).unwrap().modified().unwrap(), past);
 }
 fn row(id: u32, parent: i16, cosmetic: i16) -> DirectRecord<NavigationMapFields> {
     DirectRecord {
@@ -296,6 +312,8 @@ fn observed_file_changes_and_deletion_permanently_poison() {
     for remove in [false, true] {
         let t = Temp::new();
         add_list(&t, 1, &[(0, 0)]);
+        seed_write_time(&t.maps().join("0001.tilelist"));
+        seed_write_time(&t.maps());
         let mut p = basic(&t);
         let name = t.maps().join("0001.tilelist");
         if remove {
@@ -314,6 +332,8 @@ fn new_root_entry_child_entry_and_root_replacement_poison() {
         let t = Temp::new();
         add_list(&t, 1, &[(0, 0)]);
         add_vmaps(&t, 1, &[]);
+        seed_write_time(&t.maps());
+        seed_write_time(&t.vmaps().join("0001"));
         let mut p = basic(&t);
         match mode {
             0 => fs::write(t.maps().join("new"), []).unwrap(),
