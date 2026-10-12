@@ -1,9 +1,12 @@
-"""Independent offline WDC5 DB2 oracle for the reviewed character tables.
+"""Independent offline WDC5 DB2 oracle for reviewed and explicit catalogs.
 
 Modified 2026-10-11: corrected copy-ID extent, scalar budgets and signed
 parents; unsafe reference copy variants are explicitly rejected. A separate
 numeric sparse path transcribes SparseImpl:1020-1570 for scalar U8/U16/U32/I32
 with catalog IDs and no parent; other sparse shapes remain excluded.
+Modified 2026-10-12: added an explicit WoWDBDefs build-70205 schema catalog
+reader, independently normalizing its field declarations and checking target
+table/layout hashes. This is not evidence that any client file was decoded.
 
 This is a from-scratch, read-only decoder used to cross-check the Rust
 ``crates/forever-db2/examples/db2_dump.rs`` diagnostic byte-for-byte. It never
@@ -109,6 +112,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+from typing import Optional
 
 HEADER_SIZE = 204
 SECTION_SIZE = 40
@@ -125,6 +129,8 @@ CATALOG_ID = "pinned-metadata-v1"
 # Pin the complete factual artifact, not just its self-declared provenance.
 # Reproduction against the immutable upstream Git object is tested separately.
 CATALOG_SHA256 = "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+WOWDBDEFS_70205_CATALOG_ID = "wowdbdefs-70205-v1"
+WOWDBDEFS_70205_CATALOG_SHA256 = "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b"
 
 # Stable error code -> process exit status. Exit 2 is reserved for argument
 # errors, 3 for an unsupported signature/version, 6 for the inspection limit.
@@ -178,7 +184,7 @@ class Field:
 
 @dataclasses.dataclass(frozen=True)
 class Schema:
-    """Reviewed schema identity plus the transcribed field list.
+    """Schema identity plus a field list independently decoded by Python.
 
     ``fields`` is the decoded column list (one column per ``FileFieldCount``);
     the header's ``field_count`` equals ``len(fields)``. ``parent`` is the
@@ -194,6 +200,8 @@ class Schema:
     fields: tuple
     parent: int = -1
     appended_parent_unsigned: bool = False
+    table_hash: Optional[int] = None
+    other_layout_hashes: tuple = ()
 
 
 def _signed_field(bits, count=1):
@@ -1061,32 +1069,87 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
     This is explicit opt-in. It never modifies the reviewed SCHEMAS mapping,
     fetches metadata, reads a client or infers record/runtime acceptance.
     """
-    if catalog_id != CATALOG_ID:
+    if catalog_id == CATALOG_ID:
+        default_path = Path(__file__).resolve().parents[2] / "contracts/forever-metadata-v1.json"
+        expected_digest = CATALOG_SHA256
+    elif catalog_id == WOWDBDEFS_70205_CATALOG_ID:
+        default_path = Path(__file__).resolve().parents[2] / "contracts/wowdbdefs-70205-v1.json"
+        expected_digest = WOWDBDEFS_70205_CATALOG_SHA256
+    else:
         raise OracleError("invalid_invocation")
-    path = Path(path) if path is not None else Path(__file__).resolve().parents[2] / "contracts/forever-metadata-v1.json"
+    path = Path(path) if path is not None else default_path
     try:
         with path.open("rb") as handle:
-            raw = handle.read(2 * 1024 * 1024 + 1)
-        if hashlib.sha256(raw).hexdigest() != CATALOG_SHA256:
+            raw = handle.read(4 * 1024 * 1024 + 1)
+        if hashlib.sha256(raw).hexdigest() != expected_digest:
             raise OracleError("unsupported_table_schema")
         document = json.loads(raw)
-        if document['catalog_id'] != CATALOG_ID or document['source']['commit'] != '02245dcd245e7433e524577656177723d3e4992e':
-            raise OracleError("unsupported_table_schema")
         result = {}
-        widths = {'FT_BYTE': 8, 'FT_SHORT': 16, 'FT_INT': 32, 'FT_LONG': 64}
+        if catalog_id == CATALOG_ID:
+            if (
+                document['catalog_id'] != CATALOG_ID
+                or document['source']['commit'] != '02245dcd245e7433e524577656177723d3e4992e'
+            ):
+                raise OracleError("unsupported_table_schema")
+            widths = {'FT_BYTE': 8, 'FT_SHORT': 16, 'FT_INT': 32, 'FT_LONG': 64}
+            for table in document['tables']:
+                fields = []
+                for field in table['fields'][:table['file_field_count']]:
+                    kind = field['type']
+                    if kind in ('FT_STRING', 'FT_STRING_NOT_LOCALIZED'):
+                        fields.append(Field('string', 32, field['array_size']))
+                    elif kind == 'FT_FLOAT':
+                        fields.append(Field('float', 32, field['array_size']))
+                    else:
+                        fields.append(Field('signed' if field['signed'] else 'unsigned', widths[kind], field['array_size'], signed=field['signed']))
+                parent_unsigned = table['parent_index'] >= table['file_field_count'] and not table['fields'][table['parent_index']]['signed']
+                result[table['name']] = Schema(table['name'], table['layout_hash'], table['index'], tuple(fields), table['parent_index'], parent_unsigned)
+            if len(result) != 1126:
+                raise OracleError("unsupported_table_schema")
+            return result
+
+        source = document['source']
+        if (
+            document['catalog_id'] != WOWDBDEFS_70205_CATALOG_ID
+            or document['target'] != {
+                'product': 'wow_classic_beta', 'version': '1.60.1.70205', 'build': 70205
+            }
+            or source['commit'] != '674636522d51c010f250ad1b5fe549ef6bc8eb0a'
+            or source['manifest_blob'] != '8a5d8122f312ae6a9564e8286fdc491831fecc22'
+            or source['manifest_sha256'] != '4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265'
+        ):
+            raise OracleError("unsupported_table_schema")
+        widths = {'Byte': 8, 'Short': 16, 'Int': 32, 'Long': 64}
         for table in document['tables']:
+            if table['blockers']:
+                raise OracleError("unsupported_table_schema")
+            file_field_count = table['file_field_count']
+            declared_fields = table['fields']
+            if not 1 <= file_field_count <= len(declared_fields) or len(declared_fields) != table['field_count']:
+                raise OracleError("unsupported_table_schema")
             fields = []
-            for field in table['fields'][:table['file_field_count']]:
-                kind = field['type']
-                if kind in ('FT_STRING', 'FT_STRING_NOT_LOCALIZED'):
+            for field in declared_fields[:file_field_count]:
+                kind = field['kind']
+                if kind in ('String', 'NonLocalizedString'):
                     fields.append(Field('string', 32, field['array_size']))
-                elif kind == 'FT_FLOAT':
+                elif kind == 'Float':
                     fields.append(Field('float', 32, field['array_size']))
-                else:
+                elif kind in widths:
                     fields.append(Field('signed' if field['signed'] else 'unsigned', widths[kind], field['array_size'], signed=field['signed']))
-            parent_unsigned = table['parent_index'] >= table['file_field_count'] and not table['fields'][table['parent_index']]['signed']
-            result[table['name']] = Schema(table['name'], table['layout_hash'], table['index'], tuple(fields), table['parent_index'], parent_unsigned)
-        if len(result) != 1126:
+                else:
+                    raise OracleError("unsupported_table_schema")
+            parent = table['parent_index']
+            if parent < -1 or parent >= len(declared_fields):
+                raise OracleError("unsupported_table_schema")
+            parent_unsigned = parent >= file_field_count and not declared_fields[parent]['signed']
+            schema = Schema(
+                table['name'], table['layout_hash'], table['index'], tuple(fields), parent,
+                parent_unsigned, table['table_hash'], tuple(table['other_layout_hashes']),
+            )
+            if schema.name in result:
+                raise OracleError("unsupported_table_schema")
+            result[schema.name] = schema
+        if len(result) != 1161:
             raise OracleError("unsupported_table_schema")
         return result
     except (OSError, KeyError, TypeError, ValueError):
@@ -1094,11 +1157,14 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
 
 
 def resolve_schema(table_name, schema_catalog=None):
-    if schema_catalog is not None and schema_catalog != CATALOG_ID:
-        raise OracleError("invalid_invocation")
-    schema = SCHEMAS.get(table_name)
-    if schema is None and schema_catalog is not None:
+    if schema_catalog is None:
+        schema = SCHEMAS.get(table_name)
+    elif schema_catalog == CATALOG_ID:
+        schema = SCHEMAS.get(table_name) or load_catalog(schema_catalog).get(table_name)
+    elif schema_catalog == WOWDBDEFS_70205_CATALOG_ID:
         schema = load_catalog(schema_catalog).get(table_name)
+    else:
+        raise OracleError("invalid_invocation")
     if schema is None:
         raise OracleError("unsupported_table_schema")
     return schema
@@ -1929,7 +1995,7 @@ def render(rows, table_name):
 
 
 def dump_file(path, table_name, schema_catalog=None):
-    """Canonical local dump; additional schemas require a pinned catalog opt-in."""
+    """Canonical local dump; additional schemas require explicit catalog opt-in."""
     schema = resolve_schema(table_name, schema_catalog)
     try:
         with open(path, "rb") as handle:
@@ -1948,8 +2014,10 @@ def dump_file(path, table_name, schema_catalog=None):
         total_field_count_ok = header.total_field_count + 1 == len(schema.fields) + 1
     else:
         total_field_count_ok = header.total_field_count == header.field_count
+    table_hash_ok = schema.table_hash is None or header.table_hash == schema.table_hash
     if (
-        header.layout_hash != schema.layout_hash
+        not table_hash_ok
+        or header.layout_hash not in (schema.layout_hash, *schema.other_layout_hashes)
         or not field_count_ok
         or not total_field_count_ok
     ):

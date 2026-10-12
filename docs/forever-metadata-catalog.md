@@ -529,6 +529,18 @@ Regenerate or check these files against an existing pinned checkout with:
 python3 -B tools/generate_wowdbdefs_catalog.py --reference /path/to/WoWDBDefs --check
 ```
 
+The independent Python DB2 oracle can select this catalog for local byte-for-
+byte decoder comparisons:
+
+```sh
+python3 -B tests/forever/db2_oracle.py --schema-catalog wowdbdefs-70205-v1 \
+  --table ChrRacesCreateScreenIcon --file /local/ChrRacesCreateScreenIcon.db2
+```
+
+The oracle loads the pinned JSON facts directly, normalizes field types in
+Python, and gates the target table hash plus every declared layout hash. This
+adds a comparison path; it does not itself constitute decoder acceptance.
+
 This catalog does not replace `pinned-metadata-v1`, change the default plan, or
 authorize use with build 70170. Use it only with an explicit manifest and the
 matching selector:

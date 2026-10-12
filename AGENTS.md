@@ -1736,3 +1736,10 @@ real-client/runtime acceptance. The retained source checkpoint in the v1
 contract records authored-time flags; executed evidence is a separate field and
 is detailed in `docs/forever-db2-regular-sections.md`. Full extractor completion
 remains open.
+
+The independent Python DB2 oracle now accepts explicit
+`--schema-catalog wowdbdefs-70205-v1` selection. It verifies the pinned
+1,161-table build-70205 catalog and compares target table/layout hashes; this
+enables local oracle comparisons but is not decoder acceptance. The earlier
+1,023-file survey used frozen binaries and the previous catalog, so its results
+remain historical until files are decoded again through an accepted path.
