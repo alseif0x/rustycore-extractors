@@ -127,6 +127,15 @@ record IDs and payloads were not retained. Format and table-hash references
 were pinned to [wowdev/DBCD](https://github.com/wowdev/DBCD/tree/e732093f8864240fc5884bd1bba6b02f3dfc0d56)
 and [WoWDBDefs](https://github.com/wowdev/WoWDBDefs/blob/07d008f28907c00827cacadf2d7c1a40f578b6a3/manifest.json).
 
+The adjacent client `Hotfix.log` is also stale (mtime 2026-10-02). A metadata-
+only scan found 325 lines mentioning `TactKey`, but no `TactKeyLookup`,
+`BroadcastText`, target DB2 names, or printable 16-/32-hex key-shaped tokens.
+The aggregate report
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/hotfix-log-audit-v1.json`
+(SHA-256 `916656eb523d87af757b3336070a883dde5af026622f4668c329a8fc1f5dc13d`)
+retains counts only, not lines or record identifiers. This bounded text scan
+does not prove the absence of binary or non-printable material.
+
 ## Additional executed evidence — 2026-10-12 (Europe/Madrid)
 
 ### Complete 49-table public spell loader, synthetic inputs
