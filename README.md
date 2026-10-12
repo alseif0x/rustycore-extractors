@@ -184,6 +184,13 @@ rows** against the Python oracle and passes output verification, including
 pinned-metadata-v1` and an explicit manifest. Complete typed-loader and
 whole-catalog acceptance remain pending.
 
+The same guide now documents the separate `wowdbdefs-70205-v1` target catalog
+with 1,161 build-specific definitions. A bounded comparison of the 1,023
+complete local survey headers found no table-hash, layout-hash or field-count
+mismatches against those definitions. This expands schema facts for explicit
+build-70205 batches; it does not establish full decode, acquisition or runtime
+compatibility.
+
 The [game-table component](docs/forever-game-tables.md) extracts and verifies
 all **20 files** in the pinned C++ catalog with `--group catalog`. On
 build-70205/esES, **22,082 f32 cells** from its 14 numeric tables match the

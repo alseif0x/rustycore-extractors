@@ -10,11 +10,13 @@
 //! file, and keep the output inside the external run directory.
 //!
 //! Contract: `db2_dump --file <path.db2> --table <name>`, where `<name>` is any
-//! reviewed `CharacterTable` name. Additional pinned metadata requires
-//! `--schema-catalog pinned-metadata-v1`. No network and no CASC: only the named local
-//! file is read. The canonical format is one header line
-//! `forever-db2-dump v1 <tablename>` followed by one line per row in ascending
-//! id order; fields are tab-separated and array elements are comma-joined.
+//! reviewed `CharacterTable` name. Metadata-only names require an explicit
+//! `--schema-catalog pinned-metadata-v1` or `--schema-catalog
+//! wowdbdefs-70205-v1`. The latter selects the build 70205 definitions. No
+//! network and no CASC: only the named local file is read. The canonical
+//! format is one header line `forever-db2-dump v1 <tablename>` followed by one
+//! line per row in ascending id order; fields are tab-separated and array
+//! elements are comma-joined.
 //! Values are tagged `u:`, `i:`, `f:0x########` or `t:`.
 use forever_db2::{CharacterTable, DecodedTable, RecordError, Value, catalog};
 use std::io::{self, Read, Write};
@@ -56,7 +58,7 @@ fn parse_options(
 ) -> Result<Config, &'static str> {
     let mut file: Option<PathBuf> = None;
     let mut name: Option<String> = None;
-    let mut catalog_selected = false;
+    let mut catalog_selected = None;
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         if arg == "--file" && file.is_none() {
@@ -65,18 +67,20 @@ fn parse_options(
         } else if arg == "--table" && name.is_none() {
             let value = args.next().ok_or("invalid_invocation")?;
             name = Some(value.to_str().ok_or("invalid_invocation")?.to_owned());
-        } else if arg == "--schema-catalog" && !catalog_selected {
-            if args.next().ok_or("invalid_invocation")? != catalog::CATALOG_ID {
-                return Err("invalid_invocation");
-            }
-            catalog_selected = true;
+        } else if arg == "--schema-catalog" && catalog_selected.is_none() {
+            let value = args.next().ok_or("invalid_invocation")?;
+            catalog_selected = Some(match value.to_str() {
+                Some(catalog::CATALOG_ID) => catalog::CATALOG_ID,
+                Some(catalog::WOWDBDEFS_70205_CATALOG_ID) => catalog::WOWDBDEFS_70205_CATALOG_ID,
+                _ => return Err("invalid_invocation"),
+            });
         } else {
             return Err("invalid_invocation");
         }
     }
     let name = name.ok_or("invalid_invocation")?;
-    let table = if catalog_selected {
-        CharacterTable::from_catalog(&name).map_err(|error| error.code())?
+    let table = if let Some(catalog) = catalog_selected {
+        CharacterTable::from_catalog_id(catalog, &name).map_err(|error| error.code())?
     } else {
         CharacterTable::named(&name)
     };

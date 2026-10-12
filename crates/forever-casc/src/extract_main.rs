@@ -25,7 +25,7 @@ use std::{io::Read, process::ExitCode};
 
 const HELP: &str = "Usage: forever-db2-extract --client <root> --locale <enUS|esES> \
 --output <new-directory> [--manifest <name-tab-id.tsv>] \
-[--schema-catalog pinned-metadata-v1] [--backend native|rust-local] \
+[--schema-catalog pinned-metadata-v1|wowdbdefs-70205-v1] [--backend native|rust-local] \
 [--index-layout contiguous|paged] \
 [--root-layout headerless-18125|header-30080|header-50893-v1|header-50893-v2] \
 [--max-file-bytes <1..16777216>]\n\
@@ -90,7 +90,7 @@ fn run(options: options::Options) -> Result<ExitCode, CliError> {
         session.profile(),
         |entry, budget| session.read(entry.id, budget),
     )
-    .map_err(|code| CliError::new(code, 4))?;
+    .map_err(|code| CliError::new(code, if code == "unsupported_client" { 3 } else { 4 }))?;
     println!("{}", report.json);
     Ok(ExitCode::from(if report.complete { 0 } else { 8 }))
 }

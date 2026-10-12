@@ -509,3 +509,43 @@ ordinary two-table default. Version 3 requires exact provenance and re-decodes
 every complete artifact using explicit catalog resolution, preserving the 56
 reviewed identity gates. Unknown future versions fail with
 `MANIFEST_SCHEMA_INVALID`. Previous v2 reports are never automatically promoted.
+
+## Build 70205 definitions catalog
+
+`wowdbdefs-70205-v1` is a second, explicitly selected catalog for the exact
+WoW Classic Beta client `1.60.1.70205`. It contains 1,161 DBD table declarations
+from `wowdev/WoWDBDefs` commit
+`674636522d51c010f250ad1b5fe549ef6bc8eb0a`, pinned by manifest blob
+`8a5d8122f312ae6a9564e8286fdc491831fecc22` and SHA-256
+`4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265`.
+Attribution and the CC BY-SA 4.0 terms are recorded in
+`contracts/WOWDBDEFS-LICENSE.md`. The generator is
+`tools/generate_wowdbdefs_catalog.py`; its checked-in outputs are
+`contracts/wowdbdefs-70205-v1.json` and
+`crates/forever-db2/src/records/wowdbdefs_70205_generated.rs`.
+Regenerate or check these files against an existing pinned checkout with:
+
+```sh
+python3 -B tools/generate_wowdbdefs_catalog.py --reference /path/to/WoWDBDefs --check
+```
+
+This catalog does not replace `pinned-metadata-v1`, change the default plan, or
+authorize use with build 70170. Use it only with an explicit manifest and the
+matching selector:
+
+```sh
+forever-db2-extract --client /local/client --locale enUS --output /private/new-run \
+  --manifest /private/plan.tsv --schema-catalog wowdbdefs-70205-v1
+forever-db2-verify --output /private/new-run
+```
+
+Before this catalog was added, the bounded build-70205 local survey had 1,023
+complete DB2 artifacts. Their parsed headers matched the corresponding target
+DBD declarations in all 1,023 cases: no missing definitions and no table-hash,
+layout-hash, or field-count mismatches. This supports the identity of the
+target catalog against those local headers. It does not establish record
+decoding parity for every declaration, make incomplete inputs complete, run
+typed RustyCore loaders, or establish extraction/runtime compatibility. The
+catalog's Rust verifier binds manifests to the exact catalog provenance and
+re-decodes complete artifacts using only that catalog's field facts; it also
+rejects build 70170.

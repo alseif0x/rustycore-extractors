@@ -244,7 +244,7 @@ fn run(output: &Path) -> Result<VerifyReport, Code> {
     let loaded = load_complete(
         output,
         &complete,
-        manifest.schema_catalog || manifest.acquisition.is_some(),
+        manifest.schema_catalog.is_some() || manifest.acquisition.is_some(),
         manifest.max_file_bytes,
     )
     .map_err(|_| Code::InventoryMismatch)?;
@@ -377,7 +377,7 @@ fn check_tables(
     complete: &[&Artifact],
     loaded: &[Vec<u8>],
     tables: &[Table],
-    schema_catalog: bool,
+    schema_catalog: Option<&'static str>,
 ) -> Result<(), Invalid> {
     for (artifact, bytes) in complete.iter().zip(loaded) {
         let metadata = Metadata::read(&mut Cursor::new(bytes)).map_err(|_| Invalid)?;
@@ -399,8 +399,8 @@ fn check_tables(
         {
             return Err(Invalid);
         }
-        if schema_catalog {
-            let known = resolve_table(&artifact.name, true)?.ok_or(Invalid)?;
+        if schema_catalog.is_some() {
+            let known = resolve_table(&artifact.name, schema_catalog)?.ok_or(Invalid)?;
             if artifact.file_id != u64::from(known.file_id())
                 || table.meta_index_field != i64::from(known.schema_identity().2)
                 || artifact.declared_records != u64::from(header.record_count)
@@ -412,9 +412,12 @@ fn check_tables(
     Ok(())
 }
 
-fn resolve_table(name: &str, schema_catalog: bool) -> Result<Option<CharacterTable>, Invalid> {
-    if schema_catalog {
-        CharacterTable::from_catalog(name)
+fn resolve_table(
+    name: &str,
+    schema_catalog: Option<&'static str>,
+) -> Result<Option<CharacterTable>, Invalid> {
+    if let Some(catalog) = schema_catalog {
+        CharacterTable::from_catalog_id(catalog, name)
             .map_err(|_| Invalid)?
             .map(Some)
             .ok_or(Invalid)
@@ -426,7 +429,7 @@ fn resolve_table(name: &str, schema_catalog: bool) -> Result<Option<CharacterTab
 fn check_rows(
     complete: &[&Artifact],
     loaded: &[Vec<u8>],
-    schema_catalog: bool,
+    schema_catalog: Option<&'static str>,
 ) -> Result<(), Invalid> {
     for (artifact, bytes) in complete.iter().zip(loaded) {
         if !artifact.record_data_decoded {
@@ -492,7 +495,7 @@ fn check_declared_constants(output: &Path, manifest: &Manifest) -> Result<(), In
         }
         const_str(
             report.get("schema_selection").ok_or(Invalid)?,
-            if schema_catalog {
+            if schema_catalog.is_some() {
                 "catalog"
             } else {
                 "reviewed"
@@ -500,30 +503,27 @@ fn check_declared_constants(output: &Path, manifest: &Manifest) -> Result<(), In
         )?;
         const_str(
             report.get("scope").ok_or(Invalid)?,
-            if schema_catalog {
+            if schema_catalog.is_some() {
                 crate::manifest::CATALOG_SCOPE
             } else {
                 SCOPE
             },
         )?;
-        if !schema_catalog && report.get("schema_catalog").is_some() {
+        if schema_catalog.is_none() && report.get("schema_catalog").is_some() {
             return Err(Invalid);
         }
     }
-    if schema_catalog {
+    if let Some(catalog) = schema_catalog {
         const_str(
             report.get("scope").ok_or(Invalid)?,
             crate::manifest::CATALOG_SCOPE,
         )?;
-        const_str(
-            report.get("schema_catalog").ok_or(Invalid)?,
-            forever_db2::catalog::CATALOG_ID,
-        )?;
+        const_str(report.get("schema_catalog").ok_or(Invalid)?, catalog)?;
     }
     match report.get("full_client_extraction") {
         Some(value) if value.as_bool() == Some(false) => Ok(()),
         Some(_) => Err(Invalid),
-        None if schema_catalog || acquisition.is_some() => Err(Invalid),
+        None if schema_catalog.is_some() || acquisition.is_some() => Err(Invalid),
         None => Ok(()),
     }
 }
@@ -830,7 +830,7 @@ struct Manifest {
     tables: Vec<Table>,
     integrity: Integrity,
     incomplete_marker_present: bool,
-    schema_catalog: bool,
+    schema_catalog: Option<&'static str>,
     acquisition: Option<crate::acquisition::Profile>,
     max_file_bytes: u64,
 }
@@ -856,7 +856,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     // document is never interpreted as a strengthened v2 claim, and future
     // versions remain explicit failures.
     let acquired = matches!(root.get("manifest_version"), Some(json::Json::Number(4)));
-    let schema_catalog = match root.get("manifest_version") {
+    let catalog_selected = match root.get("manifest_version") {
         Some(json::Json::Number(2)) => false,
         Some(json::Json::Number(3)) => true,
         Some(json::Json::Number(4)) => match root
@@ -873,7 +873,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     if acquired {
         required.extend(["acquisition", "schema_selection"]);
     }
-    if schema_catalog {
+    if catalog_selected {
         required.push("schema_catalog");
     }
     let top = members(root, &required, TOP_OPTIONAL)?;
@@ -891,9 +891,11 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     let max_file_bytes = acquisition.map_or(MAX_ARTIFACT_BYTES, |profile| {
         u64::from(profile.max_file_bytes())
     });
-    if schema_catalog {
-        validate_catalog(need(top, "schema_catalog")?)?;
-    }
+    let schema_catalog = if catalog_selected {
+        Some(validate_catalog(need(top, "schema_catalog")?)?)
+    } else {
+        None
+    };
     if let Some(run_id) = get(top, "run_id")
         && !valid_uuid(as_str(run_id)?)
     {
@@ -937,6 +939,9 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     if build != 70170 && build != 70205 {
         return Err(Invalid);
     }
+    if schema_catalog == Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID) && build != 70205 {
+        return Err(Invalid);
+    }
     let expected_version = format!("1.60.1.{build}");
     const_str(need(client, "version")?, &expected_version)?;
     one_of_str(need(client, "locale")?, &["enUS", "esES"])?;
@@ -972,7 +977,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     )?;
     const_str(
         need(top, "scope")?,
-        if schema_catalog {
+        if schema_catalog.is_some() {
             crate::manifest::CATALOG_SCOPE
         } else {
             SCOPE
@@ -988,7 +993,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         return Err(Invalid);
     };
     if table_items.is_empty()
-        || ((schema_catalog || acquired) && table_items.len() > crate::batch::MAX_FILES)
+        || ((schema_catalog.is_some() || acquired) && table_items.len() > crate::batch::MAX_FILES)
     {
         return Err(Invalid);
     }
@@ -1036,7 +1041,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         "max_file_bytes",
         "max_batch_bytes",
     ];
-    if schema_catalog {
+    if schema_catalog.is_some() {
         required_options.push("schema_catalog");
     }
     let options = members(need(top, "options")?, &required_options, &[])?;
@@ -1045,16 +1050,13 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         need(options, "table_selection")?,
         &["default_character_tables", "explicit_manifest"],
     )?;
-    if schema_catalog {
-        const_str(
-            need(options, "schema_catalog")?,
-            forever_db2::catalog::CATALOG_ID,
-        )?;
+    if let Some(catalog_id) = schema_catalog {
+        const_str(need(options, "schema_catalog")?, catalog_id)?;
         if selection != "explicit_manifest" {
             return Err(Invalid);
         }
     }
-    if (schema_catalog || acquired)
+    if (schema_catalog.is_some() || acquired)
         && (as_str(need(options, "locale")?)? != as_str(need(client, "locale")?)?
             || target != build)
     {
@@ -1137,7 +1139,8 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         return Err(Invalid);
     };
     if artifact_items.is_empty()
-        || ((schema_catalog || acquired) && artifact_items.len() > crate::batch::MAX_FILES)
+        || ((schema_catalog.is_some() || acquired)
+            && artifact_items.len() > crate::batch::MAX_FILES)
     {
         return Err(Invalid);
     }
@@ -1146,7 +1149,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         artifacts.push(parse_artifact(item)?);
     }
     let integrity = parse_integrity(need(outputs, "integrity")?)?;
-    if schema_catalog || acquired {
+    if schema_catalog.is_some() || acquired {
         let entry_count = as_u64(need(options, "entry_count")?)? as usize;
         if tables.len() != entry_count
             || artifacts.len() != entry_count
@@ -1175,7 +1178,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
                     .any(|table| table.name == artifact.name && table.file_id == artifact.file_id)
                 || artifact.relative_path != format!("{}.db2", artifact.name)
                 || artifact.bytes > max_file_bytes
-                || (schema_catalog
+                || (schema_catalog.is_some()
                     && artifact.complete
                     && (!artifact.schema_validated
                         || !artifact.record_data_decoded
@@ -1220,7 +1223,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     })
 }
 
-fn validate_catalog(value: &json::Json) -> VResult<()> {
+fn validate_catalog(value: &json::Json) -> VResult<&'static str> {
     let facts = members(
         value,
         &[
@@ -1232,16 +1235,18 @@ fn validate_catalog(value: &json::Json) -> VResult<()> {
         ],
         &[],
     )?;
+    let id = as_str(need(facts, "id")?)?;
+    let provenance = forever_db2::catalog::provenance(id).ok_or(Invalid)?;
     for (key, expected) in [
-        ("id", forever_db2::catalog::CATALOG_ID),
-        ("source_commit", forever_db2::catalog::SOURCE_COMMIT),
-        ("source_blob", forever_db2::catalog::SOURCE_GIT_BLOB),
-        ("source_sha256", forever_db2::catalog::SOURCE_SHA256),
-        ("facts_sha256", crate::manifest::CATALOG_FACTS_SHA256),
+        ("id", provenance.id),
+        ("source_commit", provenance.source_commit),
+        ("source_blob", provenance.source_blob),
+        ("source_sha256", provenance.source_sha256),
+        ("facts_sha256", provenance.facts_sha256),
     ] {
         const_str(need(facts, key)?, expected)?;
     }
-    Ok(())
+    Ok(provenance.id)
 }
 
 fn parse_artifact(value: &json::Json) -> VResult<Artifact> {

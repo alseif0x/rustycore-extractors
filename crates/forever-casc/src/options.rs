@@ -13,7 +13,7 @@ pub struct Options {
     pub output: PathBuf,
     pub locale: Locale,
     pub manifest: Option<PathBuf>,
-    /// Explicit pinned metadata opt-in; never enabled by a default plan.
+    /// Explicit immutable metadata catalog opt-in; never enabled by default.
     pub schema_catalog: Option<&'static str>,
     pub acquisition: crate::acquisition::Selection,
 }
@@ -82,11 +82,13 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
     .map_err(|_| CliError::UNSUPPORTED_LOCALE)?;
     let manifest = values.get("--manifest").map(PathBuf::from);
     let schema_catalog = match values.get("--schema-catalog") {
-        Some(value)
-            if value.to_str() == Some(forever_db2::catalog::CATALOG_ID) && manifest.is_some() =>
-        {
-            Some(forever_db2::catalog::CATALOG_ID)
-        }
+        Some(value) if manifest.is_some() => match value.to_str() {
+            Some(forever_db2::catalog::CATALOG_ID) => Some(forever_db2::catalog::CATALOG_ID),
+            Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID) => {
+                Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID)
+            }
+            _ => return Err(CliError::INVALID_INVOCATION),
+        },
         Some(_) => return Err(CliError::INVALID_INVOCATION),
         None => None,
     };

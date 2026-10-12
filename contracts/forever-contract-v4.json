@@ -1,7 +1,7 @@
 {
   "contract_version": 4,
   "line": "forever",
-  "description": "Explicit Rust-local acquisition for the existing reviewed/default or pinned catalog selection policies. Reviewed unknown tables retain metadata-only claims; catalog results require full schema and row decoding. Acquisition does not establish runtime acceptance.",
+  "description": "Explicit Rust-local acquisition for the reviewed/default policy or one explicitly selected metadata catalog. Reviewed unknown tables retain metadata-only claims; catalog results require full schema and row decoding. Acquisition does not establish runtime acceptance.",
   "manifest": {
     "published_name": "forever-manifest.json",
     "report_name": "report.json",
@@ -42,7 +42,7 @@
     ],
     "schema_selection": {
       "reviewed": "Default two reviewed tables or the unchanged explicit-list policy: known schemas decode; unknown tables publish complete metadata-only bytes with false/null record claims.",
-      "catalog": "Explicit manifest plus --schema-catalog pinned-metadata-v1; every name/ID must resolve exactly and every complete artifact requires schema+record decode."
+      "catalog": "Explicit manifest plus --schema-catalog pinned-metadata-v1, or wowdbdefs-70205-v1 for build 70205; every name/ID must resolve exactly and every complete artifact requires schema+record decode."
     }
   },
   "limits": {
@@ -148,7 +148,8 @@
     "Native v2/v3 bytes and schema/record claim semantics remain unchanged; backend selection does not upgrade metadata-only claims.",
     "V4 verifier validates the acquisition profile and companion report offline, and recomputes the existing inventory, identity and claimed-row checks.",
     "Catalog schema provenance remains fixed and mandatory only when schema_selection=catalog.",
-    "No client bytes, paths, keys, remote fallback or full runtime acceptance claim."
+    "No client bytes, paths, keys, remote fallback or full runtime acceptance claim.",
+    "wowdbdefs-70205-v1 accepts only build 70205; the catalog identity does not authenticate local client acquisition."
   ],
   "acquisition": {
     "required_backend": "rust-local",
@@ -161,5 +162,21 @@
       "--max-file-bytes 1..16777216 (optional reduction)"
     ],
     "native_default": "Unchanged v2/v3; layout/limit options are rejected with native. A binary without native rejects its default before client/output IO. Native report.json remains version1; Rust-local uses report_version2. The verifier result keeps version1 because its shape is unchanged."
-  }
+  },
+  "schema_catalogs": [
+    {
+      "id": "pinned-metadata-v1",
+      "source_commit": "02245dcd245e7433e524577656177723d3e4992e",
+      "source_blob": "d06b97bad72ca2aecad3987ce9c348ac6055e0db",
+      "source_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+      "facts_sha256": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+    },
+    {
+      "id": "wowdbdefs-70205-v1",
+      "source_commit": "674636522d51c010f250ad1b5fe549ef6bc8eb0a",
+      "source_blob": "8a5d8122f312ae6a9564e8286fdc491831fecc22",
+      "source_sha256": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265",
+      "facts_sha256": "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b"
+    }
+  ]
 }

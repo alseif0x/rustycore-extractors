@@ -310,6 +310,25 @@ impl CharacterTable {
         super::catalog::resolve(name).map(|table| table.map(Self::Catalog))
     }
 
+    /// Resolve against one explicitly named immutable metadata catalog.
+    /// The build-specific target catalog takes precedence over legacy
+    /// hand-reviewed variants so its schema and table hash remain coherent.
+    pub fn from_catalog_id(
+        catalog_id: &str,
+        name: &str,
+    ) -> Result<Option<Self>, super::catalog::CatalogError> {
+        if catalog_id == super::catalog::CATALOG_ID {
+            return Self::from_catalog(name);
+        }
+        if !super::catalog::supports(catalog_id) {
+            return Err(super::catalog::CatalogError {
+                name: "unknown_catalog",
+                blockers: &[],
+            });
+        }
+        super::catalog::resolve_for(catalog_id, name).map(|table| table.map(Self::Catalog))
+    }
+
     pub fn named(name: &str) -> Option<Self> {
         match name {
             "ChrClasses" => Some(Self::Classes),
@@ -548,8 +567,12 @@ impl CharacterTable {
             } else {
                 header.total_field_count == header.field_count
             };
+        let layout_hash_matches = match self {
+            Self::Catalog(table) => table.matches_layout(header.layout_hash),
+            _ => header.layout_hash == schema.layout,
+        };
         table_hash_matches
-            && header.layout_hash == schema.layout
+            && layout_hash_matches
             && field_count_matches
             && total_field_count_matches
     }

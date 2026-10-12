@@ -286,7 +286,10 @@
           "const": 268435456
         },
         "schema_catalog": {
-          "const": "pinned-metadata-v1"
+          "enum": [
+            "pinned-metadata-v1",
+            "wowdbdefs-70205-v1"
+          ]
         }
       },
       "allOf": [
@@ -450,32 +453,7 @@
       "$ref": "#/$defs/acquisition"
     },
     "schema_catalog": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "source_commit",
-        "source_blob",
-        "source_sha256",
-        "facts_sha256"
-      ],
-      "properties": {
-        "id": {
-          "const": "pinned-metadata-v1"
-        },
-        "source_commit": {
-          "const": "02245dcd245e7433e524577656177723d3e4992e"
-        },
-        "source_blob": {
-          "const": "d06b97bad72ca2aecad3987ce9c348ac6055e0db"
-        },
-        "source_sha256": {
-          "const": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def"
-        },
-        "facts_sha256": {
-          "const": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
-        }
-      }
+      "$ref": "#/$defs/schema_catalog"
     }
   },
   "allOf": [
@@ -607,7 +585,10 @@
                 "const": "explicit_manifest"
               },
               "schema_catalog": {
-                "const": "pinned-metadata-v1"
+                "enum": [
+                  "pinned-metadata-v1",
+                  "wowdbdefs-70205-v1"
+                ]
               },
               "manifest_sha256": {
                 "$ref": "#/$defs/sha256"
@@ -679,6 +660,74 @@
               "required": [
                 "schema_catalog"
               ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_catalog": {
+            "properties": {
+              "id": {
+                "const": "pinned-metadata-v1"
+              }
+            }
+          }
+        },
+        "required": [
+          "schema_catalog"
+        ]
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "properties": {
+              "schema_catalog": {
+                "const": "pinned-metadata-v1"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_catalog": {
+            "properties": {
+              "id": {
+                "const": "wowdbdefs-70205-v1"
+              }
+            }
+          }
+        },
+        "required": [
+          "schema_catalog"
+        ]
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "properties": {
+              "schema_catalog": {
+                "const": "wowdbdefs-70205-v1"
+              }
+            }
+          },
+          "client": {
+            "properties": {
+              "build": {
+                "const": 70205
+              }
+            }
+          },
+          "compatibility": {
+            "properties": {
+              "target_build": {
+                "const": 70205
+              }
             }
           }
         }
@@ -16854,6 +16903,66 @@
           }
         }
       }
+    },
+    "schema_catalog": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "source_commit",
+            "source_blob",
+            "source_sha256",
+            "facts_sha256"
+          ],
+          "properties": {
+            "id": {
+              "const": "pinned-metadata-v1"
+            },
+            "source_commit": {
+              "const": "02245dcd245e7433e524577656177723d3e4992e"
+            },
+            "source_blob": {
+              "const": "d06b97bad72ca2aecad3987ce9c348ac6055e0db"
+            },
+            "source_sha256": {
+              "const": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def"
+            },
+            "facts_sha256": {
+              "const": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "source_commit",
+            "source_blob",
+            "source_sha256",
+            "facts_sha256"
+          ],
+          "properties": {
+            "id": {
+              "const": "wowdbdefs-70205-v1"
+            },
+            "source_commit": {
+              "const": "674636522d51c010f250ad1b5fe549ef6bc8eb0a"
+            },
+            "source_blob": {
+              "const": "8a5d8122f312ae6a9564e8286fdc491831fecc22"
+            },
+            "source_sha256": {
+              "const": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265"
+            },
+            "facts_sha256": {
+              "const": "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b"
+            }
+          }
+        }
+      ]
     }
   },
   "$comment": "The offline Rust verifier additionally cross-checks acquisition.limits.file_bytes == options.max_file_bytes, artifact byte limits, option/format/artifact counts, table name/ID/path mapping, locale/build agreement, catalog provenance, and companion report acquisition. All references are local fragments; embedded acquisition and catalog identities are checked against their repository source schemas."

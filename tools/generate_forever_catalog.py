@@ -195,6 +195,7 @@ def render_rust(doc):
         ) + "])"
         lines.append(
             f'    TableMetadata {{ name: "{table["name"]}", file_data_id: {table["file_data_id"]}, '
+            f'table_hash: None, other_layout_hashes: &[], '
             f'layout_hash: 0x{table["layout_hash"]:08X}, index: {table["index"]}, '
             f'parent_index: {table["parent_index"]}, field_count: {table["field_count"]}, '
             f'file_field_count: {table["file_field_count"]}, fields: &[{fields}], '

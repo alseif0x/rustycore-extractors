@@ -23,8 +23,7 @@ const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_BATCH_BYTES: u64 = 256 * 1024 * 1024;
 /// Digest of the complete, reproducible factual catalog artifact. Version3
 /// locks source declarations and their generated representation independently.
-pub const CATALOG_FACTS_SHA256: &str =
-    "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9";
+pub const CATALOG_FACTS_SHA256: &str = forever_db2::catalog::CATALOG_FACTS_SHA256;
 pub const CATALOG_SCOPE: &str = "explicit_db2_catalog_batch";
 
 /// Identity and independent facts for one requested entry, in plan order.
@@ -69,7 +68,7 @@ pub fn render(
     started_at: &str,
     completed_at: Option<&str>,
 ) -> String {
-    render_version(build, options, facts, started_at, completed_at, false, None)
+    render_version(build, options, facts, started_at, completed_at, None, None)
 }
 
 /// Separate v3 contract for explicitly selected pinned catalog schemas.
@@ -80,7 +79,34 @@ pub fn render_catalog(
     started_at: &str,
     completed_at: Option<&str>,
 ) -> String {
-    render_version(build, options, facts, started_at, completed_at, true, None)
+    render_catalog_for(
+        build,
+        options,
+        facts,
+        started_at,
+        completed_at,
+        forever_db2::catalog::CATALOG_ID,
+    )
+}
+
+/// Render a manifest for one explicitly selected immutable catalog.
+pub fn render_catalog_for(
+    build: u32,
+    options: &Options,
+    facts: &[TableFact],
+    started_at: &str,
+    completed_at: Option<&str>,
+    catalog_id: &'static str,
+) -> String {
+    render_version(
+        build,
+        options,
+        facts,
+        started_at,
+        completed_at,
+        Some(catalog_id),
+        None,
+    )
 }
 
 /// Version 4 records explicit acquisition, independently of schema selection.
@@ -91,6 +117,27 @@ pub fn render_acquired(
     started_at: &str,
     completed_at: Option<&str>,
     schema_catalog: bool,
+    acquisition: crate::acquisition::Profile,
+) -> String {
+    render_acquired_for(
+        build,
+        options,
+        facts,
+        started_at,
+        completed_at,
+        schema_catalog.then_some(forever_db2::catalog::CATALOG_ID),
+        acquisition,
+    )
+}
+
+/// Version 4 records explicit acquisition with an exact metadata catalog ID.
+pub fn render_acquired_for(
+    build: u32,
+    options: &Options,
+    facts: &[TableFact],
+    started_at: &str,
+    completed_at: Option<&str>,
+    schema_catalog: Option<&'static str>,
     acquisition: crate::acquisition::Profile,
 ) -> String {
     render_version(
@@ -110,7 +157,7 @@ fn render_version(
     facts: &[TableFact],
     started_at: &str,
     completed_at: Option<&str>,
-    schema_catalog: bool,
+    schema_catalog: Option<&'static str>,
     acquisition: Option<crate::acquisition::Profile>,
 ) -> String {
     let complete = facts.iter().all(|fact| fact.error_code.is_none());
@@ -130,7 +177,7 @@ fn render_version(
     let mut out = String::with_capacity(4096);
     out.push_str(if acquisition.is_some() {
         "{\"manifest_version\":4"
-    } else if schema_catalog {
+    } else if schema_catalog.is_some() {
         "{\"manifest_version\":3"
     } else {
         "{\"manifest_version\":2"
@@ -153,19 +200,18 @@ fn render_version(
         ",\"extractor\":{{\"name\":\"forever-db2-extract\",\"version\":\"{}\",\"implementation\":\"rust\",\"compatibility_oracle_commit\":\"{ORACLE_COMMIT}\"}}",
         escape(EXTRACTOR_VERSION)
     ));
-    if schema_catalog {
-        let catalog = forever_db2::catalog::CATALOG_ID;
-        let commit = forever_db2::catalog::SOURCE_COMMIT;
-        let blob = forever_db2::catalog::SOURCE_GIT_BLOB;
-        let source_sha = forever_db2::catalog::SOURCE_SHA256;
-        out.push_str(&format!(",\"scope\":\"{CATALOG_SCOPE}\",\"schema_catalog\":{{\"id\":\"{catalog}\",\"source_commit\":\"{commit}\",\"source_blob\":\"{blob}\",\"source_sha256\":\"{source_sha}\",\"facts_sha256\":\"{CATALOG_FACTS_SHA256}\"}}"));
+    if let Some(catalog) = schema_catalog {
+        let source = forever_db2::catalog::provenance(catalog)
+            .expect("rendering requires a supported catalog");
+        out.push_str(&format!(",\"scope\":\"{CATALOG_SCOPE}\",\"schema_catalog\":{{\"id\":\"{}\",\"source_commit\":\"{}\",\"source_blob\":\"{}\",\"source_sha256\":\"{}\",\"facts_sha256\":\"{}\"}}",
+            source.id, source.source_commit, source.source_blob, source.source_sha256, source.facts_sha256));
     } else {
         out.push_str(",\"scope\":\"explicit_db2_batch\"");
     }
     if let Some(profile) = acquisition {
         out.push_str(&format!(
             ",\"schema_selection\":\"{}\",\"acquisition\":{}",
-            if schema_catalog {
+            if schema_catalog.is_some() {
                 "catalog"
             } else {
                 "reviewed"
@@ -189,11 +235,8 @@ fn render_version(
         ));
     }
     out.push_str("]}");
-    let selector = if schema_catalog {
-        format!(
-            ",\"schema_catalog\":\"{}\"",
-            forever_db2::catalog::CATALOG_ID
-        )
+    let selector = if let Some(catalog) = schema_catalog {
+        format!(",\"schema_catalog\":\"{}\"", catalog)
     } else {
         String::new()
     };

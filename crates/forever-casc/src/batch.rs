@@ -22,9 +22,9 @@ pub struct Plan {
     explicit: bool,
     /// SHA-256 of the exact manifest text, present only for explicit plans.
     manifest_sha256: Option<String>,
-    /// Private invariant: true only after every entry resolved in the pinned
-    /// catalog with its exact spelling and FileDataId. v2 remains unchanged.
-    schema_catalog: bool,
+    /// Present only after every entry resolved in this exact catalog with its
+    /// exact spelling and FileDataId. v2 remains unchanged.
+    schema_catalog: Option<&'static str>,
 }
 impl Plan {
     /// Two reviewed tables, not an invented full-client catalog.
@@ -39,7 +39,7 @@ impl Plan {
                 .collect(),
             explicit: false,
             manifest_sha256: None,
-            schema_catalog: false,
+            schema_catalog: None,
         }
     }
     /// ASCII table name TAB decimal FileDataID; no paths, comments, keys or URLs.
@@ -90,32 +90,32 @@ impl Plan {
             entries,
             explicit: true,
             manifest_sha256: Some(crate::sha256::hex(input.as_bytes())),
-            schema_catalog: false,
+            schema_catalog: None,
         })
     }
 
-    /// Explicit v3 plan. Unknown/case-mismatched names and wrong IDs fail
-    /// before output creation; there is no metadata-only catalog fallback.
-    pub fn parse_with_catalog(input: &str, catalog: &str) -> Result<Self, &'static str> {
-        if catalog != forever_db2::catalog::CATALOG_ID {
+    /// Explicit v3 catalog plan. Unknown/case-mismatched names and wrong IDs
+    /// fail before output creation; there is no metadata-only catalog fallback.
+    pub fn parse_with_catalog(input: &str, catalog: &'static str) -> Result<Self, &'static str> {
+        if !forever_db2::catalog::supports(catalog) {
             return Err("invalid_manifest");
         }
         let mut plan = Self::parse(input)?;
         for entry in &plan.entries {
-            let table = CharacterTable::from_catalog(&entry.name)
+            let table = CharacterTable::from_catalog_id(catalog, &entry.name)
                 .map_err(|_| "invalid_manifest")?
                 .ok_or("invalid_manifest")?;
             if entry.id != table.file_id() {
                 return Err("invalid_manifest");
             }
         }
-        plan.schema_catalog = true;
+        plan.schema_catalog = Some(catalog);
         Ok(plan)
     }
 
     fn table(&self, name: &str) -> Result<Option<CharacterTable>, &'static str> {
-        if self.schema_catalog {
-            CharacterTable::from_catalog(name)
+        if let Some(catalog) = self.schema_catalog {
+            CharacterTable::from_catalog_id(catalog, name)
                 .map_err(|_| "invalid_manifest")?
                 .map(Some)
                 .ok_or("invalid_manifest")
@@ -310,6 +310,11 @@ pub fn extract_with_acquisition(
     {
         return Err("unsupported_client");
     }
+    if plan.schema_catalog == Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID)
+        && build != 70205
+    {
+        return Err("unsupported_client");
+    }
     let max_file_bytes = acquisition.map_or(MAX_FILE_BYTES, |profile| profile.max_file_bytes());
     if max_file_bytes == 0 || max_file_bytes > MAX_FILE_BYTES {
         return Err("read_policy_limit");
@@ -413,23 +418,20 @@ pub fn extract_with_acquisition(
         reports.push(outcome.json(entry));
         facts.push(outcome.fact(entry, identity.get(), digest.take()));
     }
-    let scope = if plan.schema_catalog {
+    let scope = if plan.schema_catalog.is_some() {
         "explicit_db2_catalog_batch"
     } else {
         "explicit_db2_batch"
     };
-    let catalog_report = if plan.schema_catalog {
-        format!(
-            ",\"schema_catalog\":\"{}\"",
-            forever_db2::catalog::CATALOG_ID
-        )
+    let catalog_report = if let Some(catalog) = plan.schema_catalog {
+        format!(",\"schema_catalog\":\"{}\"", catalog)
     } else {
         String::new()
     };
     let acquisition_report = acquisition.map_or_else(String::new, |profile| {
         format!(
             ",\"schema_selection\":\"{}\",\"acquisition\":{}",
-            if plan.schema_catalog {
+            if plan.schema_catalog.is_some() {
                 "catalog"
             } else {
                 "reviewed"
@@ -458,7 +460,7 @@ pub fn extract_with_acquisition(
     };
     let completed_at = crate::manifest::now_rfc3339();
     let manifest = if let Some(profile) = acquisition {
-        crate::manifest::render_acquired(
+        crate::manifest::render_acquired_for(
             build,
             &options,
             &facts,
@@ -467,8 +469,15 @@ pub fn extract_with_acquisition(
             plan.schema_catalog,
             profile,
         )
-    } else if plan.schema_catalog {
-        crate::manifest::render_catalog(build, &options, &facts, &started_at, Some(&completed_at))
+    } else if let Some(catalog) = plan.schema_catalog {
+        crate::manifest::render_catalog_for(
+            build,
+            &options,
+            &facts,
+            &started_at,
+            Some(&completed_at),
+            catalog,
+        )
     } else {
         crate::manifest::render(build, &options, &facts, &started_at, Some(&completed_at))
     };
