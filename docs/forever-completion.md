@@ -136,6 +136,17 @@ The aggregate report
 retains counts only, not lines or record identifiers. This bounded text scan
 does not prove the absence of binary or non-printable material.
 
+The copied client fixture also contains a later `Hotfix.log` (mtime
+2026-10-03), alongside its build-70170 cache. A whole-word, metadata-only scan
+found 2,413 `TactKey` mention lines and 970 `BroadcastText` mention lines, but
+no `TactKeyLookup` or target DB2 name mentions, and no printable 16-/32-hex
+tokens. The mode-0600 aggregate report
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/hotfix-log-audit-v2.json`
+has SHA-256
+`a27e911d855666c8703780596d8b28a5c57e00fd541e231f9d51e9b8f601601b` and
+retains no lines or identifiers. This bounded text scan does not prove the
+absence of binary, non-printable, or other encoded material.
+
 A second private cache copy from the RustyCore local client fixture is also
 build 70170. It has 112 valid `TactKey` rows, 588 zero-byte `TactKey`
 invalidations, and no `TactKeyLookup` rows. Joining its additions to the current
