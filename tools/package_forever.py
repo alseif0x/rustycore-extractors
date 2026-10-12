@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-collision-leased-archive-source-v8"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-collision-disk-source-v9"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
     "adler2-2.0.1": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
@@ -69,7 +69,32 @@ LINUX_COLLISION_ARCHIVE_SOURCE = (
     'crates/forever-casc/src/collision/resources/tests.rs',
     'crates/forever-casc/src/local_store/tests.rs',
 'crates/forever-platform/src/lib.rs', 'crates/forever-platform/src/linux.rs', 'crates/forever-platform/src/linux/lease.rs', 'crates/forever-platform/src/linux/lease/ffi.rs', 'crates/forever-platform/src/linux/lease/tests.rs', 'crates/forever-casc/Cargo.toml', 'crates/forever-casc/src/collision/spool.rs', 'crates/forever-casc/src/collision/spool/archive.rs', 'crates/forever-casc/src/collision/spool/archive/tests.rs', 'crates/forever-casc/src/collision/payload.rs', 'crates/forever-casc/src/collision/inventory_spool.rs', 'crates/forever-casc/src/collision/run/inventory.rs', 'crates/forever-casc/src/collision/assemble/staged.rs', 'crates/forever-casc/src/collision/assemble/staged/models.rs', 'crates/forever-casc/src/collision/assemble/staged/models/package.rs', 'crates/forever-casc/src/collision/assemble/staged/models/package/tests.rs', 'contracts/forever-linux-collision-archive-contract-v1.json', 'tests/contracts/test_forever_linux_collision_archive_contract.py', 'docs/forever-collision-leased-archive.md')
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE
+PRODUCT_COLLISION_DISK_SOURCE = (
+    'crates/forever-extractor/Cargo.toml',
+    'crates/forever-extractor/src/main.rs',
+    'crates/forever-extractor/src/driver.rs',
+    'crates/forever-extractor/src/driver/disk.rs',
+    'crates/forever-extractor/src/driver/disk/anchors.rs',
+    'crates/forever-extractor/src/driver/disk/capacity.rs',
+    'crates/forever-extractor/src/driver/disk/tests.rs',
+    'crates/forever-extractor/src/plan.rs',
+    'crates/forever-extractor/src/plan/disk.rs',
+    'crates/forever-extractor/src/plan/disk_tests.rs',
+    'crates/forever-extractor/src/verify.rs',
+    'crates/forever-extractor/src/verify/tests.rs',
+    'crates/forever-platform/src/linux.rs',
+    'crates/forever-platform/src/linux/space.rs',
+    'crates/forever-platform/src/linux/space/ffi.rs',
+    'crates/forever-platform/src/linux/space/tests.rs',
+    'tests/forever/test_product_disk_cli.py',
+    'tests/forever/product_disk_fixture.py',
+    'tests/forever/product_fixture.py',
+    'tests/forever/product_keys_fixture.py',
+    'contracts/forever-product-disk-contract-v1.json',
+    'tests/contracts/test_forever_product_disk_contract.py',
+    'docs/forever-product-disk.md',
+)
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024

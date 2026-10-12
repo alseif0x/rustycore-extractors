@@ -1899,3 +1899,31 @@ uses resident assembly. Physical-disk preflight, publication/resume integration,
 encrypted mandatory complete inputs, real geometry/runtime and full distribution
 remain gates. The extractor is not complete. See
 `docs/forever-collision-leased-archive.md` for hashes and retained history.
+
+
+## Explicit Linux product collision disk plan v3 (2026-10-12)
+
+The v9 source profile now connects all six leased append owners to the actual
+product CLI through explicit v3 plans and `--scratch`. Rooted disjoint guards,
+checked physical-byte/inode admission, whole-package output limits and existing
+common publication/resume are integrated. Physical admission observes available
+space; it does not reserve capacity. Unfinished collision resume recomputes into
+a new namespace and preserves previous private attempts. v1/v2 resident defaults
+and their canonical bytes remain unchanged.
+
+Executable validation passes 2,643 ordinary Linux tests per debug/release
+profile (41 targets, 26 ignored), four explicit ignored corpora per profile,
+49 existing CLI cases per profile, all-target Linux/GNU-Windows Clippy, both
+GNU-Windows compile profiles and scoped formatting. Final source association
+reruns 187 contract and 112 distribution/sealer checks plus one added
+cross-volume CLI case per profile against the exact full-run product binaries.
+All Rust/Cargo and existing CLI-test source is unchanged from the full-run freeze.
+This is synthetic GNU/Linux product/source acceptance; no new bundle,
+real-client/native acceptance, Windows product or RustyCore runtime acceptance
+is claimed.
+
+This closes the bounded synthetic product disk preflight/publication/resume gate.
+Complete encrypted mandatory inputs, real geometry and whole-world resources,
+RustyCore runtime/server integration, complete Windows product execution and
+reproducible v9 distribution remain open. The extractor is not complete. See
+`docs/forever-product-disk.md` for the versioned contract, hashes and exact scope.

@@ -8,7 +8,8 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-collision-leased-archive-source-v8'
+PROFILE = 'forever-seven-crate-linux-product-collision-disk-source-v9'
+HISTORICAL_PROFILE = 'forever-seven-crate-linux-collision-leased-archive-source-v8'
 
 
 def read(path):
@@ -43,11 +44,12 @@ class LinuxCollisionArchiveContract(unittest.TestCase):
             self.assertIn(self.c['profiles'][name], self.spool)
         self.assertIn('BackendProfile::FileSetV1', self.spool)
 
-    def test_current_mandatory_closure_and_historical_v7_are_distinct(self):
+    def test_current_mandatory_closure_and_historical_v7_v8_are_distinct(self):
         d = json.loads(read('contracts/forever-distribution-contract-v1.json'))
         self.assertEqual(literal('SOURCE_PROFILE'), PROFILE)
         self.assertEqual(d['source']['profile'], PROFILE)
-        self.assertEqual(self.c['distribution_source_profile'], PROFILE)
+        self.assertEqual(self.c['distribution_source_profile'], HISTORICAL_PROFILE)
+        self.assertIn(HISTORICAL_PROFILE, d['source']['prior_profiles'])
         self.assertIn('forever-seven-crate-windows-navigation-readers-source-v7', d['source']['prior_profiles'])
         self.assertEqual(tuple(self.c['sources']), literal('LINUX_COLLISION_ARCHIVE_SOURCE'))
         self.assertEqual(len(self.c['sources']), 28)

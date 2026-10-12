@@ -14,7 +14,7 @@ forever-terrain = { path = "../forever-terrain" }
 forever-vmap = { path = "../forever-vmap" }
 forever-navigation = { path = "../forever-navigation" }
 
-[target.'cfg(windows)'.dependencies]
+[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 forever-platform = { path = "../forever-platform" }
 
 [[bin]]

@@ -5,7 +5,7 @@
 use crate::{
     Error,
     driver::validate_db2,
-    plan::{Plan, Selection},
+    plan::{CollisionStorage, Plan, Selection},
 };
 use forever_casc::{
     cameras,
@@ -29,9 +29,13 @@ pub fn verify(
     expected: Option<Context>,
 ) -> Result<package::Summary, Error> {
     plan.validate()?;
+    let mut limits = package::Limits::default();
+    if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
+        limits.total_bytes = budget.output_bytes;
+    }
     let mut facts = Facts::default();
     let mut failure = None;
-    let summary = package::verify_with(output, expected, Default::default(), |artifact, file| {
+    let summary = package::verify_with(output, expected, limits, |artifact, file| {
         let mut bytes = Vec::new();
         let result = (|| {
             bytes

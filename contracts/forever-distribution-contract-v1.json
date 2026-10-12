@@ -126,7 +126,29 @@
       "crates/forever-casc/src/package/disk.rs",
       "crates/forever-casc/src/package/disk/recover/tests.rs",
       "crates/forever-navigation/src/inventory/fs/tests.rs",
-      "crates/forever-navigation/src/inventory/fs/run/tests.rs"
+      "crates/forever-navigation/src/inventory/fs/run/tests.rs",
+      "crates/forever-extractor/Cargo.toml",
+      "crates/forever-extractor/src/main.rs",
+      "crates/forever-extractor/src/driver.rs",
+      "crates/forever-extractor/src/driver/disk.rs",
+      "crates/forever-extractor/src/driver/disk/anchors.rs",
+      "crates/forever-extractor/src/driver/disk/capacity.rs",
+      "crates/forever-extractor/src/driver/disk/tests.rs",
+      "crates/forever-extractor/src/plan.rs",
+      "crates/forever-extractor/src/plan/disk.rs",
+      "crates/forever-extractor/src/plan/disk_tests.rs",
+      "crates/forever-extractor/src/verify.rs",
+      "crates/forever-extractor/src/verify/tests.rs",
+      "crates/forever-platform/src/linux/space.rs",
+      "crates/forever-platform/src/linux/space/ffi.rs",
+      "crates/forever-platform/src/linux/space/tests.rs",
+      "tests/forever/test_product_disk_cli.py",
+      "tests/forever/product_disk_fixture.py",
+      "tests/forever/product_fixture.py",
+      "tests/forever/product_keys_fixture.py",
+      "contracts/forever-product-disk-contract-v1.json",
+      "tests/contracts/test_forever_product_disk_contract.py",
+      "docs/forever-product-disk.md"
     ],
     "forbidden": [
       "client assets",
@@ -143,7 +165,7 @@
     "mutation": "reject a changed selected source snapshot",
     "scope": "production pure Rust build, synthetic checks, exact registry sources and retained notices; native oracle reference trees are external and excluded",
     "legacy_provenance": "retain existing legacy license/reference inventories as documentation; the actual pure Rust binary dependency closure is its versioned distribution manifest, not a claim native C++ dependencies are linked",
-    "profile": "forever-seven-crate-linux-collision-leased-archive-source-v8",
+    "profile": "forever-seven-crate-linux-product-collision-disk-source-v9",
     "workspace_crates": 7,
     "windows_dependency_edges": {
       "forever-casc": [
@@ -159,7 +181,7 @@
         "forever-platform"
       ]
     },
-    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph",
+    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph; forever-seven-crate-linux-collision-leased-archive-source-v8 remains historical with its bundled frozen verifier and its library-only acceptance; v9 mandates explicit product plan v3, physical-space observation, guarded disk driver and product CLI checks without relabeling earlier archives",
     "windows_producer_scope": "original loaded-main-module seal acquisition and pure PE verifier/sealer source, synthetic checks and scope documentation are mandatory corresponding source; this Linux recipe does not seal or enable a Windows product",
     "windows_vmap_scope": "original guarded Windows RootedSource and safe EOF source/tests; preliminary synthetic Wine evidence does not accept actual Windows/NTFS or enable the product",
     "input_diagnostics_scope": "metadata-only fixed routes and pure whole-span BLTE inspector remain distinct APIs; v6 additionally mandates the key-free fixed-three-input complete-span framing adapter with static contract and qualified executed Linux observations; no full EKey/CKey/plaintext or key sufficiency claim",
@@ -183,9 +205,21 @@
     "linux_dependency_edges": {
       "forever-casc": [
         "forever-platform"
+      ],
+      "forever-extractor": [
+        "forever-platform"
       ]
     },
-    "linux_collision_archive_scope": "original GNU/Linux x86_64 scoped file-lease FFI and private append archive with six-owner backend equality, framing/hash/guard/cap tests and qualified synthetic scope documentation; optional library only, no new product CLI or bundle/runtime acceptance"
+    "linux_collision_archive_scope": "original GNU/Linux x86_64 scoped file-lease FFI and private append archive with six-owner backend equality, framing/hash/guard/cap tests and qualified synthetic scope documentation; optional library only, no new product CLI or bundle/runtime acceptance",
+    "product_collision_disk_scope": "Explicit Linux GNU x86_64 product plan v3 selects linux-leased-append-disk-world-v1, seven downward byte budgets and caller-supplied --scratch. Six fresh private leased append owners complete assembly before collision publication through the existing common package protocol. Physical-space preflight is an observation and conservative admission allowance, not an atomic reservation, guaranteed filesystem capacity or RSS measurement. Unfinished collision resume reruns into a new scratch namespace; no scratch adoption or cleanup.",
+    "product_collision_disk_acceptance": {
+      "status": "pending executable validation at this source checkpoint",
+      "bundle_built": false,
+      "real_client_accepted": false,
+      "runtime_accepted": false,
+      "windows_product_enabled": false,
+      "full_extractor_complete": false
+    }
   },
   "registry_dependencies": [
     {

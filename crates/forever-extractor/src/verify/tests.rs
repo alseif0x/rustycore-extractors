@@ -68,6 +68,7 @@ fn db2_plan() -> Plan {
     Plan {
         build: 70205,
         decryption: crate::plan::Decryption::Disabled,
+        collision_storage: crate::plan::CollisionStorage::Resident,
         locale: Locale::EnUs,
         index_layout: local_index::Layout::Contiguous,
         root_layout: root::Layout::Header50893V2,
@@ -730,5 +731,32 @@ fn v2_verification_needs_no_keys_and_rejects_the_same_artifacts_under_v1_plan() 
     assert_eq!(
         verify(&original, &lab.output(), None).unwrap_err().code,
         "product_plan_mismatch"
+    );
+}
+
+#[test]
+fn v3_verifier_enforces_whole_package_budget_without_scratch_or_keys() {
+    use crate::plan::{CollisionStorage, DiskBudget};
+    let mut plan = db2_plan();
+    plan.components |= Component::Collision.bit();
+    let budget = DiskBudget {
+        raw_bytes: 32,
+        wdt_bytes: 32,
+        cache_bytes: 32,
+        placement_bytes: 32,
+        vmo_bytes: 32,
+        map_bytes: 32,
+        output_bytes: 1,
+    };
+    plan.collision_storage = CollisionStorage::LeasedDiskV1(budget);
+    plan.validate().unwrap();
+    let lab = Lab::new();
+    lab.publish(
+        context(&plan),
+        &[db2_file("SpellCastTimes", empty_db2("SpellCastTimes"))],
+    );
+    assert_eq!(
+        verify(&plan, &lab.output(), None).unwrap_err().code,
+        "package_limit"
     );
 }

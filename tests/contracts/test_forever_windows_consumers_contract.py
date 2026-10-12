@@ -176,7 +176,8 @@ class WindowsConsumersContract(unittest.TestCase):
         self.assertFalse(self.c['upstream_implementation_imported'])
         for crate in ['forever-casc', 'forever-extractor']:
             manifest = read(f'crates/{crate}/Cargo.toml')
-            self.assertIn("[target.'cfg(windows)'.dependencies]\nforever-platform = { path = \"../forever-platform\" }", manifest)
+            scope = 'cfg(windows)' if crate == 'forever-casc' else 'cfg(any(windows, target_os = "linux"))'
+            self.assertIn("[target.'" + scope + "'.dependencies]\nforever-platform = { path = \"../forever-platform\" }", manifest)
         for item in ['complete Windows extraction', 'actual Windows/NTFS acceptance', 'loaded executable identity',
                      'alias-safe output/key-source containment', 'full extractor completion']:
             self.assertIn(item, self.c['not_claimed'])

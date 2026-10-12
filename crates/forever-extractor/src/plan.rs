@@ -4,6 +4,9 @@ use forever_casc::{Locale, local_index, package::Component, root};
 use forever_db2::catalog;
 use std::{collections::BTreeSet, fmt::Write};
 
+mod disk;
+pub use disk::{CollisionStorage, DiskBudget};
+
 pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
 
@@ -74,6 +77,7 @@ pub struct Plan {
     pub index_layout: local_index::Layout,
     pub root_layout: root::Layout,
     pub decryption: Decryption,
+    pub collision_storage: CollisionStorage,
     pub components: u8,
     pub db2: Vec<Entry>,
     pub terrain: Selection,
@@ -86,7 +90,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    /// Parse the complete v1/v2 grammar. Exact re-rendering closes spelling,
+    /// Parse the complete v1/v2/v3 grammar. Exact re-rendering closes spelling,
     /// ordering, whitespace, numeric representation and final-newline aliases.
     pub fn parse(input: &str) -> Result<Self, &'static str> {
         if input.len() > MAX_PLAN_BYTES {
@@ -103,6 +107,7 @@ impl Plan {
         let version = match field(&mut lines, "forever-product")? {
             "1" => 1,
             "2" => 2,
+            "3" => 3,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -129,7 +134,17 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
+            3 => match field(&mut lines, "decryption")? {
+                "disabled" => Decryption::Disabled,
+                "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
+                _ => return Err("product_plan_decryption"),
+            },
             _ => unreachable!("version was validated above"),
+        };
+        let collision_storage = if version == 3 {
+            CollisionStorage::parse(&mut lines)?
+        } else {
+            CollisionStorage::Resident
         };
         let mut components = 0;
         for name in field(&mut lines, "components")?.split(',') {
@@ -169,6 +184,7 @@ impl Plan {
             index_layout,
             root_layout,
             decryption,
+            collision_storage,
             components,
             db2,
             terrain,
@@ -193,6 +209,12 @@ impl Plan {
         }
         if self.components == 0 || self.components & !63 != 0 {
             return Err("product_plan_components");
+        }
+        if let CollisionStorage::LeasedDiskV1(budget) = self.collision_storage {
+            if !self.contains(Component::Collision) {
+                return Err("product_plan_dependencies");
+            }
+            budget.validate()?;
         }
         if self.db2.len() > MAX_DB2_ENTRIES {
             return Err("product_plan_size");
@@ -256,6 +278,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
+            return 3;
+        }
         match self.decryption {
             Decryption::Disabled => 1,
             Decryption::ProvidedSalsa20V1 => 2,
@@ -263,6 +288,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
+            return "forever-product-v3";
+        }
         match self.decryption {
             Decryption::Disabled => "forever-product-v1",
             Decryption::ProvidedSalsa20V1 => "forever-product-v2",
@@ -292,12 +320,14 @@ impl Plan {
             .map(Component::name)
             .collect::<Vec<_>>()
             .join(",");
-        let decryption = match self.decryption {
-            Decryption::Disabled => "",
-            Decryption::ProvidedSalsa20V1 => "decryption\tprovided-salsa20-v1\n",
+        let decryption = match (self.version(), self.decryption) {
+            (3, Decryption::Disabled) => "decryption\tdisabled\n",
+            (_, Decryption::Disabled) => "",
+            (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
+        let collision_storage = self.collision_storage.render();
         let mut output = format!(
-            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{decryption}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
+            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{decryption}{collision_storage}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
             self.version(),
             self.build,
             self.locale.name(),
@@ -349,3 +379,6 @@ fn boolean(value: &str) -> Result<bool, &'static str> {
 mod keys_tests;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod disk_tests;

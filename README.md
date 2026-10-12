@@ -441,6 +441,7 @@ marked otherwise:
 
 - [Development environment](docs/development-environment.md)
 - [Forever Rust metadata preview](docs/forever-rust-foundation.md) — separate from the legacy suite
+- [Explicit Linux collision disk product plan](docs/forever-product-disk.md) — v3 capability; full real-client/runtime acceptance remains open
 - [Standalone C++ suite](docs/standalone-cpp-suite.md)
 - [Output conformance harness](docs/conformance-harness.md)
 - [Versioned compatibility and network contract](docs/compatibility-contract.md)

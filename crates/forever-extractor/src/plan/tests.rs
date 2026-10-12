@@ -15,6 +15,7 @@ fn subset() -> Plan {
         index_layout: local_index::Layout::Contiguous,
         root_layout: root::Layout::Header50893V2,
         decryption: Decryption::Disabled,
+        collision_storage: CollisionStorage::Resident,
         components: Component::Db2.bit(),
         db2: vec![entry("ChrClasses")],
         terrain: Selection::None,

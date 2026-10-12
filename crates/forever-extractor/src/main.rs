@@ -3,7 +3,10 @@
 use forever_casc::integrity;
 #[cfg(target_os = "linux")]
 use forever_casc::package::Context;
-use forever_extractor::{Error, input, plan::Plan};
+use forever_extractor::{
+    Error, input,
+    plan::{CollisionStorage, Plan},
+};
 use std::{collections::BTreeMap, path::PathBuf};
 
 fn main() {
@@ -26,6 +29,8 @@ fn main() {
                 || error.code == "product_platform"
                 || error.code == "product_keys_required"
                 || error.code == "product_keys_forbidden"
+                || error.code == "product_scratch_required"
+                || error.code == "product_scratch_forbidden"
             {
                 2
             } else {
@@ -40,7 +45,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z or v2 provided-salsa20-v1 plan. V2 client commands require --keys, v1 forbids it; plan-only inspection and verification need no keys. Linux product IO. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, or v3 explicit leased disk-world collision plan. V2 and supplied-key v3 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3 extract/resume require --scratch; v1/v2 forbid it. Inspection and verification take no scratch. Linux product IO. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
     }
     if !["inspect", "extract", "resume", "verify"].contains(&command) || args.len() % 2 != 1 {
         return Err("product_usage".into());
@@ -48,7 +53,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
         "verify" => &["--plan", "--output", "--expect-context"][..],
-        _ => &["--plan", "--client", "--output", "--keys"][..],
+        _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
     };
     let mut options = BTreeMap::new();
     for pair in args[1..].as_chunks::<2>().0 {
@@ -76,6 +81,15 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     } else if command == "verify" {
         path("--output")?;
     }
+    if matches!(command, "extract" | "resume") {
+        match (plan.collision_storage, options.contains_key("--scratch")) {
+            (CollisionStorage::Resident, true) => return Err("product_scratch_forbidden".into()),
+            (CollisionStorage::LeasedDiskV1(_), false) => {
+                return Err("product_scratch_required".into());
+            }
+            _ => {}
+        }
+    }
     if options.contains_key("--keys") && !plan.requires_keys() {
         return Err("product_keys_forbidden".into());
     }
@@ -86,10 +100,15 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     {
         return Err("product_keys_required".into());
     }
-    let capability = if plan.requires_keys() {
-        ",\"decryption\":\"provided-salsa20-v1\""
-    } else {
-        ""
+    let capability = match (plan.version(), plan.requires_keys()) {
+        (3, true) => {
+            ",\"decryption\":\"provided-salsa20-v1\",\"collision_storage\":\"linux-leased-append-disk-world-v1\""
+        }
+        (3, false) => {
+            ",\"decryption\":\"disabled\",\"collision_storage\":\"linux-leased-append-disk-world-v1\""
+        }
+        (_, true) => ",\"decryption\":\"provided-salsa20-v1\"",
+        (_, false) => "",
     };
     if command == "inspect" && !options.contains_key("--client") {
         if options.contains_key("--keys") {
@@ -147,22 +166,34 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 context.json()
             ));
         }
-        let summary = match keys {
-            Some(keys) => driver::extract_with_keys(
+        let summary = if let Some(scratch) = options.get("--scratch") {
+            driver::extract_disk(
                 &plan,
                 path("--client")?,
                 path("--output")?,
                 producer,
                 command == "resume",
                 keys,
-            ),
-            None => driver::extract(
-                &plan,
-                path("--client")?,
-                path("--output")?,
-                producer,
-                command == "resume",
-            ),
+                scratch,
+            )
+        } else {
+            match keys {
+                Some(keys) => driver::extract_with_keys(
+                    &plan,
+                    path("--client")?,
+                    path("--output")?,
+                    producer,
+                    command == "resume",
+                    keys,
+                ),
+                None => driver::extract(
+                    &plan,
+                    path("--client")?,
+                    path("--output")?,
+                    producer,
+                    command == "resume",
+                ),
+            }
         }?;
         Ok(format!(
             "{{\"contract\":\"{}\",\"status\":\"selected_producers_complete\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",

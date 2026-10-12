@@ -1556,3 +1556,35 @@ uses resident assembly. Physical-disk preflight, publication/resume integration,
 encrypted mandatory complete inputs, real geometry/runtime and full distribution
 remain gates. The extractor is not complete. See
 `docs/forever-collision-leased-archive.md` for hashes and retained history.
+
+
+## Explicit product collision disk source profile v9 (2026-10-12)
+
+The mandatory corresponding-source profile is now
+`forever-seven-crate-linux-product-collision-disk-source-v9`. It adds the explicit
+product plan v3 parser, Linux GNU x86_64 borrowed-directory space observation,
+guarded disk driver, CLI integration, synthetic checks, contract and scope
+documentation. Seven crates, nine lock packages and two registry archives remain;
+the extractor additionally has a local Linux platform edge. Historical v7/v8
+profiles and their frozen verifiers retain their original claims.
+
+The new plan selects `linux-leased-append-disk-world-v1`, seven downward byte
+budgets and an explicit `--scratch` for extract/resume. Six fresh private leased
+append owners finish the checked package before common product collision writes.
+Unfinished collision resume uses a new scratch namespace; no archive adoption or
+cleanup is implied. Physical preflight aggregates same-device allowances, but is
+not an atomic reservation or capacity guarantee. Common Run live capacity is
+reserved without raising conversion memory ceilings. Resident v1/v2 stays default.
+
+Executable validation passes 2,643 ordinary Linux tests per debug/release
+profile (41 targets, 26 ignored), four explicit ignored corpora per profile,
+49 existing CLI cases per profile, all-target Linux/GNU-Windows Clippy, both
+GNU-Windows compile profiles and scoped formatting. Final source association
+reruns 187 contract and 112 distribution/sealer checks plus one added
+cross-volume CLI case per profile against the exact full-run product binaries.
+All Rust/Cargo and existing CLI-test source is unchanged from the full-run freeze.
+This is synthetic GNU/Linux product/source acceptance; no new bundle,
+real-client/native acceptance, Windows product or RustyCore runtime acceptance
+is claimed. Complete encrypted inputs, real geometry, runtime/server integration
+and reproducible distribution remain gates. The extractor is not complete. See
+`docs/forever-product-disk.md` and the versioned disk contract.

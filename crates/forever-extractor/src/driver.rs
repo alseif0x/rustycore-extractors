@@ -2,7 +2,7 @@
 // Authored 2026-10-11: serial Rust-local producers behind the common package.
 use crate::{
     Error,
-    plan::{Plan, Selection},
+    plan::{CollisionStorage, Plan, Selection},
 };
 use forever_casc::{
     cameras,
@@ -15,6 +15,8 @@ use forever_casc::{
 use forever_db2::{CharacterTable, DecodedTable};
 use forever_navigation::{inventory, models, pipeline, recast, tilebuilder::Coordinate};
 use std::path::Path;
+
+mod disk;
 
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
@@ -99,7 +101,7 @@ pub fn extract(
     producer: [u8; 32],
     resume: bool,
 ) -> Result<package::Summary, Error> {
-    extract_inner(plan, client, output, producer, resume, None)
+    extract_inner(plan, client, output, producer, resume, None, None)
 }
 
 /// The key input is explicitly loaded once and its source file is protected
@@ -112,7 +114,23 @@ pub fn extract_with_keys(
     resume: bool,
     keys: crate::input::SuppliedKeys,
 ) -> Result<package::Summary, Error> {
-    extract_inner(plan, client, output, producer, resume, Some(keys))
+    extract_inner(plan, client, output, producer, resume, Some(keys), None)
+}
+
+/// Explicit Linux leased disk-world collision extraction. Scratch is a private
+/// operator-owned directory; each attempt retains a new exclusive namespace.
+/// Plan budgets, source/output boundaries and physical space admit before client
+/// acquisition or common package creation. Resume reruns unfinished producers.
+pub fn extract_disk(
+    plan: &Plan,
+    client: &Path,
+    output: &Path,
+    producer: [u8; 32],
+    resume: bool,
+    keys: Option<crate::input::SuppliedKeys>,
+    scratch: &Path,
+) -> Result<package::Summary, Error> {
+    extract_inner(plan, client, output, producer, resume, keys, Some(scratch))
 }
 
 fn extract_inner(
@@ -122,7 +140,24 @@ fn extract_inner(
     producer: [u8; 32],
     resume: bool,
     keys: Option<crate::input::SuppliedKeys>,
+    scratch: Option<&Path>,
 ) -> Result<package::Summary, Error> {
+    plan.validate()?;
+    let preflight = match (plan.collision_storage, scratch) {
+        (CollisionStorage::Resident, None) => None,
+        (CollisionStorage::Resident, Some(_)) => return Err("product_scratch_forbidden".into()),
+        (CollisionStorage::LeasedDiskV1(_), None) => return Err("product_scratch_required".into()),
+        (CollisionStorage::LeasedDiskV1(budget), Some(scratch)) => {
+            validate_keys(plan, keys.is_some())?;
+            Some(disk::Preflight::open(
+                budget,
+                scratch,
+                output,
+                client,
+                keys.as_ref().map(|keys| keys.source.as_path()),
+            )?)
+        }
+    };
     let (mut store, key_source) = match keys {
         Some(keys) => (
             open_with_keys(plan, client, keys.keyring)?,
@@ -142,12 +177,18 @@ fn extract_inner(
         key_source.as_deref().unwrap_or(client),
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
+    let mut package_limits = package::Limits::default();
+    if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
+        // Physical output admission covers all selected producers, not only
+        // vmaps. The canonical v3 output budget also bounds common replay.
+        package_limits.total_bytes = budget.output_bytes;
+    }
     let run = if resume {
-        Run::resume(output, context, protected, Default::default())?
+        Run::resume(output, context, protected, package_limits)?
     } else {
-        Run::create(output, context, protected, Default::default())?
+        Run::create(output, context, protected, package_limits)?
     };
-    execute(plan, &mut store, output, run)
+    execute(plan, &mut store, output, run, preflight)
 }
 
 #[cfg(test)]
@@ -158,6 +199,7 @@ fn execute(
     store: &mut LocalStore,
     output: &Path,
     mut run: Run,
+    preflight: Option<disk::Preflight>,
 ) -> Result<package::Summary, Error> {
     let completed = run.completed_components()?;
     for component in Component::ALL {
@@ -169,7 +211,10 @@ fn execute(
             Component::GameTables => game_tables(store, &mut run),
             Component::Cameras => cameras(store, &mut run),
             Component::Terrain => maps(plan, store, &mut run),
-            Component::Collision => vmaps(store, &mut run),
+            Component::Collision => match &preflight {
+                Some(disk) => disk.run(store, &mut run),
+                None => vmaps(store, &mut run),
+            },
             Component::Navigation => mmaps(plan, store, output, &mut run),
         };
         result.map_err(|mut error| {
@@ -179,12 +224,18 @@ fn execute(
         store
             .verify_unchanged()
             .map_err(|e| Error::from(e.code()))?;
+        if let Some(disk) = &preflight {
+            disk.verify_unchanged()?;
+        }
         // Each producer completed, including the validated empty-world case.
         run.finish_component(component)?;
     }
     store
         .verify_unchanged()
         .map_err(|e| Error::from(e.code()))?;
+    if let Some(disk) = &preflight {
+        disk.verify_unchanged()?;
+    }
     Ok(run.finish()?)
 }
 
@@ -440,4 +491,90 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
         Cause::Sink(error) => error,
     })?;
     Ok(())
+}
+
+#[cfg(test)]
+mod disk_admission_tests {
+    use super::*;
+    use crate::plan::DiskBudget;
+
+    fn plan() -> Plan {
+        let mut plan = Plan::parse("forever-product\t1\nbuild\t70205\nlocale\tenUS\nindex\tcontiguous\nroot\theader-50893-v2\ncomponents\tvmaps\nterrain\tnone\npack\ttrue\nnavigation\tnone\nbig-base-unit\tfalse\nskip-liquids\tfalse\nmaximum-slope\t55\nnon-steep-slope\t55\n").unwrap();
+        plan.collision_storage = CollisionStorage::LeasedDiskV1(DiskBudget {
+            raw_bytes: 1024,
+            wdt_bytes: 1024,
+            cache_bytes: 1024,
+            placement_bytes: 1024,
+            vmo_bytes: 1024,
+            map_bytes: 1024,
+            output_bytes: 1024,
+        });
+        plan
+    }
+    #[test]
+    fn original_extract_entries_reject_disk_without_scratch_before_client_io() {
+        let client = Path::new("/nonexistent-authored-disk-product-client");
+        let output = Path::new("/nonexistent-authored-disk-product-output");
+        assert_eq!(
+            extract(&plan(), client, output, [0; 32], false)
+                .unwrap_err()
+                .code,
+            "product_scratch_required"
+        );
+        let keys = crate::input::SuppliedKeys {
+            keyring: forever_casc::keys::Keyring::parse(
+                b"forever-tact-keys\t1\n0000000000000000\t00000000000000000000000000000000\n",
+            )
+            .unwrap(),
+            source: Path::new("/nonexistent-authored-disk-product-keys").to_owned(),
+        };
+        assert_eq!(
+            extract_with_keys(&plan(), client, output, [0; 32], false, keys)
+                .unwrap_err()
+                .code,
+            "product_scratch_required"
+        );
+    }
+    #[test]
+    fn explicit_disk_entry_rejects_resident_before_client_io() {
+        let mut plan = plan();
+        plan.collision_storage = CollisionStorage::Resident;
+        assert_eq!(
+            extract_disk(
+                &plan,
+                Path::new("/nonexistent-authored-client"),
+                Path::new("/nonexistent-authored-output"),
+                [0; 32],
+                false,
+                None,
+                Path::new("/nonexistent-authored-scratch")
+            )
+            .unwrap_err()
+            .code,
+            "product_scratch_forbidden"
+        );
+    }
+    #[test]
+    fn malformed_manual_budget_rejects_before_any_paths_are_opened() {
+        let mut plan = plan();
+        let CollisionStorage::LeasedDiskV1(mut budget) = plan.collision_storage else {
+            unreachable!()
+        };
+        budget.output_bytes = 0;
+        plan.collision_storage = CollisionStorage::LeasedDiskV1(budget);
+        assert_eq!(
+            extract_disk(
+                &plan,
+                Path::new("/nonexistent-authored-client"),
+                Path::new("/nonexistent-authored-output"),
+                [0; 32],
+                false,
+                None,
+                Path::new("/nonexistent-authored-scratch")
+            )
+            .unwrap_err()
+            .code,
+            "product_plan_disk_budget"
+        );
+    }
 }
