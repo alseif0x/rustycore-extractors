@@ -1457,3 +1457,34 @@ ceilings and the v7 corresponding-source profile remain unchanged. Scalable
 versioned policies, cross-volume support, publication/resume, mandatory encrypted
 real inputs, real geometry/runtime and distribution remain goal gates. No full
 extractor completion, server activation, merge or release is claimed.
+
+
+### Explicit captured-volume collision storage (2026-10-12)
+
+Linux Spool now has an explicit `Profile::CapturedVolumesV2` capability through
+`create_with_profile`; original `create` always keeps `SameMountV1`. V2 permits
+separately captured source/private-output mounts. Every source/key/output
+ancestor retains its own held/named object identity and mount ID; output root /
+records remain bound to the captured destination mount. All original path,
+private-parent, alias, exclusive-write, metadata/hash/EOF, sticky failure and
+independent final guards remain exact. No mounts/copies/relocation occur.
+All protected inputs still require explicit caller declaration; directory
+identity does not authenticate membership or a live-client atomic snapshot.
+
+All resource ceilings stay downward-only at their original v1 maxima. Final
+source passes 40 Spool (nine new) and 39 closed-package tests per Linux profile,
+plus an explicitly executed second-filesystem corpus per profile: four complete
+toy-CASC packages match resident Rust bytes/inventory/facts and one nearer-parent
+Association fails exactly. All six repositories use v2; default v1 rejects before
+namespace creation. Clippy, three scoped format checks, 171 source/state and 104
+distribution/sealer checks pass with ten strict IPC-only traces. Exact evidence
+and the retained initial unused-argument Clippy failure are in
+docs/forever-collision-captured-volumes.md.
+
+The preceding 2fe8cfb passes hosted Rust/C++ CI with Linux 2,555 tests/profile and
+Windows debug 2,116; observed result-summary counts differ and are recorded in
+the companion. No final full-workspace/full-collision local, new native/client,
+product activation or release claim is added. Scalable versioned cumulative
+limits, product disk/publication/resume integration, mandatory encrypted real
+inputs, geometry/runtime and distribution remain gates. The product/default
+CLI and v7 corresponding-source profile retain their contracts.

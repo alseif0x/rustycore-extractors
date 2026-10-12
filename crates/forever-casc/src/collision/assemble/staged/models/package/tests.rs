@@ -10,7 +10,7 @@ use crate::collision::{
 use crate::local_store::tests::{CollisionFile, CollisionFixture};
 use std::{
     fs,
-    os::unix::fs::{DirBuilderExt, PermissionsExt},
+    os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -364,6 +364,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 static PRIVATE_FIXTURE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 struct Private {
     base: PathBuf,
+    profile: spool::Profile,
     _lease: std::sync::MutexGuard<'static, ()>,
 }
 impl Private {
@@ -377,16 +378,51 @@ impl Private {
         fs::DirBuilder::new().mode(0o700).create(&base).unwrap();
         Self {
             base,
+            profile: spool::Profile::SameMountV1,
+            _lease: lease,
+        }
+    }
+    fn captured_volumes(parent: &Path, f: &CollisionFixture) -> Self {
+        let lease = PRIVATE_FIXTURE.lock().unwrap();
+        assert!(parent.is_absolute());
+        assert_ne!(
+            fs::metadata(parent).unwrap().dev(),
+            fs::metadata(f.path()).unwrap().dev()
+        );
+        let base = parent.join(format!(
+            "closed-cross-volume-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::DirBuilder::new().mode(0o700).create(&base).unwrap();
+        // The default remains strict and rejects before namespace creation.
+        let rejected = base.join("v1-must-reject");
+        assert_eq!(
+            Spool::create(
+                &rejected,
+                ProtectedInputs::capture(f.path(), &[]).unwrap(),
+                SpoolLimits::default()
+            )
+            .err(),
+            Some(payload::Error::Mount)
+        );
+        assert!(!rejected.exists());
+        Self {
+            base,
+            profile: spool::Profile::CapturedVolumesV2,
             _lease: lease,
         }
     }
     fn spool(&self, f: &CollisionFixture, name: &str, l: SpoolLimits) -> Spool {
-        Spool::create(
+        let spool = Spool::create_with_profile(
             &self.base.join(name),
             ProtectedInputs::capture(f.path(), &[]).unwrap(),
             l,
+            self.profile,
         )
-        .unwrap()
+        .unwrap();
+        assert_eq!(spool.profile(), self.profile);
+        spool
     }
 }
 impl Drop for Private {
@@ -448,7 +484,14 @@ fn old(f: &CollisionFixture) -> Result<resident::Completed, resident::Error> {
 }
 fn compare(f: &CollisionFixture) -> (Completed, Private, resident::Completed) {
     let expected = old(f).unwrap();
-    let (mut c, p) = perform(f, Limits::default()).unwrap();
+    let (c, p) = perform(f, Limits::default()).unwrap();
+    compare_completed(c, p, expected)
+}
+fn compare_completed(
+    mut c: Completed,
+    p: Private,
+    expected: resident::Completed,
+) -> (Completed, Private, resident::Completed) {
     let want: Vec<_> = expected
         .artifacts()
         .map(|a| (a.name().to_string(), a.bytes().to_vec()))
@@ -1289,4 +1332,123 @@ fn sixteen_maps_stream_more_artifact_bytes_than_the_active_headroom() {
     assert!(c.stats().unwrap().peak_admitted_bytes <= cap);
     assert_eq!(c.repository.stats().unwrap().records, 16);
     c.verify_unchanged().unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit RCE_SPOOL_CROSS_VOLUME_PARENT on a second mounted filesystem"]
+fn explicit_cross_volume_closed_package_matches_resident_rust() {
+    let parent = PathBuf::from(
+        std::env::var_os("RCE_SPOOL_CROSS_VOLUME_PARENT")
+            .expect("explicit second-volume private parent required"),
+    );
+    let mut total_files = 0usize;
+    let mut total_bytes = 0usize;
+    for case in 0..4 {
+        let mut input = match case {
+            0 => files(&[]),
+            1 => files(&[(1, 101, -1)]),
+            2 => files(&[(2, 102, -1), (1, 101, -1)]),
+            _ => files(&[(3, 103, 2), (2, 102, 1), (1, 101, -1)]),
+        };
+        match case {
+            0 => {}
+            1 => {
+                input[0].2 = gameobject_db2(&[(1, 201), (2, 201), (3, 0), (4, 203)], &[]);
+                let rows = [m2_adt(201, 42)[8..].to_vec(), m2_adt(202, 42)[8..].to_vec()].concat();
+                input.extend([
+                    (101, None, wdt(None, Some(111))),
+                    (111, None, chunk(b"MDDF", &rows)),
+                    (201, None, m2(true)),
+                    (202, None, m2(true)),
+                    (203, None, b"BLP2texture".to_vec()),
+                ]);
+            }
+            2 => {
+                input[0].2 = gameobject_db2(&[(1, 301)], &[]);
+                input.extend([
+                    (101, None, wdt(Some(301), Some(111))),
+                    (102, None, wdt(Some(303), None)),
+                    (111, None, wmo_adt(303, 42)),
+                    (301, None, wmo_root(302, Some(201))),
+                    (302, None, wmo_group(true, true, true)),
+                    (303, None, wmo_root(304, None)),
+                    (304, None, wmo_group(true, false, true)),
+                    (201, None, m2(true)),
+                ]);
+            }
+            _ => input.extend([
+                (101, None, wdt(None, Some(111))),
+                (102, None, wdt(None, None)),
+                (103, None, wdt(None, None)),
+                (111, None, m2_adt(201, 42)),
+                (201, None, m2(true)),
+            ]),
+        }
+        let f = CollisionFixture::new(&input);
+        let expected = old(&f).unwrap();
+        let p = Private::captured_volumes(&parent, &f);
+        let c = assemble(
+            prepared(&f, &p),
+            p.spool(&f, "maps", SpoolLimits::default()),
+            Limits::default(),
+        )
+        .unwrap();
+        let (mut c, p, _) = compare_completed(c, p, expected);
+        let stats = c.stats().unwrap();
+        total_files += stats.files;
+        total_bytes += stats.output_bytes;
+        assert_eq!(fs::read_dir(&p.base).unwrap().count(), 6);
+        assert_eq!(c.repository.profile(), spool::Profile::CapturedVolumesV2);
+        if case == 1 {
+            assert_eq!((stats.selected_models, stats.unique_spawns), (2, 1));
+        }
+        if case == 2 {
+            assert!(stats.selected_models >= 3);
+        }
+        if case == 3 {
+            assert!(stats.parent_only_tiles > 0);
+        }
+        // Complete recorded repository identity remains enforced across volumes.
+        let map_file = p.base.join("maps/00000000.payload");
+        if map_file.exists() {
+            mutate(&map_file);
+            assert_eq!(
+                c.verify_unchanged().unwrap_err().guards.maps,
+                Some(payload::Error::Changed)
+            );
+        }
+    }
+    // No usable package can escape a fatal nearer-parent association mismatch.
+    let mut input = files(&[(1, 101, -1), (2, 102, 1), (3, 103, 2)]);
+    input.extend([
+        (101, None, wdt_cells(&[(0, 0, 111)])),
+        (102, None, wdt_cells(&[(1, 0, 112)])),
+        (103, None, wdt(None, None)),
+        (111, None, m2_adt(201, 42)),
+        (112, None, m2_adt(202, 43)),
+        (201, None, m2(true)),
+        (202, None, m2(true)),
+    ]);
+    let f = CollisionFixture::new(&input);
+    assert!(matches!(
+        old(&f),
+        Err(resident::Error::Assembly(assembly::Error::Association))
+    ));
+    let p = Private::captured_volumes(&parent, &f);
+    let e = assemble(
+        prepared(&f, &p),
+        p.spool(&f, "maps", SpoolLimits::default()),
+        Limits::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(
+        e.cause,
+        Cause::Kind(Kind::Assembly(assembly::Error::Association))
+    );
+    assert_eq!(fs::read_dir(&p.base).unwrap().count(), 6);
+    assert!(total_files > 10 && total_bytes > 1000);
+    println!(
+        "captured-volume corpus: 4 exact complete packages, 1 exact terminal Association; {total_files} files, {total_bytes} bytes"
+    );
 }

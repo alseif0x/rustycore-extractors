@@ -87,6 +87,35 @@ fn same_mount(source: u64, destination: u64) -> Result<(), Error> {
     }
 }
 
+/// Storage capability only: output formats, source routing and all resource
+/// ceilings are unchanged. The default constructor retains SameMountV1.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Profile {
+    #[default]
+    SameMountV1,
+    /// Separately held source/key/destination directory chains may cross mounted
+    /// volumes. Every captured node keeps its own mount ID and object identity;
+    /// created namespaces and records must stay on their destination mount.
+    CapturedVolumesV2,
+}
+impl Profile {
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::SameMountV1 => "linux-private-collision-spool-same-mount-v1",
+            Self::CapturedVolumesV2 => "linux-private-collision-spool-captured-volumes-v2",
+        }
+    }
+    fn admit_mounts(self, source: u64, destination: u64) -> Result<(), Error> {
+        if source == 0 || destination == 0 {
+            return Err(Error::Mount);
+        }
+        match self {
+            Self::SameMountV1 => same_mount(source, destination),
+            Self::CapturedVolumesV2 => Ok(()),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limits {
     pub max_records: usize,
@@ -354,6 +383,7 @@ pub struct Stats {
 /// Exclusive newly-created namespace beneath an existing private (0700) parent.
 /// Files use ordinal names and 0400 after write. No Drop cleanup or resume.
 pub struct Spool {
+    profile: Profile,
     root: Chain,
     protected: ProtectedInputs,
     entries: Vec<Entry>,
@@ -366,6 +396,17 @@ pub struct Spool {
 }
 impl Spool {
     pub fn create(path: &Path, protected: ProtectedInputs, limits: Limits) -> Result<Self, Error> {
+        Self::create_with_profile(path, protected, limits, Profile::SameMountV1)
+    }
+    /// Explicit opt-in to separately captured volumes. ALL protected inputs are
+    /// still required, and none may contain/alias the new namespace. No copy,
+    /// relocation, mount operation, cleanup, publication or resume is performed.
+    pub fn create_with_profile(
+        path: &Path,
+        protected: ProtectedInputs,
+        limits: Limits,
+        profile: Profile,
+    ) -> Result<Self, Error> {
         limits.validate()?;
         let leaf = path.file_name().ok_or(Error::Path)?;
         if !path.is_absolute()
@@ -385,7 +426,7 @@ impl Spool {
             return Err(Error::Privacy);
         }
         protected.check()?;
-        same_mount(
+        profile.admit_mounts(
             protected.chains.first().ok_or(Error::State)?.leaf().mount,
             parent.leaf().mount,
         )?;
@@ -429,6 +470,7 @@ impl Spool {
             return Err(Error::Privacy);
         }
         let mut out = Self {
+            profile,
             root,
             protected,
             entries: Vec::new(),
@@ -444,6 +486,9 @@ impl Spool {
         }
         out.verify_unchanged()?;
         Ok(out)
+    }
+    pub const fn profile(&self) -> Profile {
+        self.profile
     }
     pub const fn limits(&self) -> Limits {
         self.limits

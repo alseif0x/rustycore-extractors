@@ -546,3 +546,285 @@ fn record_mount_mismatch_rejects_before_reload_callback() {
     assert!(!invoked);
     assert_eq!(s.stats().unwrap().reload_bytes, 0);
 }
+
+fn v2(p: &Paths, limits: Limits) -> Spool {
+    Spool::create_with_profile(
+        &p.path,
+        ProtectedInputs::capture(&p.source, &[]).unwrap(),
+        limits,
+        Profile::CapturedVolumesV2,
+    )
+    .unwrap()
+}
+#[test]
+fn explicit_volume_profiles_preserve_default_and_nonzero_mount_admission() {
+    assert_eq!(Profile::default(), Profile::SameMountV1);
+    assert_eq!(
+        Profile::SameMountV1.id(),
+        "linux-private-collision-spool-same-mount-v1"
+    );
+    assert_eq!(
+        Profile::CapturedVolumesV2.id(),
+        "linux-private-collision-spool-captured-volumes-v2"
+    );
+    for profile in [Profile::SameMountV1, Profile::CapturedVolumesV2] {
+        assert_eq!(profile.admit_mounts(0, 1), Err(Error::Mount));
+        assert_eq!(profile.admit_mounts(1, 0), Err(Error::Mount));
+        assert_eq!(profile.admit_mounts(7, 7), Ok(()));
+    }
+    assert_eq!(Profile::SameMountV1.admit_mounts(7, 8), Err(Error::Mount));
+    assert_eq!(Profile::CapturedVolumesV2.admit_mounts(7, 8), Ok(()));
+    let p = Paths::new();
+    assert_eq!(p.create(Limits::default()).profile(), Profile::SameMountV1);
+}
+#[test]
+fn captured_volumes_same_mount_keeps_private_complete_bytes_and_limits() {
+    let p = Paths::new();
+    let limits = Limits::default();
+    let mut s = v2(&p, limits);
+    assert_eq!(s.profile(), Profile::CapturedVolumesV2);
+    assert_eq!(s.limits(), limits);
+    let r = write(&mut s, b"complete-synthetic-body");
+    assert_eq!(
+        s.with_record(r, 23, |b| Ok(b.to_vec())).unwrap(),
+        b"complete-synthetic-body"
+    );
+    assert_eq!(s.entries[r.0].mount, s.root.leaf().mount);
+    assert_eq!(s.root.leaf().mount, s.protected.chains[0].leaf().mount);
+    assert_eq!(
+        fs::metadata(p.path.join("00000000.payload"))
+            .unwrap()
+            .mode()
+            & 0o7777,
+        0o400
+    );
+    s.verify_unchanged().unwrap();
+    drop(s);
+    assert!(p.path.join("00000000.payload").exists());
+}
+#[test]
+fn captured_volumes_never_raise_any_v1_resource_ceiling() {
+    for axis in 0..6 {
+        let p = Paths::new();
+        let mut limits = Limits::default();
+        match axis {
+            0 => limits.max_records += 1,
+            1 => limits.max_disk_bytes += 1,
+            2 => limits.max_active_bytes += 1,
+            3 => limits.max_descriptor_bytes += 1,
+            4 => limits.max_reloads += 1,
+            _ => limits.max_reload_bytes += 1,
+        }
+        assert_eq!(
+            Spool::create_with_profile(
+                &p.path,
+                ProtectedInputs::capture(&p.source, &[]).unwrap(),
+                limits,
+                Profile::CapturedVolumesV2
+            )
+            .err(),
+            Some(Error::InvalidLimits)
+        );
+        assert!(!p.path.exists());
+    }
+}
+#[test]
+fn captured_volumes_reject_containment_alias_symlink_privacy_and_reuse() {
+    for axis in 0..5 {
+        let p = Paths::new();
+        let (path, error) = match axis {
+            0 => (p.source.join("inside"), Error::Alias),
+            1 => {
+                let alias = p.base.join("alias");
+                std::os::unix::fs::symlink(&p.parent, &alias).unwrap();
+                (alias.join("new"), Error::Path)
+            }
+            2 => {
+                fs::set_permissions(&p.parent, Permissions::from_mode(0o755)).unwrap();
+                (p.path.clone(), Error::Privacy)
+            }
+            3 => {
+                let old = v2(&p, Limits::default());
+                drop(old);
+                (p.path.clone(), Error::Exists)
+            }
+            _ => (p.parent.join("..").join("bad"), Error::Path),
+        };
+        assert_eq!(
+            Spool::create_with_profile(
+                &path,
+                ProtectedInputs::capture(&p.source, &[]).unwrap(),
+                Limits::default(),
+                Profile::CapturedVolumesV2
+            )
+            .err(),
+            Some(error)
+        );
+    }
+}
+#[test]
+fn captured_volumes_recheck_each_input_after_capture_before_creation() {
+    for axis in 0..3 {
+        let p = Paths::new();
+        let key = p.base.join("synthetic-protected-input");
+        fs::write(&key, b"synthetic-not-key-data").unwrap();
+        let mut inputs = ProtectedInputs::capture(&p.source, &[&key]).unwrap();
+        match axis {
+            0 => {
+                fs::rename(&p.source, p.base.join("old-source")).unwrap();
+                DirBuilder::new().mode(0o700).create(&p.source).unwrap();
+            }
+            1 => fs::write(&key, b"changed-synthetic-input").unwrap(),
+            _ => inputs.chains[1].nodes.last_mut().unwrap().mount += 1,
+        }
+        assert_eq!(
+            Spool::create_with_profile(
+                &p.path,
+                inputs,
+                Limits::default(),
+                Profile::CapturedVolumesV2
+            )
+            .err(),
+            Some(Error::Changed)
+        );
+        assert!(!p.path.exists());
+    }
+}
+#[test]
+fn captured_volumes_each_retained_chain_mount_stays_bound() {
+    // Includes every ancestor of destination, source and supplied key, not just
+    // the leaf volumes admitted by the explicit profile.
+    let probe = Paths::new();
+    let key = probe.base.join("synthetic-input");
+    fs::write(&key, b"synthetic-not-a-key").unwrap();
+    let s = Spool::create_with_profile(
+        &probe.path,
+        ProtectedInputs::capture(&probe.source, &[&key]).unwrap(),
+        Limits::default(),
+        Profile::CapturedVolumesV2,
+    )
+    .unwrap();
+    let counts = [
+        s.root.nodes.len(),
+        s.protected.chains[0].nodes.len(),
+        s.protected.chains[1].nodes.len(),
+    ];
+    drop(s);
+    drop(probe);
+    for (group, &count) in counts.iter().enumerate() {
+        for index in 0..count {
+            let p = Paths::new();
+            let key = p.base.join("synthetic-input");
+            fs::write(&key, b"synthetic-not-a-key").unwrap();
+            let mut s = Spool::create_with_profile(
+                &p.path,
+                ProtectedInputs::capture(&p.source, &[&key]).unwrap(),
+                Limits::default(),
+                Profile::CapturedVolumesV2,
+            )
+            .unwrap();
+            let nodes = if group == 0 {
+                &mut s.root.nodes
+            } else {
+                &mut s.protected.chains[group - 1].nodes
+            };
+            nodes[index].mount += 1;
+            let mut invoked = false;
+            assert_eq!(
+                s.write(3, |w| {
+                    invoked = true;
+                    w.bytes(b"abc")
+                })
+                .err(),
+                Some(Error::Changed)
+            );
+            assert!(!invoked);
+            assert_eq!(s.stats().unwrap().disk_bytes, 0);
+            assert_eq!(fs::read_dir(&p.path).unwrap().count(), 0);
+        }
+    }
+}
+#[test]
+fn captured_volumes_record_mount_is_still_destination_bound() {
+    let p = Paths::new();
+    let mut s = v2(&p, Limits::default());
+    let r = write(&mut s, b"abc");
+    s.entries[r.0].mount += 1;
+    let mut invoked = false;
+    assert_eq!(
+        s.with_record(r, 3, |_| {
+            invoked = true;
+            Ok(())
+        })
+        .err(),
+        Some(Error::Changed)
+    );
+    assert!(!invoked);
+    assert_eq!(s.stats().unwrap().reload_bytes, 0);
+    assert_eq!(s.verify_unchanged(), Err(Error::Changed));
+}
+#[test]
+fn captured_volumes_callback_failures_preserve_full_guard_checks() {
+    for axis in 0..6 {
+        let p = Paths::new();
+        let key = p.base.join("synthetic-input");
+        fs::write(&key, b"synthetic-not-a-key").unwrap();
+        let mut s = Spool::create_with_profile(
+            &p.path,
+            ProtectedInputs::capture(&p.source, &[&key]).unwrap(),
+            Limits::default(),
+            Profile::CapturedVolumesV2,
+        )
+        .unwrap();
+        let r = write(&mut s, b"abc");
+        let body = p.path.join("00000000.payload");
+        assert_eq!(
+            s.with_record(r, 3, |_| {
+                match axis {
+                    0 => {
+                        fs::rename(&body, p.parent.join("old")).unwrap();
+                        fs::write(&body, b"abc").unwrap();
+                    }
+                    1 => {
+                        fs::set_permissions(&body, Permissions::from_mode(0o600)).unwrap();
+                        fs::write(&body, b"abd").unwrap();
+                    }
+                    2 => fs::hard_link(&body, p.parent.join("alias")).unwrap(),
+                    3 => fs::write(&key, b"changed-synthetic-input").unwrap(),
+                    4 => fs::set_permissions(&p.path, Permissions::from_mode(0o755)).unwrap(),
+                    _ => {
+                        fs::rename(&p.source, p.base.join("old-source")).unwrap();
+                        DirBuilder::new().mode(0o700).create(&p.source).unwrap();
+                    }
+                }
+                Err::<(), _>(Error::Callback)
+            })
+            .err(),
+            Some(Error::Changed)
+        );
+        assert_eq!(s.verify_unchanged(), Err(Error::Changed));
+    }
+}
+#[test]
+fn captured_volumes_quota_refusals_are_sticky_and_not_refunded() {
+    for axis in 0..3 {
+        let p = Paths::new();
+        let mut limits = Limits::default();
+        match axis {
+            0 => limits.max_disk_bytes = 3,
+            1 => limits.max_reloads = 0,
+            _ => limits.max_reload_bytes = 2,
+        }
+        let mut s = v2(&p, limits);
+        let r = write(&mut s, b"abc");
+        if axis == 0 {
+            assert_eq!(s.write(1, |w| w.bytes(b"x")).err(), Some(Error::Limit));
+        } else {
+            assert_eq!(s.with_record(r, 3, |_| Ok(())).err(), Some(Error::Limit));
+        }
+        assert_eq!(s.verify_unchanged(), Err(Error::Limit));
+        assert_eq!(s.stats().unwrap().disk_bytes, 3);
+        assert_eq!(s.stats().unwrap().reloads, 0);
+        assert_eq!(fs::read(p.path.join("00000000.payload")).unwrap(), b"abc");
+    }
+}

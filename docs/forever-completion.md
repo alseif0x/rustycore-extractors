@@ -1805,3 +1805,29 @@ reload and cross-volume policies, product publication/resume, complete encrypted
 mandatory inputs, real geometry/runtime and reproducible Linux/Windows
 distribution remain open. Existing formats, default CLI and v7 source profile
 retain their contracts. No new bundle or full goal completion is claimed.
+
+
+## Explicit collision storage across volumes — 2026-10-12
+
+The optional Linux [captured-volume capability](forever-collision-captured-volumes.md)
+allows the six private collision repositories to live on a separately captured
+volume. The default constructor keeps its v1 source/output mount equality.
+Every source/key/output node remains bound to its captured mount and held/named
+identity, with unchanged alias/privacy/record/hash/EOF and sticky final guards.
+All existing resource and parser ceilings remain downward-only and unchanged.
+
+Exact source passes 40 private Spool and 39 closed-package cases per Linux
+profile, plus an explicit second-filesystem corpus in both profiles. Four
+complete authored toy-CASC packages match resident Rust native inventories /
+bytes/counts/facts and one nearer-parent mismatch requires exact Association.
+Clippy, scoped formatting, 171 source/state and 104 distribution/sealer checks
+pass with ten strict IPC-only traces. Exact source/report hashes and failed
+Clippy history are in the companion; no new C++/real-client or final local
+whole-workspace/full-collision acceptance is inferred.
+
+Preceding 2fe8cfb independently passes hosted Rust/C++ CI: Linux 2,555 tests per
+profile and Windows debug 2,116. Current source needs its own hosted result.
+The product VMap driver remains resident. Versioned scalable source/read/disk /
+reload ceilings, product integration/publication/resume with live LocalStore
+verification, complete encrypted mandatory inputs, real geometry/runtime and
+reproducible distribution remain open. No full goal completion is claimed.
