@@ -1420,3 +1420,40 @@ resume, complete real inputs, runtime and reproducible distribution remain gates
 Preceding canonical 8596820 independently passes hosted Rust/C++ CI, including
 2,116 Windows debug tests / 41 targets / 20 ignored, before this increment.
 The full extractor goal remains active.
+
+
+### Closed map/proof disk package (2026-10-12)
+
+The optional Linux `collision::assemble::staged::package` consumes the actual
+Prepared world/model owner and creates a complete private artifact inventory.
+RCEPKG1 binds map/effective parent, complete tree/ordered proof and sorted tile
+payload/index spans. Complete own associations are checked; parent-only tiles
+retain child indexes and bind to the first present payload in the actual
+effective-parent chain. A present mismatch is terminal. One map build, or one
+copied child plus one borrowed ancestor, remains active. Metadata enumeration
+performs no body I/O; visitation reads each selected VMO and map once.
+
+The downward 2 GiB logical ledger retains recorded store/compact/Data/topology,
+full placement reservation, VMO catalog and actual map/tile capacities, with
+source/builder/callback overlap and the smaller package cap constraining older
+VMO readers. Validation scans, ancestor and BIH work are explicitly bounded;
+these are not RSS or all CPU counters. Typed errors retain independent guards
+after callback/value destruction. Finished owners verify private bodies and
+recorded client facts, not a live-client atomic snapshot; product integration
+must retain and recheck its LocalStore before final Run completion.
+
+Final source passes 39 package and 21 affected VMO cases per Linux debug/release
+profile, CASC library/test Clippy, four scoped formatting checks, 171 source/state
+and 104 distribution/sealer cases, with eight strict IPC-only traces. The 16-map
+logical streaming case and 25 exact Association negatives are separately scoped
+from complete toy-CASC versus resident Rust byte comparisons. No new native /
+real-client, final full-workspace or full-collision local execution is claimed.
+Exact hashes and retained failed attempts are in docs/forever-collision-map-package.md.
+Preceding 6f731b4 passes hosted Rust/C++ CI, including Linux 2,516 tests/profile
+and Windows debug 2,116 tests across 41 targets; that result predates this step.
+
+The product remains resident. Existing same-mount/source/read/disk/reload v1
+ceilings and the v7 corresponding-source profile remain unchanged. Scalable
+versioned policies, cross-volume support, publication/resume, mandatory encrypted
+real inputs, real geometry/runtime and distribution remain goal gates. No full
+extractor completion, server activation, merge or release is claimed.

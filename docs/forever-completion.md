@@ -1777,3 +1777,31 @@ product publication/resume, complete mandatory encrypted inputs, real geometry /
 runtime and reproducible Linux/Windows distribution remain open. Preceding
 8596820 independently passes hosted Rust/C++ CI, including 2,116 Windows debug
 tests across 41 targets (20 ignored). No new bundle or full completion is claimed.
+
+
+## Closed map/proof disk package — 2026-10-12
+
+The optional Linux [closed disk package](forever-collision-map-package.md)
+consumes the authenticated Prepared owner and assembles final native map/tree /
+tile/index artifacts into private complete map/proof bundles. Selected VMOs
+retain their closed pre-ID-dedup union. Parent-only tiles preserve child indexes
+and use the first present ancestor payload; nearer mismatch is terminal.
+One complete map at a time is built/read, and metadata enumeration performs no
+body I/O. The complete inventory is preflighted before returning its owner.
+
+Final candidate passes 39 new package and 21 affected VMO cases in both Linux
+profiles, CASC library/test Clippy, scoped formatting, 171 source/state and 104
+distribution/sealer checks with eight strict IPC-only traces. Complete authored
+toy-CASC outputs match the resident Rust assembler; 16-map logical streaming
+and the private 25-identity proof harness retain separate scopes. Exact hashes
+and failed compiler/intermediate histories are in the companion documentation.
+No new native/real-client, final full-workspace/full-collision local execution
+or runtime acceptance is inferred. Preceding 6f731b4 independently passes hosted
+Rust and C++ CI: Linux 2,516 tests/profile, Windows debug 2,116 across 41 targets.
+
+The product driver remains resident. Completed private owners do not replace
+live-client verification by the product. Scalable explicit source/read/disk /
+reload and cross-volume policies, product publication/resume, complete encrypted
+mandatory inputs, real geometry/runtime and reproducible Linux/Windows
+distribution remain open. Existing formats, default CLI and v7 source profile
+retain their contracts. No new bundle or full goal completion is claimed.

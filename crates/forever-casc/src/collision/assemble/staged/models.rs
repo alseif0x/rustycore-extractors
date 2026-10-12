@@ -20,6 +20,7 @@ use crate::collision::{
 };
 use forever_vmap::{RawM2, gameobject_models, vmo, wmo::raw};
 use std::mem::size_of;
+pub mod package;
 #[cfg(test)]
 mod tests;
 pub const PROFILE: &str = "linux-private-selected-vmo-stage-v1";
