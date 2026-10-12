@@ -1652,3 +1652,30 @@ remain open, as do real complete inputs/geometry and RustyCore runtime/server
 activation. The Linux v9 source profile, accepted b692ed3 bundle and hardlink
 recovery protocol retain their own scopes. No global runner/harness/oracle
 network exclusion is established. The extractor is not complete.
+
+
+## Explicit Windows membership source candidate — 2026-10-12
+
+The separate `forever-windows-private-membership-v1` capability exposes
+`output::membership::verify_membership(&PrivateRoot, Limits)` for a complete
+observed pass over all owned directories. Root/parent/security guards and full
+transient directory snapshots bracket exact observed-name/type/FileId matching.
+Unknown, missing, duplicate or mismatched entries fail and observed failures
+permanently poison; no unknown directory is adopted or traversed. The original
+identity/security `verify_unchanged` and mutations do not auto-enumerate.
+
+Global downward limits are 128 directories, 512 admitted/decoded records
+including dots, and 640 queries. A charged lookahead at the record cap can reach
+EOF; extra data fails without decoding and poisons. The fixed class-38 buffer is
+640 bytes, aligned to eight. Complete observed membership is not an atomic
+snapshot or detection of every transient concurrent change, directory write
+exclusion, same-SID isolation or a publication/recovery protocol.
+
+This is source candidate documentation, with new native membership acceptance
+pending. The earlier fourteen-case output acceptance of a220596 and its later
+5ce8b83 documentary checkpoint retain their original scope. Separate membership
+CI steps require exact listed/executed inventories in both profiles; declaring
+them is not hosted-run evidence. Historical contracts, Linux mandatory v9 source
+profile/bundle and Linux hardlink recovery are unchanged. Windows product,
+package/recovery/durability, real complete inputs/geometry and RustyCore server /
+runtime remain gates. See `docs/forever-windows-membership.md`.

@@ -2008,3 +2008,33 @@ exclusion is inferred. Real complete inputs/geometry, full-world operation and
 RustyCore runtime/server activation remain open. The historical Linux v9 bundle,
 its source profile and Linux hardlink recovery are not relabeled or migrated.
 The full extractor is not complete.
+
+
+## Explicit Windows membership source candidate — 2026-10-12
+
+A separate `forever-windows-private-membership-v1` API compares complete observed
+children of every live private owned directory with current entries, including
+post-rename names/parents. Retained root/parent identity/security guards and full
+transient directory snapshots before/after remain required. Unknown entries are
+fatal without traversal/adoption; missing/duplicate/name/type/FileId mismatch and
+observed scan/guard failures permanently poison rather than return a partial
+successful summary. The existing `verify_unchanged` remains identity/security
+only, with no automatic membership scan during append/flush/rename.
+
+The pass has downward global ceilings of 128 directories, 512 admitted/decoded
+records including dots, and 640 native calls. A charged query at the record cap
+may establish EOF; additional data fails before decoding and poisons. A fixed
+aligned 640-byte class-38 single-entry buffer admits complete bounded records;
+strict completion/status/framing rejects partial results. Concurrent changes
+may or may not be observed. This is not an atomic namespace snapshot, directory
+write exclusion, same-SID/administrator isolation or durable package completeness.
+
+New static/CI source checks are separate from the historical fourteen native
+output cases accepted for a220596 and recorded later by 5ce8b83. Native membership
+execution acceptance is pending; neither planned focused debug/release CI nor
+Wine/cross-compilation closes that gate. See [the versioned membership scope](forever-windows-membership.md).
+No Windows product driver, publication/receipts/sealing, recovery, directory-entry
+or crash durability, new Linux/Windows bundle or Linux source-profile relabel is
+claimed. The accepted v9 bundle and Linux hardlink protocol retain their scope.
+Real complete inputs/geometry, full-world resources, RustyCore server/runtime and
+full extractor completion remain open.

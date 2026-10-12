@@ -231,3 +231,24 @@ durability. The later documentation commit is not the tested functional SHA;
 frozen contract pending flags retain their earlier checkpoint meaning. See [the versioned scope](../../docs/forever-windows-output.md) and
 `contracts/forever-windows-output-contract-v1.json`; the Linux hardlink/recovery
 protocol and accepted v9 bundle retain their original scope.
+
+
+## Explicit Windows membership capability
+
+`windows::output::membership::verify_membership(&PrivateRoot, Limits)` is a
+separate opt-in observed-membership pass over every owned directory. It compares
+current entries with complete observed child records, with original root guards
+and complete transient directory snapshots before/after. Observed failure
+permanently poisons the root; unknown entries are not adopted or traversed.
+The original `verify_unchanged` and ordinary mutations do not auto-enumerate.
+
+Downward-only ceilings are 128 directories, 512 admitted/decoded records
+(including dot entries) and 640 native query calls. A charged query at the record
+cap can confirm EOF; extra data rejects before decoding and poisons. Enumeration
+uses class 38, a fixed aligned 640-byte buffer and strict single-entry/EOF framing.
+Concurrent changes may escape observation: no atomic snapshot, directory write
+exclusion or same-SID isolation is claimed. Native acceptance is pending for this
+increment; the earlier fourteen-case output acceptance retains its own scope.
+No Windows package/recovery/product or new bundle is enabled. See
+[the membership scope](../../docs/forever-windows-membership.md) and
+`contracts/forever-windows-membership-contract-v1.json`.

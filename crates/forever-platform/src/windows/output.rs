@@ -7,6 +7,8 @@
 //! Checks are not atomic namespace snapshots. Files deny competing write/delete
 //! opens, but permit compatible reads. This is not a package publication,
 //! recovery, disk reservation, crash-durability or Windows product protocol.
+//! The separate opt-in [`membership`] capability checks observed directory
+//! contents. Ordinary v1 verification retains its existing object-only policy.
 
 use super::{Identity, ReadDirectory};
 use std::{
@@ -18,6 +20,7 @@ use std::{
 
 #[allow(unsafe_code)]
 mod ffi;
+pub mod membership;
 #[cfg(test)]
 mod tests;
 
@@ -207,7 +210,7 @@ impl Entry {
 }
 
 /// Owns every created handle; failures retain filesystem objects. No adoption,
-/// listing, deletion, directory rename or recovery is provided. Opaque tokens
+/// listing, deletion, directory rename or recovery is provided by v1. Opaque tokens
 /// remain usable after file rename and cannot cross roots. A root is not Sync.
 pub struct PrivateRoot<'parent> {
     parent: &'parent ReadDirectory,
