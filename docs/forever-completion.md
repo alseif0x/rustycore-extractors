@@ -1723,3 +1723,29 @@ Preceding canonical `26f037d` independently passes hosted
 including Linux debug/release and 2,116 Windows debug tests across 41 targets
 (20 ignored). That result predates this source. No new bundle, real geometry,
 runtime activation or full extractor completion is claimed.
+
+## Authenticated placement disk phase — 2026-10-12
+
+The optional Linux [closed placement stage](forever-collision-placement-stage.md)
+now stores complete authenticated world callbacks in immutable typed private
+files and reloads one map at a time. It preserves all pre-ID-deduplication names,
+duplicate IDs, empty callbacks and exact context/sequence/count/extent binding.
+The full stage reservation partitions the original combined world limit before
+acquisition and permanently lowers the collector ceiling; no allowance is
+reused across consuming finish. Independent guards execute after callback
+capture/value destruction and preserve typed causes.
+
+Final source passes 28 focused and 491 complete collision cases per Linux
+profile, CASC library/test Clippy, scoped formatting, 171 source/state and 104
+distribution/sealer checks. Exact report hashes and retained unsuccessful
+fixture/checker attempts are in the companion. All new comparisons are against
+the resident Rust world using authored toy CASC; no new original C++ or real
+client evidence is inferred. The prior 3629e8d independently passes hosted Rust
+and C++ CI, including 2,116 Windows debug tests / 41 targets / 20 ignored.
+
+This is an intermediate library phase. Selected VMO geometry/conversion, final
+per-map artifacts and ancestor proofs still need disk integration; the product
+continues to use resident assembly. Scalable source/read/disk/reload policies,
+cross-volume support, publication/resume, complete mandatory encrypted inputs,
+real geometry/runtime and reproducible Linux/Windows distribution remain open.
+No new bundle, server activation or full extractor completion is claimed.

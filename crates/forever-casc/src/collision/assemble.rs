@@ -25,6 +25,8 @@
 use super::{Class, Model, Status, gameobjects, run, world};
 use forever_vmap::{RawM2, assembly, gameobject_models, placement, vmo, wmo::raw};
 use std::{fmt, mem::size_of};
+#[cfg(target_os = "linux")]
+pub mod staged;
 #[cfg(test)]
 mod tests;
 

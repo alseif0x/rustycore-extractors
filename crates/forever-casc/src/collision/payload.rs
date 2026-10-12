@@ -895,6 +895,19 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         let r = self.inner.release_external(bytes);
         self.checked(r)
     }
+    /// Closed assembly stages partition a disjoint reservation before world IO.
+    /// Always lowers the existing ceiling; both authenticated guards still run.
+    pub(crate) fn constrain_memory_for_stage(
+        &mut self,
+        ceiling: usize,
+    ) -> Result<(), CollectorError> {
+        let limit = ceiling.min(self.inner.memory_limit());
+        let result = self
+            .inner
+            .constrain_memory(limit)
+            .and_then(|()| self.inner.free_bytes().map(|_| ()));
+        self.checked(result)
+    }
     pub(crate) const fn memory_ceiling(&self) -> usize {
         self.inner.memory_limit()
     }

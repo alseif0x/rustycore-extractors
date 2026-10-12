@@ -1342,3 +1342,41 @@ complete real inputs, runtime activation and distribution remain gates.
 Hosted CI 38191467007 separately passes Linux debug/release and Windows debug
 at preceding canonical 26f037d (2,116 Windows tests, 41 targets, 20 ignored).
 That hosted result predates this source increment.
+
+### Authenticated placement disk stage (2026-10-12)
+
+The optional Linux `collision::assemble::staged` phase consumes the authenticated
+startup and disk world through a private borrowed Sink; callers cannot supply
+placements or forge a completed stage. Immutable RCEPLC1 envelopes bind map,
+original map, global/tile coordinates, replay flag, callback sequence, record
+count and complete extent. Empty successful callbacks and every duplicate ID /
+pre-deduplication model name survive. Sorted compact descriptors reload exactly
+one complete map in global-then-x/y order. Immediate-parent context validation
+uses the closed topology; final first-present-ancestor proofs remain separate.
+
+A full stage heap reservation is partitioned from the original combined world
+ceiling before acquisition. The collector ceiling only decreases and survives
+finish, preventing later RAW reloads from reusing that reservation. Descriptor
+replacement overlap, complete map output, largest envelope reload and declared
+callback allowance are admitted independently. This remains conservative
+logical accounting, not RSS or all CPU work. Callback captures and rejected
+values drop before final model/stage guards, preserving typed causes. All
+upfront failures also check the actual source and all independent repositories.
+
+Exact final source passes 28 focused and 491 complete collision tests per Linux
+debug/release profile, CASC library/test Clippy, four scoped format checks, 171
+source/state contracts and 104 distribution/sealer checks, with eight strict
+IPC-only traces. Comparisons use authored toy CASC against the unchanged
+resident Rust world; no new native or real-client claim is made. Full local
+workspace/Wine checks and a new distribution bundle are not claimed here.
+Exact hashes and retained fixture/checker failure history are in
+`docs/forever-collision-placement-stage.md`.
+
+This is an intermediate library owner, not a final VMap package or product mode.
+The product driver remains resident. Selected-model VMO conversion, per-map
+final artifacts/ancestor proofs on disk, scalable explicit read/disk/reload
+policies, cross-volume support, publication/resume, complete real mandatory
+inputs, runtime and reproducible distribution remain completion gates.
+Preceding canonical 3629e8d passes hosted Rust/C++ CI independently, including
+2,116 Windows debug tests across 41 targets (20 ignored); that result predates
+this Linux source increment. The full extractor goal remains active.
