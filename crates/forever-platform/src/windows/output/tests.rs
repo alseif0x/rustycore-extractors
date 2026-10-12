@@ -343,6 +343,10 @@ fn acl_oracle(
     let output = std::process::Command::new("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
         .env("RCE_OUTPUT_ACL_PATH", path)
+        // PowerShell 7 -> Rust -> Windows PowerShell otherwise inherits PS7
+        // module paths and can fail command autoloading. Reset only this child.
+        // https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath?view=powershell-7.6
+        .env_remove("PSModulePath")
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
         .output()

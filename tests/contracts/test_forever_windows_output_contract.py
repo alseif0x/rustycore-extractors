@@ -172,6 +172,7 @@ class WindowsPrivateOutputContract(unittest.TestCase):
                                 native.index('fn thread_impersonation_rejects_before_create_and_poisons_existing_root()')])
         for marker in ('.stdout(std::process::Stdio::piped())',
                        '.stderr(std::process::Stdio::null())',
+                       '.env_remove("PSModulePath")',
                        'Option<[i64;2]>', 'ifoutput.stdout.len()<=128',
                        'std::str::from_utf8(&output.stdout).ok()',
                        'text.split_ascii_whitespace()',
