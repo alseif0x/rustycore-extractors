@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Offline-only GT arguments. Parsing performs no I/O or build admission.
-use super::batch::Plan;
+use super::{batch::Plan, contract::CatalogContract};
 use crate::{Locale, options::CliError};
 use std::{collections::BTreeMap, ffi::OsString, path::PathBuf};
 
@@ -12,6 +12,7 @@ pub enum Selection {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Options {
+    pub contract: CatalogContract,
     pub client: PathBuf,
     pub output: PathBuf,
     pub locale: Locale,
@@ -39,8 +40,10 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
         if acquisition.push(key, &pair[1])? {
             continue;
         }
-        if !matches!(key, "--client" | "--output" | "--locale" | "--group")
-            || pair[1].is_empty()
+        if !matches!(
+            key,
+            "--client" | "--output" | "--locale" | "--group" | "--profile"
+        ) || pair[1].is_empty()
             || values.insert(key, &pair[1]).is_some()
         {
             return Err(CliError::INVALID_INVOCATION);
@@ -58,7 +61,19 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
         },
     };
     let acquisition = acquisition.finish(super::MAX_FILE_BYTES as u32)?;
+    let contract = match values.get("--profile") {
+        None => CatalogContract::Legacy,
+        Some(value)
+            if value.to_str() == Some(CatalogContract::PROFILE)
+                && selection == Selection::Catalog
+                && acquisition.is_rust_local() =>
+        {
+            CatalogContract::Build70338V1
+        }
+        Some(_) => return Err(CliError::INVALID_INVOCATION),
+    };
     Ok(Parsed::Run(Options {
+        contract,
         acquisition,
         client: PathBuf::from(required("--client")?),
         output: PathBuf::from(required("--output")?),

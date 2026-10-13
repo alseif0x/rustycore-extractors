@@ -385,3 +385,6 @@ fn errors_contain_only_static_format_codes() {
 mod catalog;
 
 mod acquisition;
+
+#[cfg(unix)]
+mod build70338;

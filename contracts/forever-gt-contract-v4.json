@@ -1,0 +1,56 @@
+{
+  "contract_version": 4,
+  "line": "forever",
+  "scope": "pinned_gt_catalog",
+  "component_profile": "gt-catalog-70338-v1",
+  "admitted_builds": [
+    70338
+  ],
+  "backend": "rust-local",
+  "explicit_selection": "--profile gt-catalog-70338-v1 --group catalog --backend rust-local; both layouts required",
+  "legacy_builds": [
+    70170,
+    70205
+  ],
+  "legacy_manifest_versions_unchanged": [
+    1,
+    2,
+    3
+  ],
+  "default_unchanged": "six files; native backend; no inferred component profile",
+  "catalog": "contracts/forever-gt-catalog-v1.json",
+  "catalog_sha256": "45fbc37f023eb54d71e1e47ab2fe252fabb139a5c923e25b1f9244399c29fec4",
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "manifest": "forever-gt-manifest.json",
+  "schema": "schemas/forever-gt-manifest-v4.schema.json",
+  "acquisition_schema": "schemas/forever-acquisition-v1.schema.json",
+  "acquisition_schema_sha256": "08f843c4a38ef2ec2f61aad85b5abba2082243260fee2b5e4fa97e626408ec41",
+  "acquisition_profile": "local-v7-ckey-root-nz-v1",
+  "limits": {
+    "files": 20,
+    "file_bytes": 4194304,
+    "batch_bytes": 83886080,
+    "data_rows_per_numeric_file": 100000,
+    "values_per_numeric_file_including_row_zero": 1000000,
+    "manifest_bytes": 65536,
+    "manifest_depth": 8
+  },
+  "api_admission": "explicit build/contract checked before client/output/callback access; Rust-local acquisition Profile required",
+  "cli_admission": "availability before client I/O; bounded build metadata and component gate before Session/CASC bootstrap; observed Session build must match",
+  "required_for_success": "all twenty complete; fourteen numeric and six raw-only; no optional or prefix success",
+  "numeric_policy": "finite_decimal_f64_to_f32_v1",
+  "raw_bytes_preserved": true,
+  "offline": true,
+  "network_options": false,
+  "resume": false,
+  "overwrite": false,
+  "publication": "new_private_directory_exclusive_atomic_files_incomplete_marker_manifest_last",
+  "directory_atomic_promotion": false,
+  "input_changed": "global fatal; retain incomplete marker; no later reads",
+  "verification": "strict version/build/component/acquisition agreement then exact output tree, SHA256 inventory and all numeric facts; provenance shape is not source authentication",
+  "authentication": "full CKey MD5; EKey prefix9 only; independent real source comparison required",
+  "typed_loaders_executed": false,
+  "full_client_extraction": false,
+  "unified_product_70338_scope_unchanged": "DB2 only",
+  "windows_acceptance": false
+}

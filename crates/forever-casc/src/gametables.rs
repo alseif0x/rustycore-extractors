@@ -18,6 +18,7 @@ pub mod batch;
 pub mod catalog;
 pub mod catalog_batch;
 pub mod catalog_manifest;
+pub mod contract;
 pub mod manifest;
 pub mod options;
 mod output;
