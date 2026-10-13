@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: original bounded local collision QA adapter.
-//! Linux QA: collision_local <client> <plan> <new-output> [--names].
+//! Linux QA: collision_local <client> <plan> <new-output> [--names | --m2-70338].
+//! The optional M2-only 70338 diagnostic reduces limits to the historical sample.
+//! It does not change product admission or certify any real selection by itself.
 //! Plan: one `m2\tFDID` or `wmo\tFDID` per line, optional final newline.
 //! This is not a product manifest or the original extractor startup sequence.
 //! WMO plans load LiquidType/Material; GameObjectDisplayInfo is not loaded.
@@ -35,6 +37,84 @@ mod qa {
     const O_NONBLOCK: i32 = 0x800;
     const O_DIRECTORY: i32 = 0x10000;
     const O_NOFOLLOW: i32 = 0x20000;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum Profile {
+        Existing,
+        M2Build70338,
+    }
+    impl Profile {
+        fn validate_plan(self, requests: &[(Class, u32)]) -> Result<(), &'static str> {
+            if self == Self::M2Build70338
+                && (requests.is_empty()
+                    || requests.len() > 31
+                    || requests.iter().any(|(class, _)| *class != Class::M2))
+            {
+                return Err("qa_m2_70338_plan");
+            }
+            Ok(())
+        }
+
+        fn validate_build(self, build: u32) -> Result<(), &'static str> {
+            if self == Self::M2Build70338 && build != 70338 {
+                return Err("qa_m2_70338_build");
+            }
+            Ok(())
+        }
+
+        fn limits(self) -> collision::Limits {
+            let defaults = collision::Limits::default();
+            match self {
+                Self::Existing => collision::Limits {
+                    max_file_bytes: MAX_FILE_BYTES,
+                    max_requests: MAX_REQUESTS,
+                    ..defaults
+                },
+                Self::M2Build70338 => collision::Limits {
+                    max_file_bytes: 3_661_318,
+                    max_reads: 31,
+                    max_models: 31,
+                    max_requests: 31,
+                    max_dependency_requests: 0,
+                    max_source_bytes: 15_277_222,
+                    max_raw_bytes: 27_100,
+                    ..defaults
+                },
+            }
+        }
+    }
+
+    fn options(args: &[std::ffi::OsString]) -> Result<(bool, Profile), &'static str> {
+        if args.len() == 4 {
+            return Ok((false, Profile::Existing));
+        }
+        if args.len() == 5 {
+            if args[4] == "--names" {
+                return Ok((true, Profile::Existing));
+            }
+            if args[4] == "--m2-70338" {
+                return Ok((false, Profile::M2Build70338));
+            }
+        }
+        Err("qa_usage")
+    }
+
+    #[derive(Clone, Copy)]
+    struct SourceContext {
+        build: u32,
+        content_identity: [u8; 32],
+    }
+
+    fn source_context(output: &mut impl Write, context: SourceContext) -> io::Result<()> {
+        writeln!(output, "collision-local-source-context-v1")?;
+        writeln!(output, "profile\tlinux-m2-70338-v1")?;
+        writeln!(output, "build\t{}", context.build)?;
+        writeln!(output, "locale\tesES")?;
+        writeln!(output, "names\tfalse")?;
+        write!(output, "content_identity\t")?;
+        write_hex(output, &context.content_identity)?;
+        writeln!(output)
+    }
 
     fn same(a: &Metadata, b: &Metadata) -> bool {
         same_directory(a, b)
@@ -484,12 +564,17 @@ mod qa {
 
     pub fn run() -> Result<(), &'static str> {
         let args: Vec<_> = std::env::args_os().take(6).collect();
-        if !(args.len() == 4 || (args.len() == 5 && args[4] == "--names")) {
-            return Err("qa_usage");
-        }
-        let names = args.len() == 5;
+        let (names, profile) = options(&args)?;
         let plan = Plan::read(Path::new(&args[2]))?;
+        profile.validate_plan(&plan.requests)?;
         let destination = Destination::prepare(Path::new(&args[1]), Path::new(&args[3]))?;
+        if profile == Profile::M2Build70338 {
+            // Reject an older authentic build before CASC bootstrap reads. The
+            // strict store below independently rechecks the active build row.
+            profile
+                .validate_build(forever_casc::admit(&destination.client).map_err(|e| e.code())?)?;
+        }
+        let limits = profile.limits();
         let mut store = local_store::LocalStore::open(
             &destination.client,
             local_store::OpenOptions {
@@ -497,12 +582,18 @@ mod qa {
                 index_layouts: [local_index::Layout::Contiguous; 16],
                 root_layout: root::Layout::Header50893V2,
                 limits: local_store::Limits {
-                    max_decoded_file_bytes: MAX_FILE_BYTES as u64,
+                    max_decoded_file_bytes: limits.max_file_bytes as u64,
                     ..Default::default()
                 },
             },
         )
         .map_err(|e| e.code())?;
+        // This check uses the admitted store build, before any model FDID read.
+        profile.validate_build(store.build().build)?;
+        let context = (profile == Profile::M2Build70338).then(|| SourceContext {
+            build: store.build().build,
+            content_identity: store.content_identity(),
+        });
         if names {
             store
                 .enable_names(root::name::Limits::default())
@@ -514,13 +605,10 @@ mod qa {
         } else {
             Lookups::default()
         };
-        let limits = collision::Limits::default();
         let mut extractor = Extractor::new(
             &mut store,
             &lookups,
             collision::Limits {
-                max_file_bytes: MAX_FILE_BYTES,
-                max_requests: MAX_REQUESTS,
                 max_memory_bytes: limits
                     .max_memory_bytes
                     .checked_sub(lookups.resident_bytes()?)
@@ -541,6 +629,11 @@ mod qa {
         plan.verify()?;
         let mut counter = Counter(0);
         correlation(&mut counter, &plan, &result).map_err(|_| "qa_correlation_limit")?;
+        if let Some(context) = context {
+            // Fixed stack metadata; charge its output against the same existing
+            // cumulative index ceiling, before creating the private output.
+            source_context(&mut counter, context).map_err(|_| "qa_correlation_limit")?;
+        }
         let mut raw_files = 0usize;
         let mut raw_bytes = 0usize;
         let mut refs = 0usize;
@@ -588,6 +681,13 @@ mod qa {
             .and_then(|()| index.flush())
             .and_then(|()| index.get_ref().sync_all())
             .map_err(|_| "qa_output_write")?;
+        if let Some(context) = context {
+            destination.verify_created(&output)?;
+            let mut file = new_file(&output, "source-context.tsv")?;
+            source_context(&mut file, context)
+                .and_then(|()| file.sync_all())
+                .map_err(|_| "qa_output_write")?;
+        }
         destination.verify_created(&output)?;
         output
             .sync_all()
@@ -606,6 +706,173 @@ mod qa {
             lookups.resident_bytes()?
         );
         Ok(())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::ffi::OsString;
+
+        fn args(extra: &[&str]) -> Vec<OsString> {
+            [
+                "collision_local",
+                "synthetic-client",
+                "synthetic-plan",
+                "synthetic-output",
+            ]
+            .into_iter()
+            .chain(extra.iter().copied())
+            .map(OsString::from)
+            .collect()
+        }
+
+        #[test]
+        fn existing_options_keep_their_profiles() {
+            assert_eq!(options(&args(&[])), Ok((false, Profile::Existing)));
+            assert_eq!(options(&args(&["--names"])), Ok((true, Profile::Existing)));
+        }
+
+        #[test]
+        fn explicit_m2_profile_disables_names() {
+            assert_eq!(
+                options(&args(&["--m2-70338"])),
+                Ok((false, Profile::M2Build70338))
+            );
+        }
+
+        #[test]
+        fn unknown_duplicate_and_mutually_exclusive_options_reject() {
+            for extra in [
+                vec!["--unknown"],
+                vec!["--m2-70338", "--names"],
+                vec!["--names", "--m2-70338"],
+                vec!["--m2-70338", "--m2-70338"],
+                vec!["--names", "--names"],
+            ] {
+                assert_eq!(options(&args(&extra)), Err("qa_usage"));
+            }
+        }
+
+        #[test]
+        fn missing_and_extra_arguments_reject() {
+            for length in 0..4 {
+                assert_eq!(options(&args(&[])[..length]), Err("qa_usage"));
+            }
+            assert_eq!(options(&args(&["extra"])), Err("qa_usage"));
+        }
+
+        #[test]
+        fn one_and31_m2_requests_are_admitted() {
+            for length in [1, 31] {
+                assert_eq!(
+                    Profile::M2Build70338.validate_plan(&vec![(Class::M2, 1); length]),
+                    Ok(())
+                );
+            }
+        }
+
+        #[test]
+        fn empty_and32_request_plans_reject() {
+            for length in [0, 32] {
+                assert_eq!(
+                    Profile::M2Build70338.validate_plan(&vec![(Class::M2, 1); length]),
+                    Err("qa_m2_70338_plan")
+                );
+            }
+        }
+
+        #[test]
+        fn wmo_and_mixed_plans_reject_before_client_use() {
+            for requests in [vec![(Class::Wmo, 1)], vec![(Class::M2, 1), (Class::Wmo, 2)]] {
+                assert_eq!(
+                    Profile::M2Build70338.validate_plan(&requests),
+                    Err("qa_m2_70338_plan")
+                );
+                assert_eq!(Profile::Existing.validate_plan(&requests), Ok(()));
+            }
+        }
+
+        #[test]
+        fn authentic_build_must_be_exactly70338() {
+            assert_eq!(Profile::M2Build70338.validate_build(70338), Ok(()));
+            for build in [0, 70170, 70205, 70339, u32::MAX] {
+                assert_eq!(
+                    Profile::M2Build70338.validate_build(build),
+                    Err("qa_m2_70338_build")
+                );
+                assert_eq!(Profile::Existing.validate_build(build), Ok(()));
+            }
+        }
+
+        #[test]
+        fn existing_limits_remain_exact() {
+            let expected = collision::Limits {
+                max_file_bytes: MAX_FILE_BYTES,
+                max_requests: MAX_REQUESTS,
+                ..Default::default()
+            };
+            assert_eq!(Profile::Existing.limits(), expected);
+        }
+
+        #[test]
+        fn m2_profile_limits_are_exact_and_only_reduce() {
+            let limits = Profile::M2Build70338.limits();
+            let existing = Profile::Existing.limits();
+            assert_eq!(limits.max_file_bytes, 3_661_318);
+            assert_eq!(
+                (limits.max_reads, limits.max_models, limits.max_requests),
+                (31, 31, 31)
+            );
+            assert_eq!(limits.max_dependency_requests, 0);
+            assert_eq!(limits.max_source_bytes, 15_277_222);
+            assert_eq!(limits.max_raw_bytes, 27_100);
+            assert!(limits.max_file_bytes <= existing.max_file_bytes);
+            assert!(limits.max_reads <= existing.max_reads);
+            assert!(limits.max_models <= existing.max_models);
+            assert!(limits.max_requests <= existing.max_requests);
+            assert!(limits.max_dependency_requests <= existing.max_dependency_requests);
+            assert!(limits.max_source_bytes <= existing.max_source_bytes);
+            assert!(limits.max_raw_bytes <= existing.max_raw_bytes);
+            assert_eq!(limits.max_memory_bytes, existing.max_memory_bytes);
+            assert_eq!(limits.m2, existing.m2);
+            assert_eq!(limits.wmo, existing.wmo);
+        }
+
+        #[test]
+        fn private_context_is_exact_and_deterministic() {
+            let context = SourceContext {
+                build: 70338,
+                content_identity: [0xab; 32],
+            };
+            let mut bytes = Vec::new();
+            source_context(&mut bytes, context).unwrap();
+            let expected = format!(
+                "collision-local-source-context-v1\nprofile\tlinux-m2-70338-v1\nbuild\t70338\nlocale\tesES\nnames\tfalse\ncontent_identity\t{}\n",
+                "ab".repeat(32)
+            );
+            assert_eq!(bytes, expected.as_bytes());
+            let mut counter = Counter(0);
+            source_context(&mut counter, context).unwrap();
+            assert_eq!(counter.0, bytes.len());
+        }
+
+        #[test]
+        fn private_context_shares_existing_cumulative_output_cap() {
+            let context = SourceContext {
+                build: 70338,
+                content_identity: [0; 32],
+            };
+            let mut measured = Counter(0);
+            source_context(&mut measured, context).unwrap();
+            let mut exact = Counter(MAX_CORRELATION_BYTES - measured.0);
+            source_context(&mut exact, context).unwrap();
+            assert_eq!(exact.0, MAX_CORRELATION_BYTES);
+            let mut short = Counter(MAX_CORRELATION_BYTES - measured.0 + 1);
+            assert_eq!(
+                source_context(&mut short, context).unwrap_err().kind(),
+                io::ErrorKind::FileTooLarge
+            );
+        }
     }
 }
 
