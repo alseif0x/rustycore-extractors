@@ -1,0 +1,11 @@
+[package]
+name = "forever-terrain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bounded pure WDT/ADT metadata and finite height projection; no acquisition or MAPS writer"
+publish = false
+
+[lints]
+workspace = true

@@ -1,0 +1,25 @@
+[package]
+name = "forever-extractor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Explicit offline Forever product plan and sequential extraction driver"
+publish = false
+
+[dependencies]
+forever-casc = { path = "../forever-casc", default-features = false }
+forever-db2 = { path = "../forever-db2" }
+forever-terrain = { path = "../forever-terrain" }
+forever-vmap = { path = "../forever-vmap" }
+forever-navigation = { path = "../forever-navigation" }
+
+[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
+forever-platform = { path = "../forever-platform" }
+
+[[bin]]
+name = "forever-extractor"
+path = "src/main.rs"
+
+[lints]
+workspace = true

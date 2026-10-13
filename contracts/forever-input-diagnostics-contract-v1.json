@@ -1,0 +1,126 @@
+{
+  "contract": "forever-input-diagnostics-source-v1",
+  "version": 1,
+  "distribution_source_profile": "forever-seven-crate-windows-vmap-diagnostics-source-v5",
+  "network": false,
+  "keys_consulted": false,
+  "new_registry_dependencies": [],
+  "cli_enabled": false,
+  "windows_product_enabled": false,
+  "actual_windows_ntfs_accepted": false,
+  "full_extractor_complete": false,
+  "publication_authorized": false,
+  "sources": [
+    "crates/forever-casc/src/blte.rs",
+    "crates/forever-casc/src/blte/framing.rs",
+    "crates/forever-casc/src/blte/framing/tests.rs",
+    "crates/forever-casc/src/local_store.rs",
+    "crates/forever-casc/src/local_store/io.rs",
+    "crates/forever-casc/src/local_store/io/route.rs",
+    "crates/forever-casc/src/local_store/owned.rs",
+    "crates/forever-casc/src/local_store/routes.rs",
+    "crates/forever-casc/src/local_store/route_tests.rs",
+    "crates/forever-casc/src/local_store/tests.rs",
+    "docs/forever-blte-framing.md",
+    "docs/forever-required-routes.md"
+  ],
+  "routes": {
+    "profile": "forever-local-required-routes-v1",
+    "api": "LocalStore::diagnose_required_routes(routes::Limits)",
+    "fixed_fdids": [
+      1349477,
+      1266278,
+      1266277
+    ],
+    "max_root_matches_per_input": 64,
+    "max_candidates_per_input": 64,
+    "max_total_candidates": 192,
+    "metadata_only": true,
+    "payload": "NotInspected",
+    "ciphertext": "NotInspected",
+    "raw_route_accessor": false,
+    "key_bearing_store": "reject",
+    "selection": "first eligible central-present ROOT CKey, then ordered encoding/index candidates; no later ROOT fallback from missing archive bytes",
+    "extent": "checked offset plus encoded record size versus held regular-file observed length; not payload acquisition",
+    "archive_filename": "shared Reader decimal data.NNN convention; hexadecimal formatting must not select another archive",
+    "doc_relocation": {
+      "from": "crates/forever-casc/docs/required-routes-v1.md",
+      "to": "docs/forever-required-routes.md",
+      "byte_identical": true,
+      "retain_author_date": true,
+      "sha256": "c76c62645371975353bc065e00e67dd300ac5c55716ee5cae944182b1fc10cae"
+    },
+    "observations": "serial metadata observations, not an anchored Linux ancestor lease, atomic snapshot, complete archive hash or remote repair diagnosis"
+  },
+  "framing": {
+    "api": "blte::framing::inspect(encoded, expected_content_size, blte::Limits)",
+    "pure": true,
+    "allocations": 0,
+    "all_or_error": true,
+    "decoder_change": "export pub mod framing only",
+    "frame_md5": "all framed encoded frames, including zero expected MD5, must match",
+    "N": "payload length equals declared size",
+    "Z": "outer mode and framing only; no zlib interior or termination validation",
+    "E": "outer name-size 0/8, nonce-size 4/8, cipher S and nonempty ciphertext only; no key ID/nonce/bytes returned or interpreted",
+    "F_unknown": "reject",
+    "framed": "exact full header/table/extents/EOF and declared-size sum",
+    "headerless": "HeaderlessUnhashed: no frame hash or table-declared size; Z/E interior termination is not checked",
+    "limits": "reuse caller-owned existing encoded bytes, decoded declaration and frame-count ceilings",
+    "evidence": "only copied form, sizes, optional declared size, N/Z/E counts and frame-MD5 count; no digest/raw/plain/cipher bytes"
+  },
+  "composition": {
+    "implemented": false,
+    "future": "retain private selected entry; admit and guarded-read exact full record span, remove known 30-byte local prelude, inspect entire remaining BLTE span, final held/named/store checks on success and error; no prefix or alternative-route fallback"
+  },
+  "validation": {
+    "contract_tests": "static consistency only; never runtime proof",
+    "framing_tests_each_profile": 80,
+    "framing_new_tests": 37,
+    "framing_clippy_passed": true,
+    "windows_route_runtime_accepted": false,
+    "routes_corrected_linux": {
+      "accepted": true,
+      "tests_each_profile": 88,
+      "handoff": "incomplete-route-diagnostic-20261011T183818Z/linux-handoff-decimal.json",
+      "handoff_sha256": "879b0be0fe82874f5d57a91722103114177f5e006ecfb73196d15fa7c55a80c4",
+      "source_handoff_sha256": "f0d55df319c961bb46b85299acf279c26be2bca6d91d471db4d4afc3cff02432",
+      "clippy": "Linux/Windows GNU all-target forever-casc and Windows cross-build passed",
+      "scope": "synthetic corrected decimal archive naming; Wine runtime remains pending; initial hexadecimal handoff explicitly superseded"
+    },
+    "real_metadata_observation": {
+      "accepted": true,
+      "terminal": true,
+      "report": "reports/acceptance/required-route-live-20261011T1901Z-attempt2.json",
+      "sha256": "83b4ad2ba3a939207f194dc3b1f287b6307c33cffcb304dc500b9abfd7ad6ec1",
+      "scope": "Linux build-70205/esES fixed three-FDID metadata-only observation; one Routed candidate each, FitsObservedLength, payload/ciphertext NotInspected",
+      "encoded_record_bytes": [
+        5042,
+        94617,
+        74592
+      ],
+      "declared_decoded_bytes": [
+        10181,
+        347118,
+        116054
+      ],
+      "keys_read": false,
+      "requested_archive_payload_read": false,
+      "framing_inspected": false,
+      "content_accepted": false,
+      "attempt1": "external harness toolchain-pin/lock failure before client execution, retained historical",
+      "build_info_unchanged": true
+    }
+  },
+  "not_claimed": [
+    "key-only sufficiency",
+    "complete EKey or CKey authentication",
+    "plaintext integrity",
+    "encrypted inner validity",
+    "repair/download availability",
+    "implemented exact-span route adapter",
+    "full extraction",
+    "complete real-input payload diagnosis or key sufficiency"
+  ],
+  "complete_payload_accepted": false,
+  "current_distribution_source_profile": "forever-seven-crate-windows-navigation-readers-source-v7"
+}

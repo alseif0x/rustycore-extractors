@@ -1,0 +1,155 @@
+{
+  "contract_version": 3,
+  "line": "forever",
+  "description": "Explicit opt-in DB2 batch using one versioned metadata catalog; does not reinterpret v2 reports, change the two-table default, or establish full-client extraction.",
+  "manifest": {
+    "published_name": "forever-manifest.json",
+    "report_name": "report.json",
+    "incomplete_marker_name": ".rustycore-forever-incomplete.json",
+    "schema_id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-manifest-v3.schema.json"
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "admitted_builds": [
+      {
+        "build": 70170,
+        "version": "1.60.1.70170"
+      },
+      {
+        "build": 70205,
+        "version": "1.60.1.70205"
+      }
+    ],
+    "supported_locales": [
+      "enUS",
+      "esES"
+    ]
+  },
+  "scope": {
+    "batch_scope": "explicit_db2_catalog_batch",
+    "full_client_extraction": false,
+    "db2": {
+      "magic": "WDC5",
+      "version": 5
+    },
+    "default_tables": [],
+    "selection": "An explicit manifest and --schema-catalog are both required. pinned-metadata-v1 retains the reviewed catalog; wowdbdefs-70205-v1 is restricted to build 70205."
+  },
+  "limits": {
+    "max_entries": 256,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "upload_permitted": false
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  },
+  "verification": {
+    "exit_codes": [
+      {
+        "code": 0,
+        "name": "verified"
+      },
+      {
+        "code": 2,
+        "name": "invalid_invocation"
+      },
+      {
+        "code": 3,
+        "name": "unsupported_client"
+      },
+      {
+        "code": 4,
+        "name": "input_io"
+      },
+      {
+        "code": 8,
+        "name": "incomplete"
+      },
+      {
+        "code": 9,
+        "name": "verification_failed"
+      },
+      {
+        "code": 10,
+        "name": "internal"
+      }
+    ],
+    "failure_codes": [
+      "MANIFEST_SCHEMA_INVALID",
+      "INVENTORY_MISMATCH",
+      "TABLE_IDENTITY_MISMATCH",
+      "UNSAFE_PATH",
+      "INCOMPLETE_RUN",
+      "ROW_DECODE_MISMATCH"
+    ],
+    "code_bindings": [
+      {
+        "code": "MANIFEST_SCHEMA_INVALID",
+        "exit": 2
+      },
+      {
+        "code": "INVENTORY_MISMATCH",
+        "exit": 9
+      },
+      {
+        "code": "TABLE_IDENTITY_MISMATCH",
+        "exit": 9
+      },
+      {
+        "code": "UNSAFE_PATH",
+        "exit": 9
+      },
+      {
+        "code": "INCOMPLETE_RUN",
+        "exit": 8
+      },
+      {
+        "code": "ROW_DECODE_MISMATCH",
+        "exit": 9
+      }
+    ]
+  },
+  "schema_catalog": {
+    "id": "pinned-metadata-v1",
+    "source_commit": "02245dcd245e7433e524577656177723d3e4992e",
+    "source_blob": "d06b97bad72ca2aecad3987ce9c348ac6055e0db",
+    "source_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+    "facts_sha256": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+  },
+  "version_dispatch": {
+    "2": "Reviewed/default DB2 batch contract, unchanged; metadata-only results retain their meaning.",
+    "3": "Exact provenance for the selected catalog, case-sensitive names and matching FileDataId; complete entries require validated schema and re-decodable records.",
+    "other": "MANIFEST_SCHEMA_INVALID"
+  },
+  "invariants": [
+    "At most 256 unique names and file IDs; each must match the selected catalog, and wowdbdefs-70205-v1 requires build 70205.",
+    "Options entry_count equals format and artifact counts; each artifact maps to the matching name/ID and name.db2 path.",
+    "Successful artifacts require table_schema_validated=true, record_data_decoded=true and decoded_rows.",
+    "Verifier recomputes digests, reopens metadata and re-decodes all complete artifacts using explicit catalog resolution.",
+    "16 MiB per file and 256 MiB per batch, including verifier loading.",
+    "No metadata-only fallback, incomplete-file prefix fallback, network or general runtime acceptance."
+  ],
+  "schema_catalogs": [
+    {
+      "id": "pinned-metadata-v1",
+      "source_commit": "02245dcd245e7433e524577656177723d3e4992e",
+      "source_blob": "d06b97bad72ca2aecad3987ce9c348ac6055e0db",
+      "source_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+      "facts_sha256": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+    },
+    {
+      "id": "wowdbdefs-70205-v1",
+      "source_commit": "674636522d51c010f250ad1b5fe549ef6bc8eb0a",
+      "source_blob": "8a5d8122f312ae6a9564e8286fdc491831fecc22",
+      "source_sha256": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265",
+      "facts_sha256": "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b"
+    }
+  ]
+}

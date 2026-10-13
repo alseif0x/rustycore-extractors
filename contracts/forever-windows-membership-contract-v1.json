@@ -1,0 +1,153 @@
+{
+  "contract": "forever-windows-private-membership-v1",
+  "version": 1,
+  "authored": "2026-10-12",
+  "license": "GPL-3.0-or-later",
+  "api_profile": "forever-windows-private-membership-v1",
+  "status": "explicit private-output observed-membership foundation; native execution acceptance pending",
+  "foundation_contract": "forever-windows-private-output-v1",
+  "foundation_profile": "forever-windows-private-output-v1",
+  "read_api_profile": "forever-windows-read-ntfs-v1",
+  "sources": {
+    "module": "crates/forever-platform/src/windows/output/membership.rs",
+    "ffi": "crates/forever-platform/src/windows/output/membership/ffi.rs",
+    "native_tests": "crates/forever-platform/src/windows/output/membership/tests.rs"
+  },
+  "integration_source": "crates/forever-platform/src/windows/output.rs",
+  "documentation": "docs/forever-windows-membership.md",
+  "api": [
+    "output::membership::verify_membership(&PrivateRoot, Limits) -> Result<Summary, Error>",
+    "output::membership::Limits { max_directories, max_records, max_query_calls }",
+    "output::membership::Summary { directories, records, children, query_calls }"
+  ],
+  "target": {
+    "os": "Windows",
+    "architecture": "x86_64",
+    "volume": "fixed local NTFS",
+    "owner": "live PrivateRoot and its retained ReadDirectory parent lease"
+  },
+  "explicit": {
+    "default_verify_unchanged_changed": false,
+    "automatic_mutation_scan": false,
+    "scan_parent_outside_private_root": false,
+    "unknown_entry_adoption": false,
+    "cleanup": false,
+    "operation": "caller explicitly invokes standalone membership::verify_membership; existing identity/security API and mutations do not imply membership checking"
+  },
+  "enumeration": {
+    "api": "NtQueryDirectoryFile",
+    "information_class": "FileIdFullDirectoryInformation",
+    "information_class_number": 38,
+    "single_entry": true,
+    "synchronous": true,
+    "file_name_filter": null,
+    "restart_scan": "first call for each directory only",
+    "record": "FILE_ID_FULL_DIR_INFORMATION",
+    "file_id_offset": 72,
+    "file_name_offset": 80,
+    "file_index_used_as_identity": false,
+    "fixed_buffer_bytes": 640,
+    "buffer_alignment_bytes": 8,
+    "max_record_name_utf16_units": 255,
+    "eof": "STATUS_NO_MORE_FILES only; NTSTATUS and IO_STATUS_BLOCK agree and Information is zero",
+    "success": "complete one-entry framing; zero-byte success, overflow/truncation, unexpected status or malformed record fail",
+    "concurrency": "Microsoft documents that changes during multiple calls may or may not be observed; not an atomic namespace snapshot",
+    "framing": "80-byte fixed header plus up to 255 UTF16 units (590 bytes); exact extent or opaque ignored alignment padding through 8-byte alignment of at most 7 bytes"
+  },
+  "membership": {
+    "scope": "complete observed direct children of every owned directory, compared with current same-owner entries",
+    "names": "exact current names, including post-rename parents/names; dot entries are framing exceptions, not adopted children",
+    "identity": "enumerated FileId, file/directory type and no-reparse observations match current owned entries; held/named admitted attributes are checked separately by root guards; NTFS FileIndex is ignored",
+    "unknown": "fatal; never recursively traverse or adopt an unknown directory",
+    "missing_duplicate_mismatch": "fatal; no successful partial summary",
+    "dots": "optional filesystem-supplied dot records; if supplied require unique occurrence, directory type and current/self or owned/external-parent FileId; excluded from children but charged to admitted records"
+  },
+  "guards": {
+    "root": "existing root/parent identity, attributes, process SID, DACL, case-sensitivity and permanent invalidation checks before and after",
+    "directory": "transient complete directory snapshots for all owned directories captured before and compared after the scan",
+    "failure": "observed scan/guard failure permanently poisons owner even after repair",
+    "atomic_snapshot": false,
+    "same_sid_isolation": false,
+    "directory_write_exclusion": false
+  },
+  "limits": {
+    "downward_only": true,
+    "directories": 128,
+    "records": 512,
+    "query_calls": 640,
+    "records_include_dot_entries": true,
+    "scope": "global counters for the complete pass; original output ceilings remain; not RSS, all CPU or physical reservation; repeated passes need caller budgeting",
+    "records_scope": "admitted/decoded records including dot entries, not every native returned record on failure",
+    "record_cap_lookahead": "at the admitted record cap, one query lookahead charged to global query_calls can establish EOF; a returned data record rejects Budget without decoding and permanently poisons, so a failing pass may receive one extra native record; successful passes never exceed admitted-record cap",
+    "invalid_arguments": "zero or above-cap Limits reject before filesystem I/O without poisoning the root",
+    "query_calls_scope": "NtQueryDirectoryFile calls only; existing root guard I/O is separate"
+  },
+  "validation": {
+    "contract_tests": "static source/contract/workflow consistency only; not native execution evidence",
+    "native_windows_ntfs_accepted": false,
+    "hosted_ci_executed": false,
+    "focused_filter": "windows::output::membership::tests::",
+    "profiles": [
+      "debug",
+      "release"
+    ],
+    "native_test_names": [
+      "empty_root_repeated_scan_restarts",
+      "nested_files_and_current_rename_match",
+      "extra_file_rejects_and_poison_survives_removal",
+      "extra_nested_directory_rejects_and_poison_survives_removal",
+      "noncanonical_extra_name_rejects",
+      "invalid_limits_do_not_touch_or_poison_changed_dacl",
+      "exact_global_budgets_succeed",
+      "directory_budget_exhaustion_poisons",
+      "record_budget_exhaustion_poisons",
+      "query_budget_exhaustion_poisons",
+      "full_directory_cap_succeeds",
+      "existing_v1_poison_rejects_membership_scan",
+      "decoder_reads_file_id_not_undefined_file_index",
+      "decoder_accepts_exact_and_aligned_native_extents",
+      "decoder_rejects_short_linked_and_trailing_frames",
+      "decoder_rejects_invalid_name_lengths_and_utf16",
+      "decoder_rejects_foreign_names_and_reparse",
+      "decoder_bounds_owned_and_full_foreign_names",
+      "matcher_requires_exact_parent_name_identity_and_type",
+      "matcher_rejects_duplicates_and_missing_children",
+      "dot_entries_require_self_parent_identity_and_directory_type",
+      "native_completion_requires_exact_status_length_contract",
+      "downward_limits_and_static_diagnostics",
+      "transient_full_directory_metadata_detects_changed_write_time"
+    ],
+    "count_policy": "exact listed contract inventory and executed count; zero selected or ignored cases fail",
+    "historical_output": "fourteen ordinary output cases belong to a220596 native CI4; later 5ce8b83 is documentary; no membership acceptance inferred",
+    "native_requirement": "actual Windows x86_64 fixed local NTFS; Wine and cross-compilation are insufficient",
+    "native_test_count": 24,
+    "case_scope": "13 real temporary-NTFS fixture cases and 11 pure decoder/matcher/status/limit cases, all selected on native Windows; source inventory is not execution evidence"
+  },
+  "new_registry_dependencies": [],
+  "upstream_implementation_imported": false,
+  "network_api": false,
+  "client_data_in_git": false,
+  "windows_product_enabled": false,
+  "package_protocol_enabled": false,
+  "recovery_enabled": false,
+  "publication_authorized": false,
+  "new_bundle_built": false,
+  "full_extractor_complete": false,
+  "not_claimed": [
+    "atomic filesystem snapshot or detection of every transient concurrent mutation",
+    "private namespace against same SID or administrator",
+    "directory write exclusion",
+    "content authentication",
+    "Windows driver or package publication/receipts/sealing",
+    "Windows restart recovery or crash durability",
+    "migration of Linux hardlink/recovery protocol",
+    "new Linux/Windows bundle or source-profile relabel",
+    "real complete inputs or geometry",
+    "RustyCore server/runtime acceptance",
+    "full extractor completion"
+  ],
+  "primary_sources": {
+    "query": "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntquerydirectoryfile",
+    "record": "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_id_full_dir_information"
+  }
+}

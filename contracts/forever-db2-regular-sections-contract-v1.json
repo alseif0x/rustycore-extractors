@@ -1,0 +1,82 @@
+{
+  "profile": "forever-db2-regular-sections-numeric-v1",
+  "api": "DecodedTable::read_regular_sections",
+  "activation": "explicit_supplied_byte_library_api_only",
+  "ordinary_decode_unchanged": true,
+  "product_or_component_cli_enabled": false,
+  "schemas": "existing_reviewed_non_catalog_numeric_external_id_unparented",
+  "schema_hash_gates_preserved": true,
+  "wire_format": "WDC5",
+  "sections": {
+    "minimum": 2,
+    "maximum": 16,
+    "caller_limit_downward_only": true
+  },
+  "limits": {
+    "input_bytes": 16777216,
+    "direct_records": 100000,
+    "copy_pairs": 100000,
+    "retained_scalar_values": 1000000,
+    "scope": "whole_file_cumulative",
+    "rss_bound": false
+  },
+  "admission": {
+    "tact_declared": false,
+    "sparse": false,
+    "text": false,
+    "parent": false,
+    "inline_id": false,
+    "catalog_schema": false,
+    "catalog_count_and_offset_zero": true,
+    "complete_primitive_columns": true,
+    "contiguous_sections": true,
+    "exact_id_tables_and_eof": true
+  },
+  "semantics": {
+    "id_repair": "global_direct_record_ordinal",
+    "copies": "one_global_ordered_pass_after_all_direct_records",
+    "forward_copy_retry": false,
+    "self_copy": "reject_if_applicable",
+    "partial_result": false
+  },
+  "source_checkpoint": {
+    "authored_unit_cases": 32,
+    "unit_execution_accepted": false,
+    "native_materialization_accepted": false,
+    "real_client_accepted": false,
+    "full_extractor_complete": false
+  },
+  "executed_evidence": {
+    "source_freeze_sha256": "54ee22d44427caf6a188c270c3749be22455d13331c11b440dc2fddfa8d03cd6",
+    "independent_root_review_sha256": "896155d17bd458790873f6c87b2dc1d06f980b6183251e4617bcb0c2f0b46f1a",
+    "linux_workspace_each_profile": {
+      "passed": 2675,
+      "failed": 0,
+      "ignored": 26,
+      "summaries": 42
+    },
+    "regular_section_unit_cases": 32,
+    "contract_checks": 233,
+    "distribution_checks": 112,
+    "native_reference": "02245dcd245e7433e524577656177723d3e4992e",
+    "native_source_files": 33,
+    "native_compiler_depfile_inputs": 30,
+    "native_profile": "SpellDuration three signed32 numeric fields; complete native DB2FileLoader direct getters plus AutoProduceData and AutoProduceRecordCopies",
+    "native_positive_cases_each_profile": 83,
+    "native_direct_records_each_profile": 634,
+    "native_copy_pairs_each_profile": 107,
+    "native_materialized_rows_each_profile": 732,
+    "native_direct_scalar_bit_checks_each_profile": 1902,
+    "native_materialized_scalar_bit_checks_each_profile": 2196,
+    "rust_only_negative_cases_each_profile": 36,
+    "section_ceiling_checks_each_profile": 5,
+    "exclusive_output_guards_each_profile": 2,
+    "empty_actual_cli_network_traces_each_profile": 209,
+    "gnu_windows_runtime_executed": false,
+    "real_client_acceptance": false,
+    "full_extractor_complete": false,
+    "outer_acceptance_harness_syscall_traced": false,
+    "initial_native_preflight_attempt_rejected_and_retained": true,
+    "preflight_failure": "read-only source-copy mode changed during archive extraction; no C++ compile occurred; nine preceding checks passed on the identical frozen source"
+  }
+}

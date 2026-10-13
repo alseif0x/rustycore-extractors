@@ -1,0 +1,1564 @@
+{
+  "catalog_version": 1,
+  "scope": "pinned_gt_catalog",
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "source_license": "TrinityCore GPL-2.0-or-later; metadata facts only, no implementation imported",
+  "sources": [
+    {
+      "path": "src/tools/map_extractor/System.cpp",
+      "sha256": "1e20cf57289b7bf8188af694a9551c127916c3a0f2c9821f32e58f2771549695"
+    },
+    {
+      "path": "src/server/game/DataStores/GameTables.h",
+      "sha256": "a762688abcf447fc91cc63197eaa43058eb88f1fc100085d272bc2683389d6cb"
+    },
+    {
+      "path": "src/server/game/DataStores/GameTables.cpp",
+      "sha256": "1eb37e46b9d4b6b690024caf6731db08919b6d7aaa598b904f3b71322e904d2b"
+    },
+    {
+      "path": "src/common/Utilities/StringConvert.h",
+      "sha256": "0c3a7411a7159e71df77e7c1be768d8f370e469a74cf74356e580802aed4f0eb"
+    }
+  ],
+  "tables": [
+    {
+      "name": "ArtifactKnowledgeMultiplier",
+      "file_id": 1582086,
+      "file_name": "ArtifactKnowledgeMultiplier.txt",
+      "relative_path": "gt/ArtifactKnowledgeMultiplier.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1348,
+        "source_byte_offset": 46361
+      },
+      "struct_name": "GtArtifactKnowledgeMultiplierEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 27,
+        "source_byte_offset": 889
+      },
+      "fields": [
+        {
+          "name": "Multiplier",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 29,
+            "source_byte_offset": 937
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "ArtifactLevelXP",
+      "file_id": 1391662,
+      "file_name": "ArtifactLevelXP.txt",
+      "relative_path": "gt/ArtifactLevelXP.txt",
+      "validation_mode": "f32",
+      "value_columns": 2,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1349,
+        "source_byte_offset": 46439
+      },
+      "struct_name": "GtArtifactLevelXPEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 32,
+        "source_byte_offset": 966
+      },
+      "fields": [
+        {
+          "name": "XP",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 34,
+            "source_byte_offset": 1002
+          }
+        },
+        {
+          "name": "XP2",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 35,
+            "source_byte_offset": 1023
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "BarberShopCostBase",
+      "file_id": 1391663,
+      "file_name": "BarberShopCostBase.txt",
+      "relative_path": "gt/BarberShopCostBase.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1350,
+        "source_byte_offset": 46505
+      },
+      "struct_name": "GtBarberShopCostBaseEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 38,
+        "source_byte_offset": 1045
+      },
+      "fields": [
+        {
+          "name": "Cost",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 40,
+            "source_byte_offset": 1084
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "BaseMp",
+      "file_id": 1391664,
+      "file_name": "BaseMp.txt",
+      "relative_path": "gt/BaseMp.txt",
+      "validation_mode": "f32",
+      "value_columns": 15,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1351,
+        "source_byte_offset": 46574
+      },
+      "struct_name": "GtBaseMPEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 43,
+        "source_byte_offset": 1107
+      },
+      "fields": [
+        {
+          "name": "Rogue",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 45,
+            "source_byte_offset": 1134
+          }
+        },
+        {
+          "name": "Druid",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 46,
+            "source_byte_offset": 1158
+          }
+        },
+        {
+          "name": "Hunter",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 47,
+            "source_byte_offset": 1182
+          }
+        },
+        {
+          "name": "Mage",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 48,
+            "source_byte_offset": 1207
+          }
+        },
+        {
+          "name": "Paladin",
+          "type": "f32",
+          "value_index": 4,
+          "text_column_index": 5,
+          "flattened_f32_byte_offset": 16,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 49,
+            "source_byte_offset": 1230
+          }
+        },
+        {
+          "name": "Priest",
+          "type": "f32",
+          "value_index": 5,
+          "text_column_index": 6,
+          "flattened_f32_byte_offset": 20,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 50,
+            "source_byte_offset": 1256
+          }
+        },
+        {
+          "name": "Shaman",
+          "type": "f32",
+          "value_index": 6,
+          "text_column_index": 7,
+          "flattened_f32_byte_offset": 24,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 51,
+            "source_byte_offset": 1281
+          }
+        },
+        {
+          "name": "Warlock",
+          "type": "f32",
+          "value_index": 7,
+          "text_column_index": 8,
+          "flattened_f32_byte_offset": 28,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 52,
+            "source_byte_offset": 1306
+          }
+        },
+        {
+          "name": "Warrior",
+          "type": "f32",
+          "value_index": 8,
+          "text_column_index": 9,
+          "flattened_f32_byte_offset": 32,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 53,
+            "source_byte_offset": 1332
+          }
+        },
+        {
+          "name": "DeathKnight",
+          "type": "f32",
+          "value_index": 9,
+          "text_column_index": 10,
+          "flattened_f32_byte_offset": 36,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 54,
+            "source_byte_offset": 1358
+          }
+        },
+        {
+          "name": "Monk",
+          "type": "f32",
+          "value_index": 10,
+          "text_column_index": 11,
+          "flattened_f32_byte_offset": 40,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 55,
+            "source_byte_offset": 1388
+          }
+        },
+        {
+          "name": "DemonHunter",
+          "type": "f32",
+          "value_index": 11,
+          "text_column_index": 12,
+          "flattened_f32_byte_offset": 44,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 56,
+            "source_byte_offset": 1411
+          }
+        },
+        {
+          "name": "Evoker",
+          "type": "f32",
+          "value_index": 12,
+          "text_column_index": 13,
+          "flattened_f32_byte_offset": 48,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 57,
+            "source_byte_offset": 1441
+          }
+        },
+        {
+          "name": "Adventurer",
+          "type": "f32",
+          "value_index": 13,
+          "text_column_index": 14,
+          "flattened_f32_byte_offset": 52,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 58,
+            "source_byte_offset": 1466
+          }
+        },
+        {
+          "name": "Traveler",
+          "type": "f32",
+          "value_index": 14,
+          "text_column_index": 15,
+          "flattened_f32_byte_offset": 56,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 59,
+            "source_byte_offset": 1495
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "BaseProfessionRatings",
+      "file_id": 4494528,
+      "file_name": "BaseProfessionRatings.txt",
+      "relative_path": "gt/BaseProfessionRatings.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1352,
+        "source_byte_offset": 46631
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "BattlePetTypeDamageMod",
+      "file_id": 1391665,
+      "file_name": "BattlePetTypeDamageMod.txt",
+      "relative_path": "gt/BattlePetTypeDamageMod.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1353,
+        "source_byte_offset": 46703
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "BattlePetXP",
+      "file_id": 1391666,
+      "file_name": "BattlePetXP.txt",
+      "relative_path": "gt/BattlePetXP.txt",
+      "validation_mode": "f32",
+      "value_columns": 2,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1354,
+        "source_byte_offset": 46776
+      },
+      "struct_name": "GtBattlePetXPEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 62,
+        "source_byte_offset": 1522
+      },
+      "fields": [
+        {
+          "name": "Wins",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 64,
+            "source_byte_offset": 1554
+          }
+        },
+        {
+          "name": "Xp",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 65,
+            "source_byte_offset": 1577
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "CombatRatings",
+      "file_id": 1391669,
+      "file_name": "CombatRatings.txt",
+      "relative_path": "gt/CombatRatings.txt",
+      "validation_mode": "f32",
+      "value_columns": 32,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1355,
+        "source_byte_offset": 46838
+      },
+      "struct_name": "GtCombatRatingsEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 68,
+        "source_byte_offset": 1598
+      },
+      "fields": [
+        {
+          "name": "Amplify",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 70,
+            "source_byte_offset": 1632
+          }
+        },
+        {
+          "name": "DefenseSkill",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 71,
+            "source_byte_offset": 1658
+          }
+        },
+        {
+          "name": "Dodge",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 72,
+            "source_byte_offset": 1689
+          }
+        },
+        {
+          "name": "Parry",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 73,
+            "source_byte_offset": 1713
+          }
+        },
+        {
+          "name": "Block",
+          "type": "f32",
+          "value_index": 4,
+          "text_column_index": 5,
+          "flattened_f32_byte_offset": 16,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 74,
+            "source_byte_offset": 1737
+          }
+        },
+        {
+          "name": "HitMelee",
+          "type": "f32",
+          "value_index": 5,
+          "text_column_index": 6,
+          "flattened_f32_byte_offset": 20,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 75,
+            "source_byte_offset": 1761
+          }
+        },
+        {
+          "name": "HitRanged",
+          "type": "f32",
+          "value_index": 6,
+          "text_column_index": 7,
+          "flattened_f32_byte_offset": 24,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 76,
+            "source_byte_offset": 1788
+          }
+        },
+        {
+          "name": "HitSpell",
+          "type": "f32",
+          "value_index": 7,
+          "text_column_index": 8,
+          "flattened_f32_byte_offset": 28,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 77,
+            "source_byte_offset": 1816
+          }
+        },
+        {
+          "name": "CritMelee",
+          "type": "f32",
+          "value_index": 8,
+          "text_column_index": 9,
+          "flattened_f32_byte_offset": 32,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 78,
+            "source_byte_offset": 1843
+          }
+        },
+        {
+          "name": "CritRanged",
+          "type": "f32",
+          "value_index": 9,
+          "text_column_index": 10,
+          "flattened_f32_byte_offset": 36,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 79,
+            "source_byte_offset": 1871
+          }
+        },
+        {
+          "name": "CritSpell",
+          "type": "f32",
+          "value_index": 10,
+          "text_column_index": 11,
+          "flattened_f32_byte_offset": 40,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 80,
+            "source_byte_offset": 1900
+          }
+        },
+        {
+          "name": "Corruption",
+          "type": "f32",
+          "value_index": 11,
+          "text_column_index": 12,
+          "flattened_f32_byte_offset": 44,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 81,
+            "source_byte_offset": 1928
+          }
+        },
+        {
+          "name": "CorruptionResistance",
+          "type": "f32",
+          "value_index": 12,
+          "text_column_index": 13,
+          "flattened_f32_byte_offset": 48,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 82,
+            "source_byte_offset": 1957
+          }
+        },
+        {
+          "name": "Speed",
+          "type": "f32",
+          "value_index": 13,
+          "text_column_index": 14,
+          "flattened_f32_byte_offset": 52,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 83,
+            "source_byte_offset": 1996
+          }
+        },
+        {
+          "name": "ResilienceCritTaken",
+          "type": "f32",
+          "value_index": 14,
+          "text_column_index": 15,
+          "flattened_f32_byte_offset": 56,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 84,
+            "source_byte_offset": 2020
+          }
+        },
+        {
+          "name": "ResiliencePlayerDamage",
+          "type": "f32",
+          "value_index": 15,
+          "text_column_index": 16,
+          "flattened_f32_byte_offset": 60,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 85,
+            "source_byte_offset": 2058
+          }
+        },
+        {
+          "name": "Lifesteal",
+          "type": "f32",
+          "value_index": 16,
+          "text_column_index": 17,
+          "flattened_f32_byte_offset": 64,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 86,
+            "source_byte_offset": 2099
+          }
+        },
+        {
+          "name": "HasteMelee",
+          "type": "f32",
+          "value_index": 17,
+          "text_column_index": 18,
+          "flattened_f32_byte_offset": 68,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 87,
+            "source_byte_offset": 2127
+          }
+        },
+        {
+          "name": "HasteRanged",
+          "type": "f32",
+          "value_index": 18,
+          "text_column_index": 19,
+          "flattened_f32_byte_offset": 72,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 88,
+            "source_byte_offset": 2156
+          }
+        },
+        {
+          "name": "HasteSpell",
+          "type": "f32",
+          "value_index": 19,
+          "text_column_index": 20,
+          "flattened_f32_byte_offset": 76,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 89,
+            "source_byte_offset": 2186
+          }
+        },
+        {
+          "name": "Avoidance",
+          "type": "f32",
+          "value_index": 20,
+          "text_column_index": 21,
+          "flattened_f32_byte_offset": 80,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 90,
+            "source_byte_offset": 2215
+          }
+        },
+        {
+          "name": "Sturdiness",
+          "type": "f32",
+          "value_index": 21,
+          "text_column_index": 22,
+          "flattened_f32_byte_offset": 84,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 91,
+            "source_byte_offset": 2243
+          }
+        },
+        {
+          "name": "Unused7",
+          "type": "f32",
+          "value_index": 22,
+          "text_column_index": 23,
+          "flattened_f32_byte_offset": 88,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 92,
+            "source_byte_offset": 2272
+          }
+        },
+        {
+          "name": "Expertise",
+          "type": "f32",
+          "value_index": 23,
+          "text_column_index": 24,
+          "flattened_f32_byte_offset": 92,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 93,
+            "source_byte_offset": 2298
+          }
+        },
+        {
+          "name": "ArmorPenetration",
+          "type": "f32",
+          "value_index": 24,
+          "text_column_index": 25,
+          "flattened_f32_byte_offset": 96,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 94,
+            "source_byte_offset": 2326
+          }
+        },
+        {
+          "name": "Mastery",
+          "type": "f32",
+          "value_index": 25,
+          "text_column_index": 26,
+          "flattened_f32_byte_offset": 100,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 95,
+            "source_byte_offset": 2361
+          }
+        },
+        {
+          "name": "PvPPower",
+          "type": "f32",
+          "value_index": 26,
+          "text_column_index": 27,
+          "flattened_f32_byte_offset": 104,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 96,
+            "source_byte_offset": 2387
+          }
+        },
+        {
+          "name": "Cleave",
+          "type": "f32",
+          "value_index": 27,
+          "text_column_index": 28,
+          "flattened_f32_byte_offset": 108,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 97,
+            "source_byte_offset": 2414
+          }
+        },
+        {
+          "name": "VersatilityDamageDone",
+          "type": "f32",
+          "value_index": 28,
+          "text_column_index": 29,
+          "flattened_f32_byte_offset": 112,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 98,
+            "source_byte_offset": 2439
+          }
+        },
+        {
+          "name": "VersatilityHealingDone",
+          "type": "f32",
+          "value_index": 29,
+          "text_column_index": 30,
+          "flattened_f32_byte_offset": 116,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 99,
+            "source_byte_offset": 2479
+          }
+        },
+        {
+          "name": "VersatilityDamageTaken",
+          "type": "f32",
+          "value_index": 30,
+          "text_column_index": 31,
+          "flattened_f32_byte_offset": 120,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 100,
+            "source_byte_offset": 2520
+          }
+        },
+        {
+          "name": "Unused12",
+          "type": "f32",
+          "value_index": 31,
+          "text_column_index": 32,
+          "flattened_f32_byte_offset": 124,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 101,
+            "source_byte_offset": 2561
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "CombatRatingsMultByILvl",
+      "file_id": 1391670,
+      "file_name": "CombatRatingsMultByILvl.txt",
+      "relative_path": "gt/CombatRatingsMultByILvl.txt",
+      "validation_mode": "f32",
+      "value_columns": 4,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1356,
+        "source_byte_offset": 46902
+      },
+      "struct_name": "GtCombatRatingsMultByILvl",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 104,
+        "source_byte_offset": 2588
+      },
+      "fields": [
+        {
+          "name": "ArmorMultiplier",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 106,
+            "source_byte_offset": 2627
+          }
+        },
+        {
+          "name": "WeaponMultiplier",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 107,
+            "source_byte_offset": 2661
+          }
+        },
+        {
+          "name": "TrinketMultiplier",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 108,
+            "source_byte_offset": 2696
+          }
+        },
+        {
+          "name": "JewelryMultiplier",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 109,
+            "source_byte_offset": 2732
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "HonorLevel",
+      "file_id": 1391671,
+      "file_name": "HonorLevel.txt",
+      "relative_path": "gt/HonorLevel.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1357,
+        "source_byte_offset": 46976
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "HpPerSta",
+      "file_id": 1391642,
+      "file_name": "HpPerSta.txt",
+      "relative_path": "gt/HpPerSta.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1358,
+        "source_byte_offset": 47037
+      },
+      "struct_name": "GtHpPerStaEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 112,
+        "source_byte_offset": 2768
+      },
+      "fields": [
+        {
+          "name": "Health",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 114,
+            "source_byte_offset": 2797
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "ItemLevelByLevel",
+      "file_id": 2012881,
+      "file_name": "ItemLevelByLevel.txt",
+      "relative_path": "gt/ItemLevelByLevel.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1359,
+        "source_byte_offset": 47096
+      },
+      "struct_name": "GtItemLevelByLevelEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 122,
+        "source_byte_offset": 2894
+      },
+      "fields": [
+        {
+          "name": "ItemLevel",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 124,
+            "source_byte_offset": 2931
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "ItemLevelSquish",
+      "file_id": 1726830,
+      "file_name": "ItemLevelSquish.txt",
+      "relative_path": "gt/ItemLevelSquish.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1360,
+        "source_byte_offset": 47163
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "ItemSocketCostPerLevel",
+      "file_id": 1391643,
+      "file_name": "ItemSocketCostPerLevel.txt",
+      "relative_path": "gt/ItemSocketCostPerLevel.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1361,
+        "source_byte_offset": 47229
+      },
+      "struct_name": "GtItemSocketCostPerLevelEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 117,
+        "source_byte_offset": 2822
+      },
+      "fields": [
+        {
+          "name": "SocketCost",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 119,
+            "source_byte_offset": 2865
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "NPCManaCostScaler",
+      "file_id": 1391651,
+      "file_name": "NPCManaCostScaler.txt",
+      "relative_path": "gt/NPCManaCostScaler.txt",
+      "validation_mode": "f32",
+      "value_columns": 1,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1362,
+        "source_byte_offset": 47302
+      },
+      "struct_name": "GtNpcManaCostScalerEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 127,
+        "source_byte_offset": 2959
+      },
+      "fields": [
+        {
+          "name": "Scaler",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 129,
+            "source_byte_offset": 2997
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "ProfessionRatings",
+      "file_id": 4492239,
+      "file_name": "ProfessionRatings.txt",
+      "relative_path": "gt/ProfessionRatings.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1363,
+        "source_byte_offset": 47370
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "SandboxScaling",
+      "file_id": 1391659,
+      "file_name": "SandboxScaling.txt",
+      "relative_path": "gt/SandboxScaling.txt",
+      "validation_mode": "raw",
+      "value_columns": null,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1364,
+        "source_byte_offset": 47438
+      },
+      "struct_name": null,
+      "struct_source": null,
+      "fields": null,
+      "cpp_runtime_required": false
+    },
+    {
+      "name": "SpellScaling",
+      "file_id": 1391660,
+      "file_name": "SpellScaling.txt",
+      "relative_path": "gt/SpellScaling.txt",
+      "validation_mode": "f32",
+      "value_columns": 24,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1365,
+        "source_byte_offset": 47503
+      },
+      "struct_name": "GtSpellScalingEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 132,
+        "source_byte_offset": 3022
+      },
+      "fields": [
+        {
+          "name": "Rogue",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 134,
+            "source_byte_offset": 3055
+          }
+        },
+        {
+          "name": "Druid",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 135,
+            "source_byte_offset": 3079
+          }
+        },
+        {
+          "name": "Hunter",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 136,
+            "source_byte_offset": 3103
+          }
+        },
+        {
+          "name": "Mage",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 137,
+            "source_byte_offset": 3128
+          }
+        },
+        {
+          "name": "Paladin",
+          "type": "f32",
+          "value_index": 4,
+          "text_column_index": 5,
+          "flattened_f32_byte_offset": 16,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 138,
+            "source_byte_offset": 3151
+          }
+        },
+        {
+          "name": "Priest",
+          "type": "f32",
+          "value_index": 5,
+          "text_column_index": 6,
+          "flattened_f32_byte_offset": 20,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 139,
+            "source_byte_offset": 3177
+          }
+        },
+        {
+          "name": "Shaman",
+          "type": "f32",
+          "value_index": 6,
+          "text_column_index": 7,
+          "flattened_f32_byte_offset": 24,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 140,
+            "source_byte_offset": 3202
+          }
+        },
+        {
+          "name": "Warlock",
+          "type": "f32",
+          "value_index": 7,
+          "text_column_index": 8,
+          "flattened_f32_byte_offset": 28,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 141,
+            "source_byte_offset": 3227
+          }
+        },
+        {
+          "name": "Warrior",
+          "type": "f32",
+          "value_index": 8,
+          "text_column_index": 9,
+          "flattened_f32_byte_offset": 32,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 142,
+            "source_byte_offset": 3253
+          }
+        },
+        {
+          "name": "DeathKnight",
+          "type": "f32",
+          "value_index": 9,
+          "text_column_index": 10,
+          "flattened_f32_byte_offset": 36,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 143,
+            "source_byte_offset": 3279
+          }
+        },
+        {
+          "name": "Monk",
+          "type": "f32",
+          "value_index": 10,
+          "text_column_index": 11,
+          "flattened_f32_byte_offset": 40,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 144,
+            "source_byte_offset": 3309
+          }
+        },
+        {
+          "name": "DemonHunter",
+          "type": "f32",
+          "value_index": 11,
+          "text_column_index": 12,
+          "flattened_f32_byte_offset": 44,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 145,
+            "source_byte_offset": 3332
+          }
+        },
+        {
+          "name": "Evoker",
+          "type": "f32",
+          "value_index": 12,
+          "text_column_index": 13,
+          "flattened_f32_byte_offset": 48,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 146,
+            "source_byte_offset": 3362
+          }
+        },
+        {
+          "name": "Adventurer",
+          "type": "f32",
+          "value_index": 13,
+          "text_column_index": 14,
+          "flattened_f32_byte_offset": 52,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 147,
+            "source_byte_offset": 3387
+          }
+        },
+        {
+          "name": "Traveler",
+          "type": "f32",
+          "value_index": 14,
+          "text_column_index": 15,
+          "flattened_f32_byte_offset": 56,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 148,
+            "source_byte_offset": 3416
+          }
+        },
+        {
+          "name": "Item",
+          "type": "f32",
+          "value_index": 15,
+          "text_column_index": 16,
+          "flattened_f32_byte_offset": 60,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 149,
+            "source_byte_offset": 3443
+          }
+        },
+        {
+          "name": "Consumable",
+          "type": "f32",
+          "value_index": 16,
+          "text_column_index": 17,
+          "flattened_f32_byte_offset": 64,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 150,
+            "source_byte_offset": 3466
+          }
+        },
+        {
+          "name": "Gem1",
+          "type": "f32",
+          "value_index": 17,
+          "text_column_index": 18,
+          "flattened_f32_byte_offset": 68,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 151,
+            "source_byte_offset": 3495
+          }
+        },
+        {
+          "name": "Gem2",
+          "type": "f32",
+          "value_index": 18,
+          "text_column_index": 19,
+          "flattened_f32_byte_offset": 72,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 152,
+            "source_byte_offset": 3518
+          }
+        },
+        {
+          "name": "Gem3",
+          "type": "f32",
+          "value_index": 19,
+          "text_column_index": 20,
+          "flattened_f32_byte_offset": 76,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 153,
+            "source_byte_offset": 3541
+          }
+        },
+        {
+          "name": "Health",
+          "type": "f32",
+          "value_index": 20,
+          "text_column_index": 21,
+          "flattened_f32_byte_offset": 80,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 154,
+            "source_byte_offset": 3564
+          }
+        },
+        {
+          "name": "DamageReplaceStat",
+          "type": "f32",
+          "value_index": 21,
+          "text_column_index": 22,
+          "flattened_f32_byte_offset": 84,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 155,
+            "source_byte_offset": 3589
+          }
+        },
+        {
+          "name": "DamageSecondary",
+          "type": "f32",
+          "value_index": 22,
+          "text_column_index": 23,
+          "flattened_f32_byte_offset": 88,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 156,
+            "source_byte_offset": 3625
+          }
+        },
+        {
+          "name": "ManaConsumable",
+          "type": "f32",
+          "value_index": 23,
+          "text_column_index": 24,
+          "flattened_f32_byte_offset": 92,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 157,
+            "source_byte_offset": 3659
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "StaminaMultByILvl",
+      "file_id": 1980632,
+      "file_name": "StaminaMultByILvl.txt",
+      "relative_path": "gt/StaminaMultByILvl.txt",
+      "validation_mode": "f32",
+      "value_columns": 4,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1366,
+        "source_byte_offset": 47566
+      },
+      "struct_name": "GtStaminaMultByILvl",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 160,
+        "source_byte_offset": 3692
+      },
+      "fields": [
+        {
+          "name": "ArmorMultiplier",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 162,
+            "source_byte_offset": 3725
+          }
+        },
+        {
+          "name": "WeaponMultiplier",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 163,
+            "source_byte_offset": 3759
+          }
+        },
+        {
+          "name": "TrinketMultiplier",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 164,
+            "source_byte_offset": 3794
+          }
+        },
+        {
+          "name": "JewelryMultiplier",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 165,
+            "source_byte_offset": 3830
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    },
+    {
+      "name": "xp",
+      "file_id": 1391661,
+      "file_name": "xp.txt",
+      "relative_path": "gt/xp.txt",
+      "validation_mode": "f32",
+      "value_columns": 5,
+      "catalog_source": {
+        "path": "src/tools/map_extractor/System.cpp",
+        "line": 1367,
+        "source_byte_offset": 47634
+      },
+      "struct_name": "GtXpEntry",
+      "struct_source": {
+        "path": "src/server/game/DataStores/GameTables.h",
+        "line": 168,
+        "source_byte_offset": 3866
+      },
+      "fields": [
+        {
+          "name": "Total",
+          "type": "f32",
+          "value_index": 0,
+          "text_column_index": 1,
+          "flattened_f32_byte_offset": 0,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 170,
+            "source_byte_offset": 3889
+          }
+        },
+        {
+          "name": "PerKill",
+          "type": "f32",
+          "value_index": 1,
+          "text_column_index": 2,
+          "flattened_f32_byte_offset": 4,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 171,
+            "source_byte_offset": 3913
+          }
+        },
+        {
+          "name": "Junk",
+          "type": "f32",
+          "value_index": 2,
+          "text_column_index": 3,
+          "flattened_f32_byte_offset": 8,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 172,
+            "source_byte_offset": 3939
+          }
+        },
+        {
+          "name": "Stats",
+          "type": "f32",
+          "value_index": 3,
+          "text_column_index": 4,
+          "flattened_f32_byte_offset": 12,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 173,
+            "source_byte_offset": 3962
+          }
+        },
+        {
+          "name": "Divisor",
+          "type": "f32",
+          "value_index": 4,
+          "text_column_index": 5,
+          "flattened_f32_byte_offset": 16,
+          "source": {
+            "path": "src/server/game/DataStores/GameTables.h",
+            "line": 174,
+            "source_byte_offset": 3986
+          }
+        }
+      ],
+      "cpp_runtime_required": true
+    }
+  ]
+}

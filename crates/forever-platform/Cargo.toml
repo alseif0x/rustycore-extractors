@@ -1,0 +1,11 @@
+[package]
+name = "forever-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Conservative bounded platform filesystem primitives for Forever extractors"
+
+[lints.rust]
+unsafe_code = "deny"

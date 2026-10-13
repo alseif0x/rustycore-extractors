@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-package-v1.schema.json",
+  "title": "Forever artifact-integrity package v1",
+  "description": "Authored 2026-10-11. Byte integrity and caller producer declarations only. Canonical serialization, context component/locale binding, seals, inventory digest, safe filesystem and complete artifact hashes additionally require forever-package verify. No format/runtime compatibility claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "scope",
+    "status",
+    "context",
+    "artifacts",
+    "file_count",
+    "total_bytes",
+    "inventory_sha256"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 1
+    },
+    "scope": {
+      "const": "artifact_integrity"
+    },
+    "status": {
+      "const": "complete"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build",
+        "locale",
+        "components",
+        "source_sha256",
+        "plan_sha256",
+        "producer_sha256"
+      ],
+      "properties": {
+        "build": {
+          "enum": [
+            70170,
+            70205
+          ]
+        },
+        "locale": {
+          "enum": [
+            "enUS",
+            "esES"
+          ]
+        },
+        "components": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 63
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64,
+          "not": {
+            "const": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64,
+          "not": {
+            "const": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "producer_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64,
+          "not": {
+            "const": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 262144,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "component",
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "component": {
+            "enum": [
+              "db2",
+              "gt",
+              "cameras",
+              "maps",
+              "vmaps",
+              "mmaps"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[ -~]+$",
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "[\"\\\\:*?<>|]"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(^|/)\\."
+                }
+              },
+              {
+                "not": {
+                  "pattern": "[. ](/|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(^/|//|/$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "[^ -~]"
+                }
+              }
+            ]
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 134217728
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "db2"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^dbc/(enUS|esES)/"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "gt"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^gt/"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "cameras"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^cameras/"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "maps"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^maps/"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "vmaps"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^vmaps/"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "mmaps"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "path": {
+                  "pattern": "^mmaps/"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "file_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 262144
+    },
+    "total_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1099511627776
+    },
+    "inventory_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    }
+  }
+}

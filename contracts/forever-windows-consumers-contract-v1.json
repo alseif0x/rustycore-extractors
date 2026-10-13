@@ -1,0 +1,112 @@
+{
+  "contract": "forever-windows-consumers-v1",
+  "version": 1,
+  "authored": "2026-10-11",
+  "license": "GPL-3.0-or-later",
+  "foundation_contract": "forever-windows-read-v1",
+  "foundation_profile": "windows-x64-fixed-ntfs-read-lease-v1",
+  "api_profile": "forever-windows-read-ntfs-v1",
+  "status": "read consumers integrated into Windows library branches; complete Windows product driver and output publication remain disabled",
+  "sources": {
+    "admission": "crates/forever-casc/src/admission.rs",
+    "store": "crates/forever-casc/src/local_store.rs",
+    "store_io": "crates/forever-casc/src/local_store/io.rs",
+    "store_windows": "crates/forever-casc/src/local_store/io/windows.rs",
+    "session": "crates/forever-casc/src/acquisition.rs",
+    "input": "crates/forever-extractor/src/input.rs",
+    "input_windows": "crates/forever-extractor/src/input/windows.rs",
+    "output_guards": [
+      "crates/forever-casc/src/batch/output.rs",
+      "crates/forever-casc/src/gametables/output.rs",
+      "crates/forever-casc/src/cameras/output.rs"
+    ]
+  },
+  "platform": {
+    "architecture": "x86_64",
+    "volume": "fixed local NTFS",
+    "normal_paths": "exact Unicode absolute drive paths; no UNC/device/verbatim, relative resolution, prefix stripping or reparse fallback"
+  },
+  "casc": {
+    "admission": "public admit reads complete .build.info under ReadFile with LinkPolicy::Allow before the unchanged product/build metadata parser",
+    "builds": [
+      70170,
+      70205
+    ],
+    "product": "wow_classic_beta",
+    "build_info_bytes": 262144,
+    "routing": "Windows cfg selects guarded whole-file, index enumeration and archive-span reads; non-Windows paths retain their existing implementation",
+    "links": "LinkPolicy::Allow fixes complete file identity and link count; no reparse points admitted",
+    "guard": {
+      "capture": "fresh full file or directory lease, capture exact path/type/full identity and immediately drop OS handles",
+      "retained": "exact path, kind, captured identity and optional authored expected bytes; no persistent file handles or hidden descriptor cache",
+      "check": "reacquire matching typed lease and compare every captured identity field; verify held/named snapshot before success",
+      "expected_bytes": "optional exact comparison in 4096-byte chunks under one retained file lease",
+      "directory": "full final-directory snapshot; sibling mutation is not silently reduced to same-object equality",
+      "failure": "unavailable or mismatching previously captured input maps to local_store_input_changed; no silent refresh",
+      "poison": "Guard and LocalStore do not themselves promise permanent poison across reacquisition; acquisition::Session permanently poisons future reads after an observed InputChanged"
+    },
+    "enumeration": "one directory lease spans read_dir; iterator is dropped before full verification; directory lease drops before independent index-file leases",
+    "whole": "enforce existing caller total limit, phase budget and exact allocation before guarded range acquisition",
+    "archive": "plan against captured archive size; reserve encoded/decode scratch before allocation; guarded complete range and post-decode identity verification",
+    "range": "single complete retained file lease; verify before/after full acquisition; positional reads chunk at most 64 MiB with checked offset arithmetic",
+    "content": "existing complete decoded size and CKey MD5 authentication retained; no zero-filled incomplete payload or network fallback",
+    "limits": {
+      "primitive_chunk_bytes": 67108864,
+      "encoding_bytes": 268435456,
+      "root_bytes": 268435456,
+      "archive_span_bytes": 268435456,
+      "index_bytes": 67108864,
+      "decoded_file_bytes": 67108864,
+      "windows_resident_allowance_bytes": 262144,
+      "allowance_scope": "conservative logical path/prefix/handle/enumeration reservation charged once during store open; not measured heap, RSS or kernel resource bound",
+      "existing_limits_enlarged": false
+    }
+  },
+  "input": {
+    "bytes": "complete explicit input at caller limit using captured size, one retained lease, checked 64-MiB chunks and final verification; total may exceed one primitive chunk",
+    "keys": "only explicitly named complete key file, bounded at existing 256 KiB and parsed by the existing opaque keyring API; source lease stays retained in SuppliedKeys",
+    "key_bytes": 262144,
+    "links": "LinkPolicy::Reject for both explicit input APIs",
+    "key_lease_lifetime": "until SuppliedKeys is consumed through into_keyring or dropped; no source pathname serialized",
+    "keys_not_discovered": true,
+    "secret_output": false,
+    "secure_erasure_guaranteed": false,
+    "output_protection": "retained readonly source lease is not alias-safe output-path containment or a Windows publication protocol",
+    "loaded_executable_identity": false
+  },
+  "outputs": {
+    "product_driver_enabled": false,
+    "product_error": "product_platform",
+    "component_error": "output_platform",
+    "component_operations": "DB2 batch create/publish, GT create/create_catalog/publish/complete, camera create/publish/complete reject before output I/O on Windows",
+    "filesystem_mutation": "none from unsupported Windows component-output entrypoints",
+    "private_dacl_backend": false,
+    "durable_publication_backend": false
+  },
+  "validation": {
+    "contract_tests": "static source/contract consistency only; no actual Win32 execution",
+    "windows_synthetic_ci": "whole workspace and all targets, no native feature or ignored external corpus",
+    "hosted_ci_executed": false,
+    "actual_windows_ntfs_accepted": false,
+    "wine": "per-run preliminary evidence belongs to external coordinator reports; does not prove real NTFS, privilege, junction or cloud-reparse semantics"
+  },
+  "not_claimed": [
+    "complete Windows extraction",
+    "Windows product recovery or distribution",
+    "Windows output DACL or crash durability",
+    "loaded executable identity",
+    "alias-safe output/key-source containment",
+    "actual Windows/NTFS acceptance",
+    "real-client extraction acceptance",
+    "new native C++ parity",
+    "RustyCore runtime acceptance",
+    "full extractor completion",
+    "publication authorization"
+  ],
+  "new_registry_dependencies": [],
+  "upstream_implementation_imported": false,
+  "network": false,
+  "client_data_in_git": false,
+  "full_extractor_complete": false,
+  "publication_authorized": false
+}

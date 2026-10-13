@@ -1,0 +1,86 @@
+{
+  "manifest_version": 2,
+  "run_id": "8d1e3b7c-2a94-4f61-b8d2-5e7a9c0f3b16",
+  "status": "incomplete",
+  "reason": "One reviewed table failed body decode; output left marked incomplete",
+  "compatibility": {
+    "support": "admitted",
+    "target_build": 70170
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "version": "1.60.1.70170",
+    "build": 70170,
+    "locale": "enUS",
+    "install_fingerprint_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "extractor": {
+    "name": "forever-db2-extract",
+    "version": "0.2.0-test.1",
+    "commit": "7777777777777777777777777777777777777777",
+    "implementation": "rust",
+    "compatibility_oracle_commit": "02245dcd245e7433e524577656177723d3e4992e"
+  },
+  "scope": "explicit_db2_batch",
+  "formats": {
+    "db2": { "magic": "WDC5", "version": 5 },
+    "tables": [
+      {
+        "name": "ChrClasses",
+        "file_id": 1361031,
+        "table_hash": 4119371148,
+        "layout_hash": 2949230786,
+        "meta_index_field": 29,
+        "field_count": 43
+      }
+    ]
+  },
+  "options": {
+    "locale": "enUS",
+    "table_selection": "explicit_manifest",
+    "manifest_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+    "entry_count": 1,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "lock_sha256": null,
+    "downloaded_bytes": 0
+  },
+  "outputs": {
+    "root": ".",
+    "incomplete_marker_present": true,
+    "artifacts": [
+      {
+        "name": "ChrClasses",
+        "file_id": 1361031,
+        "relative_path": "ChrClasses.db2",
+        "status": "error",
+        "code": "row_decode_mismatch",
+        "bytes": 6200,
+        "sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "declared_records": 9,
+        "table_schema_validated": true,
+        "record_data_decoded": false,
+        "decoded_rows": null
+      }
+    ],
+    "integrity": {
+      "algorithm": "sha256",
+      "file_count": 0,
+      "total_bytes": 0,
+      "inventory_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "timestamps": {
+    "started_at": "2026-10-04T09:00:00Z",
+    "completed_at": null
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  }
+}

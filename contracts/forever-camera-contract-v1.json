@@ -1,0 +1,96 @@
+{
+  "contract_version": 1,
+  "line": "forever",
+  "scope": "complete_camera_files",
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "db2_metadata_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+  "manifest": "forever-camera-manifest.json",
+  "schema": "schemas/forever-camera-manifest-v1.schema.json",
+  "incomplete_marker": ".rustycore-forever-camera-incomplete.json",
+  "product": "wow_classic_beta",
+  "admitted_builds": [
+    70170,
+    70205
+  ],
+  "storage_locales": [
+    "enUS",
+    "esES"
+  ],
+  "casc_open_file_locale_parameter": 0,
+  "discovery": {
+    "policy": "direct_rows_u32_field3_v1",
+    "source_name": "CinematicCamera.db2",
+    "source_file_id": 1294214,
+    "source_relative_path": "dbc/<storage_locale>/CinematicCamera.db2",
+    "layout_hash": "0x8BFD752B",
+    "physical_field": 3,
+    "type": "u32",
+    "index": -1,
+    "parent": -1,
+    "fields": [
+      "f32[3] Origin",
+      "u32 SoundID",
+      "f32 OriginFacing",
+      "u32 FileDataID",
+      "u32 ConversationID"
+    ],
+    "direct_rows_before_parent_and_copies": true,
+    "return_only_after_complete_decode_validation": true,
+    "retain_zero": true,
+    "deduplicate": true,
+    "order": "ascending u32",
+    "set_hash": "SHA256 over concatenated ascending little-endian u32 FileDataIDs; no count or separators"
+  },
+  "output_name": "cameras/FILE<8 uppercase hexadecimal FileDataID digits>.xxx",
+  "source_references": {
+    "discovery": "src/tools/map_extractor/System.cpp:82,394-414",
+    "metadata": "src/server/game/DataStores/DB2Metadata.h:4410-4430",
+    "field_names": "src/server/game/DataStores/DB2LoadInfo.h:1297-1311",
+    "raw_extraction": "src/tools/map_extractor/System.cpp:1147-1187,1303-1334",
+    "storage_selection": "src/tools/map_extractor/System.cpp:1555-1560",
+    "native_bridge": "native/forever-casc/bridge.cpp:44-53"
+  },
+  "limits": {
+    "source_bytes": 16777216,
+    "camera_file_bytes": 16777216,
+    "discovered_unique_ids": 4096,
+    "total_bytes_including_source": 268435456,
+    "source_direct_records": 100000,
+    "source_scalar_values": 1000000,
+    "manifest_bytes": 2097152,
+    "manifest_depth": 8
+  },
+  "raw_bytes_preserved": true,
+  "offline": true,
+  "network_options": false,
+  "prefix_fallback": false,
+  "optional_missing_success": false,
+  "required_for_success": "complete validated discovery DB2 and every discovered file; a valid empty DB2 produces a complete source-only output",
+  "m2_parsed": false,
+  "waypoints_generated": false,
+  "runtime_accepted": false,
+  "full_client_extraction": false,
+  "publication": "new_private_directory_exclusive_atomic_files_incomplete_marker_manifest_last",
+  "directory_atomic_promotion": false,
+  "resume": false,
+  "overwrite": false,
+  "verification": {
+    "offline": true,
+    "read_only": true,
+    "rediscover_from_preserved_db2": true,
+    "exact_file_id_set_and_order": true,
+    "exact_output_tree": true,
+    "symlinks_allowed": false,
+    "hash": "sha256",
+    "inventory": "UTF8 relative-path sorted lines: lowercase sha256, two spaces, relative path, LF",
+    "partial_output_accepted": false
+  },
+  "exit_codes": {
+    "success": 0,
+    "invalid_invocation_or_manifest": 2,
+    "unsupported_client": 3,
+    "input_or_publication_failure": 4,
+    "incomplete_batch": 8,
+    "verification_mismatch": 9
+  }
+}

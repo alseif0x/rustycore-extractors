@@ -1,0 +1,302 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Authored 2026-10-11: product inventory and bounded intrinsic format checks.
+//! Does not prove VMap associations, Detour topology, original output parity,
+//! full selected geometry inventories or runtime/client completeness.
+use crate::{
+    Error,
+    driver::validate_db2,
+    plan::{CollisionStorage, Plan, Selection},
+};
+use forever_casc::{
+    cameras,
+    gametables::catalog as gt,
+    integrity,
+    package::{self, Artifact, Component, Context},
+    terrain,
+};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    io::Read,
+    path::Path,
+};
+
+#[cfg(test)]
+mod tests;
+
+pub fn verify(
+    plan: &Plan,
+    output: &Path,
+    expected: Option<Context>,
+) -> Result<package::Summary, Error> {
+    plan.validate()?;
+    let mut limits = package::Limits::default();
+    if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
+        limits.total_bytes = budget.output_bytes;
+    }
+    let mut facts = Facts::default();
+    let mut failure = None;
+    let summary = package::verify_with(output, expected, limits, |artifact, file| {
+        let mut bytes = Vec::new();
+        let result = (|| {
+            bytes
+                .try_reserve_exact(artifact.bytes as usize)
+                .map_err(|_| Error::from("product_allocation"))?;
+            file.take(artifact.bytes + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error::from("product_input_io"))?;
+            if bytes.len() as u64 != artifact.bytes {
+                return Err("product_input_changed".into());
+            }
+            facts.inspect(plan, artifact, &bytes)
+        })();
+        result.map_err(|mut error: Error| {
+            error.component = Some(artifact.component);
+            failure = Some(error);
+            package::Error::Schema
+        })
+    })
+    .map_err(|e| failure.unwrap_or_else(|| e.into()))?;
+    let context = summary.context;
+    if context.build != plan.build
+        || context.locale != plan.locale
+        || context.components != plan.components
+        || context.plan_sha256 != integrity::digest(plan.render().as_bytes())
+    {
+        return Err("product_plan_mismatch".into());
+    }
+    if facts.db2 != plan.db2.iter().map(|e| e.name.clone()).collect()
+        || (plan.contains(Component::GameTables) && facts.gt != gt::Table::ALL.len())
+        || (plan.contains(Component::Cameras)
+            && facts.cameras != facts.camera_source.ok_or("product_camera_source")?)
+        || (plan.contains(Component::Collision) && !facts.dtree)
+    {
+        return Err("product_inventory".into());
+    }
+    Ok(summary)
+}
+
+#[derive(Default)]
+struct Facts {
+    db2: BTreeSet<String>,
+    gt: usize,
+    cameras: BTreeSet<u32>,
+    camera_source: Option<BTreeSet<u32>>,
+    trees: BTreeMap<u32, usize>,
+    dtree: bool,
+}
+impl Facts {
+    fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
+        if bytes.is_empty() {
+            return Err("product_empty_artifact".into());
+        }
+        let path = &artifact.path;
+        match artifact.component {
+            Component::Db2 => {
+                let prefix = format!("dbc/{}/", plan.locale.name());
+                let name = path
+                    .strip_prefix(&prefix)
+                    .and_then(|v| v.strip_suffix(".db2"))
+                    .ok_or("product_artifact_name")?;
+                if !plan.db2.iter().any(|e| e.name == name) || bytes.len() > 16 * 1024 * 1024 {
+                    return Err("product_inventory".into());
+                }
+                validate_db2(plan, name, bytes)?;
+                if name == "CinematicCamera" && plan.contains(Component::Cameras) {
+                    self.camera_source = Some(cameras::discover(bytes)?.file_ids().clone());
+                }
+                self.db2.insert(name.into());
+            }
+            Component::GameTables => {
+                let table = gt::Table::ALL
+                    .into_iter()
+                    .find(|t| t.relative_path() == path)
+                    .ok_or("product_artifact_name")?;
+                if bytes.len() > forever_casc::gametables::MAX_FILE_BYTES {
+                    return Err("product_file_limit".into());
+                }
+                if table.value_columns().is_some() {
+                    gt::parse_numeric(bytes, table).map_err(|e| Error::from(e.code()))?;
+                }
+                self.gt += 1;
+            }
+            Component::Cameras => {
+                let value = path
+                    .strip_prefix("cameras/FILE")
+                    .and_then(|v| v.strip_suffix(".xxx"))
+                    .ok_or("product_artifact_name")?;
+                let id = u32::from_str_radix(value, 16)
+                    .map_err(|_| Error::from("product_artifact_name"))?;
+                if cameras::relative_path(id) != *path || bytes.len() > cameras::MAX_FILE_BYTES {
+                    return Err("product_artifact_name".into());
+                }
+                self.cameras.insert(id);
+            }
+            Component::Terrain => {
+                if let Some(map) = path
+                    .strip_prefix("maps/")
+                    .and_then(|v| v.strip_suffix(".tilelist"))
+                {
+                    let id = decimal(map)?;
+                    admit(plan.terrain, id, None, false)?;
+                    if path != &format!("maps/{id:04}.tilelist") {
+                        return Err("product_artifact_name".into());
+                    }
+                    terrain::tilelist::verify(bytes, plan.build)
+                        .map_err(|_| Error::from("product_tilelist"))?;
+                } else {
+                    let (map, x, y) = terrain_map_name(path)?;
+                    admit(plan.terrain, map, Some((x, y)), false)?;
+                    forever_terrain::maps::verify(bytes, plan.build, 128 * 1024 * 1024)
+                        .map_err(|e| Error::from(e.code()))?;
+                }
+            }
+            Component::Collision => {
+                use forever_vmap::{assembly, gameobject_models, vmo};
+                if path == "vmaps/GameObjectModels.dtree" {
+                    gameobject_models::Dtree::parse(bytes, Default::default())
+                        .map_err(|e| Error::from(e.code()))?;
+                    self.dtree = true;
+                } else if path.ends_with(".vmo") && path[6..].split('/').count() == 1 {
+                    vmo::View::parse(bytes, Default::default())
+                        .map_err(|e| Error::from(e.code()))?;
+                } else {
+                    let (folder, file) = path
+                        .strip_prefix("vmaps/")
+                        .and_then(|v| v.split_once('/'))
+                        .ok_or("product_artifact_name")?;
+                    let map = decimal(folder)?;
+                    if folder != format!("{map:04}") {
+                        return Err("product_artifact_name".into());
+                    }
+                    if file == format!("{map:04}.vmtree") {
+                        let tree = assembly::Tree::parse_intrinsic(bytes, Default::default())
+                            .map_err(|e| Error::from(e.code()))?;
+                        self.trees.insert(map, tree.bih().stats().primitive_count);
+                    } else {
+                        let count = self.trees.get(&map).copied().ok_or("product_vmap_tree")?;
+                        collision_tile_name(file, map)?;
+                        if file.ends_with(".vmtileidx") {
+                            assembly::IndexView::parse(bytes, count, Default::default())
+                                .map_err(|e| Error::from(e.code()))?;
+                        } else {
+                            assembly::TileView::parse(bytes, Default::default())
+                                .map_err(|e| Error::from(e.code()))?;
+                        }
+                    }
+                }
+            }
+            Component::Navigation => {
+                use forever_navigation::mmap;
+                let name = path.strip_prefix("mmaps/").ok_or("product_artifact_name")?;
+                if let Some(map) = name.strip_suffix(".mmap") {
+                    let id = decimal(map)?;
+                    admit(plan.navigation, id, None, true)?;
+                    if path != &mmap::global_path(id) {
+                        return Err("product_artifact_name".into());
+                    }
+                    let global = mmap::GlobalView::parse(bytes, id, Default::default())
+                        .map_err(|e| Error::from(e.code()))?;
+                    if global.sources().len() != 0 {
+                        return Err("product_offmesh_unsupported".into());
+                    }
+                } else {
+                    let parts: Vec<_> = name
+                        .strip_suffix(".mmtile")
+                        .ok_or("product_artifact_name")?
+                        .split('_')
+                        .collect();
+                    if parts.len() != 3 {
+                        return Err("product_artifact_name".into());
+                    }
+                    let map = decimal(parts[0])?;
+                    let row = decimal(parts[1])?;
+                    let col = decimal(parts[2])?;
+                    admit(plan.navigation, map, Some((col, row)), true)?;
+                    if row >= 64
+                        || col >= 64
+                        || mmap::tile_path(map, row as u8, col as u8)
+                            .map_err(|e| Error::from(e.code()))?
+                            != *path
+                    {
+                        return Err("product_artifact_name".into());
+                    }
+                    mmap::TileView::parse(bytes, Default::default())
+                        .map_err(|e| Error::from(e.code()))?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+fn decimal(value: &str) -> Result<u32, Error> {
+    if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
+        return Err("product_artifact_name".into());
+    }
+    value.parse().map_err(|_| "product_artifact_name".into())
+}
+fn collision_tile_name(file: &str, map: u32) -> Result<(), Error> {
+    let (body, suffix) = if let Some(v) = file.strip_suffix(".vmtileidx") {
+        (v, "vmtileidx")
+    } else {
+        (
+            file.strip_suffix(".vmtile")
+                .ok_or("product_artifact_name")?,
+            "vmtile",
+        )
+    };
+    let parts: Vec<_> = body.split('_').collect();
+    if parts.len() != 3 {
+        return Err("product_artifact_name".into());
+    }
+    let x = decimal(parts[1])?;
+    let y = decimal(parts[2])?;
+    if x > 32767 || y > 255 || file != format!("{map:04}_{x:02}_{y:02}.{suffix}") {
+        return Err("product_artifact_name".into());
+    }
+    Ok(())
+}
+
+fn terrain_map_name(path: &str) -> Result<(u32, u32, u32), Error> {
+    let parts: Vec<_> = path
+        .strip_prefix("maps/")
+        .and_then(|v| v.strip_suffix(".map"))
+        .ok_or("product_artifact_name")?
+        .split('_')
+        .collect();
+    if parts.len() != 3 {
+        return Err("product_artifact_name".into());
+    }
+    let map = decimal(parts[0])?;
+    let y = decimal(parts[1])?;
+    let x = decimal(parts[2])?;
+    if x >= 64
+        || y >= 64
+        || terrain::plan::map_relative_path(map, x as u8, y as u8)
+            .map_err(|e| Error::from(e.code()))?
+            != path
+    {
+        return Err("product_artifact_name".into());
+    }
+    Ok((map, x, y))
+}
+
+fn admit(
+    selection: Selection,
+    map: u32,
+    tile: Option<(u32, u32)>,
+    global: bool,
+) -> Result<(), Error> {
+    let admitted = match selection {
+        Selection::None => false,
+        Selection::All => true,
+        Selection::Map(id) => id == map,
+        Selection::Tile { map: id, x, y } => {
+            id == map && tile.map_or(global, |(tx, ty)| tx == u32::from(x) && ty == u32::from(y))
+        }
+    };
+    if admitted {
+        Ok(())
+    } else {
+        Err("product_selection_mismatch".into())
+    }
+}

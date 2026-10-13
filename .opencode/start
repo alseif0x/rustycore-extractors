@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -euo pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/environment.sh"
+rce_opencode_binary="${OPENCODE_BIN:-${HOME}/.opencode/bin/opencode}"
+if [[ ! -x "$rce_opencode_binary" ]]; then
+  printf '%s\n' "OpenCode no está disponible: configura OPENCODE_BIN." >&2
+  exit 127
+fi
+# Private server inherits the external build paths and loads this project's profiles.
+if [[ "${1:-}" == "run" ]]; then
+  shift
+  exec "$rce_opencode_binary" run --standalone --auto "$@"
+fi
+exec "$rce_opencode_binary" --standalone --auto "$@"

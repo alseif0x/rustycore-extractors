@@ -1,0 +1,214 @@
+{
+  "contract": "forever-required-framing-v1",
+  "version": 1,
+  "api_profile": "forever-local-required-framing-v1",
+  "distribution_source_profile": "forever-seven-crate-windows-navigation-readers-source-v7",
+  "original_implementation": true,
+  "network": false,
+  "keys_consulted": false,
+  "cli_enabled": false,
+  "windows_product_enabled": false,
+  "actual_windows_ntfs_accepted": false,
+  "full_extractor_complete": false,
+  "publication_authorized": false,
+  "complete_payload_accepted": false,
+  "new_registry_dependencies": [],
+  "sources": [
+    "crates/forever-casc/src/local_store.rs",
+    "crates/forever-casc/src/local_store/io.rs",
+    "crates/forever-casc/src/local_store/tests.rs",
+    "crates/forever-casc/src/local_store/framing.rs",
+    "crates/forever-casc/src/local_store/framing_tests.rs",
+    "crates/forever-casc/src/local_store/io/framing.rs",
+    "docs/forever-required-framing.md",
+    "contracts/forever-required-framing-contract-v1.json",
+    "tests/contracts/test_forever_required_framing_contract.py",
+    "docs/forever-required-framing-acceptance.md"
+  ],
+  "api": {
+    "signature": "LocalStore::diagnose_required_framing(framing::Limits) -> Result<[framing::Diagnostic;3], framing::Error>",
+    "error_alias": "routes::Error",
+    "fixed_fdids": [
+      1349477,
+      1266278,
+      1266277
+    ],
+    "order": [
+      "Map",
+      "SkillLineAbility",
+      "GameObjectDisplayInfo"
+    ],
+    "key_bearing_store": "reject before selection; no keyring lookup",
+    "raw_accessor": false,
+    "debug_route_reports": false,
+    "caller": "already-admitted key-free LocalStore; existing metadata acquisition remains separate"
+  },
+  "selection": {
+    "root": "first eligible central-present ROOT CKey; archive availability never selects a later ROOT row",
+    "candidates": "all ordered encoding alternatives and every nine-byte index-prefix collision, including missing-index alternatives; no content promotion/fallback",
+    "unknown_decoded_size": "metadata-only span observation and NotRead"
+  },
+  "limits": {
+    "root_rows_per_input": 64,
+    "candidates_per_input": 64,
+    "candidates_total": 192,
+    "record_bytes_including_prelude": 131072,
+    "total_indexed_record_bytes": 262144,
+    "declared_content_bytes_per_input": 524288,
+    "frames_per_candidate_blte_object": 4096,
+    "report_bytes": 131072,
+    "only_downward": true,
+    "total_bytes_scope": "conservative sum for all indexed candidates including repeated, unknown-size, unreadable and unsupported candidates",
+    "frame_scope": "4096 per candidate BLTE object after complete record read, not aggregate per FDID",
+    "memory": "charge private plans, fixed3diagnostics, actual candidate capacities and one fallibly allocated record to existing resident/scratch/combined limits; caller serialization separate; logical admission, not RSS/all CPU",
+    "windows_lease_scratch_bytes": 262144
+  },
+  "read": {
+    "complete_span": true,
+    "prelude_bytes_ignored": 30,
+    "index_ekey_prefix_bytes": 9,
+    "full_ekey_authenticated": false,
+    "prelude_key_size_checksums_authenticated": false,
+    "archive_eof_required": false,
+    "blte_eof_required": true,
+    "one_record_at_a_time": true,
+    "admission": "all plans, candidate counts, conservative total bytes and output reserves before requested payload I/O; held-file metadata open can precede per-record allocation; record extent/capacity checked before payload read",
+    "linux": "existing nofollow regular-file held/named identity before/after exact range seek/read; no anchored ancestor or atomic snapshot guarantee",
+    "windows": "existing readonly fixed NTFS ReadFile/ancestor lease and explicit final verification",
+    "guards": "held/named or Windows final checks after success, parse rejection, allocation/budget/read failure; outer store guards on success and error, observed changes reject whole report"
+  },
+  "inspection": {
+    "NotRead": "distinct missing/index/archive/unsupported/unsafe/invalid/incomplete span or unknown size; no payload buffer",
+    "Rejected": "complete record read; static code with no partial frame evidence",
+    "Complete": "only complete supplied BLTE framing evidence; FramedMd5 or explicitly HeaderlessUnhashed",
+    "frame_md5": "all declared encoded-frame MD5s, including zero hashes and later frames after E",
+    "N": "payload length only",
+    "Z": "outer framing only; no inflate or interior/termination check",
+    "E": "outer name-size0/8,nonce-size4/8,cipherS,nonemptyciphertext; no key/nonce/bytes exposed, no decrypt/interior check",
+    "headerless": "no frame MD5 or table declaration; not equivalent to framed integrity",
+    "public_evidence": "copied form/sizes/optional declared size/NZE counts/frame-MD5 count, safe ordinals and route/span labels; no digest,key,path,offset,nonce,payload"
+  },
+  "validation": {
+    "static_tests": "static consistency only; never runtime proof",
+    "source_handoff": {
+      "path": "required-framing-adapter-20261011T191915Z/handoff-frame-cap-precision.json",
+      "sha256": "8a7a97a89d51fda8b95014a4d529499689a505f4069c6bc27290da47a4e6ac6e"
+    },
+    "source_freeze_sha256": "1bc8a2b2f34e3141e17d8372297d89dc8c8ee549d8eed64e9d44345c85b09605",
+    "independent_source_review_sha256": "62fc00718406fa9e379420e22776be5c69f720e3a864c23dc4190354d5ffbc4f",
+    "linux_synthetic": {
+      "local_store_tests_each_profile": 111,
+      "blte_tests_each_profile": 80,
+      "adapter_new_tests_each_profile": 23,
+      "ignored": 0,
+      "debug_release": true,
+      "linux_alltargets_clippy": true
+    },
+    "windows_gnu_cross_clippy": {
+      "accepted": true,
+      "alltargets": true,
+      "runtime_accepted": false,
+      "report_sha256": "6660a5bc791631ce05e6bdcafea88cea8446e4bae542fa344c28a50b9d0e1cba"
+    },
+    "real_acquisition": {
+      "path": "required-acquisition-live-20261011T1930Z-attempt2/live-report.json",
+      "sha256": "d1979922ac941a5c7363f7e014f023f47cffd8372523df49d4d35bd6c5c42536",
+      "accepted": true,
+      "terminal": true,
+      "build": 70205,
+      "locale": "esES",
+      "key_free": true,
+      "inputs_acquired": 0,
+      "error_each": "local_store_no_verified_encoding",
+      "candidate_failures_each": {
+        "missing": 0,
+        "incomplete": 0,
+        "encrypted": 1,
+        "corrupt": 0,
+        "unsupported": 0
+      },
+      "scope": "first encrypted outer frame rejection, not full framing or ciphertext proof"
+    },
+    "real_framing": {
+      "path": "required-framing-live-20261011T1940Z-attempt2/live-report.json",
+      "sha256": "43f2ccf6a92a4d9e33239be3cc3e0e3de87bb43d6b69d7e9baea93c515ed3f01",
+      "root_rehash_sha256": "ebe4ad0cfb130f5c0f6b9d900d4afbc703ace676dd8636249a20d477548fa108",
+      "agent_closeout_sha256": "dfc93865746aa683cbfeca5e6f48c5c49074a99dca42b8edf2321d1ce125a966",
+      "accepted": true,
+      "terminal": true,
+      "build": 70205,
+      "locale": "esES",
+      "key_free": true,
+      "candidates_each": 1,
+      "form_each": "FramedMd5",
+      "record_bytes_each": [
+        5042,
+        94617,
+        74592
+      ],
+      "declared_decoded_bytes_each": [
+        10181,
+        347118,
+        116054
+      ],
+      "frames_each": [
+        5,
+        7,
+        3
+      ],
+      "zlib_frames_each": [
+        2,
+        2,
+        2
+      ],
+      "encrypted_frames_each": [
+        3,
+        5,
+        1
+      ],
+      "verified_frame_md5_each": [
+        5,
+        7,
+        3
+      ],
+      "totals": {
+        "frames": 15,
+        "zlib_frames": 6,
+        "encrypted_frames": 9,
+        "verified_frame_md5": 15
+      },
+      "source932_canonical921_buildinfo_old_binaries_unchanged": true,
+      "runtime_trace_empty": true,
+      "full_ekey_authenticated": false,
+      "ckey_authenticated": false,
+      "plaintext_validated": false,
+      "zlib_interior_validated": false,
+      "encrypted_interior_validated": false,
+      "scope": "admitted complete-span framing and outer wrappers only; no raw assets persisted"
+    },
+    "historical_failure": "original preparation reportdb9e2fcc04275775c3c82c28bd958cde930990f757080cc390cdb09be316d6ec remains failed at256MiB; separately authorized320MiBtotal preparation reused exactbinary, no recompilation",
+    "trace_scope": "filtered observed calls, not absence of denied attempts or individual descendant-exit proof",
+    "imported_design_doc": "byteexact pre-live source snapshot; companion acceptance doc supersedes only pending real-Linux framing status"
+  },
+  "history": {
+    "old_local_file_incomplete": "retained outcomes of earlier named native/batch/locale attempts; not the current key-free acquisition category for these three FDIDs",
+    "current_acquisition_category": "encrypted1each with local_store_no_verified_encoding; no successfully acquired decoded input",
+    "typed_loaders_reexecuted": false,
+    "full_runtime_accepted": false,
+    "v5_canonical_source_merge": "935sources accepted, source-only; no v5 bundle claimed",
+    "v6_bundle_built": false
+  },
+  "not_claimed": [
+    "full EKey or CKey authentication",
+    "Z interior validity",
+    "encrypted inner validity",
+    "plaintext integrity",
+    "key-only sufficiency",
+    "typed loader success",
+    "Windows/NTFS runtime acceptance",
+    "product/CLI enablement",
+    "full extraction",
+    "publication"
+  ],
+  "historical_distribution_source_profile": "forever-seven-crate-windows-vmap-required-framing-source-v6"
+}

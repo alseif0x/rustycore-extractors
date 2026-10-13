@@ -1,0 +1,94 @@
+{
+  "contract": "forever-windows-vmap-source-v1",
+  "version": 1,
+  "distribution_source_profile": "forever-seven-crate-windows-vmap-diagnostics-source-v5",
+  "original_implementation": true,
+  "network": false,
+  "new_registry_dependencies": [],
+  "windows_product_enabled": false,
+  "actual_windows_ntfs_accepted": false,
+  "full_extractor_complete": false,
+  "publication_authorized": false,
+  "sources": [
+    "crates/forever-vmap/Cargo.toml",
+    "crates/forever-vmap/src/store.rs",
+    "crates/forever-vmap/src/store/windows.rs",
+    "crates/forever-vmap/src/store/windows/tests.rs",
+    "crates/forever-platform/src/windows.rs",
+    "crates/forever-platform/src/windows/tests.rs",
+    "docs/forever-windows-vmap.md"
+  ],
+  "api": {
+    "module": "forever_vmap::store::windows",
+    "source": "RootedSource",
+    "limits": "FsLimits",
+    "stats": "FsStats",
+    "eof": "forever_platform::windows::ReadFile::verify_eof"
+  },
+  "policy": {
+    "normal_absolute_drive_paths": true,
+    "exact_artifact_spelling": true,
+    "reparse_rejected": true,
+    "full_final_file_and_directory_identity": true,
+    "permanent_observed_change_poison": true,
+    "read_hashes_complete_successful_input": true,
+    "resident_handles_between_operations": 0,
+    "metadata_verification": "held/named checks are metadata observations, not an atomic snapshot or authentication",
+    "read_bytes": "successfully returned chunk bytes only; failed kernel partial reads and EOF probe bytes are not included",
+    "read_failure_precedence": "observed ReadFile open failure precedes later guard-budget admission; do not replace with synthetic budget error"
+  },
+  "limits": {
+    "chunk_bytes": 2097152,
+    "file_bytes": 134217728,
+    "metadata_bytes": 134217728,
+    "root_bytes": 4096,
+    "lease_allowance_bytes": 262144,
+    "peak_handles": 65,
+    "entries": 65536,
+    "operation_verify_steps": 262144,
+    "platform_call_charge": "32 * (path_components + 2)",
+    "scope": "downward logical admission bounds; not exact allocator, kernel memory, RSS or all CPU work"
+  },
+  "dependency_graph": {
+    "workspace_crates": 7,
+    "lock_packages": 9,
+    "added_local_edge": {
+      "forever-vmap": [
+        "forever-platform"
+      ]
+    },
+    "registry_packages": {
+      "adler2": "2.0.1",
+      "miniz_oxide": "0.8.9"
+    }
+  },
+  "validation": {
+    "contract_tests": "static source consistency only; never runtime proof",
+    "preliminary_wine": {
+      "accepted": true,
+      "terminal": true,
+      "tests_each_profile": 28,
+      "vmap_tests": 24,
+      "eof_tests": 3,
+      "existing_read_all_tests": 1,
+      "closeout": "windows-vmap-source-20261011T184046Z/attempt-2/closeout.json",
+      "closeout_sha256": "a61eb502cd46d22c51277aae5f8e05d1dd75d72c50345d921d51d2f262ba80cc",
+      "runtime_sha256": "2af82d155107c24af577a36638528eb400207b4847a37137c6e8d554c0147b6a",
+      "scope": "synthetic Wine only; actual Windows/NTFS, reparse/ACL and product remain unaccepted"
+    },
+    "linux_vmap_tests_each_profile": 477,
+    "clippy": "Linux and Windows GNU all-target VMap/platform checks passed",
+    "prior_attempt": "attempt-1 retained as historical; corrected attempt-2 supersedes its source/runtime scope",
+    "trace_limits": "filtered traces describe observed calls; denied attempts may be absent; individual exit of every descendant is not established"
+  },
+  "not_claimed": [
+    "Windows output or distribution",
+    "actual Windows/NTFS acceptance",
+    "source authentication or atomic snapshot",
+    "private output DACL or durability",
+    "new real-client acquisition",
+    "RustyCore provider or runtime activation",
+    "full extraction"
+  ],
+  "current_distribution_source_profile": "forever-seven-crate-windows-navigation-readers-source-v7"
+}

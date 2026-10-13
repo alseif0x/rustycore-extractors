@@ -1,0 +1,150 @@
+{
+  "manifest_version": 4,
+  "status": "complete",
+  "compatibility": {
+    "support": "admitted",
+    "target_build": 70205
+  },
+  "client": {
+    "product": "wow_classic_beta",
+    "version": "1.60.1.70205",
+    "build": 70205,
+    "locale": "enUS"
+  },
+  "extractor": {
+    "name": "forever-db2-extract",
+    "version": "0.1.0",
+    "implementation": "rust",
+    "compatibility_oracle_commit": "02245dcd245e7433e524577656177723d3e4992e"
+  },
+  "scope": "explicit_db2_catalog_batch",
+  "formats": {
+    "db2": {
+      "magic": "WDC5",
+      "version": 5
+    },
+    "tables": [
+      {
+        "name": "LiquidType",
+        "file_id": 1371380,
+        "table_hash": 0,
+        "layout_hash": 3521965769,
+        "meta_index_field": -1,
+        "field_count": 21
+      }
+    ]
+  },
+  "options": {
+    "locale": "enUS",
+    "table_selection": "explicit_manifest",
+    "manifest_sha256": "ecded15457b7734f3df9f678a8e87cc3940a21d5eb635ec9ed859690974efd33",
+    "entry_count": 1,
+    "max_file_bytes": 16777216,
+    "max_batch_bytes": 268435456,
+    "schema_catalog": "pinned-metadata-v1"
+  },
+  "network": {
+    "mode": "local",
+    "allow_network": false,
+    "remote_casc": false,
+    "lock_sha256": null,
+    "downloaded_bytes": 0
+  },
+  "outputs": {
+    "root": ".",
+    "incomplete_marker_present": false,
+    "artifacts": [
+      {
+        "name": "LiquidType",
+        "file_id": 1371380,
+        "relative_path": "LiquidType.db2",
+        "status": "complete",
+        "bytes": 288,
+        "sha256": "6d2f2f508bbf605841b1532a3f76890ce4fe62122bb4881f919d473fa1a43834",
+        "declared_records": 0,
+        "table_schema_validated": true,
+        "record_data_decoded": true,
+        "decoded_rows": 0
+      }
+    ],
+    "integrity": {
+      "algorithm": "sha256",
+      "file_count": 1,
+      "total_bytes": 288,
+      "inventory_sha256": "04b6d7d03b5c22cac10e25d8c15c9bb882eaa261238d32ad31bd756c520798e7"
+    }
+  },
+  "timestamps": {
+    "started_at": "2026-10-11T00:00:00Z",
+    "completed_at": "2026-10-11T00:00:00Z"
+  },
+  "privacy": {
+    "paths_redacted": true,
+    "client_data_embedded": false
+  },
+  "schema_catalog": {
+    "id": "pinned-metadata-v1",
+    "source_commit": "02245dcd245e7433e524577656177723d3e4992e",
+    "source_blob": "d06b97bad72ca2aecad3987ce9c348ac6055e0db",
+    "source_sha256": "897bde5aa04bab3b40ce4fe2e34d2127385b11d908d5266dce0fae7b52e23def",
+    "facts_sha256": "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
+  },
+  "schema_selection": "catalog",
+  "acquisition": {
+    "backend": "rust-local",
+    "profile": "local-v7-ckey-root-nz-v1",
+    "index_layouts": [
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous",
+      "contiguous"
+    ],
+    "root_layout": "header-50893-v2",
+    "offline": true,
+    "complete_ckey_md5": true,
+    "ekey_validation": "prefix9",
+    "limits": {
+      "resident_bytes": 805306368,
+      "scratch_bytes": 536870912,
+      "combined_bytes": 1073741824,
+      "build_info_bytes": 262144,
+      "build_info_rows": 4096,
+      "path_bytes": 4096,
+      "config_bytes": 262144,
+      "config_lines": 8192,
+      "config_keys": 4096,
+      "directory_entries": 65536,
+      "index_files": 4096,
+      "index_bytes": 67108864,
+      "index_entries": 2000000,
+      "index_pages": 131072,
+      "encoding_bytes": 268435456,
+      "encoding_pages": 65536,
+      "encoding_page_bytes": 65536,
+      "encoding_espec_bytes": 16777216,
+      "encoding_tail_bytes": 134217728,
+      "encoding_entries": 4000000,
+      "encoding_keys": 8000000,
+      "root_bytes": 268435456,
+      "root_header_bytes": 4096,
+      "root_blocks": 65536,
+      "root_entries": 4000000,
+      "archive_span_bytes": 268435456,
+      "file_bytes": 16777216,
+      "candidate_attempts": 64,
+      "blte_frames": 65536
+    }
+  }
+}
