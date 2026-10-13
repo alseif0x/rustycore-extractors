@@ -161,7 +161,10 @@
     ],
     "golden_artifacts": 35,
     "golden_bytes": 142622,
-    "golden_scope": "cross-platform Rust authored-synthetic artifact regression; not new original C++ or real-client acceptance"
+    "golden_scope": "cross-platform Rust authored-synthetic artifact regression; not new original C++ or real-client acceptance",
+    "msvc_producer_native_test_names": [
+      "msvc_v2_native_machine_query_admits_actual_amd64_test_process"
+    ]
   },
   "sources": {
     "namespace": "crates/forever-platform/src/windows/package.rs",
@@ -174,5 +177,8 @@
     "golden": "tests/forever/fixtures/windows-resident-product-golden-v1.json",
     "golden_70170": "tests/forever/fixtures/windows-resident-product-70170-golden-v1.json"
   },
-  "documentation": "docs/forever-windows-product.md"
+  "documentation": "docs/forever-windows-product.md",
+  "msvc_feature_producer_profile": "forever-windows-producer-seal-msvc-v2",
+  "msvc_feature": "windows-msvc-seal-v2",
+  "msvc_producer_contract": "contracts/forever-windows-producer-msvc-contract-v2.json"
 }

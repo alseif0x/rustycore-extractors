@@ -61,6 +61,14 @@ binds artifact identity; it does not authenticate a publisher or measure every
 loaded code page. Provided-key leases survive acquisition and producers, and
 their identities participate in output/source exclusions.
 
+The separate opt-in `windows-msvc-seal-v2` feature selects the observed-shape
+`forever-windows-producer-seal-msvc-v2` payload and parser for MSVC. Its explicit
+native-AMD64 gate, metadata/fixup rules and pending execution evidence are in
+[the v2 producer profile](forever-windows-producer-msvc-v2.md). The resident
+native acceptance helper now builds with that feature and seals with the
+explicit v2 tool profile. V1 remains the feature-free default; no prior failed
+MSVC run or old bundle is relabelled as successful v2 acceptance.
+
 The Linux leased collision disk profile rejects on Windows before client,
 output, producer, key or scratch I/O. Its plan syntax and Linux implementation
 are unchanged. No Windows disk staging support is implied by resident support.
@@ -201,6 +209,28 @@ bounded pointed-to prefixes and intersecting relocations. Its purpose is to
 review a separate explicit MSVC profile; it does not relax v1 or disable guard
 features. Native execution of that extended diagnostic remains pending.
 
+The fifth run, functional commit `2675e87`, completes that metadata collection
+and remains failed at strict v1 sealing:
+[run 38345728238 / Windows job 115126572127](https://github.com/alseif0x/rustycore-extractors/actions/runs/38345728238/job/115126572127).
+Both profiles declare image base `0x140000000` and DLL flags `0x8160`. The
+pointed-to volatile prefix begins with six u32 words: 24, `0x80038003`, an RVA,
+40, another RVA, and 24. Its two pointed spans fit the captured prefix and
+contain ten apparent code RVAs and three apparent code-range pairs. This is
+observed compiler output, not an official ABI or established interpretation of
+the second word. Six guard slots contain code VAs; the CastGuard slot is zero.
+All nine load-config VA fields have exact DIR64 fixups in the retained metadata.
+These observations are inputs to profile review, without admitting any new
+structure, malformed native execution or full product CLI acceptance.
+
+The complete downloaded job-log SHA-256 is
+`f74360e54ca08cf2a2b9b990536f342dedf1263e7c02069d6f94bcb84c93fbb3`;
+the reconstructed diagnostic report SHA-256 is
+`9253cfe81e213fe1d02effb8a41e8f9f7f944ad73c71652c553e9a38147f23f8`.
+Its unchanged 1,075-file source inventory has SHA-256
+`15b5e71381cced67f2fe1364e33391ad4f0c255c3ee14cff5c7df21a8d0ac6de`.
+The fourth/fifth compiler PE hashes differ despite unchanged Rust sources;
+no reproducible MSVC artifact or distribution is established by these runs.
+
 ## Primary API references
 
 The implementation uses handle-relative
@@ -211,3 +241,11 @@ and explicit
 [file security](https://learn.microsoft.com/en-us/windows/win32/fileio/file-security-and-access-rights).
 The narrower admitted profile and its checks are defined by this repository;
 the operating-system API documentation does not prove this implementation.
+
+
+The subsequent explicit MSVC-v2 implementation has separate frozen local
+acceptance: 2,743 Linux workspace tests per profile, 280 contracts and 158
+passing distribution tests / one platform skip. The v1 failures above remain
+failed; no native v2 CLI result is inferred. See the exact source/test report
+hashes and independent review in
+[the MSVC-v2 acceptance record](forever-windows-producer-msvc-v2.md).

@@ -7,5 +7,8 @@ license.workspace = true
 publish = false
 description = "Conservative bounded platform filesystem primitives for Forever extractors"
 
+[features]
+producer-msvc-v2 = []
+
 [lints.rust]
 unsafe_code = "deny"

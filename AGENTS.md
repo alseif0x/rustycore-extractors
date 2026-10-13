@@ -1930,3 +1930,26 @@ TerminateProcess/resume and separate build-bearing artifact goldens. It does
 not trace network calls, establish power-loss durability, publish a release or
 close real-client/runtime/full-extraction gates. See
 `docs/forever-windows-product.md` and its versioned contract.
+
+The later explicit `windows-msvc-seal-v2` extractor feature enables the separate
+`producer-msvc-v2` platform payload only on MSVC. V1 remains the feature-free
+default and retains its directory-10 rejection. The new versioned candidate
+uses its own marker, a native AMD64 machine gate, a closed observed 320-byte
+load-config/88-byte volatile shape and typed exact-once ASLR exceptions.
+The opaque volatile signature `0x80038003` is not labelled an official ABI
+version; no general volatile or ARM64-emulation support is implied. Native
+full-product execution and reproducible Windows distribution remain pending.
+The five preceding MSVC CI failures are retained as failures. See
+`docs/forever-windows-producer-msvc-v2.md`; this does not close real-client,
+runtime or full-extractor gates.
+
+The subsequent MSVC-v2 local freeze passes 2,743 Linux workspace tests / 26
+ignored across 42 targets per profile, 280 contracts and 158 distribution tests /
+one Windows-only skip, plus Clippy and formatting. Focused producer coverage is
+58 Rust tests per profile (37 retained v1, 21 v2) and 81 passing Python sealer
+tests / one platform skip. Independent source review has no remaining blocker.
+The accepted run observes all 1,078 source files unchanged; the first attempt's
+one equivalent Clippy correction invalidated its freeze and remains retained.
+These are local synthetic/source checks, not native MSVC product, reproducible
+Windows distribution, real-client or runtime acceptance. Exact report hashes
+are retained in docs/forever-windows-producer-msvc-v2.md.

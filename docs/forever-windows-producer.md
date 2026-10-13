@@ -9,6 +9,11 @@ The later [resident Windows product](forever-windows-product.md) uses this seal
 with its separate NTFS backend and records actual native execution independently.
 Neither checkpoint completes the extractor or a Windows distribution.
 
+The later opt-in [MSVC v2 candidate](forever-windows-producer-msvc-v2.md) uses a
+distinct marker and explicit native-AMD64 gate for its closed observed
+load-config shape. V1 remains the default and still rejects directory 10.
+Its historical source/execution reports below do not accept v2.
+
 ## Loaded evidence and candidate bytes
 
 `windows::producer::LoadedProducer::capture(path::Limits)` reads the initialized

@@ -25,6 +25,8 @@ class WindowsProductContract(unittest.TestCase):
         self.assertEqual(c['contract'], 'forever-windows-product-ntfs-v1')
         self.assertEqual(c['namespace_profile'], 'forever-windows-package-namespace-v1')
         self.assertEqual(c['producer_profile'], 'forever-windows-producer-seal-v1')
+        self.assertEqual(c['msvc_feature_producer_profile'], 'forever-windows-producer-seal-msvc-v2')
+        self.assertEqual(c['msvc_feature'], 'windows-msvc-seal-v2')
         self.assertEqual(c['components'], ['db2', 'gt', 'cameras', 'maps', 'vmaps', 'mmaps'])
         self.assertTrue(c['windows_resident_product_enabled'])
         self.assertFalse(c['linux_leased_disk_enabled_on_windows'])
@@ -138,11 +140,15 @@ class WindowsProductContract(unittest.TestCase):
                        'seal --input $unsealed --output $sealed --zero-checksum',
                        "'WINDOWS_PRODUCT_BINARY '",
                        'python -m unittest discover -s tests/distribution -p test_windows_seal.py -v',
+                       '--features windows-msvc-seal-v2',
+                       '--profile forever-windows-producer-seal-msvc-v2',
+                       "$release 'producer-msvc-v2'",
                        'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'):
             self.assertIn(marker, script)
         for j in workflow['jobs'].values():
             runs = '\n'.join(s.get('run', '') for s in j['steps'])
             self.assertIn('test_forever_windows_product_contract.py', runs)
+            self.assertIn('test_forever_windows_producer_msvc_contract.py', runs)
 
     def test_documented_scope_does_not_turn_a_source_candidate_into_acceptance(self):
         doc = read(self.c['documentation'])

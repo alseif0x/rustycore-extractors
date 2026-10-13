@@ -110,7 +110,7 @@
         {
           "name": "Check source contracts and synthetic Python oracle",
           "if": "matrix.profile == 'debug'",
-          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_output_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_membership_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_offmesh_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_product_contract.py -v",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_output_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_membership_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_product_offmesh_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_product_contract.py -v\npython -m unittest discover -s tests/contracts -p test_forever_windows_producer_msvc_contract.py -v",
           "env": {
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           }
@@ -149,14 +149,14 @@
         },
         {
           "name": "Display explicit build-only download plan",
-          "run": "Write-Output 'Fetch Rust 1.98.0 minimal toolchain from static.rust-lang.org via rustup checksum verification; fetch Cargo.lock registry archives only. No client, TACT, listfile or native-reference downloads.'",
+          "run": "Write-Output 'Fetch Rust 1.98.0 minimal toolchain and clippy from static.rust-lang.org via rustup checksum verification; fetch Cargo.lock registry archives only. No client, TACT, listfile or native-reference downloads.'",
           "env": {
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           }
         },
         {
           "name": "Install exact Rust version",
-          "run": "rustup toolchain install 1.98.0 --profile minimal\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "run": "rustup toolchain install 1.98.0 --profile minimal --component clippy\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
           "env": {
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           }
@@ -171,6 +171,13 @@
         {
           "name": "Preflight native producer PE directory profile",
           "run": "$ErrorActionPreference = 'Stop'\n. ./tools/check_forever_windows_product.ps1 -PePreflight",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check explicit MSVC v2 producer lint policy",
+          "run": "cargo clippy --offline --locked -p forever-platform -p forever-extractor --all-targets --no-default-features --features forever-extractor/windows-msvc-seal-v2 -- -D warnings\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
           "env": {
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           }
@@ -219,7 +226,7 @@
         },
         {
           "name": "Check source contracts and synthetic Python oracle",
-          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_output_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_membership_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_offmesh_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_keys_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_distribution_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_db2_oracle.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/forever -p test_metadata_catalog.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_read_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_consumers_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_output_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_membership_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_product_offmesh_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_producer_msvc_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
           "env": {
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           }

@@ -202,7 +202,8 @@ def selected_paths(source):
     result = set(REQUIRED)
     # Optional current-source Windows QA closure. Older v10 frozen snapshots
     # predate these paths; their existing recipe/inventory stays rebuildable.
-    for name in ("docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1"):
+    for name in ("docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1",
+                 "docs/forever-windows-producer-msvc-v2.md"):
         if (source / name).exists():
             result.add(name)
     for name in DOCS:

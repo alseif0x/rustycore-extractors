@@ -31,12 +31,12 @@ $sourceBeforeJson = $sourceBefore | ConvertTo-Json -Compress
 
 try {
 if ($PePreflight) {
-cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features
+cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --features windows-msvc-seal-v2
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --release
+cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --features windows-msvc-seal-v2 --release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # Diagnostic metadata only: this does not admit a PE or change any bytes. Dump
-# both compiler profiles before asking the unchanged strict sealer to admit them.
+# both compiler profiles before asking the explicitly selected v2 sealer to admit them.
 $diagnostic = @'
 import hashlib, json, os
 from pathlib import Path
@@ -182,7 +182,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 foreach ($profile in @('debug', 'release')) {
     $unsealed = Join-Path (Join-Path $env:CARGO_TARGET_DIR $profile) 'forever-extractor.exe'
     $sealed = Join-Path $runRoot ($profile + '-forever-extractor.exe')
-    python tools/seal_forever_windows.py seal --input $unsealed --output $sealed --zero-checksum
+    python tools/seal_forever_windows.py seal --input $unsealed --output $sealed --zero-checksum --profile forever-windows-producer-seal-msvc-v2
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 return
@@ -191,11 +191,12 @@ return
 python -m unittest discover -s tests/distribution -p test_windows_seal.py -v
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-function Test-ExactInventory($package, $prefix, $expectedNames, $release) {
+function Test-ExactInventory($package, $prefix, $expectedNames, $release, $features = $null) {
     $expected = @($expectedNames | ForEach-Object { "${prefix}${_}: test" } | Sort-Object)
     if ($expected.Count -eq 0) { throw 'empty native package test inventory' }
     $arguments = @('test', '--offline', '--locked', '-p', $package, '--lib', '--no-default-features')
     if ($release) { $arguments += '--release' }
+    if ($features) { $arguments += @('--features', $features) }
     $listing = & cargo @arguments $prefix -- --list --color never
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     $listed = @($listing | Where-Object { $_.StartsWith($prefix) -and $_.EndsWith(': test') } | Sort-Object)
@@ -211,21 +212,26 @@ function Test-ExactInventory($package, $prefix, $expectedNames, $release) {
 foreach ($release in @($false, $true)) {
     Test-ExactInventory 'forever-platform' 'windows::package::tests::' $contract.validation.native_test_names.namespace $release
     Test-ExactInventory 'forever-casc' 'package::windows::tests::' $contract.validation.native_test_names.package $release
+    foreach ($name in $contract.validation.msvc_producer_native_test_names) {
+        Test-ExactInventory 'forever-platform' ("windows::producer::tests::" + $name) @('') $release 'producer-msvc-v2'
+    }
 }
 
-cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features
+cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --features windows-msvc-seal-v2
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --release
+cargo build --offline --locked -p forever-extractor --bin forever-extractor --no-default-features --features windows-msvc-seal-v2 --release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 foreach ($profile in @('debug', 'release')) {
     $profileRoot = Join-Path $runRoot $profile
     New-Item -ItemType Directory -Path $profileRoot | Out-Null
     $unsealed = Join-Path (Join-Path $env:CARGO_TARGET_DIR $profile) 'forever-extractor.exe'
     $sealed = Join-Path $profileRoot 'forever-extractor.exe'
-    python tools/seal_forever_windows.py seal --input $unsealed --output $sealed --zero-checksum
+    python tools/seal_forever_windows.py seal --input $unsealed --output $sealed --zero-checksum --profile forever-windows-producer-seal-msvc-v2
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Output ('WINDOWS_PRODUCT_BINARY ' + (@{
         profile = $profile
+        producer_profile = 'forever-windows-producer-seal-msvc-v2'
+        cargo_features = @('windows-msvc-seal-v2')
         sealed_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $sealed).Hash.ToLowerInvariant()
         unsealed_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $unsealed).Hash.ToLowerInvariant()
     } | ConvertTo-Json -Compress))

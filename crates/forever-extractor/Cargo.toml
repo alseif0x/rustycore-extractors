@@ -7,6 +7,10 @@ license.workspace = true
 description = "Explicit offline Forever product plan and sequential extraction driver"
 publish = false
 
+[features]
+default = []
+windows-msvc-seal-v2 = ["forever-platform/producer-msvc-v2"]
+
 [dependencies]
 forever-casc = { path = "../forever-casc", default-features = false }
 forever-db2 = { path = "../forever-db2" }

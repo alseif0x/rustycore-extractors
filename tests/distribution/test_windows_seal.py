@@ -759,5 +759,322 @@ class LoaderControlTests(unittest.TestCase):
         self.assertEqual(p.verify(data, data[layout.slot - 32:layout.slot + 32], RVA[1]), hashlib.sha256(data).digest())
 
 
+V2_FIELDS = (88, 112, 120, 256, 280, 288, 296, 304, 312)
+V2_POINTERS = (0x4000, 0x3300, 0x3310, 0x3200, 0x3308, 0x3318, 0x3320, 0x3328, 0x3330)
+
+
+def v2_offset(rva):
+    for address, raw, size in ((0x1000, 1024, 512), (0x2000, 1536, 512),
+                               (0x3000, 2048, 2048), (0x4000, 4096, 512), (0x5000, 4608, 512)):
+        if address <= rva < address + size:
+            return raw + rva - address
+    raise ValueError('synthetic RVA outside fixture')
+
+
+def v2_targets(tls=False):
+    targets = [0x3000 + field for field in V2_FIELDS]
+    targets += [rva for field, rva in zip(V2_FIELDS, V2_POINTERS) if field not in (88, 256, 304)]
+    if tls:
+        targets += [0x3400, 0x3408, 0x3410, 0x3418, 0x3440]
+    return targets
+
+
+def v2_relocations(data, targets):
+    data[4608:5120] = bytes(512)
+    directory(data, 5, 0x5000, len(targets) * 12)
+    for i, target in enumerate(targets):
+        put(data, 4608 + i * 12, target & ~4095)
+        put(data, 4612 + i * 12, 12)
+        put(data, 4616 + i * 12, 0xa000 | (target & 4095), 2)
+
+
+def v2_fixture(tls=False, imports=False):
+    data = fixture()
+    data.extend(bytes(5120 - len(data)))
+    put(data, PE + 6, 5, 2)
+    put(data, OPT + 56, 0x6000)
+    put(data, OPT + 70, 0x8160, 2)
+    for i, (name, address, raw, virtual, size, flags) in enumerate([
+            (b'.text', 0x1000, 1024, 512, 512, 0x60000020),
+            (b'.rceid', 0x2000, 1536, 64, 512, 0x40000040),
+            (b'.rdata', 0x3000, 2048, 2048, 2048, 0x40000040),
+            (b'.data', 0x4000, 4096, 512, 512, 0xc0000040),
+            (b'.reloc', 0x5000, 4608, 512, 512, 0x42000040)]):
+        at = TABLE + i * 40
+        data[at:at + 40] = bytes(40)
+        data[at:at + 8] = name.ljust(8, b'\0')
+        for delta, value in ((8, virtual), (12, address), (16, size), (20, raw), (36, flags)):
+            put(data, at + delta, value)
+    data[1536:1568] = p.MARKER_V2
+    directory(data, 10, 0x3000, 320)
+    put(data, 2048, 320)
+    put(data, 2048 + 144, 0x100)
+    for field, rva in zip(V2_FIELDS, V2_POINTERS):
+        put(data, 2048 + field, BASE + rva, 8)
+        if field not in (88, 256, 304):
+            put(data, v2_offset(rva), BASE + 0x1000, 8)
+    put(data, 4096, 0x2b992ddfa232, 8)
+    at = v2_offset(0x3200)
+    for i, value in enumerate((24, 0x80038003, 0x3218, 40, 0x3240, 24)):
+        put(data, at + i * 4, value)
+    for i in range(10):
+        put(data, at + 24 + i * 4, 0x1004 + i * 4)
+    for i, (rva, size) in enumerate(((0x1000, 16), (0x1010, 32), (0x1040, 16))):
+        put(data, at + 64 + i * 8, rva)
+        put(data, at + 68 + i * 8, size)
+    if tls:
+        directory(data, 9, 0x3400, 40)
+        for i, rva in enumerate((0x4020, 0x4024, 0x4010, 0x3440)):
+            put(data, v2_offset(0x3400) + i * 8, BASE + rva, 8)
+        put(data, v2_offset(0x3440), BASE + 0x1000, 8)
+    if imports:
+        directory(data, 1, 0x3500, 40)
+        directory(data, 12, 0x4030, 16)
+        for delta, value in ((0, 0x3540), (12, 0x3580), (16, 0x4030)):
+            put(data, v2_offset(0x3500) + delta, value)
+        put(data, v2_offset(0x3540), 0x8000000000000005, 8)
+        data[v2_offset(0x3580):v2_offset(0x3580) + 8] = b'toy.dll\0'
+    v2_relocations(data, v2_targets(tls))
+    return data
+
+
+class MsvcV2Tests(unittest.TestCase):
+    def reject(self, data, code=None):
+        with self.assertRaises(p.Reject) as caught:
+            p.locate(bytes(data), p.PROFILE_V2)
+        if code:
+            self.assertEqual(str(caught.exception), code)
+
+    def test_exact_observed_shape_and_optional_tls_imports(self):
+        for tls in (False, True):
+            for imports in (False, True):
+                source = bytes(v2_fixture(tls, imports))
+                data = p.seal(source, p.PROFILE_V2)
+                layout = p.locate(data, p.PROFILE_V2)
+                loaded = data[1536:1600]
+                self.assertEqual(p.verify(data, loaded, 0x2000, p.PROFILE_V2), hashlib.sha256(data).digest())
+                self.assertEqual(data[layout.slot:layout.slot + 32], hashlib.sha256(source).digest())
+                self.assertNotEqual(data[layout.slot:layout.slot + 32], hashlib.sha256(data).digest())
+
+    def test_profiles_and_markers_never_fallback(self):
+        with self.assertRaisesRegex(p.Reject, '^pe_seal_marker$'):
+            p.locate(bytes(v2_fixture()))
+        self.reject(fixture(), 'pe_seal_marker')
+        data = v2_fixture(); data[1536:1568] = p.MARKER
+        with self.assertRaisesRegex(p.Reject, '^pe_unsupported_directory$'):
+            p.locate(bytes(data))
+        with self.assertRaisesRegex(p.Reject, '^pe_profile$'):
+            p.locate(bytes(data), 'unknown')
+
+    def test_every_reserved_load_config_byte_is_zero(self):
+        known = set(range(4)) | set(range(144, 148))
+        for field in V2_FIELDS:
+            known.update(range(field, field + 8))
+        for byte in set(range(320)) - known:
+            data = v2_fixture(); data[2048 + byte] = 1
+            self.reject(data, 'pe_v2_load_config')
+
+    def test_load_config_size_flags_and_directory_are_exact(self):
+        for at, value, width in ((2048, 319, 4), (2048 + 144, 0x500, 4),
+                                  (OPT + 70, 0xc160, 2), (OPT + 70, 0x8100, 2)):
+            data = v2_fixture(); put(data, at, value, width); self.reject(data)
+        for size in (0, 319, 321, 512):
+            data = v2_fixture(); directory(data, 10, 0 if size == 0 else 0x3000, size); self.reject(data)
+
+    def test_each_required_va_fixup_is_exactly_once(self):
+        for tls in (False, True):
+            targets = v2_targets(tls)
+            for i, target in enumerate(targets):
+                data = v2_fixture(tls); v2_relocations(data, targets[:i] + targets[i + 1:])
+                self.reject(data, 'pe_v2_fixup_count')
+                data = v2_fixture(tls); v2_relocations(data, targets[:i] + targets[i + 1:] + [0x1060])
+                self.reject(data, 'pe_v2_fixup_count')
+                data = v2_fixture(tls); v2_relocations(data, targets + [target])
+                self.reject(data, 'pe_v2_fixup_count')
+                data = v2_fixture(tls); put(data, 4616 + i * 12, target & 4095, 2)
+                self.reject(data, 'pe_v2_fixup_count')
+
+    def test_castguard_zero_and_cookie_magic_have_no_fixup(self):
+        for target in (0x3328, 0x4000):
+            data = v2_fixture(); v2_relocations(data, v2_targets() + [target]); self.reject(data)
+        for target, value in ((0x3328, BASE + 0x1000), (0x4000, 0), (0x4000, 0x2b992ddfa233)):
+            data = v2_fixture(); put(data, v2_offset(target), value, 8); self.reject(data)
+
+    def test_va_fields_underflow_unmapped_and_rva_values_reject(self):
+        for field in V2_FIELDS:
+            for value in (0, BASE - 1, 0x3300, BASE + 0x9000, (1 << 64) - 1):
+                data = v2_fixture(); put(data, 2048 + field, value, 8); self.reject(data)
+
+    def test_slots_require_code_and_separate_read_only_storage(self):
+        for field, slot in zip(V2_FIELDS, V2_POINTERS):
+            if field in (88, 256, 304):
+                continue
+            for value in (0, BASE + 0x2000, BASE + 0x3000, BASE + 0x11ff + 1):
+                data = v2_fixture(); put(data, v2_offset(slot), value, 8); self.reject(data)
+        for field in (112, 120, 280, 288, 296, 304, 312):
+            data = v2_fixture(); put(data, 2048 + field, BASE + (0x3310 if field == 112 else 0x3300), 8)
+            self.reject(data)
+        data = v2_fixture(); put(data, TABLE + 2 * 40 + 36, 0xc0000040); self.reject(data)
+        data = v2_fixture(); put(data, 2048 + 112, BASE + 0x3301, 8); self.reject(data)
+
+    def test_volatile_header_signature_counts_and_contiguity_are_exact(self):
+        for i, value in enumerate((25, 1, 0x321c, 36, 0x3244, 32)):
+            data = v2_fixture(); put(data, v2_offset(0x3200) + i * 4, value)
+            self.reject(data, 'pe_v2_volatile')
+
+    def test_volatile_sorted_unique_accesses_and_whole_code_ranges(self):
+        at = v2_offset(0x3200)
+        for delta, value in ((24, 0), (28, 0x1004), (28, 0x1000), (24, 0x1038),
+                              (64, 0x2000), (68, 0), (68, 0x201), (72, 0x1008),
+                              (80, 0x11f8), (84, 0x201)):
+            data = v2_fixture(); put(data, at + delta, value); self.reject(data)
+        data = v2_fixture(); put(data, TABLE + 2 * 40 + 8, 0x250); self.reject(data)
+
+    def test_every_partial_relocation_against_controls_rejects(self):
+        controls = ((0x3000, 320), (0x3200, 88), (0x3400, 40), (0x3440, 16),
+                    (0x3500, 40), (0x3540, 16), (0x5000, 240), (0x2000, 64))
+        for start, size in controls:
+            for target in range(start - 7, start + size):
+                data = v2_fixture(True, True)
+                v2_relocations(data, v2_targets(True) + [target]); self.reject(data)
+
+    def test_iat_and_tls_index_cannot_overlap_control_boundaries(self):
+        controls = ((0x3000, 320), (0x3200, 88), (0x3400, 40), (0x3440, 16),
+                    (0x3500, 40), (0x3540, 16), (0x5000, 240), (0x2000, 64))
+        for start, size in controls:
+            for target in range(start - 7, start + size):
+                data = v2_fixture(True, True); put(data, v2_offset(0x3500) + 16, target)
+                self.reject(data)
+            for target in range(start - 3, start + size):
+                data = v2_fixture(True, True); put(data, v2_offset(0x3400) + 16, BASE + target, 8)
+                self.reject(data)
+
+    def test_partial_relocations_and_other_writes_cannot_alias_cookie_or_slots(self):
+        for start, size in ((0x4000, 8), (0x3300, 56)):
+            for target in range(start - 7, start + size):
+                data = v2_fixture(True, True); v2_relocations(data, v2_targets(True) + [target]); self.reject(data)
+                data = v2_fixture(True, True); put(data, v2_offset(0x3500) + 16, target); self.reject(data)
+            for target in range(start - 3, start + size):
+                data = v2_fixture(True, True); put(data, v2_offset(0x3400) + 16, BASE + target, 8); self.reject(data)
+
+    def test_ordinary_duplicate_partial_relocations_and_cross_writes_reject(self):
+        for extra in ((0x1060, 0x1060), (0x1060, 0x1067), (0x4030,), (0x4010,)):
+            data = v2_fixture(True, True); v2_relocations(data, v2_targets(True) + list(extra)); self.reject(data)
+        data = v2_fixture(True, True); put(data, v2_offset(0x3400) + 16, BASE + 0x4030, 8); self.reject(data)
+        data = v2_fixture(True, True); put(data, v2_offset(0x3500), 0); self.reject(data)
+
+    def test_tls_empty_template_is_mapped_and_callbacks_require_code(self):
+        data = v2_fixture(True); put(data, v2_offset(0x3400) + 8, BASE + 0x4020, 8)
+        self.assertIsNotNone(p.locate(bytes(data), p.PROFILE_V2))
+        for value in (BASE + 0x9000, BASE + 0x100000000):
+            data = v2_fixture(True)
+            put(data, v2_offset(0x3400), value, 8); put(data, v2_offset(0x3400) + 8, value, 8)
+            self.reject(data)
+        data = v2_fixture(True); put(data, v2_offset(0x3440), BASE + 0x3000, 8); self.reject(data)
+        data = v2_fixture(True); v2_relocations(data, v2_targets(True) + [0x3448]); self.reject(data)
+
+    def test_full_file_hash_loaded_marker_rva_and_binding_remain_strict(self):
+        data = p.seal(bytes(v2_fixture()), p.PROFILE_V2)
+        loaded = data[1536:1600]
+        for rva in (0, 0x2020, 1536):
+            with self.assertRaisesRegex(p.Reject, '^pe_loaded_rva$'):
+                p.verify(data, loaded, rva, p.PROFILE_V2)
+        for at in (1024, 4096 + 100, 5120 - 1):
+            changed = bytearray(data); changed[at] ^= 1
+            with self.assertRaisesRegex(p.Reject, '^pe_digest_mismatch$'):
+                p.verify(bytes(changed), loaded, 0x2000, p.PROFILE_V2)
+        with self.assertRaisesRegex(p.Reject, '^pe_loaded_seal$'):
+            p.verify(data, p.MARKER + loaded[32:], 0x2000, p.PROFILE_V2)
+
+    def test_cli_requires_explicit_v2_and_retains_profile_in_json(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary); source = root / 'source.exe'; output = root / 'sealed.exe'
+            original = bytes(v2_fixture()); source.write_bytes(original)
+            text = io.StringIO()
+            with redirect_stdout(text):
+                self.assertEqual(p.main(['seal', '--input', str(source), '--output', str(output)]), 2)
+            self.assertFalse(output.exists())
+            text = io.StringIO()
+            with redirect_stdout(text):
+                self.assertEqual(p.main(['seal', '--profile', p.PROFILE_V2, '--input', str(source), '--output', str(output)]), 0)
+            self.assertEqual(json.loads(text.getvalue())['contract'], p.PROFILE_V2)
+            data = output.read_bytes(); text = io.StringIO()
+            with redirect_stdout(text):
+                self.assertEqual(p.main(['verify', '--profile', p.PROFILE_V2, '--input', str(output),
+                                         '--loaded-payload', data[1536:1600].hex(), '--payload-rva', '0x2000']), 0)
+            self.assertEqual(json.loads(text.getvalue())['file_sha256'], hashlib.sha256(data).hexdigest())
+            self.assertEqual(source.read_bytes(), original)
+
+    def test_explicit_checksum_transformation_uses_selected_profile(self):
+        data = v2_fixture(); put(data, OPT + 64, 0x12345678)
+        self.reject(data, 'pe_checksum_nonzero')
+        original = bytes(data)
+        prepared = p.prepare_unsigned(original, p.PROFILE_V2)
+        self.assertEqual(prepared[:OPT + 64], original[:OPT + 64])
+        self.assertEqual(prepared[OPT + 68:], original[OPT + 68:])
+        self.assertEqual(prepared[OPT + 64:OPT + 68], bytes(4))
+        self.assertIsNotNone(p.seal(prepared, p.PROFILE_V2))
+
+    def test_alternate_image_base_updates_only_va_fields(self):
+        data = v2_fixture(True, True); new_base = 0x180000000; delta = new_base - BASE
+        put(data, OPT + 24, new_base, 8)
+        for at in [2048 + field for field in V2_FIELDS] + [v2_offset(rva) for field, rva in
+                   zip(V2_FIELDS, V2_POINTERS) if field not in (88, 256, 304)] + \
+                  [v2_offset(0x3400) + i * 8 for i in range(4)] + [v2_offset(0x3440)]:
+            put(data, at, p.integer(data, at, 8) + delta, 8)
+        self.assertIsNotNone(p.locate(bytes(data), p.PROFILE_V2))
+        data = p.seal(bytes(data), p.PROFILE_V2)
+        self.assertEqual(p.verify(data, data[1536:1600], 0x2000, p.PROFILE_V2), hashlib.sha256(data).digest())
+
+    def test_cross_language_complete_file_hash_vectors(self):
+        expected = (
+            (False, False, '8b5385ee6e43affa9cc9a3958a41d488cd3e92135cd09cd6fe19d7ac63882192', 'bedb8fd595b5d12254e1d5a30f5cb5b1402d3bae4a430538ed54a80dbd6eab70'),
+            (False, True, 'e8f371bb047fc58bce966085693300d2936b40638f4d88736746164cda2ea34a', '9efc1a7e67ed17e4d760c5fc3f8262e9b59f7e7fef6b50c57f272630dca7c1e6'),
+            (True, False, '85f08894762e403b485990f9c079f4a3492704e6d5fa3e7c61fc8556433cc194', '89e4903524653857a748082de44dcd67a75ff1510622953b36fde5a2507d6c05'),
+            (True, True, '9e1339adaec5852cbe20d53383f8b21d6a0f9a5081912946344131f041883af8', 'b05150f8fcc774460ce24fec1460c3629604c3a9855d11428b58ddcbfc458ff3'))
+        for tls, imports, canonical, full in expected:
+            data = bytes(v2_fixture(tls, imports))
+            self.assertEqual(hashlib.sha256(data).hexdigest(), canonical)
+            self.assertEqual(hashlib.sha256(p.seal(data, p.PROFILE_V2)).hexdigest(), full)
+
+    def test_v2_relocation_size_and_entry_caps_include_absolute_padding(self):
+        for count in (65536, 65537):
+            data = v2_fixture(); remaining = count - len(v2_targets()) * 2
+            size = 180 + 8 + remaining * 2; raw_size = p.aligned(size, 512)
+            data.extend(bytes(4608 + raw_size - len(data)))
+            directory(data, 5, 0x5000, size)
+            put(data, TABLE + 4 * 40 + 8, size); put(data, TABLE + 4 * 40 + 16, raw_size)
+            put(data, OPT + 56, p.aligned(0x5000 + raw_size, 4096))
+            put(data, 4608 + 180, 0x1000); put(data, 4608 + 184, 8 + remaining * 2)
+            if count == 65536:
+                self.assertIsNotNone(p.locate(bytes(data), p.PROFILE_V2))
+            else:
+                self.reject(data, 'pe_relocation_limit')
+        data = v2_fixture(); size = 1024 * 1024 + 1; raw_size = p.aligned(size, 512)
+        data.extend(bytes(4608 + raw_size - len(data)))
+        directory(data, 5, 0x5000, size)
+        put(data, TABLE + 4 * 40 + 8, size); put(data, TABLE + 4 * 40 + 16, raw_size)
+        put(data, OPT + 56, p.aligned(0x5000 + raw_size, 4096))
+        self.reject(data, 'pe_relocation_limit')
+
+    def test_v2_callback_terminator_must_be_inside_1024_slots(self):
+        data = v2_fixture(True); raw_size = p.aligned(0x100 + 1024 * 8, 512)
+        data.extend(bytes(4608 + raw_size - len(data)))
+        put(data, TABLE + 4 * 40 + 8, raw_size); put(data, TABLE + 4 * 40 + 16, raw_size)
+        put(data, OPT + 56, p.aligned(0x5000 + raw_size, 4096))
+        put(data, v2_offset(0x3400) + 24, BASE + 0x5100, 8)
+        for i in range(1024):
+            put(data, 4608 + 0x100 + i * 8, BASE + 0x1000, 8)
+        self.reject(data, 'pe_tls_callbacks_limit')
+
+    def test_v2_truncation_and_unsupported_directories_reject(self):
+        data = v2_fixture(True, True)
+        for length in range(len(data)):
+            self.reject(data[:length])
+        for index in (4, 7, 8, 11, 13, 14, 15):
+            data = v2_fixture(); directory(data, index, 0x3700, 8)
+            self.reject(data, 'pe_unsupported_directory')
+
+
 if __name__ == '__main__':
     unittest.main()
