@@ -265,3 +265,134 @@ before client/output I/O. Source, binary, client and reference guards passed;
 the bounded acceptance recorded no network access. This establishes the
 recorded offline Rust acquisition scopes, not full extraction or additional
 runtime compatibility.
+
+
+## Explicit build-70338 GT catalog (manifest v4)
+
+The standalone GT CLI admits build 70338 only with the explicit
+`--profile gt-catalog-70338-v1 --group catalog --backend rust-local` selection
+and both acquisition layouts. The profile pins the existing twenty-file
+catalog and its fingerprint; it adds no discovery or automatic layout choice.
+The default remains six files with the native backend for builds 70170/70205.
+Legacy manifest versions 1–3 now explicitly reject 70338 rather than inheriting
+backend-wide build admission. Their admitted-build output bytes remain covered
+by authored golden vectors and comparison of the unchanged renderer functions.
+These checks do not claim execution of an older binary.
+
+The new `catalog_batch::extract_with_contract` API requires a typed acquisition
+profile. Its injected reader remains the caller's responsibility; provenance
+alone does not authenticate a supplied closure. Component admission precedes
+callbacks and output creation. The CLI first checks backend availability, then
+bounded build metadata and the component contract, then opens one Session. A
+changed Session build is fatal before output creation.
+
+Successful extraction requires all twenty complete files: fourteen numeric
+schemas and six raw-only entries. Limits remain 4 MiB per file, 80 MiB per
+catalog, 100,000 data rows and one million numeric values including row zero
+per numeric file, and a 64 KiB/depth-eight manifest. File-budget overrides only reduce limits.
+Missing or invalid files retain partial/exit-8 semantics; observed input changes
+are globally fatal. No resume, overwrite, available-prefix success, network
+option or directory-wide atomic promotion is added.
+
+The independent verifier accepts version 4 only with build 70338, the exact
+component profile, catalog and Rust-local acquisition shape. It checks the full
+output tree, hashes and numeric facts offline. Coherent replacement of data and
+manifest cannot be detected as a change of historical client origin without
+reopening that client. During Rust-local acquisition, CKey verification uses
+full MD5 and EKey validation remains prefix9. Six raw-only files gain no numeric or typed-reader claim.
+
+### Source and synthetic validation
+
+Functional commit `70f4b03caafb8349ae74bf45da9628066bebf8e8` contains exactly the
+reviewed source bytes. Each Linux debug/release workspace run passes 2,865 tests
+with 26 ignored across 43 targets, including 62 GT and four CLI cases. Four
+formal JSON cases, 333 source-contract methods, 162 distribution methods/one
+platform skip, all-target Clippy and formatting pass. Distribution checks do
+not create a new bundle. The initial fixture-location rejection and setup typo
+remain failed attempts; the corrected validation is separately recorded.
+
+The four producer/verifier binaries were compiled against baseline `a2ef480`
+plus the inventoried source delta before the later functional commit; their
+binding to that commit is exact source-byte equality, not a claim that Cargo
+observed the later commit. Validation is source/synthetic only at this checkpoint;
+real build-70338 catalog and typed-loader evidence require a separate campaign.
+Product build-70338 admission remains DB2-only. This component increment does
+not establish full Linux extraction, geometry, installed runtime or a new
+reproducible package. Windows development remains deferred.
+
+### Fresh build-70338/esES real acceptance — 2026-10-14
+
+The single frozen real campaign acquires all twenty complete files / 138,537
+bytes (maximum 41,518). Raw public-Session acquisition and all twenty strict
+pinned native CASC reads match complete bytes and native CKey MD5 before any
+GT numeric consumer. Both fresh production CLI profiles extract the same
+complete catalog; separate offline verification, self-contained v4 JSON Schema
+validation and complete output inventories pass.
+
+The fourteen numeric tables contain 5,086 physical data rows, plus fourteen
+implicit zero rows. All 22,082 f32 cells match the independent authored C++
+Linux `std::stold` source-style oracle in both profiles. This executes neither
+original `GameTables.cpp` nor its full server initialization. Both actual public
+RustyCore loaders execute their complete six-file projections, including row
+zero and one-past-end checks. The production loader modules compile in a minimal external crate with an
+explicit shim. All four retained production/test files match integration commit
+`544721324cf0a47553caae1ea0299a0ff2917ce7`; copied test-file provenance does not
+imply execution of those unit tests. This is not execution of the whole
+`wow-data` crate or server. Six raw-only members retain byte-identity
+coverage without invented numeric schemas.
+
+These are newly measured 70338 results. Older 70205 artifacts, expected totals
+and acceptance are not campaign inputs. There are 80 successful client-source
+visits of twenty identities: twenty raw Rust, twenty native and forty across
+the two production profiles. This is not physical archive-I/O accounting;
+private comparison, consumer and review visits are separate.
+
+The authored campaign separately passes 45 commands on twenty toy sources /
+2,008 bytes, including 282 exact numeric cells, both loaders, required-file
+failures, tampering and existing-output guards. The real campaign passes all
+43 commands. Its 1,555 known source/tool/input/output guards remain unchanged;
+all owned groups are absent. All 45 synthetic and 43 real consumer network
+traces are empty. Deliberately denied controller/pre-exec policy probes are
+outside those traces; no global zero-attempt claim is made.
+
+Outer client evidence is bounded build-metadata reads with descriptor/EOF
+checks, public Session authentication per read and complete native-source
+comparison. It is not an atomic or whole-client snapshot. Caller/source Vec
+capacity, Session logical limits, staged output traffic and process AS/CPU/file
+limits have separate scopes; no combined heap or RSS bound is claimed.
+
+Failed source-validation and tooling attempts remain retained: the fixture
+location rejection, setup typo, two pre-codegen missing-header failures, Rust
+compiler-trace classification failure and first audit's directory-mapping
+error. The original runtime proposal remains unexecuted; its receipt-shape and
+closure fixes are frozen as v2. Rust attempt1 did not serialize its process
+exit, so its `Finished` log is not exit-0 evidence. Accepted receipts bind only
+the corrected source validation, native attempt3, Rust attempt2, runtime v2 and
+one synthetic/one real campaign. Later acceptance Markdown is not rebuilt into
+any executable or new bundle.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-gt-20261014-wjtuvnvd/`.
+
+Independent final acceptance review passes with the exact receipts below. Its
+initial alias/payload classification error is retained separately; correcting
+that audit reader changes no campaign input or consumer execution.
+
+
+| Retained receipt | SHA-256 |
+| --- | --- |
+| `impl/source-review-freeze-v2.json` | `90a73d19ecc9d95da3c1e1ca26be3f0f6b68dadcdc561867d11a05555e1a84d8` |
+| `impl/validation-attempt2/validation-report.json` | `c4cfd89c87b69035294fd4ba899c0f32e929ba6c4ce5e95beb96952a01566199` |
+| `root/functional-binding.json` | `38527c76acda90e9b2c8ee1bd788fe3a309bf9b762554b28305691567d436447` |
+| `qa/review/source-validation-review-v1.json` | `39c8626c5c5f56cac268838537c34dc3cb33a4878201823842584dd2515e06cf` |
+| `tooling/native-build-attempt3/build-report.json` | `e1f3fe48aafb7af9cc2a7349a801c361c6fa9aa9464b5f0071d939a13bc8b131` |
+| `tooling/rust-build-attempt2/build-report.json` | `4b128d44950259582abfba7ff28bc0d8e2f30aa2399ae02c30e2f585baa461f5` |
+| `qa/review/helper-build-receipts-review-v1.json` | `b2ed1d8b659387bed1033d97a09efcbc7170fbbd1e6f167b303a8e16facc3c84` |
+| `tooling/runtime-source-freeze-v2.json` | `8352cd05a7357b725044b1a55e642eaab77eea65aecbe84b0c085fc0f25af552` |
+| `qa/review/runtime-source-review-v1.json` | `36951c403766e904426414a6608afa19d5c802e3438abacf19a2dabf75614641` |
+| `tooling/synthetic-attempt1/acceptance.json` | `cfaeaac3116d25fc5df44f1d2e7153fb8680f88e45104a3e29c55d332b6360fd` |
+| `qa/review/synthetic-acceptance-review-v1.json` | `0adb1c04d6d9042aa67494dc4c18a1e7e84a6f2361b2257f1ef19df2fd4ae2ce` |
+| `tooling/real-attempt1/acceptance.json` | `a442d91ba1c8e56471a279a7c116b1e120f51b592852a21be65bb711cc6567f1` |
+| `tooling/real-attempt1/evidence-freeze.json` | `b72020526abfba467fe74449c26be91d64eef4d5e90d5fdcf618ea826350bbd3` |
+| `tooling/real-audit-v1.json` | `243e7917f51af967f07957950faae53bb20ac04917dc0488d91d3876ced5d4b1` |
+| `qa/review/final-real-review-v1.json` | `9afec6c982183667b5d3c8323e38bda81d21f840131cd9da0e4e1848dad036cd` |
