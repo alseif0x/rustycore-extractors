@@ -127,6 +127,39 @@ log SHA-256 is
 The original local frozen acceptance remains associated with its preceding
 source, rather than this later correction.
 
+The second native run, functional commit `159e2c0`, separately passes 2,333
+Windows workspace tests / 21 ignored across 42 summaries, plus all 30 namespace
+and 21 package cases in both debug and release with zero failures or ignored
+focused cases. It remains an overall failure:
+[run 38342630164 / Windows job 115116818646](https://github.com/alseif0x/rustycore-extractors/actions/runs/38342630164/job/115116818646)
+stops at `pe_input_changed` in the Python sealer, before any product CLI case.
+The failed job log SHA-256 is
+`d5284d64bc29849491c396f47b865b14d773e5c206594a941fc291f5d7ba1651`.
+Its 1,075-file before/after source guard is unchanged, with inventory SHA-256
+`c315e6c1bdbc1a8d6305841d009388b09a18b71e0cd19ef6249c33b8bd9bcdc6`.
+These positive filesystem checks do not establish whole-product acceptance.
+
+The sealer correction uses complete Win32 identity snapshots for both the
+pathname and the held data reader, before and after the bounded read. It keeps
+file type, attributes, volume/index, size, creation/write times and link count.
+This avoids CPython 3.11's filename-derived execute bits and sharing-conflict
+pathname fallback with missing IDs, documented in its
+[pathname implementation](https://github.com/python/cpython/blob/v3.11.9/Modules/posixmodule.c)
+and [descriptor implementation](https://github.com/python/cpython/blob/v3.11.9/Python/fileutils.c).
+Linux's existing reader and all PE layout/digest rules remain unchanged.
+The local correction report SHA-256 is
+`6b3e31d51c3802ced30e91061a08a145f02be25a22f12a75749532a80d768cc6`;
+126 distribution/sealer cases pass and the additional actual Win32 read is
+explicitly skipped on Linux. Native confirmation is a separate gate.
+
+The subsequent native helper also executes the synthetic Python sealer suite.
+Full synthetic CLI command reports are emitted to the job log, allowing their
+stored JSON bytes to be reconstructed and checked against each logged digest.
+The runner's temporary directories are ephemeral; no executable, complete
+source inventory, fixture or output artifact is uploaded by this workflow.
+Retained evidence must distinguish the downloaded job log and reconstructed
+reports from those temporary files. Network observations remain unmeasured.
+
 ## Primary API references
 
 The implementation uses handle-relative

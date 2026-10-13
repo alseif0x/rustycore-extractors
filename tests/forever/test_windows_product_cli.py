@@ -69,6 +69,12 @@ class WindowsProductCli(unittest.TestCase):
             'case': self._testMethodName, 'report_sha256': sha(encoded),
             'commands': len(self.calls), 'binary_sha256': self.binary_hash,
             'terminated_phase': self.terminated_phase}, sort_keys=True))
+        # The runner's temporary files disappear after the job. Log the complete
+        # synthetic command report so its exact stored bytes can be reconstructed
+        # and checked against the preceding digest without publishing a binary.
+        print('WINDOWS_PRODUCT_CASE_REPORT ' + json.dumps(
+            {'case': self._testMethodName, 'report': report},
+            sort_keys=True, separators=(',', ':')))
         self.assertTrue(report['binary_unchanged'])
         self.assertTrue(report['unsealed_unchanged'])
         if self.plan_hash is not None:

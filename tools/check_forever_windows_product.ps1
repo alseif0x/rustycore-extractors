@@ -28,6 +28,9 @@ $sourceBeforeJson = $sourceBefore | ConvertTo-Json -Compress
 [IO.File]::WriteAllText((Join-Path $runRoot 'source-before.json'), $sourceBeforeJson)
 
 try {
+python -m unittest discover -s tests/distribution -p test_windows_seal.py -v
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 function Test-ExactInventory($package, $prefix, $expectedNames, $release) {
     $expected = @($expectedNames | ForEach-Object { "${prefix}${_}: test" } | Sort-Object)
     if ($expected.Count -eq 0) { throw 'empty native package test inventory' }
@@ -61,6 +64,11 @@ foreach ($profile in @('debug', 'release')) {
     $sealed = Join-Path $profileRoot 'forever-extractor.exe'
     python tools/seal_forever_windows.py seal --input $unsealed --output $sealed --zero-checksum
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Write-Output ('WINDOWS_PRODUCT_BINARY ' + (@{
+        profile = $profile
+        sealed_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $sealed).Hash.ToLowerInvariant()
+        unsealed_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $unsealed).Hash.ToLowerInvariant()
+    } | ConvertTo-Json -Compress))
     $env:FOREVER_WINDOWS_PRODUCT_BINARY = $sealed
     $env:FOREVER_WINDOWS_PRODUCT_UNSEALED = $unsealed
     $env:FOREVER_WINDOWS_PRODUCT_CASES = Join-Path $profileRoot 'cases'

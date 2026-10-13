@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+# Modified 2026-10-13: native Windows pathname/descriptor input identity snapshots.
 """Original 2026-10-11 bounded offline unsigned PE32+ producer sealer.
 
 Pure bytes core and explicit offline CLI with bounded regular-file I/O.
@@ -272,9 +273,108 @@ def verify(data, loaded_payload, measured_payload_rva):
     return hashlib.sha256(data).digest()
 
 
+@dataclass(frozen=True)
+class _WindowsInputIdentity:
+    file_type: int
+    attributes: int
+    volume: int
+    index: int
+    size: int
+    creation_time: int
+    write_time: int
+    links: int
+
+
+class _WindowsInputAPI:
+    """Native snapshots avoid CPython's pathname execute hint and stat fallback.
+
+    CPython 3.11 lstat adds 0111 for .exe paths, unlike fstat. Its share-zero
+    pathname open can also fall back to directory data without file IDs while
+    the reader is open. Query both bindings through compatible Win32 handles.
+    This is observed input identity, not an anchored ancestor or NTFS profile.
+    """
+    def __init__(self):
+        import ctypes
+        self.ctypes = ctypes
+        dword = ctypes.c_uint32
+
+        class Information(ctypes.Structure):
+            _fields_ = [(name, dword) for name in (
+                'attributes', 'creation_low', 'creation_high',
+                'access_low', 'access_high', 'write_low', 'write_high',
+                'volume', 'size_high', 'size_low', 'links', 'index_high', 'index_low')]
+
+        require(ctypes.sizeof(Information) == 52, "pe_input_layout")
+        self.Information = Information
+        native = ctypes.WinDLL('kernel32', use_last_error=True)
+        self.open = native.CreateFileW
+        self.open.argtypes = [ctypes.c_wchar_p, dword, dword, ctypes.c_void_p,
+                              dword, dword, ctypes.c_void_p]
+        self.open.restype = ctypes.c_void_p
+        self.close = native.CloseHandle
+        self.close.argtypes = [ctypes.c_void_p]
+        self.close.restype = ctypes.c_int
+        self.query = native.GetFileInformationByHandle
+        self.query.argtypes = [ctypes.c_void_p, ctypes.POINTER(Information)]
+        self.query.restype = ctypes.c_int
+        self.kind = native.GetFileType
+        self.kind.argtypes = [ctypes.c_void_p]
+        self.kind.restype = dword
+
+    def snapshot(self, handle):
+        kind = self.kind(handle)
+        require(kind == 1, "pe_input_type")  # FILE_TYPE_DISK
+        info = self.Information()
+        if not self.query(handle, self.ctypes.byref(info)):
+            raise OSError("native input identity query failed")
+        return _WindowsInputIdentity(
+            kind, info.attributes, info.volume,
+            (info.index_high << 32) | info.index_low,
+            (info.size_high << 32) | info.size_low,
+            (info.creation_high << 32) | info.creation_low,
+            (info.write_high << 32) | info.write_low, info.links)
+
+    def named(self, path):
+        import os
+        # FILE_READ_ATTRIBUTES; share READ|WRITE|DELETE; OPEN_EXISTING;
+        # BACKUP_SEMANTICS|OPEN_REPARSE_POINT. Never traverse a leaf reparse.
+        handle = self.open(os.fsdecode(path), 0x80, 7, None, 3, 0x02200000, None)
+        if handle == self.ctypes.c_void_p(-1).value:
+            raise OSError("native input pathname open failed")
+        try:
+            return self.snapshot(handle)
+        finally:
+            if not self.close(handle):
+                raise OSError("native input pathname close failed")
+
+    def held(self, descriptor):
+        import msvcrt
+        return self.snapshot(msvcrt.get_osfhandle(descriptor))
+
+
+def _read_file_windows(path):
+    import os
+    native = _WindowsInputAPI()
+    before = native.named(path)
+    require(before.file_type == 1 and not before.attributes & (0x10 | 0x400),
+            "pe_input_type")  # Directory or any reparse point rejects.
+    require(before.size <= MAX_FILE, "pe_limit")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+    with os.fdopen(os.open(path, flags), "rb") as stream:
+        held = native.held(stream.fileno())
+        require(before == held, "pe_input_changed")
+        data = stream.read(held.size + 1)
+        require(len(data) <= MAX_FILE, "pe_limit")
+        require(len(data) == held.size and held == native.held(stream.fileno())
+                and before == native.named(path), "pe_input_changed")
+    return data
+
+
 def _read_file(path):
     """Bounded regular input; reject observed replacement/change, no discovery."""
     import os
+    if os.name == 'nt':
+        return _read_file_windows(path)
     import stat
     before = os.lstat(path)
     require(stat.S_ISREG(before.st_mode), "pe_input_type")

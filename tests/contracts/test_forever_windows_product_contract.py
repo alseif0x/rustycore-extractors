@@ -100,7 +100,9 @@ class WindowsProductContract(unittest.TestCase):
         for marker in ('process.kill()', 'observed_db2_seal_before_final_manifest',
                        'pe_digest_mismatch', 'producer_unsealed', 'product_disk_unsupported',
                        'self.assertEqual(snapshot(self.client), self.inputs)',
-                       'self.plan.write_bytes(text.encode())'):
+                       'self.plan.write_bytes(text.encode())',
+                       "'WINDOWS_PRODUCT_CASE_REPORT '",
+                       "{'case': self._testMethodName, 'report': report}"):
             self.assertIn(marker, source)
         self.assertFalse(self.c['validation']['network_syscall_tracing'])
         self.assertNotIn('strace', source)
@@ -134,6 +136,8 @@ class WindowsProductContract(unittest.TestCase):
                        '--offline', '--locked', '--test-threads=1', '-- --list',
                        'native package test inventory mismatch', '0 failed; 0 ignored;',
                        'seal --input $unsealed --output $sealed --zero-checksum',
+                       "'WINDOWS_PRODUCT_BINARY '",
+                       'python -m unittest discover -s tests/distribution -p test_windows_seal.py -v',
                        'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'):
             self.assertIn(marker, script)
         for j in workflow['jobs'].values():

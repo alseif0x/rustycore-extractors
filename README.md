@@ -70,8 +70,9 @@ included in output metadata. See the [bounded key contract](docs/forever-product
 The [local distribution recipe](docs/forever-distribution.md) packages the
 Linux product with its exact current source, vendored dependencies and notices.
 Its offline reconstruction and archive integrity checks remain separate from
-complete real extraction/runtime acceptance. Windows needs a filesystem port
-before a functional product package can be claimed.
+complete real extraction/runtime acceptance. Windows uses a separate
+[resident NTFS backend](docs/forever-windows-product.md); its native product
+evidence and remaining distribution gates are recorded separately.
 
 The [Rust navigation input stage](docs/forever-navigation.md) now projects
 verified MAPS into solid/liquid triangles, joins neighboring borders and removes

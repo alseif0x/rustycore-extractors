@@ -396,6 +396,133 @@ class CliTests(unittest.TestCase):
             self.assertNotIn('private failure', log.getvalue())
 
 
+class InputIdentityTests(unittest.TestCase):
+    """Authored 2026-10-13: portable fault injection, plus a native-only read.
+
+    Mock snapshots do not establish Windows execution; the native CLI suite
+    executes the real CreateFile/GetFileInformationByHandle path separately.
+    """
+    def identity(self):
+        return p._WindowsInputIdentity(1, 0x20, 7, 11, len(fixture()), 123, 456, 1)
+
+    def read_snapshots(self, named=None, held=None):
+        import tempfile
+        from unittest import mock
+        original = bytes(fixture())
+        identity = self.identity()
+        api = mock.Mock()
+        api.named.side_effect = [identity, identity] if named is None else named
+        api.held.side_effect = [identity, identity] if held is None else held
+        with tempfile.TemporaryDirectory() as root:
+            source = pathlib.Path(root) / 'source with spaces.exe'
+            source.write_bytes(original)
+            with mock.patch.object(p, '_WindowsInputAPI', return_value=api):
+                result = p._read_file_windows(source)
+        self.assertEqual(result, original)
+        self.assertEqual(api.named.call_count, 2)
+        self.assertEqual(api.held.call_count, 2)
+
+    def test_windows_path_and_held_native_snapshots_read_complete_exe(self):
+        self.read_snapshots()
+
+    def test_windows_initial_binding_retains_every_native_identity_field(self):
+        from dataclasses import fields, replace
+        identity = self.identity()
+        for field in fields(identity):
+            with self.subTest(field=field.name):
+                changed = replace(identity, **{field.name: getattr(identity, field.name) + 1})
+                with self.assertRaisesRegex(p.Reject, '^pe_input_changed$'):
+                    self.read_snapshots(held=[changed])
+
+    def test_windows_held_postflight_retains_every_native_identity_field(self):
+        from dataclasses import fields, replace
+        identity = self.identity()
+        for field in fields(identity):
+            with self.subTest(field=field.name):
+                changed = replace(identity, **{field.name: getattr(identity, field.name) + 1})
+                with self.assertRaisesRegex(p.Reject, '^pe_input_changed$'):
+                    self.read_snapshots(held=[identity, changed])
+
+    def test_windows_named_postflight_retains_every_native_identity_field(self):
+        from dataclasses import fields, replace
+        identity = self.identity()
+        for field in fields(identity):
+            with self.subTest(field=field.name):
+                changed = replace(identity, **{field.name: getattr(identity, field.name) + 1})
+                with self.assertRaisesRegex(p.Reject, '^pe_input_changed$'):
+                    self.read_snapshots(named=[identity, changed])
+
+    def test_windows_reparse_directory_and_nondisk_reject_before_data_open(self):
+        from dataclasses import replace
+        from unittest import mock
+        identity = self.identity()
+        for changed in (replace(identity, attributes=0x400),
+                        replace(identity, attributes=0x10),
+                        replace(identity, file_type=3)):
+            with self.subTest(identity=changed):
+                api = mock.Mock()
+                api.named.return_value = changed
+                with mock.patch.object(p, '_WindowsInputAPI', return_value=api), \
+                     mock.patch('os.open', side_effect=AssertionError('data open forbidden')):
+                    with self.assertRaisesRegex(p.Reject, '^pe_input_type$'):
+                        p._read_file_windows('authored-missing.exe')
+                api.held.assert_not_called()
+
+    def test_windows_size_limit_rejects_before_data_open(self):
+        from dataclasses import replace
+        from unittest import mock
+        api = mock.Mock()
+        api.named.return_value = replace(self.identity(), size=p.MAX_FILE + 1)
+        with mock.patch.object(p, '_WindowsInputAPI', return_value=api), \
+             mock.patch('os.open', side_effect=AssertionError('data open forbidden')):
+            with self.assertRaisesRegex(p.Reject, '^pe_limit$'):
+                p._read_file_windows('authored-missing.exe')
+        api.held.assert_not_called()
+
+    def test_windows_short_read_and_extra_byte_reject(self):
+        from dataclasses import replace
+        for adjustment in (-1, 1):
+            identity = replace(self.identity(), size=len(fixture()) + adjustment)
+            with self.subTest(adjustment=adjustment):
+                with self.assertRaisesRegex(p.Reject, '^pe_input_changed$'):
+                    self.read_snapshots(named=[identity, identity], held=[identity, identity])
+
+    def test_posix_execute_bits_still_participate_in_initial_identity(self):
+        import tempfile
+        from types import SimpleNamespace
+        from unittest import mock
+        before = SimpleNamespace(st_dev=7, st_ino=11, st_mode=0o100700,
+                                 st_size=len(fixture()), st_mtime_ns=123, st_ctime_ns=456)
+        held = SimpleNamespace(**dict(vars(before), st_mode=0o100600))
+        with tempfile.TemporaryDirectory() as root:
+            source = pathlib.Path(root) / 'source.exe'
+            source.write_bytes(bytes(fixture()))
+            with mock.patch('os.name', 'posix'), mock.patch('os.lstat', return_value=before), \
+                 mock.patch('os.fstat', return_value=held):
+                with self.assertRaisesRegex(p.Reject, '^pe_input_changed$'):
+                    p._read_file(source)
+
+    @unittest.skipUnless(sys.platform == 'win32', 'real Win32 input snapshots require Windows')
+    def test_native_windows_exe_snapshots_agree_while_data_reader_is_open(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            source = pathlib.Path(root) / 'source with spaces.exe'
+            original = bytes(fixture())
+            source.write_bytes(original)
+            native = p._WindowsInputAPI()
+            before = native.named(source)
+            with source.open('rb') as stream:
+                self.assertEqual(native.held(stream.fileno()), before)
+                self.assertEqual(native.named(source), before)
+                self.assertEqual(stream.read(), original)
+                self.assertEqual(native.held(stream.fileno()), before)
+                self.assertEqual(native.named(source), before)
+            self.assertEqual(p._read_file(source), original)
+            self.assertEqual(source.read_bytes(), original)
+            self.assertEqual(os.lstat(source).st_size, len(original))
+
+
 class LoaderControlTests(unittest.TestCase):
     def test_relocation_cannot_rewrite_a_later_relocation_block(self):
         data = with_relocation(target=0x400c)
