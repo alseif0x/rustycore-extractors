@@ -183,6 +183,24 @@ successful PE admission. Local checks cover that ordering and synthetic
 diagnostic bounds; native diagnosis and complete product acceptance remain
 pending. No runner binary or client data is uploaded.
 
+The fourth run, functional commit `48726f0`, fails at that preflight as intended:
+[run 38344928358 / Windows job 115123998498](https://github.com/alseif0x/rustycore-extractors/actions/runs/38344928358/job/115123998498).
+Both compiler profiles declare directory 10 with a 320-byte load-config record;
+it is their only populated directory forbidden by v1. The record contains a
+security-cookie pointer, guard slots and a volatile-metadata pointer. This is
+compiler metadata evidence, not admission of those structures or execution of
+their product commands. Windows workspace/product suites are skipped after the
+failure; Linux debug/release pass. The complete downloaded job-log SHA-256 is
+`5e6ebabf4a7d58e0b54036a7834c34b155e6f6f3bba8444d3b20d6a112635d5e`.
+The reconstructed diagnostic report SHA-256 is
+`fde5dd0609067d12cf5d0c4f819e8c4f119248c2988f7daec819e47da1fc733c`.
+The unchanged 1,075-file preflight source inventory has SHA-256
+`1919cfb7d5d28bb42f4a2f3dc71befc45f94e3fe3d58062e0b8083e033215ac3`.
+The subsequent diagnostic additionally records the image base, DLL flags,
+bounded pointed-to prefixes and intersecting relocations. Its purpose is to
+review a separate explicit MSVC profile; it does not relax v1 or disable guard
+features. Native execution of that extended diagnostic remains pending.
+
 ## Primary API references
 
 The implementation uses handle-relative

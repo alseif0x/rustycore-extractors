@@ -41,6 +41,93 @@ $diagnostic = @'
 import hashlib, json, os
 from pathlib import Path
 from tools import seal_forever_windows as seal
+
+POINTER_FIELDS = ((88, 'SecurityCookie'), (112, 'GuardCFCheckFunctionPointer'),
+                  (120, 'GuardCFDispatchFunctionPointer'), (256, 'VolatileMetadataPointer'),
+                  (280, 'GuardXFGCheckFunctionPointer'), (288, 'GuardXFGDispatchFunctionPointer'),
+                  (296, 'GuardXFGTableDispatchFunctionPointer'), (304, 'CastGuardOsDeterminedFailureMode'),
+                  (312, 'GuardMemcpyFunctionPointer'))
+
+def mapped_span(data, sections, rva, length):
+    if rva < 0 or length <= 0 or rva+length > 1 << 32:
+        return None
+    matches = []
+    for section in sections:
+        extent = min(section['raw_size'], section['virtual_size'])
+        if section['rva']+extent > 1 << 32:
+            return None
+        if rva < section['rva']+extent and section['rva'] < rva+length:
+            if not (section['rva'] <= rva and rva+length <= section['rva']+extent):
+                return None
+        if section['rva'] <= rva and rva+length <= section['rva']+extent:
+            raw = section['raw']+rva-section['rva']
+            if raw+length <= len(data):
+                matches.append({'section_name_hex': section['name_hex'],
+                                'mapped_rva_start': section['rva'],
+                                'mapped_rva_end': section['rva']+extent,
+                                'mapped_raw_start': section['raw'],
+                                'mapped_raw_end': section['raw']+extent,
+                                'rva_start': rva, 'rva_end': rva+length,
+                                'raw_start': raw, 'raw_end': raw+length})
+    return matches[0] if len(matches) == 1 else None
+
+def pointer_peek(data, sections, image_base, offset, name, va):
+    record = {'name': name, 'load_config_offset': offset, 'va': va, 'rva': None,
+              'bounds': None, 'prefix_hex': '', 'prefix_bytes': 0, 'initial_qword': None}
+    if va is None or va == 0 or va < image_base:
+        return record
+    rva = va-image_base
+    record['rva'] = rva
+    first = mapped_span(data, sections, rva, 1)
+    if first is None:
+        return record
+    length = min(512, first['mapped_rva_end']-rva)
+    bounds = mapped_span(data, sections, rva, length)
+    if bounds is not None:
+        prefix = data[bounds['raw_start']:bounds['raw_end']]
+        record.update(bounds=bounds, prefix_hex=prefix.hex(), prefix_bytes=length,
+                      initial_qword=int.from_bytes(prefix[:8], 'little') if length >= 8 else None)
+    return record
+
+def matching_relocations(data, sections, directory, image_base, watched):
+    report = {'entries': 0, 'matches': []}
+    rva, size = directory['rva'], directory['size']
+    if rva == 0 and size == 0:
+        return report
+    seal.require(rva != 0 and 8 <= size <= 1024*1024, 'diagnostic_relocation_size')
+    bounds = mapped_span(data, sections, rva, size)
+    seal.require(bounds is not None, 'diagnostic_relocation_bounds')
+    cursor, end = bounds['raw_start'], bounds['raw_end']
+    while cursor < end:
+        seal.require(cursor+8 <= end, 'diagnostic_relocation_block')
+        page = seal.integer(data, cursor, 4)
+        block = seal.integer(data, cursor+4, 4)
+        seal.require(page % 4096 == 0 and block >= 8 and block % 2 == 0 and cursor+block <= end,
+                     'diagnostic_relocation_block')
+        count = (block-8)//2
+        seal.require(report['entries']+count <= 65536, 'diagnostic_relocation_count')
+        for index in range(count):
+            value = seal.integer(data, cursor+8+index*2, 2)
+            kind, target = value >> 12, page+(value & 4095)
+            entry_index = report['entries']+index
+            if kind != 10:
+                continue
+            seal.require(target+8 <= 1 << 32, 'diagnostic_relocation_target')
+            overlaps = [name for name, start, stop in watched if target < stop and start < target+8]
+            if not overlaps:
+                continue
+            target_bounds = mapped_span(data, sections, target, 8)
+            initial = (seal.integer(data, target_bounds['raw_start'], 8)
+                       if target_bounds is not None else None)
+            report['matches'].append({'kind': kind, 'target_rva': target,
+                                      'target_va': image_base+target, 'entry_index': entry_index,
+                                      'block_rva': rva+cursor-bounds['raw_start'],
+                                      'overlaps': overlaps, 'bounds': target_bounds,
+                                      'initial_qword': initial})
+        report['entries'] += count
+        cursor += block
+    return report
+
 for profile in ('debug', 'release'):
     data = seal._read_file(Path(os.environ['CARGO_TARGET_DIR']) / profile / 'forever-extractor.exe')
     seal.require(data[:2] == b'MZ', 'diagnostic_dos')
@@ -52,6 +139,8 @@ for profile in ('debug', 'release'):
     optional = pe+24
     seal.require(seal.integer(data, optional, 2) == 0x20b and
                  seal.integer(data, optional+108, 4) == 16, 'diagnostic_optional')
+    image_base = seal.integer(data, optional+24, 8)
+    dll_characteristics = seal.integer(data, optional+70, 2)
     table = optional+240
     seal.require(table+count*40 <= len(data), 'diagnostic_table')
     directories = [{'index': i, 'rva': seal.integer(data, optional+112+i*8, 4),
@@ -62,20 +151,30 @@ for profile in ('debug', 'release'):
         sections.append({'name_hex': data[p:p+8].hex(), 'virtual_size': seal.integer(data, p+8, 4),
                          'rva': seal.integer(data, p+12, 4), 'raw_size': seal.integer(data, p+16, 4),
                          'raw': seal.integer(data, p+20, 4), 'flags': seal.integer(data, p+36, 4)})
-    load_config = None
+    load_config, pointers, watched = None, [], []
     directory = directories[10]
     if directory['rva'] and directory['size']:
-        matches = [s for s in sections if s['rva'] <= directory['rva'] and
-                   directory['rva']+directory['size'] <= s['rva']+s['raw_size']]
-        if len(matches) == 1:
-            start = matches[0]['raw']+directory['rva']-matches[0]['rva']
+        bounds = mapped_span(data, sections, directory['rva'], directory['size'])
+        if bounds is not None:
+            start = bounds['raw_start']
             length = min(directory['size'], 512)
-            if start+length <= len(data):
-                load_config = {'prefix_hex': data[start:start+length].hex(),
-                               'prefix_bytes': length, 'truncated': length != directory['size']}
+            load_config = {'prefix_hex': data[start:start+length].hex(),
+                           'prefix_bytes': length, 'truncated': length != directory['size'],
+                           'bounds': bounds}
+            watched.append(('load_config', directory['rva'], directory['rva']+directory['size']))
+            for offset, name in POINTER_FIELDS:
+                va = seal.integer(data, start+offset, 8) if offset+8 <= directory['size'] else None
+                record = pointer_peek(data, sections, image_base, offset, name, va)
+                pointers.append(record)
+                if record['bounds'] is not None:
+                    watched.append((name, record['rva'], record['rva']+record['prefix_bytes']))
+    relocations = matching_relocations(data, sections, directories[5], image_base, watched)
     print('WINDOWS_PE_PREFLIGHT ' + json.dumps({'profile': profile, 'bytes': len(data),
           'sha256': hashlib.sha256(data).hexdigest(), 'directories': directories,
-          'sections': sections, 'load_config': load_config,
+          'sections': sections, 'image_base': image_base, 'dll_characteristics': dll_characteristics,
+          'load_config': load_config, 'load_config_pointers': pointers, 'relocations': relocations,
+          'diagnostic_limits': {'peek_bytes': 512, 'relocation_entries': 65536,
+                                'relocation_directory_bytes': 1024*1024},
           'diagnostic_only': True, 'admission_unchanged': True}, sort_keys=True), flush=True)
 '@
 $diagnostic | python -

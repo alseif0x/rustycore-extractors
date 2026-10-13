@@ -18,6 +18,7 @@ SPEC = importlib.util.spec_from_file_location("forever_windows_seal", ROOT / "to
 p = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = p
 SPEC.loader.exec_module(p)
+PREFLIGHT_REJECT = importlib.import_module('tools.seal_forever_windows').Reject
 
 PE = 128
 OPT = PE + 24
@@ -95,6 +96,39 @@ def with_import(target=0x30a0):
     return data
 
 
+PREFLIGHT_POINTERS = ((88, 'SecurityCookie'), (112, 'GuardCFCheckFunctionPointer'),
+                      (120, 'GuardCFDispatchFunctionPointer'), (256, 'VolatileMetadataPointer'),
+                      (280, 'GuardXFGCheckFunctionPointer'), (288, 'GuardXFGDispatchFunctionPointer'),
+                      (296, 'GuardXFGTableDispatchFunctionPointer'), (304, 'CastGuardOsDeterminedFailureMode'),
+                      (312, 'GuardMemcpyFunctionPointer'))
+
+
+def with_preflight_load_config(pointer_rva=0x1020, image_base=BASE):
+    data = fixture()
+    put(data, OPT+24, image_base, 8)
+    put(data, OPT+70, 0x8160, 2)
+    directory(data, 10, RVA[2], 320)
+    put(data, RAW[2], 320)
+    put(data, RAW[2]+144, 0x100)
+    for offset, _ in PREFLIGHT_POINTERS:
+        put(data, RAW[2]+offset, image_base+pointer_rva, 8)
+    put(data, RAW[0]+32, 0x0123456789abcdef, 8)
+    return data
+
+
+def preflight_relocation_blocks(data, targets):
+    # One DIR64 plus one ABSOLUTE padding entry per independent block, retaining
+    # duplicate target occurrences for the diagnostic rather than deduplicating.
+    directory(data, 5, RVA[3], len(targets)*12)
+    put(data, TABLE+3*40+8, 512)
+    for index, target in enumerate(targets):
+        start = RAW[3]+index*12
+        put(data, start, target & ~4095)
+        put(data, start+4, 12)
+        put(data, start+8, 0xa000 | (target & 4095), 2)
+    return data
+
+
 class SealTests(unittest.TestCase):
     def preflight(self, data):
         script = (ROOT / 'tools/check_forever_windows_product.ps1').read_text(encoding='utf-8')
@@ -105,10 +139,12 @@ class SealTests(unittest.TestCase):
                 (target / profile).mkdir()
                 (target / profile / 'forever-extractor.exe').write_bytes(data)
             capture = io.StringIO()
-            with patch.dict(os.environ, {'CARGO_TARGET_DIR': str(target)}), redirect_stdout(capture):
-                exec(compile(diagnostic, 'native-pe-preflight', 'exec'), {})
-            for profile in ('debug', 'release'):
-                self.assertEqual((target / profile / 'forever-extractor.exe').read_bytes(), data)
+            try:
+                with patch.dict(os.environ, {'CARGO_TARGET_DIR': str(target)}), redirect_stdout(capture):
+                    exec(compile(diagnostic, 'native-pe-preflight', 'exec'), {})
+            finally:
+                for profile in ('debug', 'release'):
+                    self.assertEqual((target / profile / 'forever-extractor.exe').read_bytes(), data)
         return [json.loads(line.removeprefix('WINDOWS_PE_PREFLIGHT '))
                 for line in capture.getvalue().splitlines()]
 
@@ -123,8 +159,13 @@ class SealTests(unittest.TestCase):
             self.assertEqual(report['bytes'], len(data))
             self.assertEqual(len(report['directories']), 16)
             self.assertEqual(report['directories'][10], {'index': 10, 'rva': RVA[2], 'size': 512})
-            self.assertEqual(report['load_config'], {'prefix_hex': bytes(data[RAW[2]:RAW[2]+512]).hex(),
-                                                     'prefix_bytes': 512, 'truncated': False})
+            self.assertEqual(report['image_base'], BASE)
+            self.assertEqual(report['dll_characteristics'], 0)
+            self.assertEqual(report['load_config']['prefix_hex'], bytes(data[RAW[2]:RAW[2]+512]).hex())
+            self.assertEqual(report['load_config']['prefix_bytes'], 512)
+            self.assertFalse(report['load_config']['truncated'])
+            self.assertEqual(report['load_config']['bounds']['raw_start'], RAW[2])
+            self.assertEqual(report['load_config']['bounds']['raw_end'], RAW[2]+512)
             self.assertTrue(report['diagnostic_only'])
             self.assertTrue(report['admission_unchanged'])
         self.reject(data, 'pe_unsupported_directory')
@@ -136,6 +177,120 @@ class SealTests(unittest.TestCase):
         directory(data, 10, RVA[2], 64)
         put(data, TABLE+2*40+20, len(data))
         self.assertTrue(all(r['load_config'] is None for r in self.preflight(bytes(data))))
+
+    def test_preflight_nine_va_peeks_use_image_base_and_preserve_both_inputs(self):
+        data = with_preflight_load_config(image_base=0x180000000)
+        for report in self.preflight(bytes(data)):
+            self.assertEqual(report['image_base'], 0x180000000)
+            self.assertEqual(report['dll_characteristics'], 0x8160)
+            self.assertEqual(report['diagnostic_limits'], {'peek_bytes': 512, 'relocation_entries': 65536,
+                                                           'relocation_directory_bytes': 1024*1024})
+            self.assertEqual(len(report['load_config_pointers']), 9)
+            for record, (offset, name) in zip(report['load_config_pointers'], PREFLIGHT_POINTERS):
+                self.assertEqual(record['name'], name)
+                self.assertEqual(record['load_config_offset'], offset)
+                self.assertEqual(record['va'], 0x180001020)
+                self.assertEqual(record['rva'], 0x1020)
+                self.assertEqual(record['prefix_bytes'], 96)
+                self.assertEqual(record['prefix_hex'], bytes(data[RAW[0]+32:RAW[0]+128]).hex())
+                self.assertEqual(record['initial_qword'], 0x0123456789abcdef)
+                self.assertEqual(record['bounds']['raw_end'], RAW[0]+128)
+                self.assertEqual(record['bounds']['mapped_rva_end'], RVA[0]+128)
+
+    def test_preflight_peeks_never_exceed_512_bytes_or_the_virtual_raw_minimum(self):
+        data = with_preflight_load_config(pointer_rva=RVA[0])
+        put(data, TABLE+8, 1024)
+        for report in self.preflight(bytes(data)):
+            self.assertTrue(all(p['prefix_bytes'] == 512 for p in report['load_config_pointers']))
+        put(data, TABLE+8, 7)
+        for report in self.preflight(bytes(data)):
+            self.assertTrue(all(p['prefix_bytes'] == 7 and p['initial_qword'] is None
+                                for p in report['load_config_pointers']))
+        data = with_preflight_load_config()
+        put(data, TABLE+2*40+8, 319)
+        self.assertTrue(all(r['load_config'] is None for r in self.preflight(bytes(data))))
+
+    def test_preflight_unmapped_zero_underflow_overflow_and_eof_va_never_read(self):
+        for va in [0, BASE-1, BASE+0x9000, BASE+(1 << 32), (1 << 64)-1]:
+            data = with_preflight_load_config()
+            put(data, RAW[2]+256, va, 8)
+            for report in self.preflight(bytes(data)):
+                record = report['load_config_pointers'][3]
+                self.assertEqual(record['va'], va)
+                self.assertIsNone(record['bounds'])
+                self.assertEqual(record['prefix_bytes'], 0)
+                self.assertEqual(record['prefix_hex'], '')
+                self.assertIsNone(record['initial_qword'])
+        data = with_preflight_load_config()
+        put(data, TABLE+20, len(data)-64)
+        self.assertTrue(all(p['bounds'] is None for r in self.preflight(bytes(data))
+                            for p in r['load_config_pointers']))
+
+    def test_preflight_ambiguous_pointer_mapping_and_short_config_never_read(self):
+        data = with_preflight_load_config()
+        put(data, TABLE+40+12, RVA[0])
+        for report in self.preflight(bytes(data)):
+            self.assertTrue(all(p['bounds'] is None for p in report['load_config_pointers']))
+        data = with_preflight_load_config()
+        directory(data, 10, RVA[2], 96)
+        for report in self.preflight(bytes(data)):
+            self.assertEqual(len(report['load_config_pointers']), 9)
+            self.assertIsNotNone(report['load_config_pointers'][0]['va'])
+            self.assertTrue(all(p['va'] is None for p in report['load_config_pointers'][1:]))
+
+    def test_preflight_dir64_matches_whole_config_partial_overlaps_and_duplicates(self):
+        data = with_preflight_load_config()
+        targets = [RVA[2]+88, RVA[2]-4, RVA[2]+319, RVA[0]+28, RVA[0]+28, RVA[0]+128]
+        preflight_relocation_blocks(data, targets)
+        for report in self.preflight(bytes(data)):
+            self.assertEqual(report['relocations']['entries'], 12)
+            matches = report['relocations']['matches']
+            self.assertEqual([m['target_rva'] for m in matches], targets[:-1])
+            self.assertEqual([m['entry_index'] for m in matches], [0, 2, 4, 6, 8])
+            self.assertTrue(all(m['kind'] == 10 for m in matches))
+            self.assertTrue(all(m['overlaps'] == ['load_config'] for m in matches[:3]))
+            self.assertEqual(matches[0]['initial_qword'], BASE+RVA[0]+32)
+            self.assertIsNone(matches[1]['initial_qword'])
+            self.assertEqual(matches[3]['overlaps'], [name for _, name in PREFLIGHT_POINTERS])
+            self.assertEqual(matches[3]['initial_qword'], int.from_bytes(data[RAW[0]+28:RAW[0]+36], 'little'))
+            self.assertEqual(matches[3]['target_va'], BASE+RVA[0]+28)
+
+    def test_preflight_relocations_output_only_matching_dir64_occurrences(self):
+        data = with_preflight_load_config()
+        preflight_relocation_blocks(data, [RVA[2]+88, RVA[2]+112, RVA[0]+128])
+        put(data, RAW[3]+12+8, 0x3000 | 112, 2)
+        for report in self.preflight(bytes(data)):
+            self.assertEqual(report['relocations']['entries'], 6)
+            self.assertEqual(len(report['relocations']['matches']), 1)
+            self.assertEqual(report['relocations']['matches'][0]['target_rva'], RVA[2]+88)
+
+    def test_preflight_relocation_size_count_and_block_bounds_are_strict(self):
+        data = fixture()
+        directory(data, 5, RVA[3], 1024*1024+1)
+        with self.assertRaisesRegex(PREFLIGHT_REJECT, '^diagnostic_relocation_size$'):
+            self.preflight(bytes(data))
+        for count in [65536, 65537]:
+            data = fixture()
+            size = 8+count*2
+            data.extend(bytes(RAW[3]+size-len(data)))
+            put(data, TABLE+3*40+8, size)
+            put(data, TABLE+3*40+16, size)
+            directory(data, 5, RVA[3], size)
+            put(data, RAW[3], RVA[0])
+            put(data, RAW[3]+4, size)
+            if count == 65536:
+                self.assertTrue(all(r['relocations'] == {'entries': count, 'matches': []}
+                                    for r in self.preflight(bytes(data))))
+            else:
+                with self.assertRaisesRegex(PREFLIGHT_REJECT, '^diagnostic_relocation_count$'):
+                    self.preflight(bytes(data))
+        data = with_relocation()
+        put(data, RAW[3]+4, 14)
+        with self.assertRaisesRegex(PREFLIGHT_REJECT, '^diagnostic_relocation_block$'):
+            self.preflight(bytes(data))
+        directory(data, 5, RVA[3], 65)
+        with self.assertRaisesRegex(PREFLIGHT_REJECT, '^diagnostic_relocation_bounds$'):
+            self.preflight(bytes(data))
 
     def reject(self, data, code=None):
         with self.assertRaises(p.Reject) as caught:
