@@ -24,6 +24,7 @@ pub(crate) fn plan() -> Plan {
         root_layout: root::Layout::Header50893V2,
         decryption: Decryption::Disabled,
         collision_storage: CollisionStorage::Resident,
+        map_domain: None,
         components: Component::Db2.bit()
             | Component::Terrain.bit()
             | Component::Collision.bit()

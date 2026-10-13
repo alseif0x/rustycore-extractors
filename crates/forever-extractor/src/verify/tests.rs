@@ -64,7 +64,7 @@ fn entry(name: &str) -> Entry {
         id: catalog::find(name).unwrap().file_data_id,
     }
 }
-fn db2_plan() -> Plan {
+pub(super) fn db2_plan() -> Plan {
     Plan {
         build: 70205,
         schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
@@ -83,6 +83,7 @@ fn db2_plan() -> Plan {
         maximum_slope: 55,
         non_steep_slope: 55,
         offmesh: None,
+        map_domain: None,
     }
 }
 fn gt_plan() -> Plan {

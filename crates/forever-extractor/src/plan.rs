@@ -8,6 +8,11 @@ mod disk;
 pub use disk::{CollisionStorage, DiskBudget};
 mod offmesh;
 pub use offmesh::{MAX_OFFMESH_CONNECTIONS, OFFMESH_PROFILE, OffMeshConnection};
+mod map_domain;
+pub use map_domain::{
+    GAMEOBJECT_SCOPE_PROFILE, MAP_DOMAIN_PROFILE, MAP_DOMAIN_VERIFICATION_PROFILE,
+    MAP_DOMAIN_VERIFY_SCOPE, PLACEMENT_ID_DOMAIN_PROFILE,
+};
 
 pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
@@ -112,6 +117,8 @@ pub struct Plan {
     pub root_layout: root::Layout,
     pub decryption: Decryption,
     pub collision_storage: CollisionStorage,
+    /// Some explicitly selects Linux v8; v7 is reserved for the deferred draft.
+    pub map_domain: Option<u32>,
     pub components: u8,
     pub db2: Vec<Entry>,
     pub terrain: Selection,
@@ -126,7 +133,8 @@ pub struct Plan {
 }
 
 impl Plan {
-    /// Parse the complete v1-v6 grammar. Exact re-rendering closes spelling,
+    /// Parse v1-v6 and the explicit Linux v8 grammar; v7 remains reserved.
+    /// Exact re-rendering closes spelling,
     /// ordering, whitespace, numeric representation and final-newline aliases.
     pub fn parse(input: &str) -> Result<Self, &'static str> {
         if input.len() > MAX_PLAN_BYTES {
@@ -147,6 +155,7 @@ impl Plan {
             "4" => 4,
             "5" => 5,
             "6" => 6,
+            "8" => 8,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -184,14 +193,14 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 => match field(&mut lines, "decryption")? {
+            3..=6 | 8 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if version == 3
+        let collision_storage = if matches!(version, 3 | 8)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
@@ -201,6 +210,11 @@ impl Plan {
             CollisionStorage::parse(&mut lines)?
         } else {
             CollisionStorage::Resident
+        };
+        let map_domain = if version == 8 {
+            Some(map_domain::parse(&mut lines)?)
+        } else {
+            None
         };
         let mut components = 0;
         for name in field(&mut lines, "components")?.split(',') {
@@ -220,7 +234,7 @@ impl Plan {
         if maximum_slope > 90 || non_steep_slope > 90 {
             return Err("product_plan_slopes");
         }
-        let offmesh = if version == 6 {
+        let offmesh = if version == 6 || (version == 8 && navigation != Selection::None) {
             if field(&mut lines, "offmesh")? != OFFMESH_PROFILE {
                 return Err("product_plan_offmesh");
             }
@@ -263,6 +277,7 @@ impl Plan {
             root_layout,
             decryption,
             collision_storage,
+            map_domain,
             components,
             db2,
             terrain,
@@ -283,6 +298,7 @@ impl Plan {
 
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
+        map_domain::validate(self)?;
         if let Some(connections) = &self.offmesh {
             if self.schema_catalog != SchemaCatalog::PinnedMetadataV1
                 || ![70170, 70205].contains(&self.build)
@@ -374,7 +390,7 @@ impl Plan {
             if !self.contains(Component::Terrain)
                 || !self.contains(Component::Collision)
                 || !self.contains(Component::Db2)
-                || self.terrain != Selection::All
+                || (self.map_domain.is_none() && self.terrain != Selection::All)
                 || !has_db2("Map")
                 || !has_db2("LiquidType")
             {
@@ -398,6 +414,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.map_domain.is_some() {
+            return 8;
+        }
         if self.offmesh.is_some() {
             return 6;
         }
@@ -416,6 +435,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.map_domain.is_some() {
+            return "forever-product-v8";
+        }
         if self.offmesh.is_some() {
             return "forever-product-v6";
         }
@@ -462,13 +484,14 @@ impl Plan {
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
         let collision_storage = self.collision_storage.render();
+        let map_domain = map_domain::render(self.map_domain);
         let mut output = format!(
-            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{collision_storage}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
+            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{collision_storage}{map_domain}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
             self.version(),
             self.build,
             self.locale.name(),
@@ -530,5 +553,7 @@ mod tests;
 
 #[cfg(test)]
 mod disk_tests;
+#[cfg(test)]
+mod map_domain_tests;
 #[cfg(test)]
 pub(crate) mod offmesh_tests;

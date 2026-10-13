@@ -1347,3 +1347,224 @@ fn three_independent_spool_mutations_and_source_error_preserve_typed_cause() {
         crate::collision::placements::spooled::Cause::Sink(run::inventory::StageError::Sink(74))
     ));
 }
+
+fn perform_selected(
+    f: &CollisionFixture,
+    selection: plan::MapSelection,
+    l: Limits,
+) -> Result<(Completed, Private), Error<u8>> {
+    let p = Private::new();
+    let mut store = f.open(false);
+    let c = startup(f, &p, &mut store);
+    let owners = inventories(f, &p, l).unwrap();
+    let out = super::extract_selected(
+        c,
+        owners.wdts,
+        owners.caches,
+        p.sink(),
+        0,
+        selection,
+        super::Limits {
+            world: l,
+            max_combined_memory_bytes: run::inventory::MAX_COMBINED_MEMORY_BYTES,
+        },
+    )?;
+    Ok((out, p))
+}
+#[test]
+fn selected_domain_does_not_acquire_unavailable_or_malformed_unrelated_wdts() {
+    let mut fs = files(&[
+        (90, 190, -1),
+        (30, 130, 20),
+        (10, 110, -1),
+        (20, 120, 10),
+        (80, 180, -1),
+    ]);
+    fs.extend([
+        (130, None, wdt(None, None)),
+        (110, None, wdt(None, None)),
+        (120, None, wdt(None, None)),
+        (180, None, b"malformed unrelated WDT".to_vec()),
+    ]);
+    // FDID190 does not exist. Either unselected read would make this fail.
+    let f = CollisionFixture::new(&fs);
+    let (out, p) = perform_selected(&f, plan::MapSelection::MapAndAncestors(30), limits()).unwrap();
+    assert_eq!(out.report().maps, 3);
+    assert_eq!(out.report().wdt.entries, 3);
+    assert_eq!(out.startup().extraction().facts().reads, 7);
+    let topology = out.topology();
+    assert_eq!(topology.all().len(), 5);
+    assert_eq!(
+        topology
+            .selected_active()
+            .map(|m| (m.id(), m.physical_ordinal()))
+            .collect::<Vec<_>>(),
+        [(30, 1), (10, 2), (20, 3)]
+    );
+    assert!(!topology.contains_selected(90));
+    assert_eq!(topology.get(90).unwrap().wdt_file_data_id(), 190);
+    assert_eq!(
+        topology.selection(),
+        plan::MapSelection::MapAndAncestors(30)
+    );
+    assert_eq!(
+        p.read().iter().map(|(c, _)| c.map_id).collect::<Vec<_>>(),
+        [30, 10, 20]
+    );
+}
+#[test]
+fn selected_domain_keeps_global_gameobject_startup() {
+    let mut fs = files(&[(1, 101, -1), (2, 102, -1)]);
+    fs[0].2 = gameobject_db2(&[(7, 10)], &[]);
+    fs.extend([(101, None, wdt(None, None)), (10, None, m2(true))]);
+    let f = CollisionFixture::new(&fs);
+    let (out, _p) = perform_selected(&f, plan::MapSelection::MapAndAncestors(1), limits()).unwrap();
+    assert_eq!(out.startup().extraction().facts().reads, 6);
+    assert_eq!(
+        out.startup()
+            .extraction()
+            .phase_compact()
+            .unwrap()
+            .model_count(),
+        1
+    );
+    assert!(
+        !out.startup()
+            .data()
+            .unwrap()
+            .lists()
+            .dtree_bytes()
+            .is_empty()
+    );
+}
+#[test]
+fn selected_missing_wdt_is_terminal_even_with_complete_unrelated_map() {
+    let mut fs = files(&[(1, 101, -1), (2, 102, -1)]);
+    fs.push((102, None, wdt(None, None)));
+    let f = CollisionFixture::new(&fs);
+    assert!(perform_selected(&f, plan::MapSelection::MapAndAncestors(1), limits()).is_err());
+}
+#[test]
+fn selected_missing_own_adt_is_terminal_and_never_falls_back() {
+    let mut fs = files(&[(2, 102, 1), (1, 101, -1)]);
+    fs.extend([
+        (101, None, wdt(None, None)),
+        (102, None, wdt(None, Some(202))),
+    ]);
+    let f = CollisionFixture::new(&fs);
+    assert!(perform_selected(&f, plan::MapSelection::MapAndAncestors(2), limits()).is_err());
+}
+#[test]
+fn selected_topology_retains_separate_domain_charge_through_finish() {
+    let mut fs = files(&[(3, 103, 1), (1, 101, -1), (2, 0, -1)]);
+    fs.extend([(103, None, wdt(None, None)), (101, None, wdt(None, None))]);
+    let f = CollisionFixture::new(&fs);
+    let (out, _p) = perform_selected(&f, plan::MapSelection::MapAndAncestors(3), limits()).unwrap();
+    let topology = out.topology();
+    assert_eq!(
+        topology.resident_bytes(),
+        capacity(&topology.rows).unwrap()
+            + capacity(&topology.by_id).unwrap()
+            + 2 * plan::DOMAIN_MEMBER_BYTES
+    );
+    assert_eq!(topology.selected, [0, 1]);
+    assert_eq!(
+        out.resident_bytes(),
+        out.startup().extraction().stats().unwrap().compact_bytes
+            + out.startup().extraction().stats().unwrap().repository_bytes
+            + out.startup().data().unwrap().stats().resident_bytes
+            + topology.resident_bytes()
+    );
+}
+#[test]
+fn selected_domain_policy_failure_checks_source_after_sink_drop() {
+    let f = CollisionFixture::new(&files(&[(1, 101, -1)]));
+    let p = Private::new();
+    let mut store = f.open(false);
+    let c = startup(&f, &p, &mut store);
+    let owners = inventories(&f, &p, limits()).unwrap();
+    let sink = ChangedSink {
+        inner: p.sink(),
+        fixture: Some(&f),
+    };
+    let error = super::extract_selected(
+        c,
+        owners.wdts,
+        owners.caches,
+        sink,
+        4096,
+        plan::MapSelection::MapAndAncestors(999),
+        super::Limits {
+            world: limits(),
+            ..Default::default()
+        },
+    )
+    .err()
+    .unwrap();
+    assert_eq!(
+        error.cause(),
+        Cause::World(super::super::Error::Plan(plan::Error::UnknownMap))
+    );
+    assert_eq!(error.code(), "local_store_input_changed");
+}
+#[test]
+fn selected_domain_charge_is_inside_existing_table_overlap_limit() {
+    let mut fs = files(&[(2, 102, 1), (1, 101, -1), (3, 0, -1)]);
+    fs.extend([(102, None, wdt(None, None)), (101, None, wdt(None, None))]);
+    let f = CollisionFixture::new(&fs);
+    let selection = plan::MapSelection::MapAndAncestors(2);
+    let (out, _p) = perform_selected(&f, selection, limits()).unwrap();
+    let tables = out
+        .tables()
+        .iter()
+        .map(|facts| facts.retained_bytes)
+        .sum::<usize>();
+    let exact = tables + out.map_stats().resident_bytes + out.topology().resident_bytes();
+    let (out, _p) = perform_selected(
+        &f,
+        selection,
+        Limits {
+            max_table_memory_bytes: exact,
+            ..limits()
+        },
+    )
+    .unwrap();
+    assert_eq!(out.topology().selected_active().count(), 2);
+    assert_eq!(
+        perform_selected(
+            &f,
+            selection,
+            Limits {
+                max_table_memory_bytes: exact - 1,
+                ..limits()
+            }
+        )
+        .err()
+        .unwrap()
+        .cause(),
+        Cause::World(super::super::Error::Limit)
+    );
+}
+#[test]
+fn selected_reduced_domain_limit_rejects_before_any_requested_wdt() {
+    let f = CollisionFixture::new(&files(&[(2, 102, 1), (1, 101, -1)]));
+    let selection = plan::MapSelection::MapAndAncestors(2);
+    let error = perform_selected(
+        &f,
+        selection,
+        Limits {
+            maps: plan::Limits {
+                max_domain_bytes: 2 * plan::DOMAIN_MEMBER_BYTES - 1,
+                ..Default::default()
+            },
+            ..limits()
+        },
+    )
+    .err()
+    .unwrap();
+    assert_eq!(
+        error.cause(),
+        Cause::World(super::super::Error::Plan(plan::Error::Limit))
+    );
+    assert_eq!(error.code(), "collision_plan_policy_limit");
+}

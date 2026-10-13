@@ -50,6 +50,15 @@ class LinuxOutputLinksContract(unittest.TestCase):
         self.assertIn(self.c['verification_profile'], self.s['links'])
         self.assertIn(self.c['scope'], self.s['links'])
 
+    def test_v8_auto_enables_links_without_changing_legacy_intrinsic_scope(self):
+        verify = re.sub(r'\s+', '', self.s['verify'])
+        self.assertIn('(matches!(scope,Scope::Links)||plan.map_domain.is_some()).then(links::Facts::default)', verify)
+        # Both operands are false for the existing intrinsic invocation with
+        # map_domain=None; only explicit links or the new v8 domain enable it.
+        self.assertIn('verify_inner(plan,output,expected,Scope::Intrinsic)', verify)
+        self.assertIn('ifplan.map_domain.is_none(){returnOk(());}', verify)
+        self.assertLess(verify.index('facts.finish_domain(plan)?;'), verify.index('links.finish(plan)?;'))
+
     def test_link_facts_follow_intrinsic_checks_and_complete_context(self):
         verify = self.s['verify']
         self.assertLess(verify.index('facts.inspect(plan, artifact, &bytes)?;'),

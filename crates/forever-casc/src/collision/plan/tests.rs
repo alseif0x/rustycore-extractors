@@ -816,3 +816,233 @@ fn errors_format_only_static_codes() {
         assert!(error.code().is_ascii());
     }
 }
+
+#[test]
+fn selected_chain_keeps_complete_metadata_and_original_orders() {
+    let rows = [
+        row(90, 190, -1, "excluded early"),
+        row(30, 130, 20, "child before parents"),
+        row(10, 110, -1, "root"),
+        row(20, 120, 10, "parent"),
+        row(5, 0, -1, "excluded inactive"),
+        row(80, 180, -1, "excluded late"),
+    ];
+    let maps = Maps::from_materialized_selection(
+        &rows,
+        rows.len(),
+        MapSelection::MapAndAncestors(30),
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(maps.all().len(), 6);
+    assert_eq!(maps.selected_ids().collect::<Vec<_>>(), [30, 10, 20]);
+    assert_eq!(
+        maps.processing().map(MapEntry::id).collect::<Vec<_>>(),
+        [10, 20, 30]
+    );
+    assert_eq!(
+        maps.preload()
+            .map(MapEntry::physical_ordinal)
+            .collect::<Vec<_>>(),
+        [1, 2, 3]
+    );
+    assert_eq!(maps.get(90).unwrap().physical_ordinal(), 0);
+    assert!(maps.contains_selected(10));
+    assert!(!maps.contains_selected(90));
+    assert!(!maps.contains_selected(5));
+    assert!(!maps.contains_selected(999));
+    assert_eq!(maps.fallback_parent(30).unwrap().unwrap().id(), 20);
+    assert_eq!(maps.stats().active_maps, 3);
+    assert_eq!(maps.domain_bytes(), 3 * DOMAIN_MEMBER_BYTES);
+    assert_eq!(maps.selection(), MapSelection::MapAndAncestors(30));
+}
+#[test]
+fn explicit_all_preserves_every_order_and_memory_bit() {
+    let rows = [row(3, 3, 2, ""), row(2, 2, -1, ""), row(4, 0, -1, "")];
+    let a = Maps::from_materialized(&rows, rows.len(), Limits::default()).unwrap();
+    let b =
+        Maps::from_materialized_selection(&rows, rows.len(), MapSelection::All, Limits::default())
+            .unwrap();
+    assert_eq!(a.stats(), b.stats());
+    assert_eq!(a.domain_bytes(), 0);
+    assert_eq!(
+        a.preload().map(MapEntry::id).collect::<Vec<_>>(),
+        b.selected_ids().collect::<Vec<_>>()
+    );
+    assert_eq!(
+        a.processing().map(MapEntry::id).collect::<Vec<_>>(),
+        b.processing().map(MapEntry::id).collect::<Vec<_>>()
+    );
+    assert!(!b.contains_selected(4));
+}
+#[test]
+fn selected_unknown_copied_and_inactive_ids_reject() {
+    let rows = [row(1, 1, -1, ""), row(2, 0, -1, ""), row(3, 3, 1, "")];
+    for (id, error) in [
+        (99, Error::UnknownMap),
+        (2, Error::InactiveMap),
+        (3, Error::CopiedSelection),
+    ] {
+        assert_eq!(
+            Maps::from_materialized_selection(
+                &rows,
+                2,
+                MapSelection::MapAndAncestors(id),
+                Limits::default()
+            )
+            .err(),
+            Some(error)
+        );
+    }
+}
+#[test]
+fn selected_inactive_ancestor_rejects_before_any_wdt_request() {
+    let rows = [row(1, 0, -1, ""), row(2, 2, 1, "")];
+    assert_eq!(
+        Maps::from_materialized_selection(
+            &rows,
+            2,
+            MapSelection::MapAndAncestors(2),
+            Limits::default()
+        )
+        .err(),
+        Some(Error::InactiveMap)
+    );
+}
+#[test]
+fn selected_domain_still_validates_unselected_complete_graph() {
+    let cases = [
+        (vec![row(1, 1, -1, ""), row(9, 9, 9, "")], Error::Cycle),
+        (
+            vec![row(1, 1, -1, ""), row(9, 9, 8, "")],
+            Error::MissingParent,
+        ),
+        (
+            vec![row(1, 1, -1, ""), row(9, 9, -1, ""), row(9, 0, -1, "")],
+            Error::DuplicateId,
+        ),
+    ];
+    for (rows, error) in cases {
+        assert_eq!(
+            Maps::from_materialized_selection(
+                &rows,
+                rows.len(),
+                MapSelection::MapAndAncestors(1),
+                Limits::default()
+            )
+            .err(),
+            Some(error)
+        );
+    }
+    let rows = [row(1, 1, -1, ""), row(2, 2, 3, ""), row(3, 3, -1, "")];
+    assert_eq!(
+        Maps::from_materialized_selection(
+            &rows,
+            2,
+            MapSelection::MapAndAncestors(1),
+            Limits::default()
+        )
+        .err(),
+        Some(Error::CopiedParent)
+    );
+}
+#[test]
+fn selected_domain_limits_are_downward_only() {
+    for limits in [
+        Limits {
+            max_domain_maps: MAX_DOMAIN_MAPS + 1,
+            ..Default::default()
+        },
+        Limits {
+            max_domain_bytes: MAX_DOMAIN_BYTES + 1,
+            ..Default::default()
+        },
+    ] {
+        assert_eq!(
+            Maps::from_materialized_selection(&[], 0, MapSelection::All, limits).err(),
+            Some(Error::InvalidLimits)
+        );
+    }
+}
+#[test]
+fn selected_domain_member_and_byte_boundaries_are_exact() {
+    let rows = [row(1, 1, -1, ""), row(2, 2, 1, "")];
+    for limits in [
+        Limits {
+            max_domain_maps: 1,
+            ..Default::default()
+        },
+        Limits {
+            max_domain_bytes: 2 * DOMAIN_MEMBER_BYTES - 1,
+            ..Default::default()
+        },
+    ] {
+        assert_eq!(
+            Maps::from_materialized_selection(&rows, 2, MapSelection::MapAndAncestors(2), limits)
+                .err(),
+            Some(Error::Limit)
+        );
+    }
+    let maps = Maps::from_materialized_selection(
+        &rows,
+        2,
+        MapSelection::MapAndAncestors(2),
+        Limits {
+            max_domain_maps: 2,
+            max_domain_bytes: 2 * DOMAIN_MEMBER_BYTES,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let peak = maps.stats().peak_bytes;
+    assert!(
+        Maps::from_materialized_selection(
+            &rows,
+            2,
+            MapSelection::MapAndAncestors(2),
+            Limits {
+                max_memory_bytes: peak,
+                ..Default::default()
+            }
+        )
+        .is_ok()
+    );
+    assert_eq!(
+        Maps::from_materialized_selection(
+            &rows,
+            2,
+            MapSelection::MapAndAncestors(2),
+            Limits {
+                max_memory_bytes: peak - 1,
+                ..Default::default()
+            }
+        )
+        .err(),
+        Some(Error::Limit)
+    );
+}
+#[test]
+fn selected_maximum_chain_and_one_more_enforce_domain_cap() {
+    let rows: Vec<_> = (0..=MAX_DOMAIN_MAPS)
+        .map(|i| row(i as u32, 1, if i == 0 { -1 } else { (i - 1) as i16 }, ""))
+        .collect();
+    let maps = Maps::from_materialized_selection(
+        &rows,
+        rows.len(),
+        MapSelection::MapAndAncestors((MAX_DOMAIN_MAPS - 1) as u32),
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(maps.preload().len(), MAX_DOMAIN_MAPS);
+    assert_eq!(maps.domain_bytes(), MAX_DOMAIN_BYTES);
+    assert_eq!(
+        Maps::from_materialized_selection(
+            &rows,
+            rows.len(),
+            MapSelection::MapAndAncestors(MAX_DOMAIN_MAPS as u32),
+            Limits::default()
+        )
+        .err(),
+        Some(Error::Limit)
+    );
+}

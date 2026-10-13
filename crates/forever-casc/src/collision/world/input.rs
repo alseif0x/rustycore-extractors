@@ -50,6 +50,7 @@ pub(super) fn topology<A: Access>(
     let count = maps.all().len();
     let requested = count
         .checked_mul(size_of::<TopologyEntry>() + size_of::<usize>())
+        .and_then(|n| n.checked_add(maps.domain_bytes()))
         .ok_or(Error::Limit)?;
     if requested > max_bytes {
         return Err(Error::Limit.into());
@@ -64,7 +65,20 @@ pub(super) fn topology<A: Access>(
     by_id
         .try_reserve_exact(count)
         .map_err(|_| Error::Allocation)?;
-    let resident_bytes = add(capacity(&rows)?, capacity(&by_id)?)?;
+    let mut selected = Vec::new();
+    if !matches!(maps.selection(), plan::MapSelection::All) {
+        selected
+            .try_reserve_exact(maps.preload().len())
+            .map_err(|_| Error::Allocation)?;
+        selected.extend(maps.preload().map(|map| map.physical_ordinal()));
+        if capacity(&selected)? > maps.domain_bytes() {
+            return Err(Error::Limit.into());
+        }
+    }
+    let resident_bytes = add(
+        add(capacity(&rows)?, capacity(&by_id)?)?,
+        maps.domain_bytes(),
+    )?;
     if resident_bytes > max_bytes {
         return Err(Error::Limit.into());
     }
@@ -87,6 +101,8 @@ pub(super) fn topology<A: Access>(
         rows,
         by_id,
         direct_count: maps.stats().direct_rows,
+        selection: maps.selection(),
+        selected,
         resident_bytes,
     })
 }

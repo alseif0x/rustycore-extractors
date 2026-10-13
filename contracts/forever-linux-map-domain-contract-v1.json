@@ -1,0 +1,135 @@
+{
+  "contract": "forever-linux-map-domain-contract-v1",
+  "product_plan_version": 8,
+  "reserved_product_plan_versions": [
+    7
+  ],
+  "legacy_product_plan_versions_unchanged": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "platform": "linux",
+  "map_domain_profile": "map-and-ancestors-v1",
+  "gameobject_scope": "global-startup-v1",
+  "placement_id_domain": "selected-closure-serial-ids-v1",
+  "verification_profile": "forever-linux-map-domain-v1",
+  "verification_scope": "artifact_integrity_intrinsic_formats_and_map_domain_links",
+  "map_selection": "one complete requested map and actual effective ancestors",
+  "parent_policy": "ParentMapID when nonnegative; otherwise CosmeticParentMapID; no secondary branch union",
+  "id_policy": "same serial allocator and original relative order inside selected closure; no full-world assigned-ID equality",
+  "global_gameobjects_retained": true,
+  "source_catalog": "pinned-metadata-v1",
+  "builds": [
+    70170,
+    70205
+  ],
+  "storage": "linux-leased-append-disk-world-v1",
+  "required_components": [
+    "db2",
+    "maps",
+    "vmaps"
+  ],
+  "required_db2": [
+    "Map"
+  ],
+  "navigation": "none or Map(requested) to enable navigation for the complete selected map-and-ancestors domain; each member emits only its own candidate tiles; requires mmaps and LiquidType; explicit inline offmesh header including empty",
+  "offmesh_map_scope": "requested map only; ancestors receive no custom records; valid records for an own-empty requested map may remain unused",
+  "canonical_fields_after_collision_storage": [
+    "map-domain",
+    "map-id",
+    "gameobject-scope",
+    "placement-ids"
+  ],
+  "package_manifest_version_unchanged": 1,
+  "package_state_version_unchanged": 2,
+  "new_dependencies": [],
+  "claims": {
+    "full_world_id_parity": false,
+    "real_client_acceptance": false,
+    "runtime_acceptance": false,
+    "full_extractor_complete": false
+  },
+  "sources": {
+    "plan": "crates/forever-extractor/src/plan.rs",
+    "domain": "crates/forever-extractor/src/plan/map_domain.rs",
+    "plan_tests": "crates/forever-extractor/src/plan/map_domain_tests.rs",
+    "cli": "crates/forever-extractor/src/main.rs",
+    "derived_domain": "crates/forever-extractor/src/map_domain.rs",
+    "driver": "crates/forever-extractor/src/driver.rs",
+    "disk_driver": "crates/forever-extractor/src/driver/disk.rs",
+    "execution": "crates/forever-extractor/src/driver/execution.rs",
+    "verify": "crates/forever-extractor/src/verify.rs",
+    "core_plan": "crates/forever-casc/src/collision/plan.rs",
+    "core_world": "crates/forever-casc/src/collision/world.rs",
+    "core_world_input": "crates/forever-casc/src/collision/world/input.rs",
+    "core_inventory": "crates/forever-casc/src/collision/world/inventory.rs",
+    "core_staged": "crates/forever-casc/src/collision/assemble/staged.rs",
+    "core_package": "crates/forever-casc/src/collision/assemble/staged/models/package.rs"
+  },
+  "plan_test_names": [
+    "v8_canonical_map_only_roundtrip_and_scope",
+    "v8_both_builds_locales_layouts_and_key_modes_roundtrip",
+    "v8_requested_navigation_has_explicit_empty_offmesh",
+    "v8_requested_connections_preserve_bits_order_and_duplicates",
+    "v8_domain_fields_are_mandatory_canonical_and_ordered",
+    "v8_unknown_profiles_and_noncanonical_map_ids_reject",
+    "reserved_v7_and_relabeled_legacy_headers_reject",
+    "v8_requires_existing_disk_profile_and_pinned_authorized_build",
+    "v8_requires_geometry_components_and_complete_map_declaration",
+    "v8_rejects_all_tile_or_divergent_terrain_and_navigation",
+    "v8_navigation_requires_liquid_type_and_navigation_component",
+    "v8_offmesh_scope_is_fixed_by_navigation_and_requested_map",
+    "v8_zero_and_full_u32_map_ids_are_explicit_plan_facts",
+    "v8_plan_fingerprint_binds_requested_map_and_policies",
+    "v8_optional_gt_cameras_keep_original_dependencies",
+    "legacy_v1_to_v6_exact_render_bytes_and_fingerprints_are_preserved"
+  ],
+  "limits": {
+    "selected_maps": 1024,
+    "core_selection_logical_bytes": 65536,
+    "product_compact_domain_logical_bytes": 65536,
+    "complete_map_input_bytes": 16777216,
+    "product_domain_preparation_logical_bytes": 690028544,
+    "preparation_combined_bytes": 2147483648,
+    "verifier_map_fact_vectors": 5,
+    "verifier_map_fact_vector_entries": 1024,
+    "verifier_fact_logical_bytes": 24576,
+    "exact_rss_claim": false,
+    "all_cpu_work_claim": false,
+    "existing_component_ceilings_raised": false,
+    "product_domain_plus_navigation_rows_logical_bytes": 65536
+  },
+  "product_admission": {
+    "complete_map_before_output_create_or_resume": true,
+    "all_three_projections_same_complete_bytes": true,
+    "navigation_projection_agreement_for_selected_rows": true,
+    "complete_navigation_startup_preflight_claim": false,
+    "source_digest_rechecked_at_db2_and_navigation": true,
+    "full_navigation_snapshot_dropped_before_discovery": true
+  },
+  "verification": {
+    "automatic_links_for_v8": true,
+    "legacy_intrinsic_scope_unchanged": true,
+    "terrain_list_domain": "exact selected closure set",
+    "collision_tree_domain": "exact selected closure set",
+    "navigation_global_domain": "exact union of selected-domain members with own MAPS or own payload .vmtile candidates; zero for a wholly empty domain",
+    "expected_wdt_tile_inventory_proof": false,
+    "vmap_association_proof": false,
+    "detour_topology_proof": false
+  },
+  "resource_accounting": "Compact domain plus selected direct numeric navigation-row capacities are checked against 64 KiB and reduce existing navigation discovery/pipeline budgets. Domain alone reduces terrain, disk combined, VMO/package budgets. Full source decoder/graph and compact facts overlap during preparation. Five verifier vectors have a separate 24 KiB logical allowance. These are not exact RSS or all CPU-work guarantees.",
+  "navigation_output_policy": {
+    "profile": "selected-domain-own-candidates-v1",
+    "source_rows": "complete direct numeric projection for selected domain from the same authenticated Map bytes, preserving original relative order and both parent fields",
+    "discovery": "Package::open_rows with Options::default over the closed projection; nav::Selection::All",
+    "candidate_union": "own MAPS files and own VMap payload .vmtile files; parent-only .vmtileidx is excluded",
+    "ancestor_outputs": "required navigation dependencies are emitted for ancestor members with own candidates",
+    "own_empty_map": "no global or tile output; do not copy inherited candidate tiles to the child",
+    "wholly_empty_domain": "valid complete selected domain may produce zero navigation files",
+    "native_semantics": "same original discoverTiles/buildMap own-candidate policy and ultimate-root parameter inventory; not full native route or runtime acceptance"
+  }
+}

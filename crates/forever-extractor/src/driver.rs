@@ -82,6 +82,10 @@ fn open_inner(
 /// acquire paths or silently select a resident fallback there.
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
+    #[cfg(not(target_os = "linux"))]
+    if plan.map_domain.is_some() {
+        return Err("product_platform".into());
+    }
     #[cfg(windows)]
     if !matches!(plan.collision_storage, CollisionStorage::Resident) {
         return Err("product_disk_unsupported".into());
@@ -213,6 +217,10 @@ fn extract_inner(
         ),
         None => (open(plan, client)?, None),
     };
+    // Validate complete Map and all selected projections before creating or
+    // resuming package state. Retained compact facts remain charged by each
+    // producer; source buffers and graph scratch are dropped here.
+    let domain = prepare_domain(plan, &mut store)?;
     let context = context(plan, &store, producer)?;
     let data = client.join("Data");
     let archives = data.join("data");
@@ -236,7 +244,37 @@ fn extract_inner(
     } else {
         Run::create(output, context, protected, package_limits)?
     };
-    execution::execute(plan, &mut store, output, run, LinuxExecution { preflight })
+    execution::execute(
+        plan,
+        &mut store,
+        output,
+        run,
+        LinuxExecution { preflight, domain },
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn prepare_domain(
+    plan: &Plan,
+    store: &mut LocalStore,
+) -> Result<Option<crate::map_domain::Domain>, Error> {
+    let Some(requested) = plan.map_domain else {
+        return Ok(None);
+    };
+    let bytes = read(store, terrain::run::MAP_ID, DB2_FILE_BYTES)?;
+    let peak = crate::map_domain::PREPARATION_BYTES
+        .checked_add(bytes.capacity().saturating_sub(bytes.len()))
+        .and_then(|n| n.checked_add(store.stats().resident_bytes))
+        .ok_or("product_map_domain_limit")?;
+    if peak > 2 * 1024 * 1024 * 1024 {
+        return Err("product_map_domain_limit".into());
+    }
+    let domain =
+        crate::map_domain::Domain::derive(&bytes, requested, plan.contains(Component::Navigation))?;
+    store
+        .verify_unchanged()
+        .map_err(|e| Error::from(e.code()))?;
+    Ok(Some(domain))
 }
 
 #[cfg(test)]
@@ -247,10 +285,14 @@ mod keys_tests;
 #[cfg(target_os = "linux")]
 struct LinuxExecution {
     preflight: Option<disk::Preflight>,
+    domain: Option<crate::map_domain::Domain>,
 }
 
 #[cfg(target_os = "linux")]
 impl execution::Adapter for LinuxExecution {
+    fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
+        self.domain.as_ref()
+    }
     fn verify_inputs(&self) -> Result<(), Error> {
         if let Some(disk) = &self.preflight {
             disk.verify_unchanged()?;
@@ -260,7 +302,10 @@ impl execution::Adapter for LinuxExecution {
 
     fn extract_collision(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
         match &self.preflight {
-            Some(disk) => disk.run(store, run),
+            Some(disk) => match &self.domain {
+                Some(domain) => disk.run_selected(store, run, domain),
+                None => disk.run(store, run),
+            },
             None => vmaps(store, run),
         }
     }
@@ -340,7 +385,12 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
         result => result.map_err(|error| Error::from(error.code())),
     }
 }
-fn db2(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+fn db2(
+    plan: &Plan,
+    store: &mut LocalStore,
+    run: &mut Run,
+    domain: Option<&crate::map_domain::Domain>,
+) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
         let bytes = read(store, entry.id, DB2_FILE_BYTES)?;
@@ -349,6 +399,11 @@ fn db2(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> 
             .filter(|n| *n <= DB2_TOTAL_BYTES)
             .ok_or_else(|| Error::from("product_db2_total_limit"))?;
         validate_db2(plan, &entry.name, &bytes)?;
+        if entry.name == "Map"
+            && let Some(domain) = domain
+        {
+            domain.verify_source(&bytes)?;
+        }
         run.put(
             Component::Db2,
             &format!("dbc/{}/{}.db2", plan.locale.name(), entry.name),
@@ -424,23 +479,39 @@ impl terrain::run::Sink for TerrainSink<'_> {
         self.put(format!("maps/{map:04}.tilelist"), bytes)
     }
 }
-fn maps(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+fn maps(
+    plan: &Plan,
+    store: &mut LocalStore,
+    run: &mut Run,
+    domain: Option<&crate::map_domain::Domain>,
+) -> Result<(), Error> {
     let mut sink = TerrainSink { run, error: None };
     let ids;
     let tiles;
-    let selection = match plan.terrain {
-        Selection::All => terrain::plan::Selection::AllMaps,
-        Selection::Map(id) => {
-            ids = [id];
-            terrain::plan::Selection::MapIds(&ids)
+    let selection = if let Some(domain) = domain {
+        terrain::plan::Selection::MapIds(domain.ids())
+    } else {
+        match plan.terrain {
+            Selection::All => terrain::plan::Selection::AllMaps,
+            Selection::Map(id) => {
+                ids = [id];
+                terrain::plan::Selection::MapIds(&ids)
+            }
+            Selection::Tile { map, x, y } => {
+                tiles = [terrain::plan::TileRequest { map_id: map, x, y }];
+                terrain::plan::Selection::Tiles(&tiles)
+            }
+            Selection::None => return Err("product_terrain_selection".into()),
         }
-        Selection::Tile { map, x, y } => {
-            tiles = [terrain::plan::TileRequest { map_id: map, x, y }];
-            terrain::plan::Selection::Tiles(&tiles)
-        }
-        Selection::None => return Err("product_terrain_selection".into()),
     };
-    terrain::run::run(store, selection, plan.pack, Default::default(), &mut sink)
+    let mut limits = terrain::run::Limits::default();
+    if let Some(domain) = domain {
+        limits.max_memory_bytes = limits
+            .max_memory_bytes
+            .checked_sub(domain.resident_bytes())
+            .ok_or("product_map_domain_limit")?;
+    }
+    terrain::run::run(store, selection, plan.pack, limits, &mut sink)
         .map_err(|failure| sink.error.unwrap_or_else(|| failure.error.code().into()))?;
     Ok(())
 }
@@ -492,7 +563,13 @@ impl navigation_input::run::Sink for NavigationSink<'_> {
         Ok(())
     }
 }
-fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> Result<(), Error> {
+fn mmaps(
+    plan: &Plan,
+    store: &mut LocalStore,
+    output: &Path,
+    run: &mut Run,
+    domain: Option<&crate::map_domain::Domain>,
+) -> Result<(), Error> {
     use forever_db2::{catalog, terrain_sources};
     use navigation_input::run::{self as nav, Cause};
     let map = read(
@@ -500,8 +577,14 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
         catalog::find("Map").unwrap().file_data_id,
         DB2_FILE_BYTES,
     )?;
+    if let Some(domain) = domain {
+        domain.verify_source(&map)?;
+    }
     let source = terrain_sources::read_navigation_maps(&map).map_err(|e| Error::from(e.code()))?;
     let connections = navigation_connections(plan, source.direct_records().is_empty())?;
+    if domain.is_some() {
+        drop(map);
+    }
     let liquid = read(
         store,
         catalog::find("LiquidType").unwrap().file_data_id,
@@ -543,18 +626,72 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
             .map_err(|e| Error::from(e.code()))?;
         return Ok(());
     }
-    let mut input = navigation_input::Package::open(
-        &output.join("maps"),
-        &output.join("vmaps"),
-        &source,
-        plan.build,
-        inventory::Options {
-            map,
-            ..Default::default()
-        },
-        Default::default(),
-    )
+    // Navigation dependencies use their own original candidate sets. A child
+    // with only inherited indexes emits no invented global/tile; its ancestors
+    // are generated in this same domain, with the same collision ID context.
+    let (source, selected_rows) = match domain {
+        Some(domain) => {
+            let rows = domain.navigation_rows(&source)?;
+            drop(source);
+            (None, Some(rows))
+        }
+        None => (Some(source), None),
+    };
+    let caller_bytes = match (domain, selected_rows.as_ref()) {
+        (Some(domain), Some(rows)) => domain.navigation_resident_bytes(rows.capacity())?,
+        _ => 0,
+    };
+    let mut discovery_limits = navigation_input::Limits::default();
+    let mut run_limits = nav::Limits::default();
+    if domain.is_some() {
+        discovery_limits.heap_bytes = discovery_limits
+            .heap_bytes
+            .checked_sub(caller_bytes)
+            .ok_or("product_map_domain_limit")?;
+        run_limits.pipeline.heap_bytes = run_limits
+            .pipeline
+            .heap_bytes
+            .checked_sub(caller_bytes)
+            .ok_or("product_map_domain_limit")?;
+    }
+    let mut input = if let Some(rows) = selected_rows.as_ref() {
+        navigation_input::Package::open_rows(
+            &output.join("maps"),
+            &output.join("vmaps"),
+            rows,
+            plan.build,
+            inventory::Options::default(),
+            discovery_limits,
+        )
+    } else {
+        navigation_input::Package::open(
+            &output.join("maps"),
+            &output.join("vmaps"),
+            source.as_ref().ok_or("product_map_domain_projection")?,
+            plan.build,
+            inventory::Options {
+                map,
+                ..Default::default()
+            },
+            discovery_limits,
+        )
+    }
     .map_err(|e| Error::from(e.code()))?;
+    if let Some(domain) = domain
+        && (input
+            .plan()
+            .maps()
+            .iter()
+            .any(|entry| !domain.contains(entry.map_id()))
+            || input.plan().maps().len() != domain.ids().len())
+    {
+        return Err("product_map_domain_projection".into());
+    }
+    let selection = if domain.is_some() {
+        nav::Selection::All
+    } else {
+        selection
+    };
     nav::execute(
         &mut input,
         types.types(),
@@ -568,7 +705,7 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
                 non_steep: plan.non_steep_slope as f32,
             },
         },
-        Default::default(),
+        run_limits,
         &mut NavigationSink(run),
     )
     .map_err(|failure| match failure.cause {

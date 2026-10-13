@@ -230,7 +230,23 @@ impl Preflight {
     /// for recovery. Startup, world and all six owners carry the same explicit
     /// resources/volume/backend profiles and downward-only disk budgets.
     pub fn run(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
-        let result = self.run_inner(store, run);
+        self.run_with_domain(store, run, None)
+    }
+    pub(super) fn run_selected(
+        &self,
+        store: &mut LocalStore,
+        run: &mut Run,
+        domain: &crate::map_domain::Domain,
+    ) -> Result<(), Error> {
+        self.run_with_domain(store, run, Some(domain))
+    }
+    fn run_with_domain(
+        &self,
+        store: &mut LocalStore,
+        run: &mut Run,
+        domain: Option<&crate::map_domain::Domain>,
+    ) -> Result<(), Error> {
+        let result = self.run_inner(store, run, domain);
         let guard = self.verify_unchanged();
         let result = guard.and(result);
         if result.is_err() {
@@ -238,7 +254,12 @@ impl Preflight {
         }
         result
     }
-    fn run_inner(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+    fn run_inner(
+        &self,
+        store: &mut LocalStore,
+        run: &mut Run,
+        domain: Option<&crate::map_domain::Domain>,
+    ) -> Result<(), Error> {
         self.verify_unchanged()?;
         let ordinal = NEXT
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
@@ -275,15 +296,32 @@ impl Preflight {
             .map_err(|e| Error::from(e.code()))?;
         let caches = inventory_spool::Inventory::new(cache, resources.inventory_limits())
             .map_err(|e| Error::from(e.code()))?;
-        let startup =
-            gameobjects::spooled::extract_startup_fdid(store, resources.startup_limits(), raw)
-                .map_err(|e| Error::from(e.code()))?;
-        let mut stage_limits = resources.stage_limits();
-        stage_limits.world.max_combined_memory_bytes = COMBINED;
-        let staged = staged::extract(startup, wdts, caches, placements, stage_limits)
+        let combined = COMBINED
+            .checked_sub(domain.map_or(0, |domain| domain.resident_bytes()))
+            .ok_or("product_map_domain_limit")?;
+        let mut startup_limits = resources.startup_limits();
+        if domain.is_some() {
+            startup_limits.collision.max_memory_bytes =
+                startup_limits.collision.max_memory_bytes.min(combined);
+        }
+        let startup = gameobjects::spooled::extract_startup_fdid(store, startup_limits, raw)
             .map_err(|e| Error::from(e.code()))?;
+        let mut stage_limits = resources.stage_limits();
+        stage_limits.world.max_combined_memory_bytes = combined;
+        let staged = match domain {
+            Some(domain) => staged::extract_selected(
+                startup,
+                wdts,
+                caches,
+                placements,
+                domain.selection(),
+                stage_limits,
+            ),
+            None => staged::extract(startup, wdts, caches, placements, stage_limits),
+        }
+        .map_err(|e| Error::from(e.code()))?;
         let mut model_limits = resources.model_limits();
-        model_limits.max_memory_bytes = COMBINED;
+        model_limits.max_memory_bytes = combined;
         model_limits.max_output_bytes = model_limits.max_output_bytes.min(
             usize::try_from(self.budget.output_bytes)
                 .map_err(|_| Error::from("product_disk_limit"))?,
@@ -291,7 +329,7 @@ impl Preflight {
         let prepared = staged::models::prepare(staged, vmo, model_limits)
             .map_err(|e| Error::from(e.code()))?;
         let mut package_limits = resources.package_limits();
-        package_limits.max_memory_bytes = COMBINED;
+        package_limits.max_memory_bytes = combined;
         package_limits.max_files = 262_144;
         package_limits.max_output_bytes = usize::try_from(self.budget.output_bytes)
             .map_err(|_| Error::from("product_disk_limit"))?;
