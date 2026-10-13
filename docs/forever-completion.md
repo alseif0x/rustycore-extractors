@@ -3312,3 +3312,77 @@ No product admission or geometry build gate changes. Map and
 GameObjectDisplayInfo remain unavailable; 70338 remains DB2-only. Complete real
 acquisition, full-world geometry outputs, runtime activation and a current
 reproducible Linux package remain required for the full extractor goal.
+
+
+### Current reproducible Linux v8 package — 2026-10-13
+
+Issue #36 closes the bounded local distribution gate for frozen functional
+commit `2452a7e16fade9a08cd71b6a901f83ab488b1a28`, tree
+`abbc124bb137fff493801cb7b06bc110de83afb6`. The unchanged
+`forever-seven-crate-linux-product-db2-catalog-source-v10` recipe includes the
+current v8 implementation, output-links verifier and liquid diagnostic. The
+only functional change for this issue makes the QA GridMap source relocatable:
+`RCE_MAP_DOMAIN_GRID_SOURCE` selects an absolute source file checked against the
+retained original SHA-256; absent preserves the historical default, while an
+explicit invalid value rejects without fallback before reader execution.
+
+Two fresh offline builds, including a path with spaces, yield byte-identical
+3,879,295-byte archives and 3,368,520-byte binaries. Both archives pass the
+closed verifier; a moved-source offline rebuild with isolated HOME/CARGO_HOME/
+target reproduces the binary exactly. There are 720 inventoried payloads,
+including 663 selected source files / 15,928,610 bytes, all matching the frozen
+committed source. Thirteen toolchain notices and two registry archives retain
+their complete checks. The unrelated configuration backup is excluded.
+
+- Archive SHA-256: `10c241fbb74fca7209c69fa27b461fe2ee75e59ecb8317b672592d6daf79dd00`.
+- Binary SHA-256: `0ea8fc2b4e0b73be63f099343b8e162c8feafa8b41526e25e950e78bd8dc5470`.
+- Selected-source SHA-256: `abfe4131f32e5f7b8297f2c4f23a8aeb16aee19d74a4d0d45b84073d1533648a`.
+
+The immutable shipped binary passes the complete shipped suites: 129 methods
+without skips, comprising seventeen v1, twenty v2, thirteen v3, fourteen v4/v5,
+eight v6, twenty output-links, twenty-nine v8 and eight GridSource guards. Ten
+methods are pure fixture/path guards (two catalog and eight GridSource), so this
+is not a count of 129 CLI invocations. V8 includes exact domain completion,
+unrelated-source exclusion, ancestor navigation, strict association and
+SIGKILL/resume. Original authored supplied-input comparisons reproduce six
+collision cases / 72 files / 8,468 bytes and one ConvertADT MAPS output with
+49 queries through the actual GridMap source. V6 retains eight original Detour
+calls / sixteen routes and one exact original TileBuilder comparison. These
+references use the retained memory adapters; they do not establish native CASC
+routing, native map selection, malformed-native parity or the complete original
+C++ navigation pipeline.
+
+The new archive's v8 results also match the immutable PR #33 receipt: 29 case
+results and 33 authenticated manifest inventories, differing only in producer
+SHA-256, with 741 artifact visits / 5,181,615 exact bytes. These include
+intentionally rehashed rejected negative inventories, not 33 accepted packages.
+Fresh/resumed manifests and artifacts are byte-identical. All 823 retained
+native/dependency/report guard entries and separate source/binary/input guards
+remain unchanged.
+
+All 407 runtime traces are checked: 393 empty, thirteen expected SIGKILL and one
+fsync baseline; zero network events and unknown trace bodies. Three compiler
+traces separately contain fourteen same-PID AF_UNIX pairs and fourteen empty
+receptions per build, plus classified local signals; they are local IPC, not
+empty runtime traces. Outer Python orchestration and ELF inspection are outside
+the traced child scope. The recorded dynamic closure requires GLIBC_2.34; no
+universal Linux ABI or static-linkage claim follows.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-current-bundle-20261013-27rcxr5j/`.
+
+| Report | SHA-256 |
+| --- | --- |
+| `qa/attempt1/acceptance.json` | `63ddf83a328d64ad10e28b1e6dfaf03b9ae93bc03bfdbabefea6fe76ce4985fa` |
+| `qa/review/final-review.json` | `366efe53c99addd2a8012a17166474f545ccc0a515ebf58b8fb0404b3d67765f` |
+| `qa/attempt1/pr33-byte-context-resume-comparison.json` | `32e058135dc518123e50c0e1a284ce35df286db2581a24c45f17383fae2bba95` |
+
+The independent review checks the immutable reports, archives, moved rebuild,
+source inventories, native receipts and complete traces without repeating
+builds or native execution. This later AGENTS/completion/distribution Markdown
+delta is not rebuilt into the accepted package. The historical real 1,078-table
+v5 selection remains bound to its earlier binary; no real acceptance transfers
+to this binary. Build 70338 remains DB2-only, and v8 geometry remains restricted
+to 70170/70205. Complete real acquisition, real geometry, full-world resources,
+installed RustyCore/server runtime and the full extractor goal remain open.
+Windows remains deferred. No assets or keys are packaged; nothing is published.
