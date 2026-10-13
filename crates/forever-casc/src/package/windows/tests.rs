@@ -129,6 +129,35 @@ fn exact_long_case_preserved_product_names() {
     finish(run);
     assert_eq!(t.verify().unwrap().files, 3);
 }
+
+#[test]
+fn one_through_four_character_artifact_leaves_publish_replay_and_verify() {
+    // A one-character target reaches the minimum native rename structure size
+    // on x64. Keep the adjacent lengths to guard flexible-array sizing without
+    // changing the admitted product name grammar.
+    let t = Temp::new();
+    let mut run = t.run();
+    for name in ["a", "bc", "def", "ghij"] {
+        let path = format!("mmaps/{name}");
+        assert_eq!(
+            run.put(Component::Navigation, &path, b"data"),
+            Ok(Put::Written)
+        );
+        assert!(run.root.file_identity(TRANSACTION).unwrap().is_none());
+    }
+    drop(run);
+    let mut run = t.resume().unwrap();
+    for name in ["a", "bc", "def", "ghij"] {
+        let path = format!("mmaps/{name}");
+        assert_eq!(
+            run.put(Component::Navigation, &path, b"data"),
+            Ok(Put::AlreadyPresent)
+        );
+    }
+    let summary = finish(run);
+    assert_eq!(summary.files, 4);
+    assert_eq!(t.verify(), Ok(summary));
+}
 #[test]
 fn rejects_aliases_reserved_names_depth_and_no_overwrite() {
     for bad in [

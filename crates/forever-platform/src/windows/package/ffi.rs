@@ -76,6 +76,9 @@ struct Rename {
     root: Handle,
     len: u32,
     name: [u16; 255],
+    // Explicit rather than implicit trailing padding: every transmitted byte
+    // is initialized, including bytes beyond the longest admitted filename.
+    tail: [u8; 6],
 }
 const _: () = {
     assert!(
@@ -98,6 +101,10 @@ const _: () = {
             && offset_of!(Rename, root) == 8
             && offset_of!(Rename, len) == 16
             && offset_of!(Rename, name) == 20
+            && offset_of!(Rename, tail) == 530
+            // Conservative documented minimum: sizeof the x64 one-WCHAR
+            // FILE_RENAME_INFORMATION header (24), plus filename bytes.
+            && size_of::<Rename>() >= 24 + 255 * size_of::<u16>()
     );
 };
 #[link(name = "ntdll")]
@@ -485,6 +492,7 @@ pub(super) fn rename(file: &File, destination: &File, name: &str) -> Result<(), 
         root: destination.as_raw_handle(),
         len: (name.len() * 2) as u32,
         name: [0; 255],
+        tail: [0; 6],
     };
     for (to, from) in data.name.iter_mut().zip(name.bytes()) {
         *to = u16::from(from)
@@ -495,7 +503,11 @@ pub(super) fn rename(file: &File, destination: &File, name: &str) -> Result<(), 
             file.as_raw_handle(),
             &mut io,
             (&mut data as *mut Rename).cast(),
-            (offset_of!(Rename, name) + name.len() * 2) as u32,
+            // The complete zero-initialized backing meets the documented
+            // sizeof(FILE_RENAME_INFORMATION)+filename-byte minimum even for
+            // one-unit names. offsetof(name)+2 would be only 22 bytes, below
+            // the x64 structure's 24-byte minimum.
+            size_of::<Rename>() as u32,
             10,
         )
     };

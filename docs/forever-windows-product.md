@@ -113,6 +113,20 @@ Later documentation is not a rebuilt binary. Two earlier contract runs failed
 only because test inventories changed during implementation; they remain
 retained as failures, followed by the passing frozen-inventory run.
 
+The first native run of functional commit `467325f` is retained as failed:
+[run 38342056314 / Windows job 115115024198](https://github.com/alseif0x/rustycore-extractors/actions/runs/38342056314/job/115115024198).
+Its CASC workspace target reports 741 passed, ten failed and one ignored test.
+All ten failures occur when publishing a one-character artifact leaf; longer
+product names pass. The rename FFI supplied 22 bytes for that case, below the
+x64 structure's minimum size. The correction changes only the native request
+framing and adds namespace/package short-name regressions; it does not relax
+identity, locking, recovery or namespace admission. This first run did not
+reach native PE sealing or the product CLI suite. The complete failed Windows
+log SHA-256 is
+`6cfcb2d448c5703f882f46eb8fbf3ac020c219be811da1988d095748a37cb25d`.
+The original local frozen acceptance remains associated with its preceding
+source, rather than this later correction.
+
 ## Primary API references
 
 The implementation uses handle-relative

@@ -699,3 +699,38 @@ fn callback_gate_rejects_nested_reads_before_io_and_releases_on_all_exits() {
     assert_eq!(root.guard(), Err(Error::Changed));
     drop(lock);
 }
+
+#[test]
+fn rename_short_and_maximum_names_same_and_cross_directory() {
+    let t = Temp::new();
+    let mut root = t.root();
+    let _lock = root.lock(true).unwrap();
+    root.create_dirs("dir").unwrap();
+    let destinations = [
+        "a".to_owned(),
+        "bb".to_owned(),
+        "ccc".to_owned(),
+        "dddd".to_owned(),
+        "dir/a".to_owned(),
+        "dir/bb".to_owned(),
+        "dir/ccc".to_owned(),
+        "dir/dddd".to_owned(),
+        format!("dir/{}", "x".repeat(252)),
+        format!("dir/{}", "y".repeat(255)),
+    ];
+    for (i, destination) in destinations.iter().enumerate() {
+        let source = format!("pending-{i}.part");
+        let before = put(&mut root, &source, b"synthetic rename");
+        let after = root
+            .rename_no_replace(&source, destination, before)
+            .unwrap();
+        assert!(after.same_object(before));
+        assert_eq!(root.file_identity(&source).unwrap(), None);
+        assert_eq!(
+            read(&root, destination, Some(after)).unwrap(),
+            b"synthetic rename"
+        );
+    }
+    root.observe().unwrap();
+    root.guard().unwrap();
+}

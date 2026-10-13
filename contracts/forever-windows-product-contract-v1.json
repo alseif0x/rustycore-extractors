@@ -115,11 +115,13 @@
         "caller_retained_metadata_is_admitted_before_observation_allocations",
         "ordinary_drive_aliases_cannot_put_output_inside_or_around_protected_sources",
         "ordinary_directory_junctions_reject_at_root_read_and_observation",
-        "callback_gate_rejects_nested_reads_before_io_and_releases_on_all_exits"
+        "callback_gate_rejects_nested_reads_before_io_and_releases_on_all_exits",
+        "rename_short_and_maximum_names_same_and_cross_directory"
       ],
       "package": [
         "all_six_component_prefixes_create_reopen_and_readonly_inspect",
         "exact_long_case_preserved_product_names",
+        "one_through_four_character_artifact_leaves_publish_replay_and_verify",
         "rejects_aliases_reserved_names_depth_and_no_overwrite",
         "restart_replays_every_distinct_unsealed_fact",
         "sealed_components_skip_replay_and_reject_new_files",
