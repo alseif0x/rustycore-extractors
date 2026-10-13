@@ -5,7 +5,7 @@
 use crate::{
     Error,
     driver::validate_db2,
-    plan::{CollisionStorage, Plan, Selection},
+    plan::{CollisionStorage, OffMeshConnection, Plan, Selection},
 };
 use forever_casc::{
     cameras,
@@ -101,6 +101,18 @@ impl Facts {
                     return Err("product_inventory".into());
                 }
                 validate_db2(plan, name, bytes)?;
+                if name == "Map"
+                    && plan
+                        .offmesh
+                        .as_ref()
+                        .is_some_and(|connections| !connections.is_empty())
+                {
+                    let source = forever_db2::terrain_sources::read_navigation_maps(bytes)
+                        .map_err(|error| Error::from(error.code()))?;
+                    if source.direct_records().is_empty() {
+                        return Err("product_offmesh_empty_map".into());
+                    }
+                }
                 if name == "CinematicCamera" && plan.contains(Component::Cameras) {
                     self.camera_source = Some(cameras::discover(bytes)?.file_ids().clone());
                 }
@@ -196,9 +208,7 @@ impl Facts {
                     }
                     let global = mmap::GlobalView::parse(bytes, id, Default::default())
                         .map_err(|e| Error::from(e.code()))?;
-                    if global.sources().len() != 0 {
-                        return Err("product_offmesh_unsupported".into());
-                    }
+                    verify_offmesh_sources(plan, id, &global)?;
                 } else {
                     let parts: Vec<_> = name
                         .strip_suffix(".mmtile")
@@ -228,6 +238,35 @@ impl Facts {
         Ok(())
     }
 }
+fn verify_offmesh_sources(
+    plan: &Plan,
+    map: u32,
+    global: &forever_navigation::mmap::GlobalView<'_>,
+) -> Result<(), Error> {
+    match &plan.offmesh {
+        None if global.sources().len() != 0 => Err("product_offmesh_unsupported".into()),
+        None => Ok(()),
+        Some(connections) => {
+            let expected = connections
+                .iter()
+                .filter(|connection| connection.map_id == map)
+                .copied()
+                .map(Ok);
+            if global
+                .sources()
+                .map(OffMeshConnection::from_source)
+                .eq(expected)
+            {
+                Ok(())
+            } else {
+                Err("product_offmesh_mismatch".into())
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod offmesh_tests;
 fn decimal(value: &str) -> Result<u32, Error> {
     if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
         return Err("product_artifact_name".into());

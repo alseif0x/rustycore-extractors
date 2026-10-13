@@ -100,7 +100,8 @@ class ForeverCiContract(unittest.TestCase):
             text = '\n'.join(s.get('run', '') for s in job['steps'])
             self.assertNotIn('pip ', text)
             for filename in ('test_forever_ci_contract.py', 'test_forever_product_contract.py',
-                             'test_forever_product_keys_contract.py', 'test_forever_distribution_contract.py',
+                             'test_forever_product_keys_contract.py', 'test_forever_product_offmesh_contract.py',
+                             'test_forever_distribution_contract.py',
                              'test_db2_oracle.py', 'test_metadata_catalog.py', 'test_metadata_cli.py',
                              'test_forever_windows_read_contract.py', 'test_forever_windows_consumers_contract.py'):
                 self.assertIn(filename, text)

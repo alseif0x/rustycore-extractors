@@ -1,0 +1,322 @@
+{
+  "contract": "forever-product-v6",
+  "version": 6,
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "builds": [
+    70170,
+    70205
+  ],
+  "locales": [
+    "enUS",
+    "esES"
+  ],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "linux",
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify"
+  ],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "max_db2_entries": 1126,
+    "ordered_keys": [
+      "forever-product",
+      "build",
+      "locale",
+      "index",
+      "root",
+      "decryption",
+      "components",
+      "terrain",
+      "pack",
+      "navigation",
+      "big-base-unit",
+      "skip-liquids",
+      "maximum-slope",
+      "non-steep-slope",
+      "offmesh"
+    ],
+    "repeatable_tail": "db2 TAB exact-catalog-name TAB exact-FDID LF; alphabetical names, unique IDs",
+    "components": [
+      "db2",
+      "gt",
+      "cameras",
+      "maps",
+      "vmaps",
+      "mmaps"
+    ],
+    "index_layouts": [
+      "contiguous",
+      "paged"
+    ],
+    "root_layouts": [
+      "headerless-18125",
+      "header-30080",
+      "header-50893-v1",
+      "header-50893-v2"
+    ],
+    "selections": [
+      "none",
+      "all",
+      "map:ID",
+      "tile:ID:X:Y"
+    ],
+    "coordinates": "X=column,Y=row; 0..63; canonical unsigned decimal",
+    "slopes": "integer 0..90; non-steep <= maximum; unselected navigation requires 55/55 and false flags",
+    "dependencies": {
+      "cameras": [
+        "db2",
+        "CinematicCamera"
+      ],
+      "mmaps": [
+        "db2",
+        "maps",
+        "vmaps",
+        "Map",
+        "LiquidType",
+        "terrain=all"
+      ]
+    },
+    "offmesh_connections": {
+      "profile": "inline-f32-bits-v1",
+      "header": "offmesh TAB inline-f32-bits-v1 LF",
+      "position": "mandatory immediately after non-steep-slope; connection records precede all db2 records",
+      "record_key": "offmesh-connection",
+      "ordered_fields": [
+        "MAP",
+        "ROW",
+        "COLUMN",
+        "FROMXbits",
+        "FROMYbits",
+        "FROMZbits",
+        "TOXbits",
+        "TOYbits",
+        "TOZbits",
+        "RADIUSbits",
+        "DIRECTION",
+        "AREA",
+        "FLAGS"
+      ],
+      "field_separator": "TAB",
+      "record_terminator": "LF",
+      "minimum_records": 0,
+      "maximum_records": 1024,
+      "float_fields": [
+        "FROMXbits",
+        "FROMYbits",
+        "FROMZbits",
+        "TOXbits",
+        "TOYbits",
+        "TOZbits",
+        "RADIUSbits"
+      ],
+      "float_encoding": "exactly eight lowercase hexadecimal digits for the IEEE754 f32 u32 bit pattern; no prefix, decimal float or uppercase alias",
+      "integer_encoding": "canonical unsigned decimal; no sign or leading zero except zero itself",
+      "map": "u32",
+      "row": [
+        0,
+        63
+      ],
+      "column": [
+        0,
+        63
+      ],
+      "endpoints": "all six f32 values finite; signed zero retained by bits",
+      "radius": "finite f32 strictly greater than zero",
+      "direction": [
+        0,
+        1
+      ],
+      "area": [
+        0,
+        63
+      ],
+      "flags": [
+        0,
+        65535
+      ],
+      "order": "preserve input order and duplicates; no sorting or deduplication",
+      "paths_and_key_material": false,
+      "representation": "Plan.offmesh: Option<Vec<OffMeshConnection>>; None preserves v1-v5; Some including an empty vector selects v6",
+      "selection": "global source records filter by map_id only in original input order; tile projection separately selects exact map/row/column",
+      "all_records_validated": "every inline record validates even when its map or tile is unselected"
+    },
+    "schema_catalog": {
+      "id": "pinned-metadata-v1",
+      "metadata_contract": "contracts/forever-metadata-v1.json",
+      "declaration_count": 1126,
+      "schema_catalog_line": "forbidden; v6 fixes this catalog implicitly"
+    },
+    "decryption": {
+      "required": true,
+      "position": "immediately after root",
+      "values": [
+        "disabled",
+        "provided-salsa20-v1"
+      ]
+    },
+    "collision_storage": {
+      "optional": true,
+      "omitted": "resident",
+      "position": "after decryption and before components",
+      "explicit_profile": "linux-leased-append-disk-world-v1",
+      "ordered_budget_keys": [
+        "collision-raw-bytes",
+        "collision-wdt-bytes",
+        "collision-cache-bytes",
+        "collision-placement-bytes",
+        "collision-vmo-bytes",
+        "collision-map-bytes",
+        "collision-output-bytes"
+      ],
+      "minimum_spool_bytes": 32,
+      "maximum_spool_bytes": 137438953472,
+      "minimum_output_bytes": 1,
+      "maximum_output_bytes": 68719476736,
+      "scratch_policy": "existing v3 leased-disk policy; extract/resume require --scratch only for explicit leased storage; inspect/verify require none"
+    },
+    "requires_navigation": true
+  },
+  "identities": {
+    "plan": "SHA-256 of the complete canonical TSV bytes",
+    "producer": "SHA-256 of loaded /proc/self/exe, max 256 MiB",
+    "source": "SHA-256(forever-logical-collection-v1 NUL + build little-endian u32 + build key + CDN key + locale ASCII + ENCODING content key + ROOT content key)",
+    "source_scope": "authenticated logical collection; not physical archive availability, encryption-key discovery or a complete archive snapshot; every read still requires complete content MD5",
+    "offmesh": "The complete canonical plan SHA-256 binds all source bits, record order, duplicates and the explicit empty v6 header to inspect/extract/resume/verify context; changing any of these changes plan identity.",
+    "keys": "Only the selected decryption capability enters plan identity. Key values, names, counts, hashes and paths remain excluded from CLI JSON, plans and package context; supplied key availability is not logical source identity."
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2
+  },
+  "limits": {
+    "db2_file_bytes": 16777216,
+    "db2_total_bytes": 17179869184,
+    "gt_files": 20,
+    "camera_files": 4096,
+    "camera_total_bytes": 268435456
+  },
+  "resume": "explicit same-context only; verified sealed components skipped; entire unfinished producer reruns and replays retained artifacts; complete output refuses writes; v6 sources, including signed-zero bits, order and duplicates, are part of the exact canonical plan identity; no hidden offmesh file is reread",
+  "empty_world": "Complete empty Map direct rows admit zero navigation artifacts for All only when the v6 inline connection list is empty; any nonempty list fails with product_offmesh_empty_map before navigation completion.",
+  "verification": {
+    "scope": "artifact_integrity_and_intrinsic_formats",
+    "db2": "complete bounded catalog decoding; exact selected name set",
+    "gt": "all 20 exact names; 14 numeric, six raw-only",
+    "cameras": "exact discovered raw file set from selected complete CinematicCamera; no M2 parsing",
+    "maps": "canonical names, selected map/tile scope, MAPS10/build and tilelist framing",
+    "vmaps": "VMAP_4.E intrinsic dtree/VMO/tree/tile/index framing and per-tree ordinal bounds",
+    "mmaps": "canonical selected names, MMAP16/Detour7 framing; every global MMap source list must equal the exact plan subset for that map by all f32 bits, integer fields, order and multiplicity",
+    "not_claimed": [
+      "complete geometry inventory",
+      "placement or ancestor association proof",
+      "Detour topology",
+      "original C++ byte parity for newly produced worlds",
+      "runtime acceptance",
+      "full real-client extraction",
+      "Windows distribution",
+      "native offmesh producer byte parity",
+      "endpoint snapping or routability",
+      "real-client offmesh routes",
+      "new v6 reproducible distribution acceptance"
+    ],
+    "offmesh": {
+      "helper": "verify_offmesh_sources",
+      "comparison": "OffMeshConnection::from_source reconstructs all f32 u32 bits; compare exact iterators after plan map_id filtering, including duplicates and order",
+      "mismatch": "product_offmesh_mismatch",
+      "legacy": "v1-v5 retain empty-only globals and product_offmesh_unsupported",
+      "scope": "global source identity and intrinsic framing only; no proof that every source becomes a traversable Detour edge or that all selected geometry exists"
+    }
+  },
+  "failure": "stable path-free code and component; incomplete outputs retained; no hidden available-prefix, native, network or missing-file fallback",
+  "full_extractor_complete": false,
+  "scope": "Explicit bounded inline offmesh sources for the legacy pinned-metadata-v1 navigation product; no catalog v4/v5 extension or real-route acceptance.",
+  "legacy_contracts_unchanged": [
+    "forever-product-v1",
+    "forever-product-v2",
+    "forever-product-v3",
+    "forever-product-v4",
+    "forever-product-v5"
+  ],
+  "sources": [
+    "crates/forever-extractor/src/plan.rs",
+    "crates/forever-extractor/src/plan/offmesh.rs",
+    "crates/forever-extractor/src/driver.rs",
+    "crates/forever-extractor/src/verify.rs",
+    "crates/forever-extractor/src/main.rs",
+    "crates/forever-navigation/src/offmesh.rs",
+    "crates/forever-navigation/src/mmap.rs",
+    "crates/forever-navigation/src/inventory/fs/run.rs",
+    "contracts/forever-product-contract-v6.json",
+    "tests/contracts/test_forever_product_offmesh_contract.py"
+  ],
+  "pipeline": {
+    "driver_helper": "navigation_connections",
+    "navigation_api": "forever_navigation::inventory::fs::run::execute",
+    "sources": "convert validated bit-preserving plan records into offmesh::Source and pass them explicitly to navigation execution; no implicit file, native or network source",
+    "empty_map_error": "product_offmesh_empty_map",
+    "publication": "existing common Run transaction, receipts, component seals and final manifest; no available-prefix completion"
+  },
+  "memory_and_work": {
+    "ceilings_raised": false,
+    "plan_bytes": 131072,
+    "maximum_inline_connections": 1024,
+    "navigation_limits": "existing navigation inventory/pipeline/offmesh limits and downward-only budgets unchanged",
+    "disk_world_combined_ceiling_bytes": 2147483648,
+    "disk_world_common_run_allowance_bytes": 270532608,
+    "disk_world_guard_allowance_bytes": 16777216,
+    "disk_world_conversion_ceiling_bytes": 1860173824,
+    "scope": "bounded logical capacities/work counters; not allocator RSS or all CPU work"
+  },
+  "provided_keys": {
+    "option": "--keys PATH",
+    "required_for": [
+      "extract",
+      "resume",
+      "inspect --client"
+    ],
+    "forbidden_for": [
+      "disabled plans",
+      "verify",
+      "inspect without --client"
+    ],
+    "input": "explicit regular file, final symlink and special file rejected; read once with metadata identity and extra-byte EOF check",
+    "max_file_bytes": 262144,
+    "max_entries": 4096,
+    "record_format": "forever-tact-keys TAB 1 LF; sorted unique lowercase hex16 u64 name TAB hex32 key LF",
+    "cipher": "Salsa20/20 with 16-byte keys, nonce4/8 padded to8, frame-index little-endian XOR, initial block counter zero",
+    "frames": "one E wrapper around N or strict Z only; mandatory complete content MD5 and encoded frame MD5 where framed",
+    "discovery": false,
+    "built_in_keys": false,
+    "network": false,
+    "source_protection": "canonical key-file source included in protected roots before output writes",
+    "secure_erasure_guaranteed": false,
+    "required_when": "decryption is provided-salsa20-v1; disabled mode forbids --keys"
+  },
+  "failure_codes": {
+    "offmesh_values": "product_plan_offmesh",
+    "offmesh_bit_spelling": "product_plan_offmesh_bits",
+    "offmesh_record_limit": "product_plan_offmesh_limit",
+    "offmesh_capability_scope": "product_plan_offmesh_scope",
+    "nonempty_sources_with_empty_map": "product_offmesh_empty_map",
+    "global_source_mismatch": "product_offmesh_mismatch",
+    "legacy_nonempty_global": "product_offmesh_unsupported",
+    "offmesh_record_grammar": "product_plan_format",
+    "offmesh_integer_spelling": "product_plan_decimal"
+  },
+  "failure_envelope": "forever-product-v6 after valid plan admission; generic CLI/plan failures before admission retain forever-product-v1; all errors path-free",
+  "validation": {
+    "static_checks": "source and contract consistency only",
+    "native_offmesh_executed": false,
+    "real_client_routes_accepted": false,
+    "runtime_accepted": false,
+    "v6_bundle_built": false,
+    "publication_authorized": false,
+    "new_registry_dependencies": [],
+    "synthetic_cli_acceptance": "separate retained QA evidence; not established by these static checks"
+  }
+}

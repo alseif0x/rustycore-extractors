@@ -1,4 +1,4 @@
-# Forever product interface v1–v5
+# Forever product interface v1–v6
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -12,6 +12,9 @@ V5 binds build 70338 plans to `wowdbdefs-70338-v1` and admits DB2 only; it does
 not extend the older component profiles to this build.
 The separate [v2 contract](../contracts/forever-product-contract-v2.json) admits
 explicitly supplied Salsa20 keys under the bounded profile described below.
+The [v6 contract](../contracts/forever-product-contract-v6.json) adds explicit
+inline off-mesh navigation connections to the legacy pinned metadata profile
+for builds 70170/70205. It does not extend build 70338 beyond v5's DB2 scope.
 
 ## Build and inspect
 
@@ -69,8 +72,8 @@ Navigation requires terrain **all**, collision, DB2 and explicit `Map` and
 `LiquidType` entries; this supplies complete producer-owned local input folders.
 No external available-prefix folder is silently selected. Explicit integer slopes
 and booleans configure the existing navigation API. Inactive navigation requires
-its defaults, 55/55 and false booleans. Off-mesh connections remain unsupported
-in product v1 and v2 and are always explicitly empty.
+its defaults, 55/55 and false booleans. Off-mesh connections remain explicitly
+empty in product v1–v5. V6 supplies the separate capability described below.
 
 Selecting maps/collision enables the existing bounded local ROOT-name capability.
 This is a local logical-name index, without a listfile, network or OS-path fallback.
@@ -80,6 +83,51 @@ against the sealed maps/vmaps folders. Complete empty Map direct rows use the
 validated empty pure navigation plan for `all`; explicit Map/Tile requests still
 reject. Other empty geometry can legitimately produce globals without tile bodies,
 or no navigation outputs, as admitted by the component planner.
+
+## Inline off-mesh navigation (v6)
+
+V6 requires navigation and its existing DB2, terrain and collision dependencies.
+It uses `pinned-metadata-v1` exclusively, with build 70170 or 70205. The plan has
+`forever-product<TAB>6` and an explicit `decryption` line (`disabled` or
+`provided-salsa20-v1`) after `root`. Optional leased collision storage retains
+its existing grammar. There is no `schema-catalog` line in this profile.
+
+After `non-steep-slope`, include `offmesh<TAB>inline-f32-bits-v1`, followed by
+zero or more connection lines, then the alphabetically ordered DB2 entries:
+
+```text
+offmesh-connection<TAB>MAP<TAB>ROW<TAB>COLUMN<TAB>FROM_X_BITS<TAB>FROM_Y_BITS<TAB>FROM_Z_BITS<TAB>TO_X_BITS<TAB>TO_Y_BITS<TAB>TO_Z_BITS<TAB>RADIUS_BITS<TAB>DIRECTION<TAB>AREA<TAB>FLAGS
+```
+
+Replace `<TAB>` with literal tabs. Float fields are exactly eight lowercase
+hexadecimal digits containing IEEE 754 f32 bits, without a `0x` prefix. Other
+fields use canonical unsigned decimal. Coordinates use the original world XYZ
+axes; the navigation library performs its existing axis projection. Row/column
+are each 0..63, direction is 0 (one way) or 1 (both ways), area is 0..63 and
+flags are 0..65535. Endpoints must be finite and radius must be finite and
+positive. Coordinate signed zero bits, record order and duplicates are retained.
+All records validate before client or output I/O, including unselected records.
+
+The limits are 1,024 connections and the unchanged 128 KiB complete plan budget.
+An explicit empty off-mesh profile still selects v6. The complete canonical plan
+hash binds every connection bit, order and duplicate to extraction and recovery;
+there is no external mutable connection file. Existing component parser, work
+and output limits remain in force.
+
+Global MMap files retain the plan's records for that map in source order,
+including records for tiles outside an explicit tile selection. Tile generation
+selects connections using the existing map/row/column rules. Valid records for
+maps that the navigation planner does not emit are unused; this capability does
+not discover new maps, tiles or endpoints. A completely empty Map source rejects
+nonempty connections. No endpoint snapping or route existence is inferred from
+the global record list.
+
+Product verification compares every stored global connection with that map's
+exact planned records, including float bits, flags, order and duplicates. The
+tile verifier retains its existing intrinsic-format scope; it does not prove
+general routing or bind all tile polygons to their source connections. Legacy
+profiles continue to reject nonempty global connections. Executed synthetic
+acceptance and remaining gates are recorded in the completion runbook.
 
 ## Extract, resume and verify
 

@@ -13,7 +13,7 @@ use forever_casc::{
     root, terrain,
 };
 use forever_db2::{CharacterTable, DecodedTable, HEADER_SIZE, Header, RecordError};
-use forever_navigation::{inventory, models, pipeline, recast, tilebuilder::Coordinate};
+use forever_navigation::{inventory, models, offmesh, pipeline, recast, tilebuilder::Coordinate};
 use std::path::Path;
 
 mod disk;
@@ -474,6 +474,7 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
         DB2_FILE_BYTES,
     )?;
     let source = terrain_sources::read_navigation_maps(&map).map_err(|e| Error::from(e.code()))?;
+    let connections = navigation_connections(plan, source.direct_records().is_empty())?;
     let liquid = read(
         store,
         catalog::find("LiquidType").unwrap().file_data_id,
@@ -530,7 +531,7 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
     nav::execute(
         &mut input,
         types.types(),
-        &[],
+        &connections,
         nav::Options {
             selection,
             big_base_unit: plan.big_base_unit,
@@ -549,6 +550,22 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
     })?;
     Ok(())
 }
+
+fn navigation_connections(plan: &Plan, map_empty: bool) -> Result<Vec<offmesh::Source>, Error> {
+    let connections = plan.offmesh.as_deref().unwrap_or_default();
+    if map_empty && !connections.is_empty() {
+        return Err("product_offmesh_empty_map".into());
+    }
+    let mut sources = Vec::new();
+    sources
+        .try_reserve_exact(connections.len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    sources.extend(connections.iter().map(|connection| connection.source()));
+    Ok(sources)
+}
+
+#[cfg(test)]
+mod offmesh_tests;
 
 #[cfg(test)]
 mod disk_admission_tests {

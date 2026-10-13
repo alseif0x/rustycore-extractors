@@ -1857,3 +1857,24 @@ with exact per-file census hashes and three empty network traces. Decryption
 is disabled and limits are unchanged. The 83 failed acquisitions remain outside
 that separate selection; no new row/native, multisection, geometry or runtime
 acceptance follows. See the packaged real evidence in docs/forever-distribution.md.
+
+## Product v6 inline navigation connections — 2026-10-13
+
+The separate Linux product v6 plan now admits up to 1,024 explicit off-mesh
+connections with canonical f32 bits, order and duplicates under the existing
+128 KiB plan ceiling. It requires navigation and pinned-metadata-v1 for builds
+70170/70205; v1–v5 remain unchanged and build 70338 remains DB2-only. Connection
+identity participates in the plan hash/recovery context; global MMap verification
+compares exact records. Nonempty connections with empty Map reject extraction
+and verification. Full navigation inventory/topology verification is not added.
+
+All 165 product library tests pass in debug/release; final local Linux workspace
+acceptance passes 2,716 tests / 26 ignored, all-target Clippy and full formatting,
+plus 260 contract and 118 distribution checks. Separate debug/release toy-CASC
+CLI runs each pass eight methods / 61 processes, sixteen original Detour routes
+and one original TileBuilder tile-byte comparison, including provided keys,
+leased disk and interrupted recovery. The initial flat corpus remains failed
+despite native byte equality; the later varying-height corpus does not establish
+general flat routability. Exact source/report guards, hashes and scope are in
+docs/forever-completion.md. No new real-client/routes, Windows product, runtime,
+v6 reproducible bundle or full extractor completion is established.

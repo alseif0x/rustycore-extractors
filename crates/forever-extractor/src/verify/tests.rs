@@ -82,6 +82,7 @@ fn db2_plan() -> Plan {
         skip_liquids: false,
         maximum_slope: 55,
         non_steep_slope: 55,
+        offmesh: None,
     }
 }
 fn gt_plan() -> Plan {
@@ -760,4 +761,54 @@ fn v3_verifier_enforces_whole_package_budget_without_scratch_or_keys() {
         verify(&plan, &lab.output(), None).unwrap_err().code,
         "package_limit"
     );
+}
+
+#[test]
+fn v6_complete_common_package_with_empty_map_and_connections_rejects_without_globals() {
+    let plan = crate::plan::offmesh_tests::plan();
+    let dtree = forever_vmap::gameobject_models::build(&[], Default::default()).unwrap();
+    let lab = Lab::new();
+    lab.publish(
+        context(&plan),
+        &[
+            db2_file("LiquidType", empty_db2("LiquidType")),
+            db2_file("Map", empty_db2("Map")),
+            (
+                Component::Collision,
+                "vmaps/GameObjectModels.dtree".into(),
+                dtree.dtree_bytes().to_vec(),
+            ),
+        ],
+    );
+    assert!(!lab.output().join("mmaps").exists());
+    // All selected common components, including Navigation, were sealed by
+    // publish. A missing global cannot bypass the v6 empty-world rule.
+    assert_eq!(
+        verify(&plan, &lab.output(), None).unwrap_err().code,
+        "product_offmesh_empty_map"
+    );
+}
+
+#[test]
+fn v6_empty_connections_and_legacy_accept_the_existing_complete_empty_world() {
+    for offmesh in [Some(vec![]), None] {
+        let mut plan = crate::plan::offmesh_tests::plan();
+        plan.offmesh = offmesh;
+        let dtree = forever_vmap::gameobject_models::build(&[], Default::default()).unwrap();
+        let lab = Lab::new();
+        let summary = lab.publish(
+            context(&plan),
+            &[
+                db2_file("LiquidType", empty_db2("LiquidType")),
+                db2_file("Map", empty_db2("Map")),
+                (
+                    Component::Collision,
+                    "vmaps/GameObjectModels.dtree".into(),
+                    dtree.dtree_bytes().to_vec(),
+                ),
+            ],
+        );
+        assert!(!lab.output().join("mmaps").exists());
+        assert_eq!(verify(&plan, &lab.output(), None).unwrap(), summary);
+    }
 }
