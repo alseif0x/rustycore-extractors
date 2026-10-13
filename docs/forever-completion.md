@@ -3453,3 +3453,58 @@ bundle remains unchanged; no new distribution is accepted here. Product 70338
 stays DB2-only. WMO, placements, VMO/query compatibility, full-world resources,
 complete real dependencies, installed RustyCore/server runtime and full Linux
 extraction remain open; Windows remains deferred.
+
+
+### Real build-70338 M2 VMO and finite local rays — 2026-10-13
+
+Issue #40 adds real supplied-model evidence using existing APIs, with repository
+source `fd3e7afa3e661d71bfe1f9fbcd60d7823f576483` unchanged. All 28 retained
+issue38 RAWs / 27,100 bytes produce **28 exact VMOs / 51,328 bytes**, maximum
+28,136 bytes/model, containing 723 vertices and 1,302 triangles. Both Rust
+conversions and all Rust queries complete before any original consumer. All
+original conversion/read-write roundtrips match; all original primary/roundtrip
+VMOs are strictly admitted before native queries. No new client/CASC acquisition
+or availability-prefix selection occurs.
+
+Each backend executes 672 query records: six axis rays/model, two query modes
+and two ignore settings, not 672 distinct geometric rays. Results match exactly
+at 328 hits / 344 misses, including 336 ignore controls. Two Rust profiles plus
+native execute 2,016 calls. Rust charges 3,039 nodes / 1,344 triangle tests per
+profile against one shared 2,000,000/32,000 budget; no native counter parity is
+claimed. Source/geometry remain private. This does not execute instance,
+placement or map/package/runtime integration.
+
+All 62 real commands exit0 with empty denied-network traces. Independent audit
+and review preserve 716 files, 2,607 guards and 64 phase inventory views, without
+additional consumers/acquisition. The separate synthetic run passes 80 commands
+(62 positives, 18 exact Rust-only negatives) with 80 empty traces and 112 hits /
+560 misses/backend. Ten helper unit methods/profile, Clippy and format pass in
+validation3. Fresh native2 uses 40 compile invocations
+(38 original-source compiles plus two authored wrappers, with possible repeated
+units across consumers) / 1,221 dependency inputs. Rust3 is a separate external
+style-only copy. Earlier ar-text, Clippy and
+formatter-trace failures remain failed. The accepted explicit formatter
+preflight and validation3 keep the strict classifier unchanged; compiler IPC
+and outer Python scopes remain distinct from runtime tracing.
+
+Logical memory is 8 MiB caller plus 8 MiB active work, with downward RAW/VMO/
+geometry caps and separate OS process limits. The 51,328-byte primary VMO view,
+455,936-byte staged artifact traffic, and runner's 56 retained-RAW authentication
+visits / 54,200 bytes have separate scopes. QA post-audit adds 28 RAW hash
+visits / 27,100 bytes; other audit traffic stays separate. None measures all
+physical I/O or RSS. Complete resource/provenance/native
+scopes and eight receipt hashes are retained in the
+[collision evidence](forever-collision.md#real-build-70338-supplied-m2-vmo-and-direct-rays--2026-10-13).
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-vmo-query-bljbfc79/`.
+Real acceptance SHA-256:
+`987ee6efa7501776d7f678bd5fefebba6ca8be54cc982bf83c2e7678392975be`.
+Independent final-review SHA-256:
+`2590cefa3b646e3595b556468e59e13c4084123cd150cd145d95d86f9188bd62`.
+
+Only evidence and later three-file Markdown updates are added; the docs are not
+rebuilt. Product 70338 remains DB2-only and the accepted Linux bundle remains
+unchanged. Real Map/WMO, placements/instances, full-world resources, installed
+RustyCore/server runtime and full extraction remain open. No new bundle,
+Windows acceptance or publication is transferred from this bounded result.

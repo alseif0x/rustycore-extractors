@@ -2113,3 +2113,110 @@ new bundle is produced. This accepts real M2 acquisition/RAW conversion for the
 fixed 31 selection only. Product 70338 remains DB2-only; no WMO, placements, VMO,
 queries, full-world extraction or installed RustyCore/server runtime acceptance
 is added. Full Linux extraction remains open; Windows stays deferred.
+
+
+## Real build-70338 supplied M2 VMO and direct rays — 2026-10-13
+
+Issue #40 uses the existing pure APIs on **all 28 retained RAW files / 27,100
+bytes** from issue #38's accepted 70338/esES sample. The original 31-source
+selection and its three normal NoCollision outcomes remain bound to their
+receipts; no new model discovery, client/CASC acquisition or source-prefix
+selection occurs. Repository commit
+`fd3e7afa3e661d71bfe1f9fbcd60d7823f576483`, tree
+`feac7767cdc3834e61a8aa7b373fa39a5f5e745f`, is unchanged. The adapter, runner
+and build evidence remain external; the source-only v3 helper copy makes three
+equivalent Clippy style changes while preserving the built v2 helper.
+
+The single real attempt produces **28 VMOs / 51,328 primary bytes**, maximum
+28,136 bytes/model, with 28 groups, 723 vertices and 1,302 triangles. Debug and
+release conversions agree exactly. Both complete Rust conversions and both
+complete Rust query phases precede **any original consumer**. All 28 unchanged
+original TileAssembler conversions and WorldModel read/write roundtrips then
+match the Rust VMO bytes; every original primary and roundtrip view passes
+strict Rust admission before any original query. Native execution uses only
+complete admitted positives; no malformed-native rejection parity is inferred.
+
+The frozen recipe uses the actual vertex AABB in source order, strict tie
+comparisons, checked f32 midpoint/span/padding operations, finite maxima and
+canonical axis directions. Six geometric rays per model are combined with
+Nearest/Any and ignore-M2 false/true: **24 records/model, 672 records/backend**.
+These are query records, not 672 distinct geometric rays. The same stored bits
+and spawn-length-zero envelopes drive both Rust profiles and the original direct
+WorldModel queries. No normalization, adaptive hit search or model omission is
+used. Each backend measures **328 hits / 344 misses**, including **336 ignore
+controls**, with exact flags/distance bits and unchanged miss maxima. Across
+both Rust profiles and native, there are **2,016 actual query calls**. Each Rust
+profile charges **3,039 node visits / 1,344 triangle tests** against one shared
+budget; native counters are not compared. Constructor work totals 16,028 in
+each Rust conversion profile. No instances, placements or manager/package
+loading execute.
+
+Downward limits retain one nonempty M2 group, no liquids, RAW 14,248 bytes/model
+and 27,100 aggregate, VMO 1 MiB/model and 2 MiB primary inventory per view,
+vertices and triangles at most 1,179 each per model, and BIH depth 65. The
+additional wire-proof limits are V + T ≤ 1,179 per model and ≤ 2,025 across
+all 28 models. Each profile shares at most 2,000,000 query node visits / 32,000
+triangle tests across all 672 records. Caller and
+active conversion/parser ledgers are **8 MiB each, 16 MiB combined**; returned
+VMO and pending result capacities are charged before parser/growth overlap.
+Recorded conversion ledger peaks are 1,214,391 caller / 84,324 active bytes;
+query peaks are 1,169,475 caller / 1,901 active bytes. These include conservative
+caller reservations and library capacity accounting, not measured allocator/RSS
+usage. Separate process limits are 512 MiB address space, 120 CPU seconds and
+1 MiB file size per process; native logical-memory parity is not claimed.
+
+The 51,328-byte primary inventory is distinct from 455,936 bytes of retained
+phase artifact traffic, including staged copies/reports. The runner separately
+records 56 retained-RAW authentication visits / 54,200 bytes. The QA post-audit
+adds 28 RAW hash visits / 27,100 bytes; other private hash/byte comparisons and
+independent review reads remain separate. None of these counters is a new
+client acquisition total, all physical filesystem/archive I/O or memory copies.
+Source, binary, input and output guards cover every phase; private outputs use
+exclusive 0700 directories / 0600 files. Existing destinations reject and failed
+stages never become accepted partial output.
+
+Fresh native build2 has 40 compile invocations: 38 original-source compiles
+and two authored wrappers, with original units potentially repeated across
+consumers. It closes 1,221 complete system/dependency inputs with 2,543 guards;
+the composite native2/Rust3 build
+adds its own 2,553-entry scope. The final run preserves 2,607 guard entries,
+716 frozen evidence files and 64 phase inventory views. Original pins, wrappers,
+Boost/archive/notices, dependencies, objects, libraries and binaries retain
+explicit before/after guards. Historical native binaries are not reused as
+current-system evidence. Compiler/local IPC classification remains separate
+from runtime syscall traces; outer Python orchestration is outside traced child
+scope. All **62 real runtime commands exit0 with empty denied-network traces**.
+The independent review/audit rechecks complete bytes, chronology and receipts
+without additional consumers or client acquisition.
+
+Synthetic acceptance separately passes 80 commands / 80 empty traces: 62
+positive phase/native commands and 18 exact Rust-only negative checks. Its
+per-backend 672 records yield 112 hits / 560 misses, not the real coverage above.
+Ten helper unit methods pass in debug/release; validation3 passes Clippy and
+format. Build1's ar-text classification failure, validation1's three Clippy
+style failures and validation2's formatter-trace failure remain retained and
+failed. A separate explicit formatter preflight passes with the strict
+classifier unchanged; it is bound into the successful validation3 composition.
+No real consumer retry or admission relaxation is used.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-vmo-query-bljbfc79/`.
+
+| Report | SHA-256 |
+| --- | --- |
+| `qa/real-attempt1/acceptance.json` | `987ee6efa7501776d7f678bd5fefebba6ca8be54cc982bf83c2e7678392975be` |
+| `qa/real-attempt1/final-freeze.json` | `2c123b71ce113716a5079f4ab1c363e6e39141be0e50c14237bac702e0261daa` |
+| `qa/real-attempt1-audit.json` | `d7e8204e0e64f7d4eec4df2894f92b4b85913b1e4169ad5401186e8732c1c602` |
+| `qa/review/final-real-review.json` | `2590cefa3b646e3595b556468e59e13c4084123cd150cd145d95d86f9188bd62` |
+| `qa/final-real-closure.json` | `e7e0c469af24024ddc0f4706210f5cda2902c32148007b96415c79f7a7c82e59` |
+| `qa/rust3-build-attempt1/build-report.json` | `a3c4adada32bda3277aa1e35657ce923992acc4e200809d5a9e1b9167eff347e` |
+| `qa/validation-attempt3/acceptance.json` | `a0280df187a9d03abdca17b04df7383dcfaadccf5357da75c473cd610403995d` |
+| `qa/synthetic-attempt1/acceptance.json` | `6c9dfa24a91206831e7e6f76387d14963e0830a34c92ac2afc18d7af6926ecca` |
+
+This accepts supplied real M2 RAW→VMO and finite direct-local model rays for the
+fixed 28 selection. It does not admit 70338 product geometry, WMO, real Map/
+terrain, instances/placements, StaticMapTree/VMapManager, RustyCore runtime
+installation, full-world resources or full extraction. Product 70338 stays
+DB2-only. No new bundle, Windows acceptance or publication occurs; the accepted
+Linux bundle remains immutable. The later AGENTS/collision/completion Markdown
+delta is not rebuilt into any accepted binary.
