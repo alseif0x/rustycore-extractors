@@ -696,3 +696,65 @@ SHA-256 `b56e7724ef2335876069a0588312553ed8ea555d731082dc3ca4eb644bd7f7ec`.
 Independent output review: `real-v5-root-review.json` in the distribution
 evidence root, SHA-256
 `9167a8a204cf5ffd014ebe11f0924c7b1a351df9015077e6acf9eb1fe6ef9afd`.
+
+### Executed v6 product bundle with the v10 source recipe — 2026-10-13
+
+The frozen functional commit `6f1a6fa2f17fb174ec74cbd7b9440b026b66e973`
+adds the explicit v6 inline navigation plan. PR #21 merged it into `forever`
+as `62093c477bfd72a1c12ea71db425912f3383838a`; both commits have Git tree
+`0a8363e0ae1a426bae9ad1307e6a8cbab3129a78`. The unchanged
+`forever-seven-crate-linux-product-db2-catalog-source-v10` recipe already
+selects the nine new shipped source/contract/fixture paths. No dependency,
+toolchain, license or source-profile version changes are needed for this exact
+snapshot. This does not make those paths mandatory in older v10 snapshots.
+
+Two fresh offline builds, including a path with spaces, produce identical
+3,697,053-byte archives and 3,330,656-byte binaries. Both archives pass the
+closed verifier. A moved-source offline rebuild reproduces the binary exactly.
+The complete inventory contains 682 files; selected source contains 625 files /
+15,234,939 bytes and all thirteen pinned toolchain notice files are checked.
+The unrelated untracked configuration backup is excluded.
+
+- Archive SHA-256: `258c8fe40b799048b8684fe68548c91df9aabdbcd7b4dcc76a87d74f66adeb6e`.
+- Binary SHA-256: `a318428a0ef70eb3fa36ab6a34325a2ba9bf495f137a6797e4cde8f3b4d9fdbf`.
+- Selected-source SHA-256: `6afeac8b76a9e9fda02bcf47dd53ae3b84e32b301abf16cb4dd8df4b2fa3f281`.
+- Source-freeze report SHA-256: `80ef60f24e38a3c4cab594e9eebeb293a89409fe970879ac8d9bed8717c121d6`.
+
+The immutable shipped binary passes 72 synthetic CLI methods without skips:
+seventeen v1, twenty v2, thirteen v3, fourteen v4/v5 and eight v6. The v6
+methods execute eight original Detour consumer calls / sixteen routes and one
+exact original TileBuilder comparison, including provided-key and leased-disk
+modalities and interrupted recovery. The 371 retained native source, object,
+report and executable guards remain unchanged; fixture inputs have separate
+per-case guards. The previously failed flat
+fixture and its routability limitation remain recorded in the product evidence;
+this new run does not repair or supersede that negative result.
+
+There are 228 runtime traces including help: 215 empty, twelve expected SIGKILL
+traces and one baseline fsync trace, with no network calls. Compiler traces
+separately retain fourteen matched local AF_UNIX pairs and fourteen empty
+receptions per build, with local signals classified; they are not empty network
+traces. The outer Python harness is outside the syscall-traced runtime scope.
+The dynamic NEEDED closure remains `libgcc_s.so.1`, `libm.so.6`, `libc.so.6`
+and `ld-linux-x86-64.so.2`, with maximum observed GLIBC symbol version 2.34;
+no universal Linux ABI claim follows.
+
+An independent coordinator review checks both archives, the shipped and rebuilt
+binaries, all 625 current source files, eight v6 case-report hashes, 228 runtime
+traces and all 371 native guards. It reuses retained evidence without repeating
+builds or native execution. Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/distribution-v6-6f1a6fa-8vfh8hk3/`.
+
+| Report | SHA-256 |
+| --- | --- |
+| `acceptance.json` | `cdf2d4a0c66f95509e1770a5c3bbc6e6557c298c3dacae4494f7fbcdbd8fedeb` |
+| `final-review.json` | `aa2eed54489876e01265026be8be46505b6d550eb11801a4c95a4507fbdcd290` |
+| `root-review.json` | `c03acb6055ec0feea3c206f60e421d87b165eceb62906e1a88ca878b1412d51a` |
+
+This accepts a local Linux candidate for the frozen functional source. Later
+documentation is not rebuilt and replaces none of its bytes. The real 1,078-table
+v5 selection above remains bound to its older `ae9f4a98…` binary and is not
+transferred to this new binary. Build 70338 remains DB2-only; v6 geometry stays
+restricted to builds 70170/70205. Real complete geometry/runtime, the 83 encrypted
+70338 inputs, Windows product/distribution and full extraction remain open.
+No client assets or keys are packaged and nothing is published.
