@@ -3386,3 +3386,70 @@ to this binary. Build 70338 remains DB2-only, and v8 geometry remains restricted
 to 70170/70205. Complete real acquisition, real geometry, full-world resources,
 installed RustyCore/server runtime and the full extractor goal remain open.
 Windows remains deferred. No assets or keys are packaged; nothing is published.
+
+
+### Real build-70338 M2 sample acceptance — 2026-10-13
+
+Issue #38 closes real M2 acquisition/RAW conversion for the exact authenticated
+historical 31-request selection at functional commit
+`d89d58b20fed0d6a9c43976b988e7f77cee88566`, tree
+`b11858ac1da8a3c3275cb6ab2c33d9366ca17486`. Only the optional private
+`collision_local --m2-70338` profile changes; default behavior and product gates
+remain. The frozen plan SHA is
+`c92cbadaa8bd7adba050576d224be19871e034a8e98d034baeb3d5f9a91d1b84`.
+All 31 are members of complete retained CreatureModelData 70338: 1,156 direct /
+1,178 resolved records / 71,674 bytes, with `FileDataID<u32>` at physical field 2
+proven from pinned WoWDBDefs `d6f50d4f351193e84226aa62a36faa0f58528afa`.
+
+The single real attempt measures 31 complete sources / 15,277,222 bytes, maximum
+3,661,318, and 28 RAW / 27,100 bytes plus three NoCollision outcomes. Every source
+passes Rust validation and exact strict-native-CASC byte comparison before any
+of 31 original Model::open calls. States/RAWs match. Direct debug/release
+inventories agree on 61 files each (31 sources, 28 RAW, two receipts); collector
+inventories agree on 30 files each (28 RAW, two receipts), including the actual
+70338 source identity at mode 0600. No failing-prefix
+fallback or outcome assumption is admitted. The historical failed 32 plan stays
+failed and separate.
+
+All 66 real runtime traces and 44 synthetic runtime traces are empty under
+network syscall denial. Synthetic CLI integration executes 22 commands per
+profile and eight positive inventories, covering ordering/build/limits/privacy,
+legacy literal outputs and exclusivity. Workspace passes 2,852 ordinary tests /
+26 ignored across 42 targets per profile, twelve example tests, Clippy/format,
+329 contracts and 162 distribution checks/one skip. The successful helper build
+retains 45 CASC and 44 Model original source/dependency files; 28 compiler/inspection
+traces classify twelve AF_UNIX pairs/empty receptions per Rust profile separately
+from runtime. Outer Python is untraced. Earlier OpenSSL configure and Cargo PATH
+build failures remain retained; only one real attempt executes.
+
+Per-backend caps are 3,661,318 source bytes/file, 15,277,222 cumulative source bytes
+and 27,100 RAW bytes, without higher ceilings. Direct caller 64 MiB reservation
+reduces the store's 1 GiB logical allowance; the separate 4 GiB process address-
+space ceiling is not an RSS bound or native logical parity. Campaign totals are
+155 client model acquisitions / 76,386,110 bytes and 31 private Model input visits
+/ 15,277,222 bytes: 186 source visits / 91,663,332 bytes, not physical archive I/O.
+The independent audit rechecks 2,606 guards and six phase inventories; 638 files
+are frozen without additional client reads or binary runs. See the
+[collision evidence](forever-collision.md#real-build-70338-bounded-m2-acquisition-and-raw-conversion--2026-10-13)
+for complete provenance, resource/native scopes and the retained hashes.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-m2-cc972f7g/`.
+Acceptance SHA-256:
+`5a6a41c3a83ab0849d28924ce514c4945d8f99e2075aa397cd334724fc24c788`.
+Independent evidence-audit SHA-256:
+`55a4ef9b8610bc50755fdce264407674793c15a86858176b8a48634aaaf606c6`.
+Final evidence-freeze SHA-256:
+`34702672d04d53c21a16f10839811368cf4ac2f2be310964b8c4c0de6e0c605b`.
+
+Independent final-review SHA-256:
+`56eaf27aadb8a3ef9dc0c4c150ad37675f1068c6bd520a364f8efe1636400f31`,
+retained at `qa/review/final-real-review.json`, accepts this bounded replay
+without findings or new model acquisition/native execution. RAW bytes agree
+across all five views; no new M2 variant coverage is claimed.
+
+The later three-file Markdown delta is not rebuilt. The accepted current Linux
+bundle remains unchanged; no new distribution is accepted here. Product 70338
+stays DB2-only. WMO, placements, VMO/query compatibility, full-world resources,
+complete real dependencies, installed RustyCore/server runtime and full Linux
+extraction remain open; Windows remains deferred.
