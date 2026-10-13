@@ -81,9 +81,36 @@ pub(super) fn extract_inner(
             Some(source) => make_run(&[source]),
             None => make_run(&[]),
         }?;
-        execute(plan, &mut store, output, run, key_source.as_ref())
+        execution::execute(
+            plan,
+            &mut store,
+            output,
+            run,
+            WindowsExecution {
+                key_source: key_source.as_ref(),
+            },
+        )
     })();
     // Keep the lease alive through finish and check it on every return path.
     verify_keys(key_source.as_ref())?;
     result
+}
+
+/// Windows owns the supplied-key read lease for the complete resident run.
+struct WindowsExecution<'a> {
+    key_source: Option<&'a ReadFile>,
+}
+
+impl execution::Adapter for WindowsExecution<'_> {
+    fn verify_before_producer(&self) -> Result<(), Error> {
+        verify_keys(self.key_source)
+    }
+
+    fn verify_inputs(&self) -> Result<(), Error> {
+        verify_keys(self.key_source)
+    }
+
+    fn extract_collision(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+        vmaps(store, run)
+    }
 }
