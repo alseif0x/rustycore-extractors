@@ -23,10 +23,40 @@ use std::{
 #[cfg(test)]
 mod tests;
 
+#[cfg(target_os = "linux")]
+pub mod links;
+
+#[derive(Clone, Copy)]
+enum Scope {
+    Intrinsic,
+    #[cfg(target_os = "linux")]
+    Links,
+}
+
 pub fn verify(
     plan: &Plan,
     output: &Path,
     expected: Option<Context>,
+) -> Result<package::Summary, Error> {
+    verify_inner(plan, output, expected, Scope::Intrinsic)
+}
+
+/// Linux-only cross-artifact checks over the same complete verification traversal.
+/// Does not establish VMap associations, topology or unobserved map completeness.
+#[cfg(target_os = "linux")]
+pub fn verify_links(
+    plan: &Plan,
+    output: &Path,
+    expected: Option<Context>,
+) -> Result<package::Summary, Error> {
+    verify_inner(plan, output, expected, Scope::Links)
+}
+
+fn verify_inner(
+    plan: &Plan,
+    output: &Path,
+    expected: Option<Context>,
+    scope: Scope,
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
     let mut limits = package::Limits::default();
@@ -34,6 +64,10 @@ pub fn verify(
         limits.total_bytes = budget.output_bytes;
     }
     let mut facts = Facts::default();
+    #[cfg(target_os = "linux")]
+    let mut link_facts = matches!(scope, Scope::Links).then(links::Facts::default);
+    #[cfg(not(target_os = "linux"))]
+    let _ = scope;
     let mut failure = None;
     let summary = package::verify_with(output, expected, limits, |artifact, file| {
         let mut bytes = Vec::new();
@@ -47,7 +81,12 @@ pub fn verify(
             if bytes.len() as u64 != artifact.bytes {
                 return Err("product_input_changed".into());
             }
-            facts.inspect(plan, artifact, &bytes)
+            facts.inspect(plan, artifact, &bytes)?;
+            #[cfg(target_os = "linux")]
+            if let Some(links) = &mut link_facts {
+                links.inspect(artifact, &bytes)?;
+            }
+            Ok(())
         })();
         result.map_err(|mut error: Error| {
             error.component = Some(artifact.component);
@@ -71,6 +110,10 @@ pub fn verify(
         || (plan.contains(Component::Collision) && !facts.dtree)
     {
         return Err("product_inventory".into());
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(links) = link_facts {
+        links.finish(plan)?;
     }
     Ok(summary)
 }
