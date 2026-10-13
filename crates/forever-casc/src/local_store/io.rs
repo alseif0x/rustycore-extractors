@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: bounded read-only local metadata/archive IO.
 
-mod route;
 pub(super) mod framing;
+mod route;
 pub(super) use route::observe_span;
 
 use super::{Budget, CandidateFailures, Error, Limits, add, array_bytes, owned, reserve};

@@ -87,6 +87,9 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, CliError> {
             Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID) => {
                 Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID)
             }
+            Some(forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID) => {
+                Some(forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID)
+            }
             _ => return Err(CliError::INVALID_INVOCATION),
         },
         Some(_) => return Err(CliError::INVALID_INVOCATION),
@@ -212,6 +215,18 @@ mod tests {
             panic!("run expected")
         };
         assert_eq!(options.schema_catalog, Some("pinned-metadata-v1"));
+        let Parsed::Run(build_70338) = run(&[
+            base.to_vec(),
+            vec!["--manifest", "m", "--schema-catalog", "wowdbdefs-70338-v1"],
+        ]
+        .concat())
+        .unwrap() else {
+            panic!("run expected")
+        };
+        assert_eq!(
+            build_70338.schema_catalog,
+            Some(forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID)
+        );
         let Parsed::Run(default) = run(&base).unwrap() else {
             panic!("run expected")
         };

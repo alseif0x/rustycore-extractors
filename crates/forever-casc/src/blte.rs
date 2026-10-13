@@ -22,8 +22,8 @@
 //! produce exactly its declared output size and pass its Adler32 check. This
 //! module neither opens CASC stores nor returns partial data after any error.
 
-pub(crate) mod md5;
 pub mod framing;
+pub(crate) mod md5;
 
 use miniz_oxide::inflate::{
     TINFLStatus,

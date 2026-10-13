@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Generate the pinned WoWDBDefs schema catalog for WoW 1.60.1.70205.
+"""Generate pinned WoWDBDefs schema catalogs for supported Forever builds.
 
 The parser is deliberately strict and dependency-free. It reads only the
 pinned definition and manifest files from a local WoWDBDefs checkout. It does
@@ -23,6 +23,21 @@ EXPECTED_TABLES = 1161
 ROOT = Path(__file__).resolve().parents[1]
 FACTS_PATH = ROOT / "contracts/wowdbdefs-70205-v1.json"
 RUST_PATH = ROOT / "crates/forever-db2/src/records/wowdbdefs_70205_generated.rs"
+CATALOG_ID = "wowdbdefs-70205-v1"
+TARGETS = {
+    70205: {
+        "pin": PIN,
+        "catalog_id": "wowdbdefs-70205-v1",
+        "facts_path": FACTS_PATH,
+        "rust_path": RUST_PATH,
+    },
+    70338: {
+        "pin": "d6f50d4f351193e84226aa62a36faa0f58528afa",
+        "catalog_id": "wowdbdefs-70338-v1",
+        "facts_path": ROOT / "contracts/wowdbdefs-70338-v1.json",
+        "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70338_generated.rs",
+    },
+}
 
 COLUMN = re.compile(
     r"^(int|uint|float|string|locstring)(?:<[^<>]+>)?\s+"
@@ -345,8 +360,12 @@ def document(reference, raw_manifest):
         raise CatalogError("duplicate_target_identity")
     return {
         "catalog_version": 1,
-        "catalog_id": "wowdbdefs-70205-v1",
-        "target": {"product": "wow_classic_beta", "version": "1.60.1.70205", "build": 70205},
+        "catalog_id": CATALOG_ID,
+        "target": {
+            "product": "wow_classic_beta",
+            "version": ".".join(str(value) for value in TARGET_BUILD),
+            "build": TARGET_BUILD[-1],
+        },
         "source": {
             "repository": "wowdev/WoWDBDefs",
             "commit": PIN,
@@ -406,8 +425,16 @@ def render_json(doc):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference", type=Path, required=True)
+    parser.add_argument("--build", type=int, choices=tuple(TARGETS), default=70205)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
+    global PIN, TARGET_BUILD, CATALOG_ID, FACTS_PATH, RUST_PATH
+    config = TARGETS[args.build]
+    PIN = config["pin"]
+    TARGET_BUILD = (1, 60, 1, args.build)
+    CATALOG_ID = config["catalog_id"]
+    FACTS_PATH = config["facts_path"]
+    RUST_PATH = config["rust_path"]
     try:
         raw_manifest = pinned_source(args.reference)
         doc = document(args.reference, raw_manifest)

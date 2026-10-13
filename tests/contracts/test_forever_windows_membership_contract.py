@@ -160,7 +160,7 @@ class WindowsMembershipContract(unittest.TestCase):
                           '-p test_forever_windows_membership_contract.py -v', runs)
             self.assertIn('test_forever_windows_output_contract.py', runs)
         source = read('tools/package_forever.py')
-        self.assertIn('forever-seven-crate-linux-product-collision-disk-source-v9', source)
+        self.assertIn('forever-seven-crate-linux-product-db2-catalog-source-v10', source)
         main = read('crates/forever-extractor/src/main.rs')
         self.assertIn('#[cfg(not(target_os = "linux"))]', main)
         self.assertIn('product_platform', main)

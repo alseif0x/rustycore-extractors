@@ -100,7 +100,7 @@ impl Facts {
                 if !plan.db2.iter().any(|e| e.name == name) || bytes.len() > 16 * 1024 * 1024 {
                     return Err("product_inventory".into());
                 }
-                validate_db2(name, bytes)?;
+                validate_db2(plan, name, bytes)?;
                 if name == "CinematicCamera" && plan.contains(Component::Cameras) {
                     self.camera_source = Some(cameras::discover(bytes)?.file_ids().clone());
                 }

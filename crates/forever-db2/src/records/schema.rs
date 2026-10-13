@@ -549,8 +549,29 @@ impl CharacterTable {
     pub fn matches(self, header: &crate::Header) -> bool {
         let schema = self.schema();
         let table_hash_matches = schema.hash.is_none_or(|hash| header.table_hash == hash);
-        // The header's `field_count` is the column count (FileFieldCount).
-        let field_count_matches = header.field_count as usize == schema.fields.len();
+        // A zero-section catalog file has no rows to decode. Some pinned
+        // modern metadata records the appended parent in both header counts,
+        // even though it is not a physical file column. Admit that exact
+        // shape only for an empty file; nonempty row decoding continues to
+        // require the physical column count.
+        let empty_appended_catalog_shape = match self {
+            Self::Catalog(table) => {
+                let metadata = table.metadata();
+                header.section_count == 0
+                    && header.record_count == 0
+                    && metadata.parent_index >= 0
+                    && metadata.parent_index == metadata.file_field_count as i16
+                    && metadata.file_field_count == schema.fields.len()
+                    && metadata.field_count == schema.fields.len() + 1
+                    && schema.parent == metadata.parent_index
+                    && header.field_count as usize == metadata.field_count
+                    && header.total_field_count as usize == metadata.field_count
+            }
+            _ => false,
+        };
+        // The ordinary header's `field_count` is the physical column count.
+        let field_count_matches =
+            header.field_count as usize == schema.fields.len() || empty_appended_catalog_shape;
         // DB2FileLoader.cpp:1771: the gate is
         //   TotalFieldCount + (ParentIndexField >= TotalFieldCount ? 1 : 0)
         //   == Meta->FieldCount.
@@ -561,12 +582,13 @@ impl CharacterTable {
         // Case (c) extra field at the end (`parent >= fields.len()`): the
         //   reviewed `Meta->FieldCount` is one past the columns, so
         //   `total_field_count + 1 == fields.len() + 1`, i.e. total == columns.
-        let total_field_count_matches =
-            if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
-                header.total_field_count as usize + 1 == schema.fields.len() + 1
-            } else {
-                header.total_field_count == header.field_count
-            };
+        let total_field_count_matches = if empty_appended_catalog_shape {
+            true
+        } else if schema.parent >= 0 && (schema.parent as usize) >= schema.fields.len() {
+            header.total_field_count as usize + 1 == schema.fields.len() + 1
+        } else {
+            header.total_field_count == header.field_count
+        };
         let layout_hash_matches = match self {
             Self::Catalog(table) => table.matches_layout(header.layout_hash),
             _ => header.layout_hash == schema.layout,

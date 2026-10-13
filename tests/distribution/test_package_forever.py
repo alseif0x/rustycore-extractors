@@ -116,7 +116,7 @@ class DistributionTests(unittest.TestCase):
         archive = self.root / "a/forever-extractor-linux.tar.gz"
         manifest = m.verify_archive(archive)
         self.assertFalse(manifest["full_extractor_complete"])
-        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-product-collision-disk-source-v9")
+        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-product-db2-catalog-source-v10")
         unpacked = self.root / "moved"
         unpacked.mkdir()
         # Test archive has already been checked; manually write regular members.
@@ -726,6 +726,73 @@ class DistributionTests(unittest.TestCase):
         for name in ("source/docs/private-product-disk.md", "source/tools/product_disk_live.py",
                      "source/crates/forever-extractor/docs/product-disk.md"):
             self.assertFalse(m.bundle_path_allowed(name))
+
+    def test_v10_product_catalog_source_is_shipped_and_mandatory(self):
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        for name in m.PRODUCT_DB2_CATALOG_SOURCE:
+            with self.subTest(name=name):
+                self.assertEqual((self.root / "output/source" / name).read_bytes(), (self.source / name).read_bytes())
+                incomplete = copy.deepcopy(manifest)
+                incomplete["inventory"].pop("source/" + name)
+                self.assertFailure("manifest_missing", m.validate_manifest, incomplete)
+
+    def test_v10_missing_catalog_source_rejects_before_compilation(self):
+        for name in m.PRODUCT_DB2_CATALOG_SOURCE:
+            with self.subTest(name=name):
+                path = self.source / name
+                saved = path.read_bytes()
+                path.unlink()
+                try:
+                    with patch.object(m, "compile_source", side_effect=AssertionError("missing catalog source must reject before compilation")):
+                        self.assertFailure("input_io", self.build, "missing-v10")
+                finally:
+                    path.write_bytes(saved)
+
+    def test_v10_only_exact_attribution_markdown_is_admitted(self):
+        self.assertTrue(m.bundle_path_allowed("source/contracts/WOWDBDEFS-LICENSE.md"))
+        for relative in ("contracts/README.md", "contracts/subdir/WOWDBDEFS-LICENSE.md", "schemas/WOWDBDEFS-LICENSE.md"):
+            with self.subTest(relative=relative):
+                self.assertFalse(m.bundle_path_allowed("source/" + relative))
+                path = self.source / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"unapproved markdown")
+                try:
+                    self.assertFailure("source_extension", m.source_snapshot, self.source)
+                finally:
+                    path.unlink()
+
+    def test_v10_catalog_source_payload_changes_reject(self):
+        root = self.unpack()
+        for name in m.PRODUCT_DB2_CATALOG_SOURCE:
+            with self.subTest(name=name):
+                path = root / "source" / name
+                saved = path.read_bytes()
+                path.write_bytes(saved + b"changed")
+                try:
+                    self.assertFailure("inventory_hash", m.verify_bundle, root)
+                finally:
+                    path.write_bytes(saved)
+
+    def test_v10_contract_and_attribution_match_both_catalog_pins(self):
+        contract = json.loads((REPO / "contracts/forever-distribution-contract-v1.json").read_bytes())
+        self.assertEqual(contract["source"]["profile"], m.SOURCE_PROFILE)
+        self.assertEqual(contract["source"]["contract_markdown_exception"], m.CONTRACT_MARKDOWN)
+        self.assertTrue(set(m.PRODUCT_DB2_CATALOG_SOURCE) <= set(contract["source"]["required"]))
+        self.assertIn("forever-seven-crate-linux-product-collision-disk-source-v9", contract["source"]["prior_profiles"])
+        self.assertFalse(contract["source"]["product_db2_catalog_acceptance"]["bundle_built"])
+        attribution = (REPO / m.CONTRACT_MARKDOWN).read_text()
+        for build in (70205, 70338):
+            catalog = json.loads((REPO / f"contracts/wowdbdefs-{build}-v1.json").read_bytes())
+            self.assertIn(catalog["source"]["commit"], attribution)
+            self.assertIn(str(build), attribution)
+            self.assertEqual(catalog["source"]["license"], "CC-BY-SA-4.0")
+
+    def test_v10_does_not_admit_historical_v9_profile(self):
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-collision-disk-source-v9"
+        self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
     def test_environment_drops_inherited_injection(self):
         with patch.dict(m.os.environ, {"RUSTFLAGS": "secret", "RUSTC_WRAPPER": "evil", "RCE_FOREVER_CASC_REFERENCE": "client", "HTTP_PROXY": "secret"}):

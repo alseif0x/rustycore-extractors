@@ -10,9 +10,9 @@
 //! BIH construction or I/O. Admission requires
 //! complete extents, finite used floats, ordered bounds and bounded ASCII names,
 //! which is stricter than the source's unchecked records and strlen writes.
-mod codec;
 pub mod bounds;
 pub mod cache;
+mod codec;
 pub mod doodads;
 pub mod ids;
 mod source;

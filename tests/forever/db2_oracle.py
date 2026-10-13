@@ -134,6 +134,8 @@ CATALOG_ID = "pinned-metadata-v1"
 CATALOG_SHA256 = "0f1ed0c419e851078d99f46ad3b37cadddb27b0556a2d1b52d3fd9ab62b76ec9"
 WOWDBDEFS_70205_CATALOG_ID = "wowdbdefs-70205-v1"
 WOWDBDEFS_70205_CATALOG_SHA256 = "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b"
+WOWDBDEFS_70338_CATALOG_ID = "wowdbdefs-70338-v1"
+WOWDBDEFS_70338_CATALOG_SHA256 = "9fb8852f7ec15a5721ff17da4708970eacb54c5e79c4e78703891a2468905405"
 
 # Stable error code -> process exit status. Exit 2 is reserved for argument
 # errors, 3 for an unsupported signature/version, 6 for the inspection limit.
@@ -1075,9 +1077,14 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
     if catalog_id == CATALOG_ID:
         default_path = Path(__file__).resolve().parents[2] / "contracts/forever-metadata-v1.json"
         expected_digest = CATALOG_SHA256
-    elif catalog_id == WOWDBDEFS_70205_CATALOG_ID:
-        default_path = Path(__file__).resolve().parents[2] / "contracts/wowdbdefs-70205-v1.json"
-        expected_digest = WOWDBDEFS_70205_CATALOG_SHA256
+    elif catalog_id in (WOWDBDEFS_70205_CATALOG_ID, WOWDBDEFS_70338_CATALOG_ID):
+        suffix = "70205" if catalog_id == WOWDBDEFS_70205_CATALOG_ID else "70338"
+        default_path = Path(__file__).resolve().parents[2] / f"contracts/wowdbdefs-{suffix}-v1.json"
+        expected_digest = (
+            WOWDBDEFS_70205_CATALOG_SHA256
+            if catalog_id == WOWDBDEFS_70205_CATALOG_ID
+            else WOWDBDEFS_70338_CATALOG_SHA256
+        )
     else:
         raise OracleError("invalid_invocation")
     path = Path(path) if path is not None else default_path
@@ -1112,12 +1119,20 @@ def load_catalog(catalog_id=CATALOG_ID, path=None):
             return result
 
         source = document['source']
-        if (
-            document['catalog_id'] != WOWDBDEFS_70205_CATALOG_ID
-            or document['target'] != {
+        if catalog_id == WOWDBDEFS_70205_CATALOG_ID:
+            expected_target = {
                 'product': 'wow_classic_beta', 'version': '1.60.1.70205', 'build': 70205
             }
-            or source['commit'] != '674636522d51c010f250ad1b5fe549ef6bc8eb0a'
+            expected_commit = '674636522d51c010f250ad1b5fe549ef6bc8eb0a'
+        else:
+            expected_target = {
+                'product': 'wow_classic_beta', 'version': '1.60.1.70338', 'build': 70338
+            }
+            expected_commit = 'd6f50d4f351193e84226aa62a36faa0f58528afa'
+        if (
+            document['catalog_id'] != catalog_id
+            or document['target'] != expected_target
+            or source['commit'] != expected_commit
             or source['manifest_blob'] != '8a5d8122f312ae6a9564e8286fdc491831fecc22'
             or source['manifest_sha256'] != '4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265'
         ):
@@ -1190,7 +1205,7 @@ def resolve_schema(table_name, schema_catalog=None):
         schema = SCHEMAS.get(table_name)
     elif schema_catalog == CATALOG_ID:
         schema = SCHEMAS.get(table_name) or load_catalog(schema_catalog).get(table_name)
-    elif schema_catalog == WOWDBDEFS_70205_CATALOG_ID:
+    elif schema_catalog in (WOWDBDEFS_70205_CATALOG_ID, WOWDBDEFS_70338_CATALOG_ID):
         schema = load_catalog(schema_catalog).get(table_name)
     else:
         raise OracleError("invalid_invocation")

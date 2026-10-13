@@ -9,7 +9,7 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-product-collision-disk-source-v9'
+PROFILE = 'forever-seven-crate-linux-product-db2-catalog-source-v10'
 HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 

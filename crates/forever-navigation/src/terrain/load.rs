@@ -6,10 +6,10 @@ use crate::{Mesh, inventory, tilebuilder::Coordinate};
 use forever_terrain::maps;
 #[cfg(target_os = "linux")]
 pub mod fs;
-#[cfg(windows)]
-pub mod windows;
 #[cfg(test)]
 mod tests;
+#[cfg(windows)]
+pub mod windows;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Artifact {
     pub map_id: u32,

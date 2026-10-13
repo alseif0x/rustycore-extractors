@@ -3917,5 +3917,23 @@ class VMapSourceOracleTests(unittest.TestCase):
         self.assertEqual(len(db2_oracle.materialize_terrain(source)), 2)
 
 
+class Build70338CatalogTests(unittest.TestCase):
+    def test_exact_build_catalog_and_key_table_shapes(self):
+        older = db2_oracle.load_catalog(db2_oracle.WOWDBDEFS_70205_CATALOG_ID)
+        current = db2_oracle.load_catalog(db2_oracle.WOWDBDEFS_70338_CATALOG_ID)
+        self.assertEqual(len(current), 1161)
+        self.assertEqual(current, older)
+        self.assertEqual(
+            (current["TactKey"].table_hash, current["TactKey"].layout_hash,
+             [(field.kind, field.bits, field.count) for field in current["TactKey"].fields]),
+            (0xDF2F53CF, 0xCBA490FC, [("unsigned", 8, 16)]),
+        )
+        self.assertEqual(
+            (current["TactKeyLookup"].table_hash, current["TactKeyLookup"].layout_hash,
+             [(field.kind, field.bits, field.count) for field in current["TactKeyLookup"].fields]),
+            (0xAFC190D1, 0x4983962C, [("unsigned", 8, 8)]),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

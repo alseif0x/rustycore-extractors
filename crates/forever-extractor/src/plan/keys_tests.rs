@@ -164,6 +164,7 @@ fn v2_all_components_and_layouts_roundtrip() {
             for index_layout in [local_index::Layout::Contiguous, local_index::Layout::Paged] {
                 let plan = Plan {
                     build,
+                    schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
                     root_layout,
                     index_layout,
                     components: 63,

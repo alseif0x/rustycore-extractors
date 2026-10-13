@@ -310,6 +310,7 @@ fn v3_all_components_layouts_and_key_capabilities_roundtrip() {
                     for decryption in [Decryption::Disabled, Decryption::ProvidedSalsa20V1] {
                         let plan = Plan {
                             build,
+                            schema_catalog: SchemaCatalog::PinnedMetadataV1,
                             locale,
                             index_layout,
                             root_layout,

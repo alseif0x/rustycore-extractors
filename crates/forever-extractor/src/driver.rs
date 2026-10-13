@@ -12,7 +12,7 @@ use forever_casc::{
     package::{self, Component, Context, Run},
     root, terrain,
 };
-use forever_db2::{CharacterTable, DecodedTable};
+use forever_db2::{CharacterTable, DecodedTable, HEADER_SIZE, Header, RecordError};
 use forever_navigation::{inventory, models, pipeline, recast, tilebuilder::Coordinate};
 use std::path::Path;
 
@@ -249,12 +249,69 @@ fn read(store: &mut LocalStore, id: u32, limit: u64) -> Result<Vec<u8>, Error> {
     Ok(file.bytes)
 }
 
-pub(crate) fn validate_db2(name: &str, bytes: &[u8]) -> Result<(), Error> {
-    let schema = CharacterTable::from_catalog(name)
-        .map_err(|e| Error::from(e.code()))?
-        .ok_or_else(|| Error::from("product_db2_schema"))?;
-    DecodedTable::read(bytes, schema).map_err(|e| Error::from(e.code()))?;
-    Ok(())
+pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), Error> {
+    let schema = match plan.schema_catalog {
+        crate::plan::SchemaCatalog::PinnedMetadataV1 => CharacterTable::from_catalog(name),
+        catalog => CharacterTable::from_catalog_id(catalog.id(), name),
+    }
+    .map_err(|e| Error::from(e.code()))?
+    .ok_or_else(|| Error::from("product_db2_schema"))?;
+
+    // Preserve v1-v3's regular-table verifier exactly. The build-specific v4/v5
+    // profiles additionally admit bounded catalog-aware readers and a raw-byte
+    // validation fallback for non-UTF-8 regular strings. Product DB2 artifacts
+    // preserve the original source bytes; this fallback returns no text values.
+    let target_catalog = matches!(
+        plan.schema_catalog,
+        crate::plan::SchemaCatalog::WowDbDefs70205V1 | crate::plan::SchemaCatalog::WowDbDefs70338V1
+    );
+    let validation = (|| {
+        if target_catalog && bytes.len() >= HEADER_SIZE {
+            let header_bytes: &[u8; HEADER_SIZE] = bytes[..HEADER_SIZE]
+                .try_into()
+                .map_err(|_| RecordError::Metadata)?;
+            let header = Header::parse(header_bytes).map_err(|_| RecordError::Metadata)?;
+            if header.section_count > 1 {
+                return DecodedTable::read_regular_sections_from_catalog(
+                    bytes,
+                    plan.schema_catalog.id(),
+                    name,
+                    16,
+                )
+                .map(|_| ());
+            }
+            if DecodedTable::read_target_high_volume_from_catalog(
+                bytes,
+                plan.schema_catalog.id(),
+                name,
+            )?
+            .is_some()
+            {
+                return Ok(());
+            }
+        }
+        DecodedTable::read(bytes, schema).map(|_| ())
+    })();
+
+    match validation {
+        Err(RecordError::String) if target_catalog => {
+            DecodedTable::validate_catalog_raw_source_bytes(bytes, plan.schema_catalog.id(), name)
+                .map_err(|error| Error::from(error.code()))
+        }
+        Err(RecordError::Unsupported)
+            if target_catalog
+                && matches!(
+                    name,
+                    "CollectableSourceEncounterSparse"
+                        | "CollectableSourceQuestSparse"
+                        | "CollectableSourceVendorSparse"
+                ) =>
+        {
+            DecodedTable::validate_catalog_raw_source_bytes(bytes, plan.schema_catalog.id(), name)
+                .map_err(|error| Error::from(error.code()))
+        }
+        result => result.map_err(|error| Error::from(error.code())),
+    }
 }
 fn db2(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
     let mut total = 0u64;
@@ -264,7 +321,7 @@ fn db2(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> 
             .checked_add(bytes.len() as u64)
             .filter(|n| *n <= DB2_TOTAL_BYTES)
             .ok_or_else(|| Error::from("product_db2_total_limit"))?;
-        validate_db2(&entry.name, &bytes)?;
+        validate_db2(plan, &entry.name, &bytes)?;
         run.put(
             Component::Db2,
             &format!("dbc/{}/{}.db2", plan.locale.name(), entry.name),

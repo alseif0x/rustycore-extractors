@@ -60,7 +60,15 @@ class Db2RegularSectionsContract(unittest.TestCase):
         ordinary = source.split('fnscan_regular_or_logical(', 1)[1]
         self.assertNotIn('regular_sections::', ordinary)
         self.assertIn('let(cols,metadata_end)=columns(data,&h)?;', ordinary)
-        self.assertIn('Self::read_impl(data,table,None,TEXT_POLICY_LIMIT)', source)
+        self.assertIn('Self::read_impl(data,table,None,TEXT_POLICY_LIMIT,DecodeLimits::DEFAULT)', source)
+        defaults = source.split('constDEFAULT:Self=Self{', 1)[1].split('};', 1)[0]
+        for field, constant, expected in (
+                ('max_direct_records', 'DEFAULT_MAX_DIRECT_RECORDS', 100000),
+                ('max_copy_pairs', 'DEFAULT_MAX_COPY_PAIRS', 100000),
+                ('max_parent_entries', 'DEFAULT_MAX_PARENT_ENTRIES', 100000),
+                ('max_retained_values', 'DEFAULT_MAX_RETAINED_VALUES', 1000000)):
+            self.assertIn(field + ':' + constant, defaults)
+            self.assertEqual(rust_integer(self.records, constant), expected)
 
     def test_legacy_column_prefix_is_preserved_by_separate_helper(self):
         source = compact(self.columns)
@@ -71,15 +79,18 @@ class Db2RegularSectionsContract(unittest.TestCase):
         self.assertIn('h.column_meta_sizeasusize!=meta_bytes', source)
         self.assertIn('ifat>data.len(){returnErr(RecordError::Bounds);}', source)
 
-    def test_no_product_or_component_cli_activation(self):
+    def test_numeric_v1_has_no_product_or_component_cli_activation(self):
         self.assertFalse(self.c['product_or_component_cli_enabled'])
         for path in ('crates/forever-db2/src/main.rs',
                      'crates/forever-extractor/src/main.rs',
+                     'crates/forever-extractor/src/driver.rs',
                      'crates/forever-db2/src/records/sparse.rs',
                      'crates/forever-db2/src/records/terrain_sources.rs'):
             self.assertNotRegex(read(path), r'\bread_regular_sections\s*\(')
-        self.assertIn('component/product CLIs', self.doc)
+        self.assertIn('component CLIs', self.doc)
         self.assertIn('existing admission policies', self.doc)
+        self.assertIn('product v1-v3 retain their previous path', self.doc)
+        self.assertIn('product v4/v5 profiles now route DB2 files', self.doc)
 
     def test_reviewed_schema_and_hash_gates_precede_decode(self):
         self.assertEqual(self.c['schemas'], 'existing_reviewed_non_catalog_numeric_external_id_unparented')
@@ -91,6 +102,10 @@ class Db2RegularSectionsContract(unittest.TestCase):
         self.assertIn('schema.index>=0', source)
         self.assertIn('schema.parent>=0', source)
         self.assertIn('matches!(kind,Kind::String|Kind::StringArray(_))', source)
+        numeric = source.split('fnread_with_limits(', 1)[1].split('fnread_with_text_limits(', 1)[0]
+        self.assertIn('allow_text:false,allow_catalog:false,text_limit:0', numeric)
+        self.assertIn('(!allow_catalog&&matches!(table,CharacterTable::Catalog(_)))', source)
+        self.assertIn('ifschema_has_text!=allow_text{returnErr(RecordError::Unsupported);}', source)
 
     def test_closed_unencrypted_regular_admission(self):
         admission = self.c['admission']
@@ -149,7 +164,7 @@ class Db2RegularSectionsContract(unittest.TestCase):
                        'columns_after_prefix(data,&h,prefix)?',
                        'section.file_offsetasusize!=end',
                        'section.id_table_sizeasusize!=id_bytes',
-                       'record_count!=h.record_countasusize||end!=data.len()',
+                       'record_count!=h.record_countasusize||string_bytes!=h.string_table_sizeasusize||end!=data.len()',
                        '.filter(|end|*end<=data.len())'):
             self.assertIn(marker, source)
         self.assertLess(source.index('end!=data.len()'), source.index('letmutrows=BTreeMap::new()'))
@@ -159,7 +174,8 @@ class Db2RegularSectionsContract(unittest.TestCase):
         source = compact(self.module)
         self.assertIn('letmutordinal=0u32;', source)
         self.assertIn('ifstored<=h.min_id', source)
-        self.assertIn('h.min_id.checked_add(ordinal)', source)
+        self.assertIn('letrecord_ordinal=ordinal;', source)
+        self.assertIn('h.min_id.checked_add(record_ordinal)', source)
         self.assertIn('ordinal=ordinal.checked_add(1)', source)
         self.assertIn('id>h.max_id||rows.contains_key(&id)', source)
         self.assertLess(source.index('letmutordinal=0u32;'), source.index('forrecordin0..section.record_count'))
@@ -188,7 +204,22 @@ class Db2RegularSectionsContract(unittest.TestCase):
         self.assertEqual(source.count('Ok(DecodedTable{rows})'), 1)
         self.assertLess(source.index('rows.insert(new,fields);'), source.index('Ok(DecodedTable{rows})'))
         names = re.findall(r'#\[test\]\s+fn\s+([a-z0-9_]+)\s*\(', self.units)
-        self.assertEqual(len(names), self.c['source_checkpoint']['authored_unit_cases'])
+        extensions = {
+            'text_profile_is_separate_and_resolves_section_ordered_strings_and_copies',
+            'text_profile_accepts_null_strings_and_charges_utf8_and_copy_bytes',
+            'text_profile_rejects_bad_string_offsets_terminators_and_aggregate_sizes',
+            'text_profile_validates_string_compression_even_without_records',
+            'catalog_profile_decodes_numeric_rows_and_global_copies_for_each_catalog',
+            'catalog_profile_decodes_text_rows_and_global_copies_for_each_catalog',
+            'catalog_profile_rejects_compressed_text_in_empty_tables_for_each_catalog',
+            'catalog_profile_preserves_target_table_hash_layout_and_field_count_gates',
+            'catalog_profile_rejects_unknown_selection_inline_ids_and_parents',
+        }
+        extension_names = {name for name in names if name.startswith(('text_profile_', 'catalog_profile_'))}
+        self.assertEqual(extension_names, extensions)
+        numeric_names = [name for name in names if name not in extensions]
+        self.assertEqual(len(numeric_names), self.c['source_checkpoint']['authored_unit_cases'])
+        self.assertEqual(len(names), self.c['source_checkpoint']['authored_unit_cases'] + len(extensions))
         self.assertEqual(len(names), len(set(names)))
         self.assertNotIn('#[ignore', self.units)
         for name in ('empty_middle_section_keeps_global_id_repair_ordinal',
@@ -197,6 +228,33 @@ class Db2RegularSectionsContract(unittest.TestCase):
                      'legacy_entry_points_still_reject_multi_section_files',
                      'catalog_schemas_are_not_silently_admitted'):
             self.assertIn(name, names)
+
+    def test_string_compression_admission_is_checked_before_all_record_loops(self):
+        source = compact(self.module)
+        metadata_check = source.split('columns_after_prefix(data,&h,prefix)?;', 1)[1].split('letmutranges=', 1)[0]
+        self.assertIn('ifallow_text{', metadata_check)
+        self.assertIn('matches!(kind,Kind::String|Kind::StringArray(_))', metadata_check)
+        self.assertIn('cols.get(field).ok_or(RecordError::Column)?.compression!=0', metadata_check)
+        self.assertIn('returnErr(RecordError::Column);', metadata_check)
+        self.assertLess(source.index(metadata_check), source.index('forrecordin0..section.record_count'))
+
+    def test_metadata_profile_is_explicit_with_fixed_cumulative_policy(self):
+        source = compact(self.records)
+        self.assertIn('"forever-db2-regular-sections-text-v1"', source)
+        self.assertIn('"forever-db2-regular-sections-metadata-v1"', source)
+        self.assertIn('pubfnread_regular_sections_from_catalog(data:&[u8],catalog_id:&str,table_name:&str,max_sections:u32)', source)
+        self.assertIn('CharacterTable::from_catalog_id(catalog_id,table_name)', source)
+        self.assertIn('regular_sections::read_from_catalog(data,table,max_sections)', source)
+        module = compact(self.module)
+        metadata = module.split('fnread_from_catalog(', 1)[1].split('fnread_with_limits(', 1)[0]
+        for marker in ('record_limit:MAX_RECORDS', 'copy_limit:MAX_COPIES',
+                       'value_limit:MAX_VALUES', 'allow_catalog:true',
+                       'text_limit:TEXT_POLICY_LIMIT'):
+            self.assertIn(marker, metadata)
+        self.assertIn('text_budget.charge(len)?', module)
+        self.assertIn('text_budget.charge(copied_text_bytes)?', module)
+        self.assertLess(module.index('text_budget.charge(copied_text_bytes)?'),
+                        module.index('letfields=source_fields.clone()'))
 
     def test_authored_checkpoint_does_not_claim_execution_or_completion(self):
         checkpoint = self.c['source_checkpoint']

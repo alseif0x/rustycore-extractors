@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Independently authored 2026-10-11 from pinned TrinityCore 02245dcd facts.
-//! First sparse subset: external catalog IDs, no parent, scalar U8/U16/U32/I32,
-//! no text/64-bit/array values, and zero or one unencrypted section. This does
-//! not relax the regular decoder or provide general sparse compatibility.
+//! Bounded sparse subset: external catalog IDs, no parent, fields composed of
+//! U8/U16/U32/I8/I16/I32, F32 or inline UTF-8 strings, and zero or one
+//! unencrypted section. Numeric and string arrays use their complete metadata
+//! shape. This does not provide general sparse compatibility.
 use super::{
-    DecodedTable, RecordError, Value,
+    DecodedTable, RecordError, StringMode, TextBudget, Value,
     schema::{Kind, Schema},
     u32_at,
 };
@@ -28,15 +29,58 @@ fn half(data: &[u8], at: usize) -> Result<u16, RecordError> {
     ))
 }
 
+struct Policy {
+    value_limit: usize,
+    text_limit: usize,
+    string_mode: StringMode,
+    allow_appended_parent: bool,
+}
+
 pub(super) fn read(
     data: &[u8],
     meta: &Metadata,
     schema: &Schema,
     direct_field: Option<usize>,
+    text_limit: usize,
 ) -> Result<(DecodedTable, BTreeSet<u32>), RecordError> {
-    read_with_limit(data, meta, schema, direct_field, 1_000_000)
+    read_with_limits_and_text(
+        data,
+        meta,
+        schema,
+        direct_field,
+        Policy {
+            value_limit: 1_000_000,
+            text_limit,
+            string_mode: StringMode::StrictUtf8,
+            allow_appended_parent: false,
+        },
+    )
 }
 
+/// Validate a fixed catalog sparse-parent input without exposing decoded rows
+/// or parent associations. The native materializer rejects this variant.
+pub(super) fn validate_catalog_parented_raw(
+    data: &[u8],
+    meta: &Metadata,
+    schema: &Schema,
+    text_limit: usize,
+) -> Result<(), RecordError> {
+    read_with_limits_and_text(
+        data,
+        meta,
+        schema,
+        None,
+        Policy {
+            value_limit: 1_000_000,
+            text_limit,
+            string_mode: StringMode::OpaqueBytes,
+            allow_appended_parent: true,
+        },
+    )
+    .map(|_| ())
+}
+
+#[cfg(test)]
 fn read_with_limit(
     data: &[u8],
     meta: &Metadata,
@@ -44,22 +88,60 @@ fn read_with_limit(
     direct_field: Option<usize>,
     value_limit: usize,
 ) -> Result<(DecodedTable, BTreeSet<u32>), RecordError> {
+    read_with_limits_and_text(
+        data,
+        meta,
+        schema,
+        direct_field,
+        Policy {
+            value_limit,
+            text_limit: 0,
+            string_mode: StringMode::StrictUtf8,
+            allow_appended_parent: false,
+        },
+    )
+}
+
+fn read_with_limits_and_text(
+    data: &[u8],
+    meta: &Metadata,
+    schema: &Schema,
+    direct_field: Option<usize>,
+    policy: Policy,
+) -> Result<(DecodedTable, BTreeSet<u32>), RecordError> {
+    let Policy {
+        value_limit,
+        text_limit,
+        string_mode,
+        allow_appended_parent,
+    } = policy;
     let h = meta.header;
     // Sparse AutoProduceData:1055 rejects appended parents even for no rows.
-    // The first subset excludes in-record parents and inline IDs as well.
-    if schema.parent >= 0
+    // Strict row projection still excludes parents and inline IDs. A separate
+    // raw-only caller may admit an appended parent for its fixed catalog list.
+    let appended_parent = allow_appended_parent
+        && schema.parent >= 0
+        && schema.parent as usize == schema.fields.len();
+    if (schema.parent >= 0 && !appended_parent)
         || schema.index >= 0
-        || schema
-            .fields
-            .iter()
-            .any(|kind| !matches!(kind, Kind::Unsigned(8 | 16 | 32, 1) | Kind::Signed(32, 1)))
+        || schema.fields.iter().any(|kind| match kind {
+            Kind::String => false,
+            Kind::StringArray(count) => *count == 0,
+            Kind::Unsigned(8 | 16 | 32, count)
+            | Kind::Signed(8 | 16 | 32, count)
+            | Kind::Float(count) => *count == 0,
+            _ => true,
+        })
     {
+        return Err(RecordError::Unsupported);
+    }
+    if allow_appended_parent && !appended_parent {
         return Err(RecordError::Unsupported);
     }
     if h.parent_lookup_count > 1 {
         return Err(RecordError::Unsupported);
     }
-    if h.parent_lookup_count != 0 {
+    if h.parent_lookup_count != 0 && !appended_parent {
         return Err(RecordError::Schema);
     }
     if meta.sections.len() > 1
@@ -72,7 +154,9 @@ fn read_with_limit(
     if h.record_count > 100_000 {
         return Err(RecordError::Limit);
     }
-    let row_values = schema.fields.len();
+    let row_values = schema.fields.iter().try_fold(0_usize, |total, kind| {
+        total.checked_add(kind.count()).ok_or(RecordError::Limit)
+    })?;
     let mut value_count = (h.record_count as usize)
         .checked_mul(row_values)
         .filter(|n| *n <= value_limit)
@@ -88,7 +172,7 @@ fn read_with_limit(
     if primitive_end > data.len() {
         return Err(RecordError::Bounds);
     }
-    let mut widths = Vec::with_capacity(row_values);
+    let mut widths = Vec::with_capacity(schema.fields.len());
     for (field, kind) in schema.fields.iter().enumerate() {
         let unused = half(data, add(primitive_at, field * 4)?)? as i16;
         // GetFieldSize:1509 is 4 - UnusedBits/8. The 32-bit getter also
@@ -99,17 +183,25 @@ fn read_with_limit(
             return Err(RecordError::Column);
         }
         let width = 4 - unused as usize / 8;
-        if matches!(kind, Kind::Unsigned(8, 1)) && unused != 24
-            || matches!(kind, Kind::Unsigned(16, 1)) && unused != 16
-        {
-            return Err(RecordError::Column);
+        match kind {
+            Kind::Unsigned(8, _) | Kind::Signed(8, _) if unused != 24 => {
+                return Err(RecordError::Column);
+            }
+            Kind::Unsigned(16, _) | Kind::Signed(16, _) if unused != 16 => {
+                return Err(RecordError::Column);
+            }
+            Kind::Float(_) | Kind::String | Kind::StringArray(_) if unused != 0 => {
+                return Err(RecordError::Column);
+            }
+            _ => {}
         }
         widths.push((width, 32 - unused as u32));
     }
+    let mut text_budget = TextBudget::new(text_limit);
     let mut rows = BTreeMap::new();
     let mut direct_values = BTreeSet::new();
     if meta.sections.is_empty() {
-        if h.record_count != 0 || h.column_meta_size != 0 {
+        if h.record_count != 0 || h.column_meta_size != 0 || h.parent_lookup_count != 0 {
             return Err(RecordError::Unsupported);
         }
         if data.len() != primitive_end {
@@ -120,7 +212,7 @@ fn read_with_limit(
     let section = meta.sections[0];
     if section.tact_declared
         || section.string_table_size != 0
-        || section.parent_lookup_data_size != 0
+        || (h.parent_lookup_count == 0 && section.parent_lookup_data_size != 0)
     {
         return Err(RecordError::Unsupported);
     }
@@ -131,8 +223,8 @@ fn read_with_limit(
         return Err(RecordError::Bounds);
     }
     let expected_columns = count_bytes(h.total_field_count, 24)?;
-    // Sparse LoadColumnData:1003 discards columns. The first subset admits
-    // absent storage metadata or complete None columns without extra payload.
+    // Sparse LoadColumnData:1003 discards columns. Admit absent storage
+    // metadata or complete None columns without extra payload.
     if h.column_meta_size != 0 && h.column_meta_size as usize != expected_columns {
         return Err(RecordError::Column);
     }
@@ -141,7 +233,7 @@ fn read_with_limit(
         return Err(RecordError::Bounds);
     }
     if h.column_meta_size != 0 {
-        for field in 0..row_values {
+        for field in 0..schema.fields.len() {
             let at = add(primitive_end, field * 24)?;
             if u32_at(data, add(at, 4)?)? != 0 || u32_at(data, add(at, 8)?)? != 0 {
                 return Err(RecordError::Unsupported);
@@ -164,9 +256,7 @@ fn read_with_limit(
     let copies_at = add(catalog_start, id_bytes)?;
     let entries_at = add(copies_at, count_bytes(section.copy_table_count, 8)?)?;
     let trailing_ids_at = add(entries_at, count_bytes(section.catalog_data_count, 6)?)?;
-    if add(trailing_ids_at, id_bytes)? != data.len() {
-        return Err(RecordError::Bounds);
-    }
+    let end = add(trailing_ids_at, id_bytes)?;
     for ordinal in 0..section.catalog_data_count as usize {
         let id = u32_at(data, add(catalog_start, ordinal * 4)?)?;
         if id >= extent || rows.contains_key(&id) {
@@ -180,23 +270,63 @@ fn read_with_limit(
         }
         let raw = data.get(record_at..record_end).ok_or(RecordError::Bounds)?;
         let mut at = 0;
-        let mut fields = Vec::with_capacity(row_values);
-        for (kind, &(width, significant)) in schema.fields.iter().zip(&widths) {
-            let end = add(at, width)?;
-            let encoded = raw.get(at..end).ok_or(RecordError::Bounds)?;
-            let mut word = [0u8; 4];
-            word[..width].copy_from_slice(encoded);
-            let bits = u32::from_le_bytes(word);
-            let value = match kind {
-                Kind::Unsigned(32, 1) => Value::Unsigned(bits & (u32::MAX >> (32 - significant))),
-                Kind::Signed(32, 1) => {
-                    Value::Signed(((bits << (32 - significant)) as i32) >> (32 - significant))
-                }
-                Kind::Unsigned(_, 1) => Value::Unsigned(bits),
-                _ => return Err(RecordError::Unsupported),
-            };
-            fields.push(vec![value]);
-            at = end;
+        let mut fields = Vec::with_capacity(schema.fields.len());
+        for (field, kind) in schema.fields.iter().enumerate() {
+            let (width, significant) = widths[field];
+            let mut values = Vec::with_capacity(kind.count());
+            for _ in 0..kind.count() {
+                let value = match kind {
+                    Kind::String | Kind::StringArray(_) => {
+                        let tail = raw.get(at..).ok_or(RecordError::String)?;
+                        let length = tail
+                            .iter()
+                            .position(|byte| *byte == 0)
+                            .ok_or(RecordError::String)?;
+                        text_budget.charge(length)?;
+                        let text = match string_mode {
+                            StringMode::StrictUtf8 => std::str::from_utf8(&tail[..length])
+                                .map_err(|_| RecordError::String)?
+                                .to_owned(),
+                            StringMode::OpaqueBytes | StringMode::CatalogSparseParentRaw => {
+                                String::new()
+                            }
+                        };
+                        at = add(at, length + 1)?;
+                        Value::Text(text)
+                    }
+                    Kind::Float(_) => {
+                        let end = add(at, 4)?;
+                        let bits = u32::from_le_bytes(
+                            raw.get(at..end)
+                                .ok_or(RecordError::Bounds)?
+                                .try_into()
+                                .unwrap(),
+                        );
+                        at = end;
+                        Value::FloatBits(bits)
+                    }
+                    Kind::Unsigned(_, _) | Kind::Signed(_, _) => {
+                        let end = add(at, width)?;
+                        let encoded = raw.get(at..end).ok_or(RecordError::Bounds)?;
+                        let mut word = [0u8; 4];
+                        word[..width].copy_from_slice(encoded);
+                        let bits = u32::from_le_bytes(word);
+                        at = end;
+                        match kind {
+                            Kind::Unsigned(32, _) => {
+                                Value::Unsigned(bits & (u32::MAX >> (32 - significant)))
+                            }
+                            Kind::Signed(_, _) => Value::Signed(
+                                ((bits << (32 - significant)) as i32) >> (32 - significant),
+                            ),
+                            Kind::Unsigned(_, _) => Value::Unsigned(bits),
+                            _ => return Err(RecordError::Unsupported),
+                        }
+                    }
+                };
+                values.push(value);
+            }
+            fields.push(values);
         }
         // Native sparse getters ignore trailing bytes/padding in catalog rows.
         // Header.RecordSize and primitive Offset do not determine these ranges.
@@ -224,6 +354,14 @@ fn read_with_limit(
         if source == new {
             return Err(RecordError::Unsupported);
         }
+        let cloned_text = fields.iter().flatten().try_fold(0_usize, |total, value| {
+            let bytes = match value {
+                Value::Text(text) => text.len(),
+                _ => 0,
+            };
+            total.checked_add(bytes).ok_or(RecordError::Limit)
+        })?;
+        text_budget.charge(cloned_text)?;
         if !rows.contains_key(&new) {
             value_count = value_count
                 .checked_add(row_values)
@@ -232,6 +370,30 @@ fn read_with_limit(
         }
         let fields = fields.clone();
         rows.insert(new, fields);
+    }
+    let end = if h.parent_lookup_count == 1 {
+        if !appended_parent || section.parent_lookup_data_size < 12 {
+            return Err(RecordError::Bounds);
+        }
+        let parent_count = u32_at(data, end)?;
+        if parent_count > 100_000 {
+            return Err(RecordError::Limit);
+        }
+        let parent_bytes = count_bytes(parent_count, 8)?
+            .checked_add(12)
+            .ok_or(RecordError::Bounds)?;
+        if section.parent_lookup_data_size as usize != parent_bytes {
+            return Err(RecordError::Bounds);
+        }
+        add(end, parent_bytes)?
+    } else {
+        if section.parent_lookup_data_size != 0 {
+            return Err(RecordError::Bounds);
+        }
+        end
+    };
+    if end != data.len() {
+        return Err(RecordError::Bounds);
     }
     Ok((DecodedTable { rows }, direct_values))
 }

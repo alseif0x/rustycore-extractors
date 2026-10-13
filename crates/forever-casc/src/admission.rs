@@ -4,7 +4,11 @@ use std::path::Path;
 #[cfg(not(windows))]
 use std::{fs::File, io::Read};
 pub const PRODUCT: &str = "wow_classic_beta";
-pub const SUPPORTED_CLIENTS: &[(&str, u32)] = &[("1.60.1.70170", 70170), ("1.60.1.70205", 70205)];
+pub const SUPPORTED_CLIENTS: &[(&str, u32)] = &[
+    ("1.60.1.70170", 70170),
+    ("1.60.1.70205", 70205),
+    ("1.60.1.70338", 70338),
+];
 const MAX_BUILD_INFO: u64 = 256 * 1024;
 
 pub fn admit(client: &Path) -> Result<u32, Error> {

@@ -10,6 +10,10 @@ fn put32(data: &mut [u8], offset: usize, value: u32) {
     data[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
 }
 
+fn put16(data: &mut [u8], offset: usize, value: u16) {
+    data[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+}
+
 fn width(field: FieldMetadata) -> usize {
     match field.kind {
         FieldType::Byte => 1,
@@ -36,6 +40,14 @@ fn fixture(metadata: &TableMetadata, lookup: bool) -> (Vec<u8>, Vec<Vec<Value>>,
     let table = CharacterTable::from_catalog(metadata.name)
         .unwrap()
         .unwrap();
+    fixture_for(metadata, table, lookup)
+}
+
+fn fixture_for(
+    metadata: &TableMetadata,
+    table: CharacterTable,
+    lookup: bool,
+) -> (Vec<u8>, Vec<Vec<Value>>, bool) {
     let fields = &metadata.fields[..metadata.file_field_count];
     let record_size: usize = fields
         .iter()
@@ -144,6 +156,158 @@ fn fixture(metadata: &TableMetadata, lookup: bool) -> (Vec<u8>, Vec<Vec<Value>>,
         }
     }
     (data, expected, copies)
+}
+
+fn empty_sparse_parent_fixture(name: &str) -> Vec<u8> {
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70338_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    let mut data = header(table, table.schema().fields.len());
+    put16(&mut data, 172, 1);
+    for kind in table.schema().fields {
+        let unused: i16 = match kind {
+            Kind::Unsigned(8, _) | Kind::Signed(8, _) => 24,
+            Kind::Unsigned(16, _) | Kind::Signed(16, _) => 16,
+            _ => 0,
+        };
+        data.extend_from_slice(&unused.to_le_bytes());
+        data.extend_from_slice(&0u16.to_le_bytes());
+    }
+    data
+}
+
+fn vendor_sparse_parent_fixture() -> Vec<u8> {
+    let table = CharacterTable::from_catalog_id(
+        WOWDBDEFS_70338_CATALOG_ID,
+        "CollectableSourceVendorSparse",
+    )
+    .unwrap()
+    .unwrap();
+    let fields = table.schema().fields;
+    let row_values = [
+        0xFFFF_FFFFu32,
+        0x8000_0000,
+        0x3F80_0000,
+        0x7FC1_2345,
+        1,
+        2,
+        3,
+        4,
+    ];
+    let record_offset = 412u32;
+    let record_size = (row_values.len() * 4) as u32;
+    let catalog_offset = record_offset + record_size;
+    let end_of_ids = catalog_offset + 4 + 6 + 4;
+    let parent_count = 1u32;
+
+    let mut data = vec![0; 244];
+    data[..4].copy_from_slice(b"WDC5");
+    put32(&mut data, 4, 5);
+    put32(&mut data, 136, 1);
+    put32(&mut data, 140, fields.len() as u32);
+    put32(&mut data, 144, record_size);
+    put32(&mut data, 152, table.schema_identity().0);
+    put32(&mut data, 156, table.schema_identity().1);
+    put32(&mut data, 160, 7);
+    put32(&mut data, 164, 7);
+    put16(&mut data, 172, 1);
+    put16(&mut data, 174, u16::MAX);
+    put32(&mut data, 176, fields.len() as u32);
+    put32(&mut data, 184, 1);
+    put32(&mut data, 188, (fields.len() * 24) as u32);
+    put32(&mut data, 200, 1);
+
+    // One WDC5 section with one direct sparse record and a one-entry parent block.
+    put32(&mut data, 212, record_offset);
+    put32(&mut data, 216, 1);
+    put32(&mut data, 224, catalog_offset);
+    put32(&mut data, 228, 4);
+    put32(&mut data, 232, 20);
+    put32(&mut data, 236, 1);
+
+    for _ in fields {
+        data.extend_from_slice(&0i16.to_le_bytes());
+        data.extend_from_slice(&0u16.to_le_bytes());
+    }
+    data.resize(data.len() + fields.len() * 24, 0);
+    assert_eq!(data.len(), record_offset as usize);
+    for value in row_values {
+        data.extend_from_slice(&value.to_le_bytes());
+    }
+    data.extend(7u32.to_le_bytes());
+    data.extend(record_offset.to_le_bytes());
+    data.extend((record_size as u16).to_le_bytes());
+    data.extend(u32::MAX.to_le_bytes());
+    assert_eq!(data.len(), end_of_ids as usize);
+    data.extend(parent_count.to_le_bytes());
+    data.extend(100u32.to_le_bytes());
+    data.extend(100u32.to_le_bytes());
+    data.extend(100u32.to_le_bytes());
+    data.extend(0u32.to_le_bytes());
+    data
+}
+
+#[test]
+fn catalog_sparse_parent_tables_have_raw_only_bounded_validation() {
+    for name in [
+        "CollectableSourceEncounterSparse",
+        "CollectableSourceQuestSparse",
+    ] {
+        let data = empty_sparse_parent_fixture(name);
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70338_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            DecodedTable::read(&data, table).err(),
+            Some(RecordError::Unsupported)
+        );
+        assert!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data,
+                WOWDBDEFS_70338_CATALOG_ID,
+                name,
+            )
+            .is_ok()
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data[..data.len() - 1],
+                WOWDBDEFS_70338_CATALOG_ID,
+                name,
+            ),
+            Err(RecordError::Bounds)
+        );
+    }
+
+    let data = vendor_sparse_parent_fixture();
+    let table = CharacterTable::from_catalog_id(
+        WOWDBDEFS_70338_CATALOG_ID,
+        "CollectableSourceVendorSparse",
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::Unsupported)
+    );
+    assert!(
+        DecodedTable::validate_catalog_raw_source_bytes(
+            &data,
+            WOWDBDEFS_70338_CATALOG_ID,
+            "CollectableSourceVendorSparse",
+        )
+        .is_ok()
+    );
+    let mut bad_parent_block = data.clone();
+    put32(&mut bad_parent_block, 232, 19);
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(
+            &bad_parent_block,
+            WOWDBDEFS_70338_CATALOG_ID,
+            "CollectableSourceVendorSparse",
+        ),
+        Err(RecordError::Bounds)
+    );
 }
 
 #[test]
@@ -262,6 +426,73 @@ fn catalog_decodes_all_1126_shapes_and_exact_empty_variants() {
             metadata.name
         );
     }
+}
+
+#[test]
+fn empty_catalog_appended_parent_header_counts_are_admitted_without_rows() {
+    let table =
+        CharacterTable::from_catalog_id(WOWDBDEFS_70338_CATALOG_ID, "ExteriorComponentGroup")
+            .unwrap()
+            .unwrap();
+    let metadata = resolve_for(WOWDBDEFS_70338_CATALOG_ID, "ExteriorComponentGroup")
+        .unwrap()
+        .unwrap()
+        .metadata();
+    assert_eq!(metadata.file_field_count, 2);
+    assert_eq!(metadata.field_count, 3);
+    assert_eq!(metadata.parent_index, 2);
+
+    let mut empty = header(table, metadata.field_count);
+    empty.resize(empty.len() + 4 * metadata.field_count, 0);
+    assert!(DecodedTable::read(&empty, table).unwrap().rows().is_empty());
+
+    let mut with_rows = empty.clone();
+    put32(&mut with_rows, 136, 1);
+    assert_eq!(
+        DecodedTable::read(&with_rows, table).err(),
+        Some(RecordError::Schema)
+    );
+
+    let mut wrong_count = empty;
+    put32(&mut wrong_count, 140, 4);
+    assert_eq!(
+        DecodedTable::read(&wrong_count, table).err(),
+        Some(RecordError::Schema)
+    );
+}
+
+#[test]
+fn raw_catalog_source_validation_preserves_non_utf8_text_without_projecting_it() {
+    let catalog_id = WOWDBDEFS_70338_CATALOG_ID;
+    let metadata = tables_for(catalog_id)
+        .unwrap()
+        .iter()
+        .find(|metadata| metadata.name == "SpellMissileMotion")
+        .unwrap();
+    let table = CharacterTable::from_catalog_id(catalog_id, metadata.name)
+        .unwrap()
+        .unwrap();
+    let (mut data, _, _) = fixture_for(metadata, table, false);
+    let invalid_utf8 = data
+        .windows(2)
+        .position(|pair| pair == [0xC3, 0xA1])
+        .unwrap();
+    data[invalid_utf8] = 0x97;
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::String)
+    );
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&data, catalog_id, metadata.name),
+        Ok(())
+    );
+
+    let mut truncated = data;
+    truncated.pop();
+    assert!(
+        DecodedTable::validate_catalog_raw_source_bytes(&truncated, catalog_id, metadata.name)
+            .is_err()
+    );
 }
 
 #[test]
@@ -485,4 +716,44 @@ fn catalog_unsigned_appended_byte_uses_unsigned_32_bit_storage() {
         DecodedTable::read(&invalid, table).err(),
         Some(RecordError::Id)
     );
+}
+
+#[test]
+fn build_70338_catalog_is_separately_pinned_and_schema_equivalent() {
+    let old = tables_for(WOWDBDEFS_70205_CATALOG_ID).unwrap();
+    let new = tables_for(WOWDBDEFS_70338_CATALOG_ID).unwrap();
+    assert_eq!(old.len(), 1161);
+    assert_eq!(new.len(), 1161);
+    for (old, new) in old.iter().zip(new) {
+        assert_eq!(old.name, new.name);
+        assert_eq!(old.file_data_id, new.file_data_id);
+        assert_eq!(old.table_hash, new.table_hash);
+        assert_eq!(old.other_layout_hashes, new.other_layout_hashes);
+        assert_eq!(old.layout_hash, new.layout_hash);
+        assert_eq!(old.index, new.index);
+        assert_eq!(old.parent_index, new.parent_index);
+        assert_eq!(old.field_count, new.field_count);
+        assert_eq!(old.file_field_count, new.file_field_count);
+        assert_eq!(old.fields, new.fields);
+        assert_eq!(old.blockers, new.blockers);
+        assert_eq!(old.decode_fields, new.decode_fields);
+    }
+
+    for (name, id, fields, table_hash, layout_hash) in [
+        ("TactKey", 1_302_850, 1, 0xDF2F53CF, 0xCBA490FC),
+        ("TactKeyLookup", 1_302_851, 1, 0xAFC190D1, 0x4983962C),
+    ] {
+        let table = resolve_for(WOWDBDEFS_70338_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        assert_eq!(table.catalog_id(), WOWDBDEFS_70338_CATALOG_ID);
+        assert_eq!(table.metadata().file_data_id, id);
+        assert_eq!(table.metadata().field_count, fields);
+        assert_eq!(table.metadata().table_hash, Some(table_hash));
+        assert_eq!(table.metadata().layout_hash, layout_hash);
+    }
+
+    let source = provenance(WOWDBDEFS_70338_CATALOG_ID).unwrap();
+    assert_eq!(source.source_commit, WOWDBDEFS_70338_SOURCE_COMMIT);
+    assert_eq!(source.facts_sha256, WOWDBDEFS_70338_FACTS_SHA256);
 }

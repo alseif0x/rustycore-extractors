@@ -916,7 +916,7 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
         &["admitted", "experimental"],
     )?;
     let target = as_u64(need(compatibility, "target_build")?)?;
-    if target != 70170 && target != 70205 {
+    if target != 70170 && target != 70205 && target != 70338 {
         return Err(Invalid);
     }
     if let Some(reason) = get(compatibility, "reason") {
@@ -936,10 +936,13 @@ fn validate(root: &json::Json) -> VResult<Manifest> {
     )?;
     const_str(need(client, "product")?, "wow_classic_beta")?;
     let build = as_u64(need(client, "build")?)?;
-    if build != 70170 && build != 70205 {
+    if build != 70170 && build != 70205 && build != 70338 {
         return Err(Invalid);
     }
     if schema_catalog == Some(forever_db2::catalog::WOWDBDEFS_70205_CATALOG_ID) && build != 70205 {
+        return Err(Invalid);
+    }
+    if schema_catalog == Some(forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID) && build != 70338 {
         return Err(Invalid);
     }
     let expected_version = format!("1.60.1.{build}");

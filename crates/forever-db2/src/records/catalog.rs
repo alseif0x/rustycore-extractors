@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Added 2026-10-11: independent metadata catalog; no upstream code imported.
-//! Two complete, separately pinned factual catalogs for different client
-//! targets. Neither imports upstream implementation code.
+//! Complete separately pinned factual catalogs for different client targets.
+//! The build 70338 schema catalog retains its own provenance even where its
+//! reviewed table facts match build 70205. Neither imports upstream code.
 //!
 //! Shape compatibility describes the current bounded decoder's value model.
 //! It does not promise readable CASC data, supported WDC5 section variants,
@@ -16,6 +17,8 @@ mod generated;
 mod tests;
 #[path = "wowdbdefs_70205_generated.rs"]
 mod wowdbdefs_70205_generated;
+#[path = "wowdbdefs_70338_generated.rs"]
+mod wowdbdefs_70338_generated;
 
 pub const CATALOG_ID: &str = "pinned-metadata-v1";
 pub const SOURCE_COMMIT: &str = "02245dcd245e7433e524577656177723d3e4992e";
@@ -31,6 +34,14 @@ pub const WOWDBDEFS_70205_SOURCE_SHA256: &str =
     "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265";
 pub const WOWDBDEFS_70205_FACTS_SHA256: &str =
     "fc8a2d07e18931be37a269e018e57ab00df6bd3b19794f2a025d06eaa280521b";
+
+pub const WOWDBDEFS_70338_CATALOG_ID: &str = "wowdbdefs-70338-v1";
+pub const WOWDBDEFS_70338_SOURCE_COMMIT: &str = "d6f50d4f351193e84226aa62a36faa0f58528afa";
+pub const WOWDBDEFS_70338_SOURCE_BLOB: &str = "8a5d8122f312ae6a9564e8286fdc491831fecc22";
+pub const WOWDBDEFS_70338_SOURCE_SHA256: &str =
+    "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265";
+pub const WOWDBDEFS_70338_FACTS_SHA256: &str =
+    "9fb8852f7ec15a5721ff17da4708970eacb54c5e79c4e78703891a2468905405";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CatalogProvenance {
@@ -56,6 +67,13 @@ pub fn provenance(catalog_id: &str) -> Option<CatalogProvenance> {
             source_blob: WOWDBDEFS_70205_SOURCE_BLOB,
             source_sha256: WOWDBDEFS_70205_SOURCE_SHA256,
             facts_sha256: WOWDBDEFS_70205_FACTS_SHA256,
+        }),
+        WOWDBDEFS_70338_CATALOG_ID => Some(CatalogProvenance {
+            id: WOWDBDEFS_70338_CATALOG_ID,
+            source_commit: WOWDBDEFS_70338_SOURCE_COMMIT,
+            source_blob: WOWDBDEFS_70338_SOURCE_BLOB,
+            source_sha256: WOWDBDEFS_70338_SOURCE_SHA256,
+            facts_sha256: WOWDBDEFS_70338_FACTS_SHA256,
         }),
         _ => None,
     }
@@ -160,6 +178,7 @@ impl std::error::Error for CatalogError {}
 enum CatalogSource {
     PinnedMetadata,
     WowDbDefs70205,
+    WowDbDefs70338,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -177,6 +196,7 @@ impl CatalogTable {
         match self.source {
             CatalogSource::PinnedMetadata => generated::TABLES,
             CatalogSource::WowDbDefs70205 => wowdbdefs_70205_generated::TABLES,
+            CatalogSource::WowDbDefs70338 => wowdbdefs_70338_generated::TABLES,
         }
     }
 
@@ -184,6 +204,7 @@ impl CatalogTable {
         match self.source {
             CatalogSource::PinnedMetadata => CATALOG_ID,
             CatalogSource::WowDbDefs70205 => WOWDBDEFS_70205_CATALOG_ID,
+            CatalogSource::WowDbDefs70338 => WOWDBDEFS_70338_CATALOG_ID,
         }
     }
 
@@ -198,10 +219,10 @@ impl CatalogTable {
         // wrap a public CatalogTable directly. The build-specific catalog must
         // always decode from its own pinned DBD facts, even when a name also
         // appears in the older reviewed enum.
-        if self.source == CatalogSource::PinnedMetadata {
-            if let Some(reviewed) = super::CharacterTable::named(metadata.name) {
-                return reviewed.schema();
-            }
+        if self.source == CatalogSource::PinnedMetadata
+            && let Some(reviewed) = super::CharacterTable::named(metadata.name)
+        {
+            return reviewed.schema();
         }
         Schema {
             hash: metadata.table_hash,
@@ -223,6 +244,7 @@ pub fn tables_for(catalog_id: &str) -> Option<&'static [TableMetadata]> {
     match catalog_id {
         CATALOG_ID => Some(generated::TABLES),
         WOWDBDEFS_70205_CATALOG_ID => Some(wowdbdefs_70205_generated::TABLES),
+        WOWDBDEFS_70338_CATALOG_ID => Some(wowdbdefs_70338_generated::TABLES),
         _ => None,
     }
 }
@@ -250,6 +272,10 @@ pub fn resolve_for(catalog_id: &str, name: &str) -> Result<Option<CatalogTable>,
         WOWDBDEFS_70205_CATALOG_ID => (
             CatalogSource::WowDbDefs70205,
             wowdbdefs_70205_generated::TABLES,
+        ),
+        WOWDBDEFS_70338_CATALOG_ID => (
+            CatalogSource::WowDbDefs70338,
+            wowdbdefs_70338_generated::TABLES,
         ),
         _ => return Ok(None),
     };

@@ -10,7 +10,7 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-product-collision-disk-source-v9'
+PROFILE = 'forever-seven-crate-linux-product-db2-catalog-source-v10'
 HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 
@@ -71,6 +71,17 @@ class WindowsNavigationContract(unittest.TestCase):
             self.assertEqual(entry['historical_import_sha256'], pins[entry['path']])
             self.assertFalse(entry['production_changed'])
             reviewed[entry['path']] = entry['current_sha256']
+        order = self.c['reviewed_module_order_correction']
+        path = 'crates/forever-navigation/src/terrain/load.rs'
+        self.assertEqual(order['path'], path)
+        self.assertEqual(order['historical_import_sha256'], pins[path])
+        self.assertFalse(order['behavior_changed'])
+        current = (ROOT / path).read_bytes()
+        before = b'#[cfg(windows)]\npub mod windows;\n#[cfg(test)]\nmod tests;'
+        after = b'#[cfg(test)]\nmod tests;\n#[cfg(windows)]\npub mod windows;'
+        self.assertEqual(current.count(after), 1)
+        self.assertEqual(hashlib.sha256(current.replace(after, before)).hexdigest(), pins[path])
+        reviewed[path] = order['current_sha256']
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)

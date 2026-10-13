@@ -14,7 +14,10 @@
 //! GameObjectDisplayInfo follows gameobject_extract.cpp:88-158: the snapshot
 //! preserves all direct rows and raw FDID bits. Acquisition, zero-FDID filtering
 //! and model dispatch belong to the caller; copies are validated but not replayed.
-use super::{CharacterTable, DecodedTable, RecordError, TEXT_POLICY_LIMIT, TextBudget, Value};
+use super::{
+    CharacterTable, DecodeLimits, DecodedTable, RecordError, StringMode, TEXT_POLICY_LIMIT,
+    TextBudget, Value,
+};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -397,8 +400,15 @@ pub(super) fn read(data: &[u8], role: Role, text_limit: usize) -> Result<Collect
             Collector::LiquidObject(Vec::new()),
         ),
     };
-    let result =
-        DecodedTable::scan_regular_or_logical(data, table, None, text_limit, Some(collector))?;
+    let result = DecodedTable::scan_regular_or_logical(
+        data,
+        table,
+        None,
+        text_limit,
+        DecodeLimits::DEFAULT,
+        StringMode::StrictUtf8,
+        Some(collector),
+    )?;
     result.terrain.ok_or(RecordError::Schema)
 }
 impl Collector {

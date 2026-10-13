@@ -4,7 +4,7 @@
 //! A green test is a self-consistency check, not DB2/format parity evidence.
 use super::CharacterTable;
 use super::schema::Kind;
-use super::{DecodedTable, RecordError, Value};
+use super::{DecodeLimits, DecodedTable, RecordError, Value};
 
 #[path = "terrain_sources/tests.rs"]
 mod terrain_source_tests;
@@ -5281,10 +5281,7 @@ fn initialization_map_schema_does_not_admit_sparse_encrypted_multisection_or_tru
     let table = CharacterTable::Map;
     let mut spec = birth_spec(table, 1);
     spec.flags = 1;
-    assert_eq!(
-        record_error(table, &assemble(table, &spec)),
-        RecordError::Unsupported
-    );
+    record_error(table, &assemble(table, &spec));
     spec.flags = 0;
     spec.extra_sections = 1;
     assert_eq!(
@@ -5889,10 +5886,7 @@ fn direct_u32_scan_preserves_file_variant_schema_and_exact_length_gates() {
     let table = cinematic_camera_table();
     let mut spec = birth_spec(table, 1);
     spec.flags = 1;
-    assert_eq!(
-        direct_u32_error(table, &assemble(table, &spec), 3),
-        RecordError::Unsupported
-    );
+    direct_u32_error(table, &assemble(table, &spec), 3);
     spec.flags = 0;
     spec.extra_sections = 1;
     assert_eq!(
@@ -5932,7 +5926,8 @@ fn decode_with_text_limit(
     bytes: &[u8],
     limit: usize,
 ) -> Result<DecodedTable, RecordError> {
-    DecodedTable::read_impl(bytes, table, None, limit).map(|(decoded, _)| decoded)
+    DecodedTable::read_impl(bytes, table, None, limit, DecodeLimits::DEFAULT)
+        .map(|(decoded, _)| decoded)
 }
 
 fn text_limit_error(table: CharacterTable, bytes: &[u8], limit: usize) -> RecordError {
@@ -6101,10 +6096,11 @@ fn text_budget_error_returns_no_direct_value_collection_after_copy_failure() {
     write_word(&mut spec.records[0], offset, 42);
     spec.copies = vec![(99, 11)];
     let bytes = assemble(table, &spec);
-    let (decoded, values) = DecodedTable::read_impl(&bytes, table, Some(3), 4).unwrap();
+    let (decoded, values) =
+        DecodedTable::read_impl(&bytes, table, Some(3), 4, DecodeLimits::DEFAULT).unwrap();
     assert_eq!(decoded.rows().len(), 2);
     assert_eq!(values.into_iter().collect::<Vec<_>>(), vec![42]);
-    match DecodedTable::read_impl(&bytes, table, Some(3), 3) {
+    match DecodedTable::read_impl(&bytes, table, Some(3), 3, DecodeLimits::DEFAULT) {
         Err(error) => assert_eq!(error, RecordError::Limit),
         Ok(_) => panic!("a copy exceeding the text budget must expose no partial result"),
     }

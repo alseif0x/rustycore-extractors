@@ -578,3 +578,121 @@ documentation commit is not rebuilt and replaces no accepted archive bytes.
 Historical source profiles and reports retain their original scope. Real complete
 inputs/geometry, full-world resources, RustyCore runtime and complete Windows
 product/distribution acceptance remain gates. The extractor is not complete.
+
+
+## Product v4/v5 DB2 catalog source profile v10 — 2026-10-13
+
+The current mandatory corresponding-source profile is
+`forever-seven-crate-linux-product-db2-catalog-source-v10`. The archive envelope
+remains `forever-distribution-v1`; the seven workspace crates, nine lock packages,
+two exact registry archives, thirteen toolchain notices and Linux build recipe
+are unchanged. The accepted v9 bundle of `b692ed3` above remains historical,
+verified with its own frozen tool. The v10 verifier does not admit its older
+source profile or replace its archive bytes.
+
+The source closure now explicitly requires both generated WoWDBDefs catalogs,
+their provenance JSON, product v4/v5 contracts, generator, DB2 reader/validator
+sources and tests, and the [regular-section scope](forever-db2-regular-sections.md).
+Product v4 binds build 70205 to `wowdbdefs-70205-v1`; product v5 binds build 70338
+to the separate `wowdbdefs-70338-v1` catalog and allows only DB2. See
+[the product scope](forever-product.md). Raw-text and exact three-table
+sparse-parent admission preserve complete source bytes without projecting the
+affected rows or parent associations. No other build-70338 component or complete
+catalog acceptance follows from shipping this source.
+
+`contracts/WOWDBDEFS-LICENSE.md` is the sole admitted Markdown file under
+`contracts/`; other Markdown files there still reject. Its attribution includes
+both source commits and is mandatory, alongside
+`tools/generate_wowdbdefs_catalog.py`. The previously JSON-only directory rule
+would reject this existing attribution document before compilation. Frozen
+Rust/catalog facts are sufficient for the shipped offline build. Regenerating
+metadata separately requires the already pinned external WoWDBDefs checkout;
+the packager neither acquires nor bundles that checkout. Original project and
+Rust notices remain required, including the complete existing CC-BY-SA-4.0 text
+under `toolchain-notices/licenses/`.
+
+The source-only checkpoint repaired corresponding-source selection and
+versioning. Its authored contract retains the pre-execution acceptance flags;
+the subsequent executed evidence is recorded below. Historical v1-v3 cases
+remain required.
+The 83 encrypted build-70338 candidates, including Map, still block complete
+catalog/full-client acceptance; full geometry and RustyCore runtime acceptance,
+Windows product distribution and publication authorization remain separate gates.
+
+### Executed local Linux v10 acceptance — 2026-10-13
+
+Two fresh offline builds, including an output path with spaces, produce the
+same 3,667,182-byte archive and 3,320,032-byte binary. Both archives pass the
+closed verifier. A third offline build from the verified, moved/unpacked bundle
+uses its own shipped helper/source/vendor archives and reproduces that binary.
+The exact source freeze contains 616 selected files / 15,136,381 bytes; the
+complete distribution inventory contains 673 files / 20,474,652 bytes. Source
+identity is unchanged before/after all builds and executable checks.
+
+- Archive SHA-256: `8ddf5b58580b8a87ceda6f81253d88ec36a3044d1c0e5192d00ae28db29fad80`.
+- Binary SHA-256: `ae9f4a984246e935dc983e050c9a6eb5326f4fe571b9e165986c004a54ce4ee5`.
+- Selected-source SHA-256: `ef3eeb8812ba95822c9b56d103ebbd483802506245ae76d572df180bbff50bdf`.
+
+The shipped binary passes 64 synthetic test methods: fourteen v4/v5 catalog
+fixture/CLI checks, seventeen v1, twenty v2 and thirteen v3. The new catalog
+suite writes its WDC5 bytes with an independent literal writer and reuses only
+the existing toy CASC container writer; that helper's transitively imported
+DB2 writer does not generate these fixtures. It verifies exact numeric/text
+multisection source bytes, schema/build/FDID/hash gates and all-or-error rejection
+of compressed text, including empty sections. Its four complete synthetic
+packages and 37 actual CLI traces are separate from real-client acceptance.
+
+All 166 runtime traces contain no network syscalls: 155 are empty and eleven
+contain only expected fsync/SIGKILL interruption events. Each compiler trace
+contains fourteen matched AF_UNIX socket pairs and fourteen empty receptions
+bound by PID/descriptor/inodes, with local signals classified separately.
+These compiler traces are not counted as empty network traces. Three initial
+classifier rejections for line reconstruction, compiler signals and interrupted
+fsync remain retained; the original builds and suites all exited successfully
+and were reused without rewriting their evidence.
+
+At the same source freeze, Linux workspace debug passes 2,691 tests with 26
+existing ignored cases across 42 summaries; workspace all-target Clippy with
+warnings denied and formatting pass. All 248 contracts, 118 distribution/sealer
+checks and 185 Python oracle cases pass, with one oracle case skipped. Earlier
+shell-PATH and Clippy failures remain retained separately. No new native or
+Windows execution follows from these Linux checks.
+
+The binary retains the recorded dynamic NEEDED closure (`libgcc_s.so.1`,
+`libm.so.6`, `libc.so.6`, `ld-linux-x86-64.so.2`), including GLIBC_2.34 symbol
+requirements. This is a local Linux candidate, with no universal ABI, full
+extraction or gameplay/runtime claim. Nothing is published. Later documentation
+updates are not part of the compiled source snapshot above.
+
+Retained evidence root:
+`/mnt/nvme2/datos/forever-product-runs/distribution-v10-root-oxp5imur/`.
+Bundle acceptance report: `bundle-evidence/acceptance.json`, SHA-256
+`d90e92159445eb2543be19f37673dba47a92237e823a1ce761773e6e1d79c243`.
+Independent coordinator review: `root-bundle-review.json`, SHA-256
+`78a157f5ac2942923bb59dd3563a8ec786572ca2efa01d617f9180a79cdaa77d`.
+Source validation report: `core-validation.json`, SHA-256
+`7178fbc2ef9962950794b22aecf93ccd09c48dcdec4d1abed3bc891606037bff`.
+
+### Packaged real v5 selection — 2026-10-13
+
+The immutable shipped binary above also passes plan inspection, real extraction
+and separate verification for a new explicit build-70338/esES selection of all
+1,078 files acquired completely in the fresh census. All 1,078 output paths,
+sizes and SHA-256 digests exactly match that census: 29,213,383 bytes, with a
+maximum input of 4,844,598 bytes. Product limits are unchanged, decryption is
+disabled, and all three actual process network traces are empty under syscall
+denial. The manifest binds the exact shipped producer and plan; binary,
+catalog and client build-info hashes are identical before/after the run.
+
+This independently selected plan does not include the 83 failed acquisitions.
+The 1,161-table plan and its failures remain separate. The run performs no new
+row-oracle comparison, accepts no real multisection input and supplies no
+geometry or runtime evidence. Outputs remain private and are absent from the
+distribution and Git.
+
+Retained real report:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-packaged-70338-20261013-q52a5tcu/report.json`,
+SHA-256 `b56e7724ef2335876069a0588312553ed8ea555d731082dc3ca4eb644bd7f7ec`.
+Independent output review: `real-v5-root-review.json` in the distribution
+evidence root, SHA-256
+`9167a8a204cf5ffd014ebe11f0924c7b1a351df9015077e6acf9eb1fe6ef9afd`.

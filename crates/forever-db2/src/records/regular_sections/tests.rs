@@ -9,6 +9,13 @@ struct Part {
     copies: Vec<(u32, u32)>,
 }
 
+#[derive(Default)]
+struct TextPart {
+    rows: Vec<(u32, Option<usize>)>, // stored ID and section-local string offset
+    strings: Vec<u8>,
+    copies: Vec<(u32, u32)>,
+}
+
 fn put32(data: &mut [u8], at: usize, value: u32) {
     data[at..at + 4].copy_from_slice(&value.to_le_bytes());
 }
@@ -72,6 +79,78 @@ fn fixture(table: CharacterTable, parts: &[Part]) -> Vec<u8> {
     data
 }
 
+fn text_fixture(parts: &[TextPart]) -> Vec<u8> {
+    text_fixture_for(CharacterTable::AnimKitBoneSet, parts)
+}
+
+fn text_fixture_for(table: CharacterTable, parts: &[TextPart]) -> Vec<u8> {
+    let schema = table.schema();
+    assert_eq!(schema.fields[0], Kind::String);
+    let fields = schema.fields.len();
+    let record_size: usize = schema
+        .fields
+        .iter()
+        .map(|kind| kind.bits() as usize / 8 * kind.count())
+        .sum();
+    let record_count: usize = parts.iter().map(|part| part.rows.len()).sum();
+    let string_size: usize = parts.iter().map(|part| part.strings.len()).sum();
+    let mut data = vec![0; HEADER_SIZE + parts.len() * SECTION_SIZE + fields * 28];
+    data[..4].copy_from_slice(b"WDC5");
+    put32(&mut data, 4, 5);
+    put32(&mut data, 136, record_count as u32);
+    put32(&mut data, 140, fields as u32);
+    put32(&mut data, 144, record_size as u32);
+    put32(&mut data, 148, string_size as u32);
+    put32(&mut data, 152, schema.hash.unwrap_or(0));
+    put32(&mut data, 156, schema.layout);
+    put32(&mut data, 160, 10);
+    put32(&mut data, 164, 100);
+    data[174..176].copy_from_slice(&schema.index.to_le_bytes());
+    put32(&mut data, 176, fields as u32);
+    put32(&mut data, 188, fields as u32 * 24);
+    put32(&mut data, 200, parts.len() as u32);
+    let mut bit = 0u16;
+    for (field, kind) in schema.fields.iter().enumerate() {
+        let at = column_at(parts.len(), fields, field);
+        data[at..at + 2].copy_from_slice(&bit.to_le_bytes());
+        bit += kind.bits() as u16 * kind.count() as u16;
+    }
+
+    let mut record_ordinal = 0usize;
+    let mut prior_strings = 0usize;
+    for (index, part) in parts.iter().enumerate() {
+        let section_at = HEADER_SIZE + index * SECTION_SIZE;
+        let records_at = data.len();
+        put32(&mut data, section_at + 8, records_at as u32);
+        put32(&mut data, section_at + 12, part.rows.len() as u32);
+        put32(&mut data, section_at + 16, part.strings.len() as u32);
+        put32(&mut data, section_at + 24, part.rows.len() as u32 * 4);
+        put32(&mut data, section_at + 36, part.copies.len() as u32);
+
+        for &(_, local_string) in &part.rows {
+            let mut raw = vec![0; record_size];
+            if let Some(local_string) = local_string {
+                let logical_target = record_count * record_size + prior_strings + local_string;
+                let logical_record = record_ordinal * record_size;
+                let displacement = logical_target - logical_record;
+                raw[..4].copy_from_slice(&(displacement as u32).to_le_bytes());
+            }
+            data.extend_from_slice(&raw);
+            record_ordinal += 1;
+        }
+        data.extend_from_slice(&part.strings);
+        for &(id, _) in &part.rows {
+            data.extend_from_slice(&id.to_le_bytes());
+        }
+        for &(new, source) in &part.copies {
+            data.extend_from_slice(&new.to_le_bytes());
+            data.extend_from_slice(&source.to_le_bytes());
+        }
+        prior_strings += part.strings.len();
+    }
+    data
+}
+
 fn column_at(sections: usize, fields: usize, field: usize) -> usize {
     HEADER_SIZE + sections * SECTION_SIZE + fields * 4 + field * 24
 }
@@ -91,6 +170,10 @@ fn parts() -> [Part; 2] {
 
 fn decode(data: &[u8]) -> Result<DecodedTable, RecordError> {
     DecodedTable::read_regular_sections(data, CharacterTable::SpellDuration, 16)
+}
+
+fn decode_text(data: &[u8]) -> Result<DecodedTable, RecordError> {
+    DecodedTable::read_regular_sections_with_text(data, CharacterTable::AnimKitBoneSet, 16)
 }
 
 fn error(data: &[u8]) -> RecordError {
@@ -115,6 +198,289 @@ fn explicit_profile_and_section_ceiling() {
         ));
     }
     assert!(DecodedTable::read_regular_sections(&data, CharacterTable::SpellDuration, 2).is_ok());
+}
+
+#[test]
+fn text_profile_is_separate_and_resolves_section_ordered_strings_and_copies() {
+    assert_eq!(
+        DecodedTable::REGULAR_SECTIONS_TEXT_PROFILE,
+        "forever-db2-regular-sections-text-v1"
+    );
+    let data = text_fixture(&[
+        TextPart {
+            rows: vec![(20, Some(0))],
+            strings: b"first\0".to_vec(),
+            copies: vec![(40, 30)],
+        },
+        TextPart {
+            rows: vec![(30, Some(0))],
+            strings: b"second\0".to_vec(),
+            copies: vec![(50, 40)],
+        },
+    ]);
+    assert!(matches!(
+        DecodedTable::read_regular_sections(&data, CharacterTable::AnimKitBoneSet, 16),
+        Err(RecordError::Unsupported)
+    ));
+    let decoded = decode_text(&data).unwrap();
+    for id in [30, 40, 50] {
+        assert_eq!(decoded.rows()[&id][0][0], Value::Text("second".into()));
+    }
+    assert_eq!(decoded.rows()[&20][0][0], Value::Text("first".into()));
+}
+
+#[test]
+fn text_profile_accepts_null_strings_and_charges_utf8_and_copy_bytes() {
+    let data = text_fixture(&[
+        TextPart {
+            rows: vec![(20, None), (21, Some(0))],
+            strings: "é\0".as_bytes().to_vec(),
+            copies: vec![(40, 21)],
+        },
+        TextPart::default(),
+    ]);
+    let table = CharacterTable::AnimKitBoneSet;
+    assert_eq!(
+        DecodedTable::read_regular_sections_with_text(&data, table, 2)
+            .unwrap()
+            .rows()[&20][0][0],
+        Value::Text(String::new())
+    );
+    assert!(read_with_text_limits(&data, table, 2, 100, 100, 100, 4).is_ok());
+    assert!(matches!(
+        read_with_text_limits(&data, table, 2, 100, 100, 100, 3),
+        Err(RecordError::Limit)
+    ));
+}
+
+#[test]
+fn text_profile_rejects_bad_string_offsets_terminators_and_aggregate_sizes() {
+    let fixture = || {
+        text_fixture(&[
+            TextPart {
+                rows: vec![(20, Some(0))],
+                strings: b"alpha\0".to_vec(),
+                copies: vec![],
+            },
+            TextPart {
+                rows: vec![(30, Some(0))],
+                strings: b"beta\0".to_vec(),
+                copies: vec![],
+            },
+        ])
+    };
+    let mut bad_pointer = fixture();
+    let first_records = u32::from_le_bytes(
+        bad_pointer[HEADER_SIZE + 8..HEADER_SIZE + 12]
+            .try_into()
+            .unwrap(),
+    ) as usize;
+    put32(&mut bad_pointer, first_records, u32::MAX);
+    assert!(matches!(
+        decode_text(&bad_pointer),
+        Err(RecordError::String)
+    ));
+
+    let mut missing_terminator = fixture();
+    let second_section = HEADER_SIZE + SECTION_SIZE;
+    let second_records = u32::from_le_bytes(
+        missing_terminator[second_section + 8..second_section + 12]
+            .try_into()
+            .unwrap(),
+    ) as usize;
+    let record_size: usize = CharacterTable::AnimKitBoneSet
+        .schema()
+        .fields
+        .iter()
+        .map(|kind| kind.bits() as usize / 8 * kind.count())
+        .sum();
+    let second_string_size = u32::from_le_bytes(
+        missing_terminator[second_section + 16..second_section + 20]
+            .try_into()
+            .unwrap(),
+    ) as usize;
+    let second_strings = second_records + record_size;
+    let last_second_string = second_strings + second_string_size - 1;
+    missing_terminator[last_second_string] = b'x';
+    assert!(matches!(
+        decode_text(&missing_terminator),
+        Err(RecordError::String)
+    ));
+
+    let mut wrong_aggregate = fixture();
+    let total = u32::from_le_bytes(wrong_aggregate[148..152].try_into().unwrap());
+    put32(&mut wrong_aggregate, 148, total - 1);
+    assert!(matches!(
+        decode_text(&wrong_aggregate),
+        Err(RecordError::Bounds)
+    ));
+}
+
+#[test]
+fn text_profile_validates_string_compression_even_without_records() {
+    let data = text_fixture(&[TextPart::default(), TextPart::default()]);
+    assert!(decode_text(&data).unwrap().rows().is_empty());
+    let field = column_at(2, CharacterTable::AnimKitBoneSet.schema().fields.len(), 0);
+    for mode in 1..=5 {
+        let mut compressed = data.clone();
+        put32(&mut compressed, field + 8, mode);
+        assert!(matches!(decode_text(&compressed), Err(RecordError::Column)));
+    }
+}
+
+fn catalog_ids() -> [&'static str; 3] {
+    [
+        crate::catalog::CATALOG_ID,
+        "wowdbdefs-70205-v1",
+        "wowdbdefs-70338-v1",
+    ]
+}
+
+#[test]
+fn catalog_profile_decodes_numeric_rows_and_global_copies_for_each_catalog() {
+    assert_eq!(
+        DecodedTable::REGULAR_SECTIONS_METADATA_PROFILE,
+        "forever-db2-regular-sections-metadata-v1"
+    );
+    for catalog in catalog_ids() {
+        let name = "GameObjectDisplayInfo";
+        let table = CharacterTable::from_catalog_id(catalog, name)
+            .unwrap()
+            .unwrap();
+        assert!(matches!(table, CharacterTable::Catalog(_)));
+        let mut sections = parts();
+        sections[0].copies = vec![(40, 30)];
+        sections[1].copies = vec![(50, 40)];
+        let data = fixture(table, &sections);
+        let decoded =
+            DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2).unwrap();
+        assert_eq!(
+            decoded.rows().keys().copied().collect::<Vec<_>>(),
+            [20, 30, 40, 50]
+        );
+        assert_eq!(decoded.rows()[&20][0], vec![Value::FloatBits(7); 6]);
+        for id in [30, 40, 50] {
+            assert_eq!(decoded.rows()[&id][0], vec![Value::FloatBits(9); 6]);
+            assert_eq!(decoded.rows()[&id][1], [Value::Signed(9)]);
+        }
+        // The separately versioned numeric v1 never gains catalog admission.
+        assert!(matches!(
+            DecodedTable::read_regular_sections(&data, table, 2),
+            Err(RecordError::Unsupported)
+        ));
+    }
+}
+
+#[test]
+fn catalog_profile_decodes_text_rows_and_global_copies_for_each_catalog() {
+    for catalog in catalog_ids() {
+        let name = "AnimKitBoneSet";
+        let table = CharacterTable::from_catalog_id(catalog, name)
+            .unwrap()
+            .unwrap();
+        let data = text_fixture_for(
+            table,
+            &[
+                TextPart {
+                    rows: vec![(0, Some(0))],
+                    strings: b"first\0".to_vec(),
+                    copies: vec![(40, 11)],
+                },
+                TextPart {
+                    rows: vec![(0, Some(0))],
+                    strings: "segundo é\0".as_bytes().to_vec(),
+                    copies: vec![(50, 40)],
+                },
+            ],
+        );
+        let decoded =
+            DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2).unwrap();
+        assert_eq!(decoded.rows()[&10][0], [Value::Text("first".into())]);
+        for id in [11, 40, 50] {
+            assert_eq!(decoded.rows()[&id][0], [Value::Text("segundo é".into())]);
+        }
+        assert!(matches!(
+            DecodedTable::read(&data, table),
+            Err(RecordError::Unsupported)
+        ));
+    }
+}
+
+#[test]
+fn catalog_profile_rejects_compressed_text_in_empty_tables_for_each_catalog() {
+    for catalog in catalog_ids() {
+        let name = "AnimKitBoneSet";
+        let table = CharacterTable::from_catalog_id(catalog, name)
+            .unwrap()
+            .unwrap();
+        let data = text_fixture_for(table, &[TextPart::default(), TextPart::default()]);
+        assert!(
+            DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2)
+                .unwrap()
+                .rows()
+                .is_empty()
+        );
+        let column = column_at(2, table.schema().fields.len(), 0);
+        for mode in 1..=5 {
+            let mut compressed = data.clone();
+            put32(&mut compressed, column + 8, mode);
+            assert!(matches!(
+                DecodedTable::read_regular_sections_from_catalog(&compressed, catalog, name, 2),
+                Err(RecordError::Column)
+            ));
+        }
+    }
+}
+
+#[test]
+fn catalog_profile_preserves_target_table_hash_layout_and_field_count_gates() {
+    for catalog in ["wowdbdefs-70205-v1", "wowdbdefs-70338-v1"] {
+        let name = "GameObjectDisplayInfo";
+        let table = CharacterTable::from_catalog_id(catalog, name)
+            .unwrap()
+            .unwrap();
+        assert!(table.schema().hash.is_some());
+        let data = fixture(table, &parts());
+        for offset in [140, 152, 156, 176] {
+            let mut wrong_identity = data.clone();
+            let value = u32_at(&data, offset).unwrap();
+            put32(&mut wrong_identity, offset, value ^ 1);
+            assert!(matches!(
+                DecodedTable::read_regular_sections_from_catalog(&wrong_identity, catalog, name, 2),
+                Err(RecordError::Schema)
+            ));
+        }
+        assert!(matches!(
+            DecodedTable::read_regular_sections_from_catalog(&data, catalog, "SpellDuration", 2),
+            Err(RecordError::Schema)
+        ));
+    }
+}
+
+#[test]
+fn catalog_profile_rejects_unknown_selection_inline_ids_and_parents() {
+    let data = fixture(CharacterTable::SpellDuration, &parts());
+    for (catalog, name) in [
+        ("unknown-catalog", "SpellDuration"),
+        ("wowdbdefs-70338-v1", "UnknownTable"),
+    ] {
+        assert!(matches!(
+            DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2),
+            Err(RecordError::Schema)
+        ));
+    }
+    for catalog in catalog_ids() {
+        for name in ["Curve", "ChrClassesXPowerTypes"] {
+            let table = CharacterTable::from_catalog_id(catalog, name)
+                .unwrap()
+                .unwrap();
+            let data = fixture(table, &[Part::default(), Part::default()]);
+            assert!(matches!(
+                DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2),
+                Err(RecordError::Unsupported)
+            ));
+        }
+    }
 }
 
 #[test]

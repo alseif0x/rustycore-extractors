@@ -16,15 +16,15 @@ or client-data upload is authorized by this checklist.
 | Component | Current evidence | Completion requirement |
 | --- | --- | --- |
 | Local acquisition | Explicit Rust-local component CLI passes five DB2/GT/camera plans with 61 artifact comparisons and closed-profile verification; native remains default for those component CLIs; the Rust-only unified product admits explicit v2 supplied keys with synthetic acceptance; separate name API has original C++ synthetic comparison and real negative-query evidence | Complete supported-profile and actual real encrypted acceptance; positive real named-file reads; no implicit network or zero-filled missing data |
-| DB2 catalog | 56 reviewed schemas retain their v2 policy; pinned catalog accounts for all 1,126 declarations; target-only `wowdbdefs-70205-v1` adds 1,161 build-70205 declarations, matching all 1,023 surveyed complete headers; the earlier complete local survey matches 1,023 artifacts / 719,466 rows against Python, with 103 explicit failures; separate closed terrain sources have synthetic and two-table local acceptance | All required extraction tables and physical variants accounted for; unsupported/incomplete inputs reported without success claims; complete required reader acceptance |
-| DB2 reader acceptance | Separate names, appearance and item specialization loaders accepted; Birth and initialization have synthetic complete-loader evidence; all 49 spell tables now have complete public typed-load projection acceptance on five populated synthetic worlds; the older four-table generic-reader comparison remains separate; the build-70205 target catalog matches Rust's standalone diagnostic on three complete local esES DB2s (ChrClasses 9 rows, ChrRaces 58, CinematicCamera 10), and an explicit Rust-local v4 batch acquires and verifies those three files with exact bytes matching the prior live package | Complete public Forever loaders, including Birth, initialization and all 49 spell tables, on complete local inputs; explicit treatment of encrypted/multiple/sparse sections and output TACT metadata |
+| DB2 catalog | 56 reviewed schemas retain their v2 policy; pinned catalog accounts for all 1,126 declarations; separate `wowdbdefs-70205-v1` and `wowdbdefs-70338-v1` catalogs each pin 1,161 build-specific declarations; 70205 matches all 1,023 surveyed complete headers, while the 70338 survey acquired 1,078 complete files and left 83 encrypted candidates; the earlier 70205 survey matches 1,023 artifacts / 719,466 rows against Python, with 103 explicit failures; separate closed terrain sources have synthetic and two-table local acceptance | All required extraction tables and physical variants accounted for; unsupported/incomplete inputs reported without success claims; complete required reader acceptance |
+| DB2 reader acceptance | Separate names, appearance and item specialization loaders accepted; Birth and initialization have synthetic complete-loader evidence; all 49 spell tables now have complete public typed-load projection acceptance on five populated synthetic worlds; the older four-table generic-reader comparison remains separate; the build-70205 target catalog matches Rust's standalone diagnostic on three complete local esES DB2s (ChrClasses 9 rows, ChrRaces 58, CinematicCamera 10); explicit Rust-local v4 batches verify those three files and a 1,024-table package with exact per-file bytes matching legacy-profile output; product v4/v5 code routes multi-section target-catalog DB2s through the bounded catalog reader, but no real multi-section file has passed that route; the immutable v10 Linux binary extracts/verifies an explicit 70338/esES selection of 1,078 files / 29,213,383 bytes against the fresh complete-read census, without a new row-oracle comparison | Complete public Forever loaders, including Birth, initialization and all 49 spell tables, on complete local inputs; real product acceptance of multi-section files, encrypted/sparse variants and output TACT metadata |
 | Game tables | Complete 20-file catalog with native v2 and Rust-local v3 verification; 14 numeric tables / 22,082 f32 cells match C++; six raw-only files; both public six-file RustyCore loader groups accepted with both backends | Preserve this component evidence in the unified product interface; retain numeric versus raw-only scope |
 | Cameras | Native v1 and Rust-local v2 acquisition/output verification; ten camera files plus source DB2 match C++ bytes, independent discovery and filenames | Preserve component evidence in the unified interface; M2/waypoint/runtime acceptance needs a separate reader contract |
 | Terrain maps | Local startup/WDT/root-ADT/MAPS/tile-list runner has 20 synthetic CLI cases per debug/release profile, with 48 MAPS / 24 lists and 6,864 exact GridMap queries per profile; real probe fails at the first complete Map read; integrated supplied-ADT conversion matches 248 complete synthetic files from the original pinned C++ parser/converter across two runs, with strict verification and 35,464 actual GridMap queries; 154 synthetic tests; preceding assembly acceptance covers another 380 files / 54,340 queries | Complete real local terrain acquisition; versioned real MAPS semantics, including liquids and bounds, compared against Forever C++ output and appropriate RustyCore readers |
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
 | Product interface | Canonical v1 N/Z and separate v2 explicit supplied-key plans; Linux inspect/extract/resume/verify connect all six Rust producers; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
-| Distribution | Legacy C++ suite; Linux v9 bundle of `b692ed3` has two identical fresh archives/manifests/binaries, an exact moved-source offline rebuild and 50 packaged synthetic CLI cases; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation is [recorded](forever-distribution.md); the separate [private-output foundation](forever-windows-output.md) has fourteen ordinary native fixed-NTFS cases per debug/release profile, while privileged reparse and Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
+| Distribution | Legacy C++ suite; Linux v10 ships both target catalogs and product v4/v5 with two identical fresh archives, an exact moved-source offline rebuild and 64 packaged synthetic test methods across v1-v5; the earlier v9 bundle of `b692ed3` and its 50 packaged cases remain historical; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation is [recorded](forever-distribution.md); the separate [private-output foundation](forever-windows-output.md) has fourteen ordinary native fixed-NTFS cases per debug/release profile, while privileged reparse and Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
 
 ## Version differences that must be resolved
 
@@ -163,7 +163,232 @@ has SHA-256
 `439039a8be1b118bc704682e7e09efc4dab829038b5bc109351bea6c31e20949` and
 contains no key bytes, key identifiers, record identifiers, or client payloads.
 
+### Offline client key-source and Ghidra audit — 2026-10-12
+
+The installed `WowB.exe` is pinned by SHA-256
+`6ccfa6ce6954917082a00f28f04b862f44a86ca571b9940bd5bcfa0029f9d0de`.
+Read-only Ghidra 12.1.4 headless analysis completes in 275 seconds after
+disabling `Disassemble Entry Points`, `Shared Return Calls`,
+`Subroutine References`, and `Create Address Tables`. The focused DB2/TACT marker
+scan finds 55 relevant string/data matches and zero references or containing
+functions. Its report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-db2-targeted-20261012e/db2-data-xrefs.txt`
+(SHA-256
+`ff41aa46d4420fe8f5b7e31ab5d12782165474230ba0b97fe132b197635d3fda`). A
+second focused scan finds the standard Salsa20 sigma literal once in `.rdata`,
+also with zero references; this does not identify an executable Salsa20 routine.
+Its report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-salsa-constant-20261012f/salsa-constant-xrefs.txt`
+(SHA-256
+`58bf8d15ff3cd0e4319ee7cbf46052cdb44f2a14d2d1be22316d7fc94a9cdabc`).
+The successful auto-analysis log is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-salsa-constant-20261012f/ghidra.log`
+(SHA-256
+`d5fb0767d8200c0523ce10aeacbfe0f4bdaafd94abdcb6d00267813875f2a892`).
+
+A bounded read-only scan finds none of the eight Spell encrypted-frame key
+names in ASCII, big-endian, or little-endian form in `WowB.exe`,
+`WowB_loader.dll`, or the 59 files in the installed client's Cache tree
+(28,662,411 bytes). These scans do not establish that key material is absent in
+other encodings, runtime state, or outside these paths. REA's string-search
+provider timed out at 30 minutes and again at 90 minutes without candidates;
+the manual headless analysis of `WowB.exe` succeeds, so those search timeouts
+are not evidence that Ghidra itself crashed. Two initial read-only headless
+passes over `WowB_loader.dll` ended at 4m46s and 2m08s while automatic analysis
+was active. Their thread snapshots showed database iteration in
+`FindNoReturnFunctionsAnalyzer`, then exception metadata in
+`CreateEHUnwindMapBackgroundCmd`; both had a 7,200-second per-file analysis
+timeout configured but were stopped early.
+
+A fresh read-only headless pass over the same hash-pinned DLL was then allowed
+to run for the full 3,600-second outer limit, with the same 7,200-second
+per-file limit and the known slow return/entry-point analyzers disabled. It
+passed 30 minutes and was still active in `DecompilerSwitchAnalyzer`, then
+advanced to `ConstantPropagationAnalyzer` traversing Ghidra's address-range
+database. At the 60-minute outer timeout the command returned 124; the
+post-cleanup process check found no remaining Ghidra process. There is no
+`Analysis succeeded` marker or post-script output. This run did not crash, but
+did not complete within one hour; it does not prove whether a longer run would
+finish and yields no key-presence conclusion. The retained report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-loader-export-20261012i/report.json`
+(SHA-256
+`a5a1e40832181924ce2193993b8a765d7535b8ade2c072c55242a5957e870d2b`); its
+26,723,817-byte Ghidra log has SHA-256
+`b4b1d34e11f64c077cf422c4b8e944510679f3f82b3ec675196412209b8c547c`.
+
+A corrected focused probe imported the same DLL with `-noanalysis`, then
+disassembled only 0x800-byte windows around three known addresses. It recovered
+the ordinal-1 stub at `0x180e44650` (`return 1`) and the adjacent block's direct
+call to `0x180add1a0` with arguments `(100, 14, arg1 + 0x10, 55)`. Decompilation
+of that callee failed with `Flow exceeded maximum allowable instructions`; the
+log also reports flow into unmapped memory and unresolved constructors. This is
+useful as a narrow address probe, but it is not complete function analysis,
+whole-file auto-analysis, or REA-backed evidence. The corrected script lived in
+its own directory; the earlier attempt failed because a broad script path made
+Ghidra compile cached duplicate classes, and the script used the wrong reference
+array type. The report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-loader-targeted-20261012k/targeted-report.txt`
+(SHA-256
+`6ffcf5991eb34683b85a700dc6b5df51e2685932f2640e6d08e375efdfb5b255`).
+
+REA's documented provider is a different workflow: it imports into an isolated
+temporary project, passes `-readOnly` and `-deleteProject`, loads its packaged
+Java bridge with `-scriptPath`, and leaves Ghidra's default auto-analysis and
+resource settings enabled. `open_binary` selects the target; the first
+Ghidra-backed query starts import and analysis, and REA only exposes operations
+after full auto-analysis completes. Its documented startup deadline is 330,000
+ms by default and is configurable through `REA_GHIDRA_STARTUP_TIMEOUT_MS` in
+the REA server environment. The current REA session reports no target open.
+For our DLL, running a Ghidra query through REA would therefore require setting
+that server deadline above the observed one-hour analysis, then querying the
+target; opening it alone would not start the work. See [REA's Ghidra
+provider guide](https://github.com/morluto/rea/blob/main/docs/installation.md)
+and [provider evaluation](https://github.com/morluto/rea/blob/main/docs/provider-evaluation.md).
+
+The community check found a directly relevant, but anecdotal, report in a
+2026-10-12 [r/LocalLLaMA discussion](https://www.reddit.com/r/LocalLLaMA/comments/1x212iv/what_does_localllama_think_of_rea/).
+One user says a local REA clone plus Ghidra took about two hours on a 50 MB
+binary, then about 20 minutes after their custom bridge disabled Ghidra's
+`Non-Returning Functions - Discovered` analyzer. Their script comment says this
+analyzer can be slow on partially obfuscated PE files such as Arxan-protected
+WoW clients; the post does not establish that the 50 MB timing used that exact
+WoW binary. The patch is not an upstream REA setting, and the post gives no
+binary hash or reproducible benchmark. It is a useful hypothesis for our
+42,667,728-byte `WowB_loader.dll`:
+an earlier thread snapshot on this exact DLL found `FindNoReturnFunctionsAnalyzer`,
+but the current full-default run is now inside `EntryPointAnalyzer`. An earlier
+run with the return/entry-point analyzers disabled still spent over an hour in
+other analyzers. So the community optimization matches one observed bottleneck,
+but cannot be assumed to finish this target by itself. A separate REA
+[Show and Tell report](https://github.com/morluto/rea/discussions/1406) gives
+much shorter Ghidra cold-starts on other PE/DLL targets, with no sizes that
+would make those timings comparable to this WoW DLL.
+
+This confirms that our long-running direct `analyzeHeadless` job is a manual
+Ghidra investigation, not an REA session. To use stock REA as documented, bind
+this exact binary with `open_binary` and make a Ghidra-backed query; configure
+both REA's startup allowance and the MCP client's request timeout. Stock REA
+waits for default auto-analysis and currently exposes no documented per-analyzer
+selection. To adopt the Reddit optimization, first reproduce it as an isolated
+Ghidra pre-analysis configuration and measure the same hash-pinned DLL; do not
+count it as REA evidence or change project defaults based on the single post.
+
+Ghidra's own guide recommends a layered approach on large binaries: keep core
+reference/data/function analysis for code discovery, disable costly speculative
+or stack work for an initial pass, then run one-shot analyzers such as Stack or
+Decompiler Parameter ID on selected functions. Its headless documentation also
+supports saving an analyzed project and re-processing it with `-noanalysis`
+when iterating on export scripts. Community game-reversing reports likewise
+describe whole-file analysis taking tens of minutes to over a day, and use
+headless processing to avoid GUI overhead. For reproducible iteration here,
+preserve one private analyzed project between export-script revisions; use
+small `-noanalysis` address probes only for local disassembly checks. See the
+[Ghidra large-binary analysis guidance](https://ghidra.re/ghidra_docs/GhidraClass/Beginner/Introduction_to_Ghidra_Student_Guide.html),
+[headless analyzer manual](https://github.com/NationalSecurityAgency/ghidra/blob/master/Ghidra/RuntimeScripts/support/analyzeHeadlessREADME.md),
+[maintainer guidance on reusing an analyzed project](https://github.com/NationalSecurityAgency/ghidra/discussions/5841),
+and a [community game-binary workflow](https://kiwidog.me/2021/07/analysis-of-large-binaries-and-games-in-ghidra-sre/).
+
+Following that guidance, a full default-analysis run was started on the same
+hash-pinned DLL with a private persistent project, an isolated script directory,
+`-max-cpu 2`, and a six-hour per-file limit. It does not pass `-noanalysis`,
+disable analyzers, or delete the project, so it can be resumed for focused
+export-script iterations if it completes. It remains in progress; no function
+or key conclusion is available from this run yet. Its working directory is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/deep-loader-full-default-20261012l/`.
+The initial launch was rejected before import because Ghidra requires the
+project-location directory to exist; that directory was created and the current
+run proceeded through PE import into auto-analysis.
+
+The sole PE export is ordinal
+1 at RVA `0x00e44650`, whose bytes are `b8 01 00 00 00 c3` (`mov eax, 1; ret`);
+this export is a trivial success stub and gives no key-recovery path. The
+bounded report and retained logs are
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/loader-export-analysis-20261012.txt`
+(SHA-256
+`68e6bd75d01af12e12e2c17cb5e8ec37ae60292e9a5c9a9ed42ce76db10f499d`).
+Preserve the bounded negative result and continue looking for a target-build
+key source.
+
 ## Additional executed evidence — 2026-10-12 (Europe/Madrid)
+
+### Unified product: real `ConversationLine` output
+
+The release `forever-extractor` binary hashes to
+`0cc6a7e23ed0f86691e31a4c819c37d615a54eef34d29a0b80a22ce2c7aa3e87`. An
+explicit one-table plan for build 70205/esES completed the selected DB2 producer
+from the shared local client root and wrote the sealed package outside Git at
+`/mnt/nvme2/datos/forever-product-runs/conversationline-20261012/output/`.
+The output contains only `dbc/esES/ConversationLine.db2` (21,190 bytes,
+SHA-256 `5f935e76f62ffa93c9c426efe2ffcb7db019022f1fd7b13fe4640c044973e773`);
+the product command and a separate `verify` both report a complete package with
+the same inventory digest `83d957b352d91583add95e2955b6c0baf677e0b81002fe39444a25401cb973cc`.
+This connects the existing real sparse-table acceptance to the unified product
+CLI and its package writer/verifier. It is one table only; it adds no RustyCore
+typed-loader, other-table, complete-client, or runtime claim. The first attempt
+was rejected before acquisition because the output path was below a Git root;
+the successful attempt used a new private output on the data volume.
+
+### Unified product: real 21-table DB2 catalog batch
+
+The same release binary admitted and extracted the 21 explicit build-70205/esES
+file IDs from `catalog-v3-accept-20261011T004108Z-aa77d0a1.json`, then passed
+the CLI's package verification and a separate `verify` invocation. The private
+package at `/mnt/nvme2/datos/forever-product-runs/catalog21-20261012/output/`
+contains 21 DB2 files / 148,282 bytes; its manifest SHA-256 is
+`a62a0d5c0e23c0d43d6da7e2f2f9190fdbf1f855c0d12a52018280b609698bdb` and its
+inventory digest is
+`f754bbaae3f55fce0c5101a3cd5d639ca4a0be2851401fa042cd30b0328d4b26`. The
+canonical plan digest is
+`5763585779d1198ab89829280ddd16177b0301094b7bbb4fa1156369639a6e3e`; producer
+and logical source digests match the preceding one-table product run. The
+existing independent catalog acceptance compares these same source files with
+Python and reports 5,302 decoded rows; this product step verifies acquisition,
+selection, package writing and intrinsic output verification, not a second
+oracle comparison. Typed loaders, other client tables, geometry, runtime and
+full extraction remain open.
+
+### Unified product: single real 1,024-table DB2 package
+
+A combined canonical plan selected the 1,023 complete tables from the prior
+survey plus the separately accepted sparse `ConversationLine`. Release
+`forever-extractor` admitted the shared build-70205/esES client, completed all
+selected producers, wrote the package and passed an independent `verify` call.
+The package at
+`/mnt/nvme2/datos/forever-product-runs/accepted1024-20261012/output/` contains
+1,024 exact DB2 artifacts / 15,104,473 bytes. Its inventory digest is
+`a62f335db3161538574af053e1a5d65832d07d433ee9642e650ccdf2c189c58e`; manifest
+SHA-256 is
+`cad0d686b7794f60636baf1aa973253fd50f988a3397b36911fd740875543d07` and plan
+SHA-256 is
+`a350c736f649e07210ca7a8e9ef9d72b7a8d6796fcd5a6219e84afa9a4d76b6a`. An
+independent comparison matched all 1,024 package path/size/SHA-256 entries to
+the earlier 1,023-table survey artifacts and the separately verified
+`ConversationLine` package. The previous 21-table product run is included in
+the 1,023 survey tables, not an additional set. This closes one broad real
+DB2 acquisition/producer/package gate; it does not admit the remaining client
+tables, terrain/collision/navigation product inputs, runtime, or distribution.
+`full_extractor_complete` remains false.
+
+### Unified product: real DB2, GT and camera package
+
+The same 1,024-table plan, extended to `components=db2,gt,cameras`, completed
+all selected producers and passed both package-time and separate verification.
+The private output at
+`/mnt/nvme2/datos/forever-product-runs/accepted-db2-gt-cameras-20261012/output/`
+contains 1,024 DB2 files / 15,104,473 bytes, all 20 GT files / 138,537 bytes,
+and ten camera files / 26,296 bytes: 1,054 artifacts / 15,269,306 bytes total.
+All 1,024 DB2 size/hash pairs exactly match the previous per-table accepted
+inputs. Inventory digest:
+`759789932224e2753a8bc99e2a627998d58e1f4f942575b702083239b2169c5d`;
+manifest SHA-256:
+`0b2c71c1d618c8f1bf9a265e5b55b215f700d66fa0e833a5bed8d6b784195d98`; plan
+SHA-256:
+`dc35685ef4495255907795530a63ae21ef4b0c7ced38bdf7a3d7fa39e64d8e81`. The
+existing independent GT and camera comparisons remain the semantic/native
+evidence; this combined run establishes their real production and packaging
+path together with the 1,024 DB2 set. It does not include terrain, collision,
+navigation, runtime or Windows distribution, and `full_extractor_complete`
+remains false.
 
 ### Complete 49-table public spell loader, synthetic inputs
 
@@ -1743,6 +1968,28 @@ The 935-source v5 canonical merge is accepted as source integration only
 `dc55520190ea017eedda82436469cd8199f2079d07a95fb28a4a4d04c63be77f`).
 This adds no v5/v6 bundle, publication or hosted CI result.
 
+The public-source and local-cache check was repeated on 2026-10-12. Upstream
+`wowdev/TACTKeys` master still resolves to commit
+`f800811762b2e9ea638bf6dfdb4707382c497943`; its current `WoW.txt` and the
+`wow.export` mirror are byte-identical (983,950 bytes, SHA-256
+`52bdbe5f369a854a460056628d956708ffcf51cf1e1ef300f1713e25adab1cc2`). Both
+contain one of the eight required names. The TACTKeys project documents client
+TactKey DB2s, DBCache hotfixes and BroadcastText additions as key-delivery
+sources ([upstream README](https://github.com/wowdev/TACTKeys/blob/master/README.md));
+the checked local client cache is still build 70170, not 70205. A bounded
+`DBCache*.bin` search under `/home/joe` and `/home/server` found only that
+installed cache and the existing RustyCore fixture; no separate build-70205
+cache was present. No key values were retained. The private recheck report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/tact-keys-live-recheck-20261012.json`
+(SHA-256
+`f0be85874056b3ccf96d36fc24aec784bb2d91b95b49af779bed3dbd3aeb124a`).
+A later scan of the mounted server root `/mnt/nvme2/home` found one additional
+`.build.info`, for the `wow_classic` 3.4.3.51943 client, and no `DBCache.bin`.
+This legacy client is not a substitute for build 70205; its bounded report is
+`/mnt/nvme2/datos/tools/rea/investigation-wow-20261012/second-root-client-search-20261012.json`
+(SHA-256
+`1488f0e18599842fb71e5ac182f84fcaf63716230f35dde8802648a303c83300`).
+
 ## Private collision inventory source acceptance — 2026-10-12
 
 The optional Linux [typed WDT/cache inventory](forever-collision-inventory-spool.md)
@@ -2191,3 +2438,383 @@ source-time checkpoint flags and records execution in a separate field. Exact
 report hashes and scope are in the companion. This increment does not complete
 the extractor; full encrypted real inputs, product integration and RustyCore
 runtime acceptance remain open.
+
+### Unified product v4: real 1,024-table DB2 batch — 2026-10-12
+
+The release product binary (`82188a3aab67ea095ff44269866cd1cd181c699bd92387ae1105ba8def47dfd0`)
+admitted the build-70205/esES client under the explicit `wowdbdefs-70205-v1`
+schema plan, extracted 1,024 DB2 artifacts / 15,104,473 bytes, and passed a
+separate product `verify`. The package inventory digest is
+`a62f335db3161538574af053e1a5d65832d07d433ee9642e650ccdf2c189c58e`; the
+canonical plan digest is
+`d922ab4fee16dab7602b5164a2f81e8bf614d053b9201c288db62238c67c9cd4`.
+Independent per-file comparison against the earlier accepted 1,024-table
+package found identical names, sizes and SHA-256 values for every artifact.
+The private output is under
+`/mnt/nvme2/datos/forever-product-runs/accepted1024-v4-20261012/output-current/`.
+
+This real batch establishes product plan/catalog binding and current
+single/zero-section decoding on this selected set. The 1,024 inputs contain 542
+zero-section and 482 one-section WDC5 headers; none has multiple sections, so
+no real input exercised v4 regular-section routing. It adds no typed-loader,
+encrypted-input, remaining-table, geometry, runtime, or complete-extraction
+acceptance. `full_extractor_complete` remains false.
+
+### Unified product v4: bounded high-volume catalog tables — 2026-10-12
+
+The release product binary (`3e181ebb83775728f2069ec2371fee4f81c6caaa05b35e6379634166737192da`)
+adds the exact-catalog high-volume profile for `ManifestInterfaceData`,
+`ModelFileData`, and `WMOMinimapTexture`. It caps direct records and parent
+entries at 160,000, copy pairs at 100,000, retained scalar values at 1,250,000,
+each file at 16 MiB, and cumulative decoded UTF-8 at 64 MiB. Parent lookup is
+accepted only for catalog schemas with a declared parent field. The generic
+reader and v1-v3 product behavior retain their prior limits.
+
+A fresh build-70205/esES plan with 1,072 DB2 entries extracted and separately
+verified 1,072 artifacts / 28,513,222 bytes. The plan SHA-256 is
+`2ae33b6f6f5f0e0e20b58c921bce44dec04ae4f35d13e431a0fad83e0bc41c5e`; the
+inventory SHA-256 is
+`4978fa63dc1b86f51997f042dffd2ba78ffe10ccb4123f4a6afd498e20188cd2`. An
+independent per-file comparison found all prior 1,069 names, sizes and SHA-256
+values unchanged. The three added files are 4,625,387-byte
+`ManifestInterfaceData`, 4,844,438-byte `ModelFileData`, and 2,810,192-byte
+`WMOMinimapTexture`; each passed complete decoding under the new profile.
+The private package is under
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-high-volume-1072-20261012/output-1072-r2/`.
+
+This is still bounded DB2 acquisition and intrinsic decoding only. It does not
+establish typed-loader, other high-volume table, full-client, geometry, runtime,
+or full-extractor acceptance; `full_extractor_complete` remains false.
+
+### Unified product v4: sparse text and zero-row column metadata — 2026-10-13
+
+The release product binary
+`f9ebb26f1561f1cf8a4d039028bfa4f4dcb568c71fce3f4718ae58cf2eb01768`
+now admits the bounded single-section sparse profile with inline strings and
+arrays: external catalog IDs, no parent or inline ID, unencrypted records,
+supported numeric scalar/array fields and strict inline UTF-8 strings, under
+the existing 100,000 direct-row/copy/value and 64 MiB text limits. TACT,
+physical catalog data, parents and multi-section sparse files remain excluded.
+
+On the real 70205/esES client, `SceneScriptText` produced one 401,058-byte
+artifact and passed package-time extraction plus an independent `verify`. Its
+plan SHA-256 is
+`51c77026acf0134fcaa9b686fa985d7b5a4d2273910ebbf065858729b46d4a4f`; artifact
+SHA-256 is
+`2f987601bf8967c9c159586130726d90f852f0b6e7e04b873ce5343e0f16fc4c`. The
+package bytes match a separate local acquisition. A structural scan found 147
+rows with two NUL-terminated UTF-8 strings per row. The Python oracle does not
+yet decode this sparse-text shape, so no row equality is claimed.
+
+The zero-row `SpellMissile` input has no sections but includes complete column
+metadata. The reader now validates the full block, exact file end and absence
+of string/common/pallet payload. Its 624-byte real artifact passed extraction
+and separate verification and matches the separately acquired source bytes.
+Plan SHA-256:
+`99b303ed289c5b4a763daf0285f19121929f447ca7cae45761dcfa77f0ccdfa8`; artifact
+SHA-256: `bf4ab8a49d7f7fb8f118b3998f74b9a5cd3788ad120bc0676e5e706e48b4ed10`.
+
+These two real-file product gates do not establish general sparse compatibility,
+Python row equality for `SceneScriptText`, typed-loader/runtime acceptance, or
+full extraction. `full_extractor_complete` remains false.
+
+The same release binary then extracted and separately verified a fresh
+1,074-table plan / 28,914,904 bytes. All 1,072 prior artifact path/size/SHA-256
+entries are unchanged; only `SceneScriptText` and `SpellMissile` were added.
+Plan SHA-256:
+`9f3cdca5c1773c906e16cbbf2f6a4816e386aec9029fa91ba62decb791aef9c1`;
+inventory SHA-256:
+`e63230fc1e784a5d8dacb6f38dd45e2d31d4a0c3e05610b2254df68766f97eb2`.
+Private output:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-high-volume-1074-20261013/output/`.
+
+A fresh independent matrix of 89 per-table plans using the same binary verified
+two tables. The remaining outcomes are 82 `local_store_no_verified_encoding`,
+three `unsupported_record_variant` (`CollectableSourceEncounterSparse`,
+`CollectableSourceQuestSparse`, `CollectableSourceVendorSparse`), one
+`unsupported_table_schema` (`ExteriorComponentGroup`) and one
+`invalid_record_string` (`SpellMissileMotion`). Summary:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-20261013-r3/summary.json`.
+
+A separate matrix supplied only the matching public-key subset from
+`wowdev/TACTKeys` commit `f800811762b2e9ea638bf6dfdb4707382c497943`. It still
+verified only `SceneScriptText` and `SpellMissile`; one additional table,
+`ItemDisplayInfoMaterialRes`, advanced from `local_store_no_verified_encoding`
+to `unsupported_record_variant`. Aggregate results are 81 missing verified
+encodings, four unsupported record variants, one unsupported schema and one
+invalid record string. The public snapshot covers three of the ten required
+frame-key names, and its temporary keyfile was removed. No key bytes are
+retained in the repository. Summary:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-keys-20261013/summary.json`.
+
+## Build 70338 DB2-only product v5 — 2026-10-13
+
+The separately pinned `wowdbdefs-70338-v1` catalog contains 1,161 schema
+definitions from WoWDBDefs commit `d6f50d4f351193e84226aa62a36faa0f58528afa`.
+Its metadata shapes match the separate build-70205 catalog; build 70338 and its
+provenance remain separately identified. The v5 product contract is limited to
+DB2, so it does not inherit build-70205 acceptance for GT, cameras, terrain,
+collision or navigation.
+
+On the installed 70338/esES client, the v5 plan extracted `TactKey` and
+`TactKeyLookup` (two files / 4,292 bytes); a separate product verification
+accepted the package. The DB2 oracle found 69 direct key rows and 197 lookup
+rows. The 69 joined name/value pairs matched the public TACTKeys snapshot after
+little-endian interpretation. That snapshot adds 47 keys for lookup names
+without direct client key rows, for 116 available names total. Key material is
+outside the repository and omitted from retained reports. The package digests
+and precise file hashes are recorded in `docs/forever-product.md`.
+
+Two encrypted `Map` probes, with the 69 client keys and then the 116-name
+enriched set, both reject as `local_store_no_verified_encoding` for file data ID
+1349477; no partial package is accepted. The enriched-key diagnostic counts zero
+missing/incomplete files, one encrypted encoding candidate, and zero corrupt or
+unsupported candidates. The user's latest Battle.net Play click did not result
+in a running `WowB.exe` process at this checkpoint, so this evidence comes from
+installed client files and local extraction, not a live game session. The
+extractor remains incomplete.
+
+Scoped Rust validation passes `forever-casc` (1,219 passed, 5 ignored),
+`forever-db2` (337 passed, 1 ignored), and `forever-extractor` (140 passed).
+Python product-contract and DB2-oracle validation passes 190 tests with one
+skip; the 70338 and 70205 metadata generators both report exact 1,161-table
+catalog checks. These checks do not establish full-client extraction, other
+components on build 70338, typed RustyCore loader acceptance, or runtime support.
+
+A fresh local survey opened all 1,161 build-70338 catalog entries: 1,078 files
+were acquired completely (29,213,383 bytes), and strict row decoding produced
+1,074 tables / 1,160,115 logical rows. Raw-only catalog validation additionally
+accepted `SpellMissileMotion` and the exact three-table sparse-parent allowlist,
+so all 1,078 acquired artifacts pass product DB2 validation. The regular string
+check repeats framing, pointer, NUL-terminator and cumulative source-byte checks
+without converting strings to UTF-8 or returning rows. Strict decoding still
+rejects `SpellMissileMotion` because one payload byte (`0x97`) is outside UTF-8.
+The sparse path checks bounded record framing and parent-block byte length but
+projects no rows or parent associations; the pinned C++ sparse materializer
+still rejects those tables. Eighty-three files remain encrypted candidates.
+
+A one-table v5 package containing real `SpellMissileMotion` passed extraction
+and separate verification (one file / 17,236 bytes). Its packaged DB2 is byte
+identical to the acquired input (SHA-256
+`97bd53f4fd4ecd33c2f0169e7026501e70cce07ba7e444efa0a782af11b9ff1e`). Plan
+SHA-256: `97ff5a9acd59650e9a562ff441ed6394b03a423339769350c5f6f5190750f6ea`;
+inventory SHA-256: `ed10d1d0c755bd3f6f54ace1e4ad5cb18b27b3fa944823509e62961e4e4866a`.
+Private plan, output and verification report:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-spellmissile-opaque-text-20261013/`.
+This does not establish typed UTF-8 projection, complete 70338 DB2 extraction,
+other components or runtime acceptance.
+
+The survey also identified the zero-row `ExteriorComponentGroup` header shape:
+the appended parent is counted in both header field counts. The bounded reader
+now admits this exact shape only for a zero-section, zero-record catalog input.
+The real 216-byte file passed a one-table v5 extraction and separate product
+verification. Retained plan and inventory digests and package are under
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-exterior-empty-parent-20261013/`.
+This does not establish nonempty appended-parent decoding, native loader
+acceptance, complete 70338 DB2 extraction, or overall extractor completion.
+
+A three-table v5 plan for the parent-bearing sparse inputs passed extraction and
+separate verification: 193,096 bytes across the two empty files and the 3,560-row
+vendor file. All package bytes match the separately acquired source files.
+Plan SHA-256: `f9a5fd4e6ad2e0b8bdfd8458110d245131e4783a5bedbf2db84377f1f84546b4`;
+inventory SHA-256: `b57435c960173ac5dce6c7734aa0860bd9f8aae7b7dde5b48ab7c3724fe8b61b`.
+The raw profile does not expose record values or parent associations, and does
+not claim native sparse-loader acceptance. Private run:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-sparse-parent-raw-20261013/`.
+
+A follow-up key-coverage probe used all 19,679 entries from the current public
+[`wowdev/TACTKeys` snapshot](https://github.com/wowdev/TACTKeys/tree/f800811762b2e9ea638bf6dfdb4707382c497943),
+partitioned into five independent batches of at most 4,096 entries to respect
+the supplied-key limit. Each batch reproduced 1,078 acquired and product-
+validatable files, with 83 encrypted candidates; no individual batch unlocked
+another table. The batches were not combined, so this does not prove that every
+encrypted frame key is absent from the aggregate set or identify missing key
+names. No key bytes are retained. Private report:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-public-keys-20261013/batch-report.json`.
+
+Across two passive observation windows and a subsequent five-minute window
+(375 seconds total) with the game process active in-world, `DBCache.bin` and
+`Hotfix.log` did not change. The cache remained 2,935,182 bytes with its
+2026-10-02 modification time; a printable-text scan of the log found 69
+`TactKey` lines and no `BroadcastText` lines. This does not rule out delivery
+or storage through another channel. No log lines or key material were
+retained. Private aggregates:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-public-keys-20261013/live-client-observation.json`
+and
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-public-keys-20261013/live-watch.jsonl`.
+
+Review of the public `wow.tools.local` implementation confirmed another key
+source worth checking: it reads `TactKey` and `TactKeyLookup`, then scans
+`BroadcastText` hotfix payloads in `DBCache.bin` for an embedded key lookup and
+key. The current client cache is unchanged from the already-audited cache, and
+the live log has no `BroadcastText` lines, so this method has produced no new
+local key evidence. `cascette-rs` supplies general NGDP/CASC parsers and a TACT
+text-key loader, but no DBCache hotfix-key extraction path; its local
+installation reader also decodes BLTE without passing a key store. These are
+reference implementations only; the extractor's bounded local-store and
+keyring paths remain the product path.
+
+### TrinityCore `forever` source review (2026-10-13)
+
+Reviewed `advocaite/TrinityCore` branch `forever` at
+`8c5325b37dfa155450a9e87f213965f6e6c00afe`. Its map extractor defaults to
+`wow_classic_beta` (commented as the Classic 1.60 Forever client) and selects
+DB2, map, camera, and game-table stages. The shell script runs map extraction,
+then VMap and MMap tools, and copies stage directories into server data.
+
+The server's `DBFilesClientList.h` is a fixed list of 1,133 DB2 names and
+FileDataIDs. An offline comparison against our pinned 70338 catalog found all
+1,133 names and exact FileDataIDs; the catalog has 28 additional tables. This
+cross-check validates the shared IDs, not output completeness or runtime
+acceptance.
+
+The 83 encrypted candidates from the local v5 survey all fall within that fixed
+1,133-table server list. Restricting extraction to TrinityCore's current DB2
+scope therefore does not remove the key-availability blocker.
+
+For TACT keys, Trinity downloads the complete current `wowdev/TACTKeys`
+`WoW.txt` once when opening CASC and imports it into CascLib. Its DB2 file
+source opens files with `CASC_OVERCOME_ENCRYPTED`; the section handler processes
+sections only when CascLib has the section's key. The DB2 extractor reads the
+headers, copies the remaining source bytes, and replaces a section TactId with
+a dummy known-key marker when that key is present. It skips DB2 paths that
+already exist. This avoids our supplied-key parser's 4,096-entry ceiling by
+loading a larger external set, but it relies on a mutable online key list and
+CascLib's encrypted-part behavior. We should not replace the offline, explicit
+Rust keyring contract with that acquisition path.
+
+The source confirms that `CASC_OVERCOME_ENCRYPTED` fills blocks whose key is
+missing with zeros and reports success
+([CascLib.h](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/dep/CascLib/src/CascLib.h),
+[DB2CascFileSource.cpp](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/src/tools/extractor_common/DB2CascFileSource.cpp)).
+The DB2 path also skips sections without keys and keeps existing output files
+([System.cpp](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/src/tools/map_extractor/System.cpp)).
+It is a useful version-specific compatibility reference, but its successful
+file count is not evidence that every encrypted section was recovered or that
+the resulting inventory is complete.
+
+The five independent batches did not settle the 83 encrypted candidates, so a
+temporary diagnostic outside the checkout loaded all 19,679 keys together
+without changing the product parser or its 4,096-entry cap. It reread the
+entire 1,161-file catalog with no keys and reproduced the baseline of 1,078
+complete files / 83 encrypted candidates; with the combined public set it
+recovered 0 of those 83. The decoder observed six distinct missing TACT key
+names across the 83 files, and none appears in that full public key set. Their
+FileDataID association is retained only in the mode-0600 private file
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-public-keys-20261013/missing-tact-ids-private.tsv`;
+the path-free aggregate is
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-public-keys-20261013/missing-tact-summary.json`.
+The minimal diagnostic patch is retained beside it. The current public `master`
+still resolves to snapshot `f800811762b2e9ea638bf6dfdb4707382c497943`.
+
+The current esES `DBCache.bin` was 2,935,182 bytes with the previously observed
+2026-10-02 modification time. A raw-byte scan found none of the six missing
+names in either byte order or as printable hex; `Hotfix.log` has 69 `TactKey`
+mentions and no `BroadcastText` mention. This scan is not a structured
+DBCache/hotfix parser and cannot rule out an encoded delivery path. No public
+key bytes or client DB2 payloads are retained in the diagnostic report. The
+83 files therefore remain unavailable under the currently observed public and
+local key sources. Trinity's fixed server list is a useful focused output
+scope, while our full 1,161-table catalog remains the broader extraction
+target; neither fact establishes complete extraction or runtime acceptance.
+
+### Structured DBCache v9 follow-up — 2026-10-13
+
+Parsed all nine `DBCache.bin*` files under the installed client. The two recent
+temporary snapshots are valid v9 streams for build 70338 and reach exact EOF.
+The record framing agrees with `wow.tools.local`'s pinned parser
+([`DBCacheParser.cs`](https://github.com/Marlamin/wow.tools.local/blob/cf33a49330fea535b243da13914f6d9413a6dab3/Utils/DBCacheParser.cs));
+the v9 operation byte is valid only when it equals 1 in pinned DBCD
+([`HTFXStructs.cs`](https://github.com/wowdev/DBCD/blob/e732093f8864240fc5884bd1bba6b02f3dfc0d56/DBCD.IO/Common/HTFXStructs.cs)).
+
+Each build-70338 snapshot contains three active `TactKey` records with 16-byte
+payloads and no `TactKeyLookup` or `BroadcastText` records. Their three valid
+rows use `pushID=-1` and agree across snapshots. Pinned DBCD sorts hotfixes by
+push ID and suppresses TactKey deletes when a valid `pushID=-1` record with
+data is present ([`HotfixReader.cs`](https://github.com/wowdev/DBCD/blob/e732093f8864240fc5884bd1bba6b02f3dfc0d56/DBCD.IO/HotfixReader.cs));
+thus the zero-sized invalidations in these streams do not erase those three
+keys under DBCD's overlay rules.
+
+Joined against the extracted 70338 tables (69 direct `TactKey` rows and 197
+lookups), none of the three hotfix rows maps to the six missing TACT key names.
+All six names exist in `TactKeyLookup`, but none has a base direct key row. The
+snapshots therefore provide no key for any of the 83 encrypted files. The only
+build-70338 cache files on disk are these `.tmp` snapshots; `wow.tools.local`'s
+normal cache loader enumerates files named exactly `DBCache.bin`, so it would
+not ingest these temporary files through that path. This does not exclude
+another locale, a later final cache, or another delivery channel. No payload or
+key material was retained, and this diagnostic did not change the Rust keyring
+or product contract.
+
+### Multi-section DB2 follow-up — 2026-10-13
+
+The product v4/v5 driver now sends target-catalog DB2 inputs whose WDC5 header
+declares more than one section through the bounded metadata-catalog reader. The
+numeric regular-section profile has prior synthetic parity against the pinned
+C++ loader; the later text and metadata-catalog extensions do not yet have
+native parity or real-file acceptance.
+
+A read-only header census found no retained file with more than one section:
+10,031 DB2 paths under `forever-product-runs` had zero or one section, as did
+45 paths under `forever-db2-remaining-20261012` and seven files in the REA raw
+variant probe. These are artifact paths, not unique table counts or proof of
+build provenance. The five independently manifested build-70338 DB2 artifacts
+also have zero or one section. The earlier 1,078-file build-70338 survey did
+not retain per-table section counts, so this does not establish that the client
+has no eligible multi-section file.
+
+The current worktree's source review also found that the text profile checked
+string-column compression only while decoding rows, allowing an empty table to
+skip that constraint. The check has been moved to schema/column admission so it
+applies even when there are no rows. The corrected source now passes all 346
+`forever-db2` all-target tests (one existing ignored case), all 41 focused
+regular-section tests in release, sixteen scoped static checks and all-target
+DB2 Clippy with warnings denied. Six new authored cases cover empty compressed
+text, numeric/text catalog resolution and identity/admission gates. These are
+synthetic Rust results, without new native or real-file parity. A real gate
+still requires a provenance-bound build-70338 input with 2–16 regular,
+unencrypted sections, external IDs and no parent, followed by v5 extraction,
+independent verification, source/package byte comparison, and row/copy
+comparison against a pinned oracle.
+
+A fresh build-70338/esES header census subsequently requested all 1,161 catalog
+FDIDs through one `LocalStore`, with zero supplied keys and complete strict
+reads. It acquired 1,078 files / 29,213,383 bytes: 550 declare zero sections and
+528 declare one; none declares multiple sections. All acquired table/layout
+hashes match the pinned catalog. The remaining 83 reads fail with
+`local_store_no_verified_encoding` and retain unknown DB2 headers. Thus no
+current complete input supplies the real multisection gate; this is not proof
+of absence across the unavailable part of the catalog or decoder acceptance.
+The helper performed no row decoding or product extraction/verification, kept
+no payloads or keys, and its runtime network trace is empty. Source verification
+passed and `.build.info` is identical before/after. The first compiler attempt
+failed when syscall injection denied local compiler IPC; the successful second
+attempt allowed only the recorded local IPC and did not access the internet.
+
+Retained metadata report:
+`/mnt/nvme2/datos/forever-product-runs/header-census-70338-20261013T014734Z/report.json`,
+SHA-256 `d599959bd3c3229c55cb47f32bf055e1a64d96b3262515bd30d0a029a354d241`.
+Per-table metadata SHA-256:
+`d7827559c06a575071aaf78b45bafc7d4ef3fe63f683e3ac9dbc77873bda7835`.
+
+### Packaged v5 real selection — 2026-10-13
+
+The reproducible Linux v10 binary now executes a new explicit 1,078-table
+build-70338/esES v5 plan, with decryption disabled and the separately pinned
+catalog. Plan inspection, extraction and separate verification all pass. The
+output namespace, every length and every SHA-256 match the fresh complete-read
+census: 1,078 artifacts / 29,213,383 bytes. The largest file is 4,844,598 bytes;
+no product limit is raised. All three process traces are empty under network
+syscall denial, and binary/catalog/build-info identities are unchanged.
+
+The package binds producer SHA-256
+`ae9f4a984246e935dc983e050c9a6eb5326f4fe571b9e165986c004a54ce4ee5`, plan
+SHA-256 `cf99cea2633a549aeee4ca9359b424562d9be49c3ec135e31d36c39659de419a`
+and manifest SHA-256
+`0c8c4568bc277a1c641c84ce8d314b0602b0ba7674c6e2311345a507dc292b66`.
+Report and independent review hashes are recorded in
+[the distribution evidence](forever-distribution.md#packaged-real-v5-selection--2026-10-13).
+The authored selection excludes the 83 known acquisition failures explicitly;
+no original plan or failed batch is upgraded. This is complete acceptance of
+that selection, with intrinsic DB2 validation and exact source bytes. It adds
+no row-oracle, real multisection, full-catalog, geometry or runtime acceptance.

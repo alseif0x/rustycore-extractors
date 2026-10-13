@@ -67,6 +67,7 @@ fn entry(name: &str) -> Entry {
 fn db2_plan() -> Plan {
     Plan {
         build: 70205,
+        schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
         decryption: crate::plan::Decryption::Disabled,
         collision_storage: crate::plan::CollisionStorage::Resident,
         locale: Locale::EnUs,

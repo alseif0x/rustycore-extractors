@@ -31,6 +31,26 @@ and a v2 output verifier. Empty tables and supported unencrypted single-section
 records have separate synthetic/local evidence in `docs/forever-rust-foundation.md`.
 This is not full extraction: neither the full Rust-native replacement nor full
 build-70170/70205 extraction compatibility is established.
+The 2026-10-13 product v5 separately pins build 70338 to the 1,161-schema
+`wowdbdefs-70338-v1` catalog from WoWDBDefs commit
+`d6f50d4f351193e84226aa62a36faa0f58528afa`. V5 admits DB2 only and does not
+transfer older-build acceptance for other components. Local esES evidence
+extracts/verifies `TactKey` and `TactKeyLookup` (69 direct keys, 197 lookups);
+the client-derived/public supplemental key set has 116 names. `Map` remains
+`local_store_no_verified_encoding` with that set (one encrypted candidate for
+file data ID 1349477 remains unverified). See `docs/forever-product.md`
+and `docs/forever-completion.md`; full build-70338 extraction is not established.
+The all-table 70338/esES survey acquired 1,078 of 1,161 files (29,213,383
+bytes); strict row decoding yields 1,074 tables / 1,160,115 rows, and the
+raw-text validator plus the exact three-table sparse-parent validator bring
+product DB2 validation to all 1,078 acquired files. `SpellMissileMotion` and
+the sparse-parent tables passed real v5 extraction, separate verification and
+exact source-byte comparisons; strict row decoding still rejects the former,
+and neither the sparse records nor parent associations are projected. The
+zero-row appended-parent case also accepts `ExteriorComponentGroup` (216 bytes)
+through separate v5 extraction and verification. Eighty-three files remain
+encrypted candidates, so the full catalog plan remains incomplete. The latest
+Battle.net Play click did not produce a `WowB.exe` process at the check.
 The 2026-10-11 build-70205/esES acceptance validated 54 available tables against
 the Python oracle/output verifier (141,594 decoded rows), four tables through
 RustyCore's typed names loader, seven through its typed appearance loader, and
@@ -731,6 +751,29 @@ still rejects with no payloads. No new native/runtime consumer execution,
 publication, Windows distribution or full extraction is claimed. See
 `docs/forever-product.md` and retained `product-20261011T142606Z` base/supplement
 reports. Other component gates remain open.
+
+V1-v3 retain the `pinned-metadata-v1` DB2 schema identity. Product v4 binds
+build-70205 plans to the exact `wowdbdefs-70205-v1` catalog and includes that
+choice in the canonical plan fingerprint. A real 1,024-table v4 DB2 product
+run acquired and separately verified 15,104,473 bytes; all per-file names,
+sizes and SHA-256 values match the previous legacy-profile package. Its files
+have 542 zero-section and 482 one-section headers, with no multi-section input,
+so this does not establish real product routing through the new regular-section
+path. The package remains a DB2 acquisition/verification result, not full-client
+extraction, typed-loader or runtime acceptance. See the v4 contract and the
+private `output-current` package under `accepted1024-v4-20261012`.
+
+The v4 reader also has a separate exact-catalog profile for the three locally
+available high-volume tables `ManifestInterfaceData`, `ModelFileData`, and
+`WMOMinimapTexture`. Its limits are 160,000 direct records, 100,000 copies,
+160,000 schema-declared parent entries, 1,250,000 retained scalar values,
+16 MiB per file, and 64 MiB cumulative decoded text; generic reader and v1-v3
+limits remain unchanged. A fresh 1,072-table build-70205/esES product batch
+passed separate verification at 28,513,222 bytes; all 1,069 prior artifact
+hashes match and the only additions are those three tables. Its plan and
+inventory hashes and private output path are recorded in
+`docs/forever-completion.md`. This remains DB2 product acceptance, not typed
+loader, full-client, geometry, runtime, or full-extractor acceptance.
 
 Do not trust an extractor because it builds or finishes. TrinityCoreLegacy output plus
 RustyCore reader/runtime acceptance is the compatibility authority.
@@ -1753,3 +1796,64 @@ same three files from the client; v4 verification accepts all three, and raw
 bytes match the earlier accepted live package. Reports and dumps remain in a
 private external run. This does not accept other catalog tables, encrypted
 inputs, RustyCore typed loaders, or runtime behavior.
+
+## Forever DB2 sparse-text and empty-column product acceptance — 2026-10-13
+
+The bounded sparse reader now admits external-ID, parent-free schemas with
+numeric scalar/array and inline strict-UTF-8 string/string-array fields. It
+remains limited to zero or one unencrypted section, 100,000 direct rows/copies/
+retained values and 64 MiB cumulative decoded UTF-8; TACT, physical catalog,
+parent, inline-ID and multi-section sparse layouts remain excluded. Real
+`SceneScriptText` (147 rows, two NUL-terminated UTF-8 strings each) passes v4
+product extraction and separate verification, without Python row equality or
+RustyCore typed-loader acceptance.
+
+The sectionless, zero-row `SpellMissile` input includes a full per-field column
+metadata block. The zero-section reader validates that block and exact EOF when
+string/common/pallet payloads are absent. The file passes v4 extraction and
+separate verification. A fresh 1,074-table build-70205/esES plan adds both
+`SceneScriptText` and `SpellMissile` to the previous 1,072 artifacts and keeps
+all previous paths/sizes/hashes unchanged; see `docs/forever-completion.md` and
+`docs/forever-product.md` for digests and retained paths.
+
+A fresh 89-plan independent product matrix with release binary SHA-256
+`f9ebb26f1561f1cf8a4d039028bfa4f4dcb568c71fce3f4718ae58cf2eb01768` verifies
+two tables. The other results are 82 `local_store_no_verified_encoding`, three
+unsupported sparse parent schemas, one inline-index/parent schema mismatch and
+one invalid UTF-8 record string. The report is outside Git at
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-20261013-r3/summary.json`.
+An additional matrix supplied the three matching public keys available in
+`wowdev/TACTKeys` at `f800811762b2e9ea638bf6dfdb4707382c497943`. It still
+verified only the same two tables; `ItemDisplayInfoMaterialRes` moved from
+`local_store_no_verified_encoding` to `unsupported_record_variant`. Aggregate
+results are 81 missing verified encodings, four unsupported record variants,
+one unsupported schema and one invalid record string. The public source covers
+three of ten required frame-key names; the temporary keyfile was removed. Its
+summary is outside Git at
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-keys-20261013/summary.json`.
+The extractor is incomplete; encrypted real inputs, other DB2 variants, full
+geometry and typed RustyCore/runtime acceptance remain gates.
+
+The 2026-10-13 regular-section follow-up checks string compression before row
+iteration, including zero-row text sections. It passes 346 DB2 all-target tests
+(one ignored), 41 focused release cases and scoped Clippy. A fresh metadata-only
+70338/esES census requests all 1,161 catalog FDIDs and acquires 1,078 complete
+files: 550 with zero sections, 528 with one and none with multiple sections.
+The 83 unacquired headers remain unknown. This does not accept real multisection
+decoding; its provenance-bound report is retained in docs/forever-completion.md.
+
+The Linux v10 corresponding-source candidate now ships both target catalogs,
+their generator and attribution, and product v4/v5 source/tests. Two offline
+archives and a moved-source rebuild reproduce one binary; 64 packaged synthetic
+test methods pass across v1-v5. The frozen source passes 2,691 workspace tests
+(26 ignored), all-target Clippy, formatting, 248 contracts and 118 distribution
+checks. See docs/forever-distribution.md for exact source/artifact hashes and
+qualified traces. Historical archive/acceptance identities are retained; this
+local candidate does not establish full real extraction or runtime acceptance.
+
+The immutable v10 Linux binary additionally extracts and independently verifies
+a new explicit 70338/esES v5 selection of 1,078 complete DB2s / 29,213,383 bytes,
+with exact per-file census hashes and three empty network traces. Decryption
+is disabled and limits are unchanged. The 83 failed acquisitions remain outside
+that separate selection; no new row/native, multisection, geometry or runtime
+acceptance follows. See the packaged real evidence in docs/forever-distribution.md.

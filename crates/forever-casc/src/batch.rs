@@ -315,6 +315,11 @@ pub fn extract_with_acquisition(
     {
         return Err("unsupported_client");
     }
+    if plan.schema_catalog == Some(forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID)
+        && build != 70338
+    {
+        return Err("unsupported_client");
+    }
     let max_file_bytes = acquisition.map_or(MAX_FILE_BYTES, |profile| profile.max_file_bytes());
     if max_file_bytes == 0 || max_file_bytes > MAX_FILE_BYTES {
         return Err("read_policy_limit");

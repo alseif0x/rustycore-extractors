@@ -32,10 +32,10 @@
 //! Opening a store and the existing acquisition profile do not enable names.
 
 mod build_info;
+pub mod framing;
 mod io;
 mod owned;
 pub mod routes;
-pub mod framing;
 
 use crate::{Locale, build_config, encoding, local_index, root};
 use owned::{Central, OwnedRoot};

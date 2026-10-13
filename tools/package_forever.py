@@ -24,7 +24,8 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-product-collision-disk-source-v9"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-catalog-source-v10"
+CONTRACT_MARKDOWN = "contracts/WOWDBDEFS-LICENSE.md"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
     "adler2-2.0.1": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
@@ -94,7 +95,39 @@ PRODUCT_COLLISION_DISK_SOURCE = (
     'tests/contracts/test_forever_product_disk_contract.py',
     'docs/forever-product-disk.md',
 )
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE
+PRODUCT_DB2_CATALOG_SOURCE = (
+    "tools/generate_wowdbdefs_catalog.py",
+    CONTRACT_MARKDOWN,
+    "contracts/forever-product-contract-v4.json",
+    "contracts/forever-product-contract-v5.json",
+    "contracts/wowdbdefs-70205-v1.json",
+    "contracts/wowdbdefs-70338-v1.json",
+    "crates/forever-db2/src/records.rs",
+    "crates/forever-db2/src/records/catalog.rs",
+    "crates/forever-db2/src/records/catalog_tests.rs",
+    "crates/forever-db2/src/records/wowdbdefs_70205_generated.rs",
+    "crates/forever-db2/src/records/wowdbdefs_70338_generated.rs",
+    "crates/forever-db2/src/records/schema.rs",
+    "crates/forever-db2/src/records/regular_sections.rs",
+    "crates/forever-db2/src/records/regular_sections/tests.rs",
+    "crates/forever-db2/src/records/sparse.rs",
+    "crates/forever-db2/src/records/sparse/tests.rs",
+    "crates/forever-extractor/src/driver.rs",
+    "crates/forever-extractor/src/main.rs",
+    "crates/forever-extractor/src/plan.rs",
+    "crates/forever-extractor/src/plan/tests.rs",
+    "crates/forever-extractor/src/verify.rs",
+    "crates/forever-extractor/src/verify/tests.rs",
+    "tests/contracts/test_forever_product_contract.py",
+    "tests/forever/db2_oracle.py",
+    "tests/forever/test_db2_oracle.py",
+    "tests/forever/product_catalog_fixture.py",
+    "tests/forever/test_product_catalog_cli.py",
+    "docs/forever-db2-regular-sections.md",
+    "docs/forever-product.md",
+    "docs/forever-completion.md",
+)
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024
@@ -179,8 +212,9 @@ def selected_paths(source):
             result.add(relative)
     for directory, suffixes in (("contracts", {".json"}), ("schemas", {".json"}), ("tests/forever", TEST_SUFFIXES), ("tests/contracts", TEST_SUFFIXES), ("LICENSES", {".txt"}), ("docs/licensing", {".md"})):
         for p in tree_files(source / directory):
-            require(p.suffix in suffixes, "source_extension")
-            result.add(p.relative_to(source).as_posix())
+            relative = p.relative_to(source).as_posix()
+            require(p.suffix in suffixes or (directory == "contracts" and relative == CONTRACT_MARKDOWN), "source_extension")
+            result.add(relative)
     return sorted(result)
 
 

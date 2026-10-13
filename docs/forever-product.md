@@ -1,11 +1,15 @@
-# Forever product interface v1 / v2
+# Forever product interface v1–v5
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
 sequential navigation producers. The [v1 contract](../contracts/forever-product-contract-v1.json)
 uses an explicit canonical TSV plan and the existing [common package](forever-package.md)
 final manifest v1 / internal recovery state v2. Linux x86_64 has local evidence;
-Windows distribution and full real extraction remain open.
+Windows distribution and full real extraction remain open. V1–v3 plans use the
+legacy pinned DB2 catalog. V4 binds build 70205 plans to the separately pinned
+`wowdbdefs-70205-v1` catalog; it does not rewrite older package or plan identities.
+V5 binds build 70338 plans to `wowdbdefs-70338-v1` and admits DB2 only; it does
+not extend the older component profiles to this build.
 The separate [v2 contract](../contracts/forever-product-contract-v2.json) admits
 explicitly supplied Salsa20 keys under the bounded profile described below.
 
@@ -47,8 +51,8 @@ db2	CinematicCamera	1294214
 The grammar requires all fixed lines in that order and alphabetically ordered
 DB2 entries. Unknown keys, duplicate components/entries, case aliases, leading
 zero decimal aliases, missing final LF and physical layout inference reject.
-Plans are at most 128 KiB / 1,126 DB2 entries. Only catalog-backed complete record
-decoding is admitted; this product CLI does not issue metadata-only DB2 success.
+V1–v3 plans are at most 128 KiB / 1,126 DB2 entries. Only catalog-backed complete
+record decoding is admitted; this product CLI does not issue metadata-only DB2 success.
 Existing component CLIs, schemas and acquisition defaults remain separate.
 
 ## Select components and dependencies
@@ -270,6 +274,99 @@ No dependency, existing acquisition profile or underlying decryption primitive
 changed in this CLI increment. Full real extraction and distribution remain
 open.
 
+## Target DB2 metadata catalog: product v4
+
+Product v4 is a separate plan identity for build 70205. It requires the line
+`schema-catalog<TAB>wowdbdefs-70205-v1` immediately after `root`, then an explicit
+`decryption<TAB>disabled` or `decryption<TAB>provided-salsa20-v1` line. It admits
+up to 1,161 sorted DB2 entries and resolves each name and file ID against that
+catalog. If leased disk collision storage is selected, its storage and seven
+budgets follow the decryption line. Build 70170 and the legacy catalog remain on
+the earlier plan profiles.
+
+The [v4 contract](../contracts/forever-product-contract-v4.json) records the
+target schema source and decoder boundary. One-section files use the existing
+bounded complete decoder except for three explicitly allowlisted, high-volume
+tables: `ManifestInterfaceData`, `ModelFileData`, and `WMOMinimapTexture`. Those
+tables use a separate reader profile capped at 160,000 direct records, 100,000
+copy pairs, 160,000 parent entries, 1,250,000 retained scalar values, 16 MiB
+per file and 64 MiB of cumulative decoded UTF-8 text. Parent lookup is accepted
+only when the table schema declares a parent field. This selection is exact-
+catalog/name bound and does not change the generic reader or v1-v3 products.
+The v4 path also routes multi-section files to the separate regular-section
+reader, which admits at most 16 unencrypted regular sections for catalog shapes
+it supports. That route still excludes parent lookup, TACT/catalog data,
+unsupported field-compression shapes, and inline IDs. The single-section reader
+also admits the bounded sparse subset described in the completion record,
+including inline UTF-8 strings for external-ID, parent-free schemas. Failed or
+unsupported files reject the producer and are not emitted as a successful DB2
+batch.
+Verification uses the same plan-bound catalog and reader selection. It does not establish all table
+variants, typed RustyCore loader behavior, or full-client extraction.
+
+The schema catalog line participates in the canonical plan hash, so a package
+created under v1–v3 cannot be relabeled as v4. Existing accepted artifacts keep
+their prior identities and claims. Full encrypted-data, geometry, runtime and
+distribution acceptance remain separate gates.
+
+### Unified product v4: bounded sparse text and empty column metadata — 2026-10-13
+
+The release product binary
+`f9ebb26f1561f1cf8a4d039028bfa4f4dcb568c71fce3f4718ae58cf2eb01768`
+accepted two more real build-70205/esES DB2 variants. Its bounded sparse reader
+supports external catalog IDs, no parent or inline ID, one unencrypted section,
+numeric scalar/array values and inline UTF-8 string/string-array values, under
+the existing 100,000-row/copy/value and 64 MiB decoded-text limits. It rejects
+TACT, physical catalog, parent and multi-section sparse forms.
+
+`SceneScriptText` produced one exact 401,058-byte file; its plan digest is
+`51c77026acf0134fcaa9b686fa985d7b5a4d2273910ebbf065858729b46d4a4f` and the
+artifact SHA-256 is
+`2f987601bf8967c9c159586130726d90f852f0b6e7e04b873ce5343e0f16fc4c`. The
+package-time producer and a separate `verify` both passed. The source DB2 is
+byte-identical to the independent local acquisition. A structural scan found
+147 rows, each with two NUL-terminated UTF-8 strings. No Python row-oracle
+equality or RustyCore typed-loader/runtime acceptance is claimed.
+
+The same binary admitted zero-row `SpellMissile`, whose sectionless WDC5 carries
+complete per-field column metadata. The reader validates that metadata block
+and exact EOF while requiring no string/common/pallet payload. Its one-file,
+624-byte package passed extraction and separate verification; the packaged file
+is byte-identical to the independent local acquisition. Plan digest:
+`99b303ed289c5b4a763daf0285f19121929f447ca7cae45761dcfa77f0ccdfa8`; artifact
+SHA-256: `bf4ab8a49d7f7fb8f118b3998f74b9a5cd3788ad120bc0676e5e706e48b4ed10`.
+
+These are bounded product/DB2-reader acceptances for two inputs. They do not
+change the other sparse rejections or establish all-catalog coverage, typed
+loaders, runtime behavior, complete client extraction, or
+`full_extractor_complete`.
+
+A fresh 1,074-table product plan then admitted both files in the same batch,
+passed extraction and separate verification, and retained all 1,072 prior
+artifact path/size/hash entries unchanged. The plan SHA-256 is
+`9f3cdca5c1773c906e16cbbf2f6a4816e386aec9029fa91ba62decb791aef9c1`; its
+inventory SHA-256 is
+`e63230fc1e784a5d8dacb6f38dd45e2d31d4a0c3e05610b2254df68766f97eb2`. The
+private package is under
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-high-volume-1074-20261013/output/`.
+
+The fresh independent 89-plan matrix with this binary verifies the same two
+tables and records 82 `local_store_no_verified_encoding`, three
+`unsupported_record_variant` (the three CollectableSource sparse tables), one
+`unsupported_table_schema` (`ExteriorComponentGroup`) and one
+`invalid_record_string` (`SpellMissileMotion`). Retained summary:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-20261013-r3/summary.json`.
+
+A follow-up matrix supplied the three matching public keys available in
+`wowdev/TACTKeys` commit `f800811762b2e9ea638bf6dfdb4707382c497943`. It still
+verified only the same two tables. `ItemDisplayInfoMaterialRes` advanced from
+`local_store_no_verified_encoding` to `unsupported_record_variant`; aggregate
+results are 81 missing verified encodings, four unsupported variants, one
+unsupported schema and one invalid record string. The public snapshot covered
+three of ten required frame-key names. Its temporary keyfile was removed, and
+no key bytes are retained in the repository. Summary:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v4-remaining-89-keys-20261013/summary.json`.
+
 
 ## Explicit product collision disk source profile v9 (2026-10-12)
 
@@ -301,3 +398,105 @@ real-client/native acceptance, Windows product or RustyCore runtime acceptance
 is claimed. Complete encrypted inputs, real geometry, runtime/server integration
 and reproducible distribution remain gates. The extractor is not complete. See
 `docs/forever-product-disk.md` and the versioned disk contract.
+
+## Target DB2 metadata catalog: product v5 — 2026-10-13
+
+Product v5 is a separate plan and package identity for build 70338
+(`1.60.1.70338`). It requires `schema-catalog<TAB>wowdbdefs-70338-v1` after the
+root line and allows only the `db2` component. The catalog pins 1,161 table
+definitions to WoWDBDefs commit
+[`d6f50d4`](https://github.com/wowdev/WoWDBDefs/commit/d6f50d4f351193e84226aa62a36faa0f58528afa),
+manifest blob `8a5d8122f312ae6a9564e8286fdc491831fecc22`, and source SHA-256
+`4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265`. The
+1,161 metadata shapes match the separately pinned 70205 catalog, while the
+build target and provenance remain distinct. This is metadata coverage, not
+proof that each table can be acquired or decoded.
+
+The local 70338 client package was admitted with v5, extracted, and independently
+verified for `TactKey` and `TactKeyLookup`: two artifacts / 4,292 bytes. The
+canonical plan SHA-256 is
+`a2f1fe241e22c2659a0606e546f8297959b144107c7e093ab2576f1c779e2c2d`; the
+verified inventory SHA-256 is
+`976cd6825f16ab4175668d4a9e3511f9c7b6b93411bc477e9177b50961fc9ddc`. Their
+artifact SHA-256 values are respectively
+`bdf268fa9eefda4ae23773599a69b542666fd9b7e1172fca135c183ab1b7b9e5` and
+`5202ce0687062f29a7ba873b71b9986be7077c1a7cf47a70b01dee8e4a5c91eb`.
+
+The two decoded tables contain 69 direct key records and 197 lookup records.
+All 69 direct records join to lookup names and match the corresponding public
+[`wowdev/TACTKeys` snapshot](https://github.com/wowdev/TACTKeys/tree/f800811762b2e9ea638bf6dfdb4707382c497943)
+after the DB2 little-endian value interpretation. Of the other 128 lookup names,
+47 have public supplemental keys in that snapshot; the client-derived and
+supplemental set therefore contains 116 names. Key material is kept outside the
+repository and is not included in the report.
+
+A v5 `Map` probe with 69 client-derived keys and a second probe with the 116-name
+enriched set both fail closed as `local_store_no_verified_encoding` for the
+selected file (file data ID 1349477). With the enriched set, the failure
+diagnostic counts zero missing or incomplete local files, one encrypted
+encoding candidate, and zero corrupt or unsupported candidates. No successful
+map payload or available-prefix result is produced. The v5 contract therefore
+remains DB2-only, and `full_extractor_complete` remains false. It establishes
+neither complete 70338
+DB2 extraction, other product components, geometry, runtime compatibility, nor
+full client extraction.
+
+A fresh local survey of all 1,161 catalog entries acquired 1,078 complete
+artifacts (29,213,383 bytes). Strict row decoding produced 1,074 tables /
+1,160,115 logical rows. Raw-only catalog validation additionally accepted
+`SpellMissileMotion` and the exact three-table sparse-parent allowlist, so all
+1,078 acquired artifacts pass product DB2 validation. The regular string check
+repeats framing, pointer, NUL-terminator and cumulative byte-budget validation
+without converting the payload to UTF-8 or returning rows. Strict typed decoding
+still rejects `SpellMissileMotion` because one payload byte (`0x97`) is outside
+UTF-8. For sparse-parent files, bounded record framing and parent-block byte
+length are checked, but no rows or parent associations are projected; the pinned
+C++ sparse materializer still rejects those tables. Eighty-three files remain
+encrypted local encoding candidates, so the full plan remains all-or-error and
+emits no available prefix.
+
+A one-table v5 package containing the real `SpellMissileMotion` file passed
+extraction and separate verification: 1 file / 17,236 bytes. The packaged file
+matches the separately acquired source byte for byte (SHA-256
+`97bd53f4fd4ecd33c2f0169e7026501e70cce07ba7e444efa0a782af11b9ff1e`). Plan
+SHA-256: `97ff5a9acd59650e9a562ff441ed6394b03a423339769350c5f6f5190750f6ea`;
+inventory SHA-256: `ed10d1d0c755bd3f6f54ace1e4ad5cb18b27b3fa944823509e62961e4e4866a`.
+Private plan, package and verification report are retained under
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-spellmissile-opaque-text-20261013/`.
+This validates raw artifact preservation, not typed UTF-8 projection, complete
+DB2 extraction or overall extractor completion.
+
+The same survey exposed an empty regular-table shape for `ExteriorComponentGroup`:
+its zero-section header counts the appended parent in both field counts while
+declaring no records. The reader now admits this exact catalog shape only when
+there are no rows; nonempty files still require the physical column count. A
+one-table v5 package for the real 216-byte file passed extraction and separate
+verification. Its plan and inventory digests are recorded in the retained
+private run at
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-exterior-empty-parent-20261013/`.
+Plan SHA-256: `d9e441c3cfd31641c998408b0906681cc07bf66987d06e0e1b1fbd312a5048b3`;
+inventory SHA-256:
+`7731349cecbd4f0a6f9481522f2132400b141d3df6b196f288324da9ba40c10e`.
+This admits one empty file and does not establish populated appended-parent
+compatibility or complete catalog extraction. The pinned reference checks the
+layout and total-field relationship in
+[`DB2FileLoader.cpp`](https://github.com/TrinityCore/TrinityCore/blob/02245dcd245e7433e524577656177723d3e4992e/src/common/DataStores/DB2FileLoader.cpp);
+the evidence here does not include running that native loader on the client
+file.
+
+
+A fresh three-table v5 package admitted the raw-only sparse-parent profile and
+passed extraction plus separate verification: `CollectableSourceEncounterSparse`
+(212 bytes), `CollectableSourceQuestSparse` (220 bytes), and
+`CollectableSourceVendorSparse` (192,664 bytes), 193,096 bytes total. All three
+packaged DB2 files match their separately acquired source bytes exactly. Plan
+SHA-256: `f9a5fd4e6ad2e0b8bdfd8458110d245131e4783a5bedbf2db84377f1f84546b4`;
+inventory SHA-256: `b57435c960173ac5dce6c7734aa0860bd9f8aae7b7dde5b48ab7c3724fe8b61b`.
+File SHA-256 values are `63d499404dd80f65b1f9f38b5c197ec092fe76f08623810ff4bd2c69856b6d3f`,
+`c27193dca19a59fd10194e284688e65feaf1a80660466e29d1152b7b8daeb56a`, and
+`a57d5e87e327559647ba684c37c104f5952c374a0c6e958a9ae299b7aae3dce3` in the
+same order. Private plan, package and verification report:
+`/mnt/nvme2/datos/forever-product-runs/catalog-v5-sparse-parent-raw-20261013/`.
+This confirms bounded raw artifact admission only. Strict sparse row decoding,
+pinned native parent materialization and parent-association parity remain
+unsupported; the 83 encrypted candidates still block the full catalog plan.

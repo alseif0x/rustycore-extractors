@@ -1,10 +1,13 @@
-# Explicit numeric regular-section decoder
+# Explicit regular-section DB2 profiles
 
 `forever-db2-regular-sections-numeric-v1` is a separate supplied-byte library
 profile exposed by `DecodedTable::read_regular_sections(data, table,
-max_sections)`. Production `DecodedTable::read`, component/product CLIs,
-catalog decoding, sparse decoding and closed terrain/GameObject adapters keep
-their existing admission policies.
+max_sections)`. The default `DecodedTable::read`, component CLIs, sparse decoder
+and closed terrain/GameObject adapters keep their existing admission policies.
+The build-specific product v4/v5 profiles now route DB2 files with more than
+one section through the metadata-catalog section profile described below;
+product v1-v3 retain their previous path. That code routing is not real-file
+acceptance.
 
 ## Admission
 
@@ -104,3 +107,85 @@ traces, exact terminal observers and binaries remain in the external
 `db2-regular-sections-20261012T152238Z` evidence directory. Independent root
 review SHA-256:
 `896155d17bd458790873f6c87b2dc1d06f980b6183251e4617bcb0c2f0b46f1a`.
+
+## Separate text profile — 2026-10-12
+
+`forever-db2-regular-sections-text-v1` is an additional supplied-byte API:
+`DecodedTable::read_regular_sections_with_text(data, table, max_sections)`. It
+does not change the numeric v1 API or production `DecodedTable::read`.
+
+The admission boundary remains 2–16 unencrypted regular sections, reviewed
+non-catalog schemas, external IDs, no parent blocks, complete contiguous
+section layout, and exact EOF. This profile additionally requires at least one
+reviewed `String`/`StringArray` field; numeric schemas remain on numeric v1.
+String columns must use compression 0. Per-section bytes are interpreted as
+records, that section's string bytes, IDs, and copies. The section string sizes
+must sum to the header string-table size. The decoder concatenates those pools
+in section order and resolves each nonzero field-relative pointer against the
+flattened records followed by that pool. A zero pointer yields an empty Rust
+string. Strings must be NUL-terminated and valid UTF-8. Copies preserve decoded
+text and are charged against the cumulative text budget when applied.
+
+The reference basis is pinned `DB2FileLoader.cpp` at
+`02245dcd245e7433e524577656177723d3e4992e`: `LoadTableData` flattens each
+section's records and appends its string bytes at the cumulative offsets, while
+`RecordGetString` adds the column offset to the stored field-relative pointer.
+This source evidence establishes the layout rule, not Rust/native output parity.
+
+The implementation retains the 16 MiB file, 100,000 direct-record, 100,000
+copy, 1,000,000 scalar-value, and 64 MiB cumulative UTF-8 allocation/copy
+ceilings. They are Rust admission limits, not native format limits or exact
+RSS bounds. Catalogs, encrypted/TACT sections, compressed strings, inline IDs,
+parent lookups, and malformed-input parity remain outside this profile.
+
+The three added text-focused authored cases pass in the focused Rust run
+(`cargo test -p forever-db2 records::regular_sections::tests --lib`: 35 passed,
+0 failed, 300 filtered). This run covers section-ordered pointers and copies,
+null strings, UTF-8 byte charging, budget boundaries, malformed offsets,
+terminators, and aggregate string sizes. It does not compare against the native
+loader or real Forever client files. No text-profile native or production
+acceptance is claimed.
+
+## Metadata-catalog section profile — 2026-10-12
+
+`forever-db2-regular-sections-metadata-v1` adds
+`DecodedTable::read_regular_sections_from_catalog(data, catalog_id, table_name,
+max_sections)`. It resolves a table through the explicit pinned metadata catalog
+or either build-specific `wowdbdefs-70205-v1` or `wowdbdefs-70338-v1` catalog,
+then uses the metadata's table/layout identity and reviewed primitive shape.
+String schemas select the same bounded text resolver; numeric schemas use
+numeric field decoding. This makes the opt-in section reader available to
+shape-compatible catalog entries without widening the existing numeric-v1 or
+text-v1 APIs.
+
+This path retains the same 2..=16 sections, 16 MiB input, 100,000 direct-row,
+100,000 copy, 1,000,000 scalar-value and 64 MiB cumulative UTF-8 policy. It
+requires external IDs and no parent; inline-ID schemas reject. TACT/encrypted
+data, sparse records, physical catalog data, nonzero catalog offsets, compressed
+text and noncontiguous/trailing data remain outside the profile. The default
+`DecodedTable::read` is unchanged. Product v4/v5 target-catalog plans call this
+reader from `driver::validate_db2` when a DB2 header declares more than one
+section; product v1-v3 keep their previous validation path. This activation is
+bounded to the profile above and does not admit TACT/encrypted, sparse or
+parent-bearing sections. A successful decode is not evidence of native or
+real-client parity. No real Forever multisection file has yet been accepted
+through this product route, and the text/catalog extension has no pinned native
+parity result.
+
+## Empty-text admission regression — 2026-10-13
+
+String-column compression is now checked before the row loop, so zero-record
+sections cannot bypass the compression-0 requirement. Private policy structs
+also group decoder options without widening public limits or profiles.
+
+The final focused source passes 346 `forever-db2` all-target tests with one
+existing ignored case, 41 regular-section tests in release, sixteen static
+contract checks and all-target DB2 Clippy with warnings denied. The six new
+authored cases cover empty text/compression, numeric and text catalog routes,
+global IDs/copies and schema/hash/inline-ID/parent gates. This is Rust synthetic
+regression evidence; the earlier numeric native comparison is unchanged, and
+text/catalog native or real-client acceptance is still pending.
+
+Retained report: external run `db2-multisection-fix-20261013-nm2hB7/summary.json`,
+SHA-256 `7cb27928895da0472771330c8814d9fb5da6ec036288541ee1571fa4788687d0`.
+Its earlier static-check and Clippy failures remain retained as failed attempts.

@@ -9,6 +9,37 @@ pub use disk::{CollisionStorage, DiskBudget};
 
 pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
+pub const MAX_70205_DB2_ENTRIES: usize = 1161;
+pub const MAX_70338_DB2_ENTRIES: usize = 1161;
+
+/// Explicit DB2 schema source. Existing product plans retain their legacy
+/// pinned schema; builds 70205 and 70338 plans opt into separately pinned
+/// metadata catalogs without relabeling older package identities.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SchemaCatalog {
+    #[default]
+    PinnedMetadataV1,
+    WowDbDefs70205V1,
+    WowDbDefs70338V1,
+}
+
+impl SchemaCatalog {
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::PinnedMetadataV1 => catalog::CATALOG_ID,
+            Self::WowDbDefs70205V1 => catalog::WOWDBDEFS_70205_CATALOG_ID,
+            Self::WowDbDefs70338V1 => catalog::WOWDBDEFS_70338_CATALOG_ID,
+        }
+    }
+
+    const fn max_entries(self) -> usize {
+        match self {
+            Self::PinnedMetadataV1 => MAX_DB2_ENTRIES,
+            Self::WowDbDefs70205V1 => MAX_70205_DB2_ENTRIES,
+            Self::WowDbDefs70338V1 => MAX_70338_DB2_ENTRIES,
+        }
+    }
+}
 
 /// An explicit decoding capability, without key material or keyset identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,6 +104,7 @@ impl Selection {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Plan {
     pub build: u32,
+    pub schema_catalog: SchemaCatalog,
     pub locale: Locale,
     pub index_layout: local_index::Layout,
     pub root_layout: root::Layout,
@@ -90,7 +122,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    /// Parse the complete v1/v2/v3 grammar. Exact re-rendering closes spelling,
+    /// Parse the complete v1-v5 grammar. Exact re-rendering closes spelling,
     /// ordering, whitespace, numeric representation and final-newline aliases.
     pub fn parse(input: &str) -> Result<Self, &'static str> {
         if input.len() > MAX_PLAN_BYTES {
@@ -108,6 +140,8 @@ impl Plan {
             "1" => 1,
             "2" => 2,
             "3" => 3,
+            "4" => 4,
+            "5" => 5,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -128,20 +162,37 @@ impl Plan {
             "header-50893-v2" => root::Layout::Header50893V2,
             _ => return Err("product_plan_root"),
         };
+        let schema_catalog = match version {
+            4 => match field(&mut lines, "schema-catalog")? {
+                "wowdbdefs-70205-v1" => SchemaCatalog::WowDbDefs70205V1,
+                _ => return Err("product_plan_schema_catalog"),
+            },
+            5 => match field(&mut lines, "schema-catalog")? {
+                "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
+                _ => return Err("product_plan_schema_catalog"),
+            },
+            _ => SchemaCatalog::PinnedMetadataV1,
+        };
         let decryption = match version {
             1 => Decryption::Disabled,
             2 => match field(&mut lines, "decryption")? {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3 => match field(&mut lines, "decryption")? {
+            3..=5 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if version == 3 {
+        let collision_storage = if version == 3
+            || (matches!(version, 4 | 5)
+                && lines
+                    .clone()
+                    .next()
+                    .is_some_and(|line| line.starts_with("collision-storage\t")))
+        {
             CollisionStorage::parse(&mut lines)?
         } else {
             CollisionStorage::Resident
@@ -166,7 +217,7 @@ impl Plan {
         }
         let mut db2 = Vec::new();
         for line in lines {
-            if db2.len() == MAX_DB2_ENTRIES {
+            if db2.len() == schema_catalog.max_entries() {
                 return Err("product_plan_size");
             }
             let fields: Vec<_> = line.split('\t').collect();
@@ -180,6 +231,7 @@ impl Plan {
         }
         let plan = Self {
             build,
+            schema_catalog,
             locale,
             index_layout,
             root_layout,
@@ -204,8 +256,19 @@ impl Plan {
 
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if ![70170, 70205].contains(&self.build) {
+        if ![70170, 70205, 70338].contains(&self.build) {
             return Err("product_plan_build");
+        }
+        if self.schema_catalog == SchemaCatalog::WowDbDefs70205V1 && self.build != 70205 {
+            return Err("product_plan_schema_catalog");
+        }
+        if (self.schema_catalog == SchemaCatalog::WowDbDefs70338V1 && self.build != 70338)
+            || (self.build == 70338 && self.schema_catalog != SchemaCatalog::WowDbDefs70338V1)
+        {
+            return Err("product_plan_schema_catalog");
+        }
+        if self.build == 70338 && self.components != Component::Db2.bit() {
+            return Err("product_plan_component_scope");
         }
         if self.components == 0 || self.components & !63 != 0 {
             return Err("product_plan_components");
@@ -216,13 +279,29 @@ impl Plan {
             }
             budget.validate()?;
         }
-        if self.db2.len() > MAX_DB2_ENTRIES {
+        if self.db2.len() > self.schema_catalog.max_entries() {
             return Err("product_plan_size");
         }
         let mut ids = BTreeSet::new();
         let mut previous: Option<&str> = None;
         for entry in &self.db2 {
-            let metadata = catalog::find(&entry.name).ok_or("product_plan_schema")?;
+            let metadata = match self.schema_catalog {
+                SchemaCatalog::PinnedMetadataV1 => {
+                    catalog::find(&entry.name).ok_or("product_plan_schema")?
+                }
+                SchemaCatalog::WowDbDefs70205V1 => {
+                    catalog::resolve_for(self.schema_catalog.id(), &entry.name)
+                        .map_err(|_| "product_plan_schema")?
+                        .ok_or("product_plan_schema")?
+                        .metadata()
+                }
+                SchemaCatalog::WowDbDefs70338V1 => {
+                    catalog::resolve_for(self.schema_catalog.id(), &entry.name)
+                        .map_err(|_| "product_plan_schema")?
+                        .ok_or("product_plan_schema")?
+                        .metadata()
+                }
+            };
             if metadata.file_data_id != entry.id
                 || !ids.insert(entry.id)
                 || previous.is_some_and(|name| name >= entry.name.as_str())
@@ -278,6 +357,11 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        match self.schema_catalog {
+            SchemaCatalog::WowDbDefs70205V1 => return 4,
+            SchemaCatalog::WowDbDefs70338V1 => return 5,
+            SchemaCatalog::PinnedMetadataV1 => {}
+        }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
             return 3;
         }
@@ -288,6 +372,11 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        match self.schema_catalog {
+            SchemaCatalog::WowDbDefs70205V1 => return "forever-product-v4",
+            SchemaCatalog::WowDbDefs70338V1 => return "forever-product-v5",
+            SchemaCatalog::PinnedMetadataV1 => {}
+        }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
             return "forever-product-v3";
         }
@@ -320,14 +409,19 @@ impl Plan {
             .map(Component::name)
             .collect::<Vec<_>>()
             .join(",");
+        let schema_catalog = match self.schema_catalog {
+            SchemaCatalog::PinnedMetadataV1 => "",
+            SchemaCatalog::WowDbDefs70205V1 => "schema-catalog\twowdbdefs-70205-v1\n",
+            SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
+        };
         let decryption = match (self.version(), self.decryption) {
-            (3, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=5, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
         let collision_storage = self.collision_storage.render();
         let mut output = format!(
-            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{decryption}{collision_storage}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
+            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{collision_storage}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
             self.version(),
             self.build,
             self.locale.name(),

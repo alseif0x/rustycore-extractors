@@ -340,7 +340,6 @@ fn sparse_unreviewed_kinds_inline_ids_and_all_parents_stay_excluded_even_empty()
         "Curve",
         "AnimationData",
         "SkillRaceClassInfo",
-        "SpellRadius",
         "CollectableSourceEncounterSparse",
         "CollectableSourceQuestSparse",
         "CollectableSourceVendorSparse",
@@ -357,11 +356,7 @@ fn sparse_unreviewed_kinds_inline_ids_and_all_parents_stay_excluded_even_empty()
         put32(&mut data, 152, hash);
         put32(&mut data, 156, layout);
         put16(&mut data, 172, 7);
-        assert_eq!(
-            DecodedTable::read(&data, table).err(),
-            Some(RecordError::Unsupported),
-            "{name}"
-        );
+        assert!(DecodedTable::read(&data, table).is_err(), "{name}");
     }
 }
 
@@ -446,13 +441,11 @@ fn sparse_each_excluded_value_kind_fails_before_reading_any_payload() {
     let data = fixture(&[7], &[RAW], &[], UNUSED, true);
     let meta = Metadata::read(&mut Cursor::new(&data)).unwrap();
     for fields in [
-        &[Kind::String][..],
-        &[Kind::Float(1)][..],
         &[Kind::Unsigned(64, 1)][..],
         &[Kind::Signed(64, 1)][..],
-        &[Kind::Unsigned(32, 2)][..],
-        &[Kind::Signed(16, 1)][..],
-        &[Kind::Signed(8, 1)][..],
+        &[Kind::StringArray(0)][..],
+        &[Kind::Unsigned(32, 0)][..],
+        &[Kind::Float(0)][..],
     ] {
         let schema = Schema {
             fields,

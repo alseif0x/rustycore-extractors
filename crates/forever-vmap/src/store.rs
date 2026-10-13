@@ -19,8 +19,6 @@
 //! bounded stack and allocator metadata are outside the capacity ledger.
 #[cfg(target_os = "linux")]
 pub mod fs;
-#[cfg(windows)]
-pub mod windows;
 mod load;
 mod loaded;
 mod manager;
@@ -28,6 +26,8 @@ mod memory;
 mod source;
 #[cfg(test)]
 mod tests;
+#[cfg(windows)]
+pub mod windows;
 
 use crate::{assembly, placement, query, vmo};
 pub use loaded::{LoadedModel, LoadedModels};

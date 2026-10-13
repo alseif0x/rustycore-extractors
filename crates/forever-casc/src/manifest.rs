@@ -450,7 +450,7 @@ mod tests {
         );
         assert_eq!(
             document,
-            render_version(70205, &options, &facts, start, Some(start), false, None)
+            render_version(70205, &options, &facts, start, Some(start), None, None)
         );
         let explicit = Options {
             table_selection: "explicit_manifest",

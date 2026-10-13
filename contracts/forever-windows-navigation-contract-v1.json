@@ -156,6 +156,14 @@
       "scope": "test-only distinct pre-capture write time; actual mutation and original result/progress/poison assertions retained"
     }
   ],
+  "reviewed_module_order_correction": {
+    "path": "crates/forever-navigation/src/terrain/load.rs",
+    "date": "2026-10-13",
+    "historical_import_sha256": "240abd73b1c41a6c03fdfd7dee91c4179713a6fbb5c007ec04604da4e693bbab",
+    "current_sha256": "affdf95789ae3e27204237c34a83a13817b2ec931f1d8a600a9ad9fc1e5eb3d7",
+    "behavior_changed": false,
+    "scope": "rustfmt module declaration ordering only; exact inverse restores the historical imported bytes; does not transfer historical Windows runtime acceptance"
+  },
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",

@@ -8,9 +8,20 @@ fn entry(name: &str) -> Entry {
         id: catalog::find(name).unwrap().file_data_id,
     }
 }
+fn build_70338_entry(name: &str) -> Entry {
+    Entry {
+        name: name.into(),
+        id: catalog::resolve_for(catalog::WOWDBDEFS_70338_CATALOG_ID, name)
+            .unwrap()
+            .unwrap()
+            .metadata()
+            .file_data_id,
+    }
+}
 fn subset() -> Plan {
     Plan {
         build: 70205,
+        schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
         locale: Locale::EsEs,
         index_layout: local_index::Layout::Contiguous,
         root_layout: root::Layout::Header50893V2,
@@ -68,6 +79,60 @@ fn canonical_all_components_roundtrip() {
             .all(|component| plan.contains(component))
     );
 }
+
+#[test]
+fn build_70338_catalog_has_a_separate_canonical_v5_plan() {
+    let plan = Plan {
+        build: 70338,
+        schema_catalog: SchemaCatalog::WowDbDefs70338V1,
+        db2: vec![
+            build_70338_entry("TactKey"),
+            build_70338_entry("TactKeyLookup"),
+        ],
+        ..subset()
+    };
+    assert_eq!(plan.validate(), Ok(()));
+    assert_eq!(plan.version(), 5);
+    assert_eq!(plan.contract(), "forever-product-v5");
+    assert!(!plan.requires_keys());
+    assert_eq!(Plan::parse(&plan.render()), Ok(plan.clone()));
+    assert!(
+        plan.render()
+            .contains("schema-catalog\twowdbdefs-70338-v1\n")
+    );
+    assert!(
+        plan.render()
+            .starts_with("forever-product\t5\nbuild\t70338\n")
+    );
+}
+
+#[test]
+fn build_70338_cannot_use_the_older_build_metadata_catalog() {
+    let plan = Plan {
+        build: 70338,
+        ..subset()
+    };
+    assert_eq!(plan.validate(), Err("product_plan_schema_catalog"));
+
+    let plan = Plan {
+        build: 70205,
+        schema_catalog: SchemaCatalog::WowDbDefs70338V1,
+        ..subset()
+    };
+    assert_eq!(plan.validate(), Err("product_plan_schema_catalog"));
+}
+
+#[test]
+fn build_70338_metadata_plan_is_limited_to_db2_until_other_components_are_accepted() {
+    let plan = Plan {
+        build: 70338,
+        schema_catalog: SchemaCatalog::WowDbDefs70338V1,
+        db2: vec![build_70338_entry("TactKey")],
+        components: Component::Db2.bit() | Component::Terrain.bit(),
+        ..subset()
+    };
+    assert_eq!(plan.validate(), Err("product_plan_component_scope"));
+}
 #[test]
 fn all_layouts_builds_and_locales_roundtrip() {
     for build in [70170, 70205] {
@@ -81,6 +146,7 @@ fn all_layouts_builds_and_locales_roundtrip() {
                 ] {
                     let plan = Plan {
                         build,
+                        schema_catalog: SchemaCatalog::PinnedMetadataV1,
                         locale,
                         index_layout,
                         root_layout,
