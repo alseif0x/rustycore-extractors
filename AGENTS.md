@@ -2232,3 +2232,21 @@ docs/forever-completion.md. No client/CASC acquisition, product admission,
 repository API or bundle changes follow. Product 70338 stays DB2-only; WMO,
 placements/instances, real maps, full-world resources, installed runtime and full
 extraction remain open. Windows stays deferred; these docs are not rebuilt.
+
+
+### Bounded 70338 static pilot closed negatively — 2026-10-13
+
+Issue #42's single real manual Ghidra v6 attempt fails loaded/initialized-byte
+admission with `initialized_bytes_cap` before seed scanning; controller status
+is `script_not_complete` despite engine exit 0. No real reference, function,
+hotfix or key conclusion is accepted. Cleanup proves the owned group absent;
+nineteen network calls are denied and none succeeds. Final authored v6 passes
+one Pcode corroboration (not an xref), one decompilation and one misalignment
+rejection; independent review verifies the negative real closure and unchanged
+5,682 source/tool guards. The initial ranges hash was not serialized, so ranges
+immutability is not claimed. Details/receipts and preserved earlier failures are
+in docs/forever-completion.md. No rerun or cap increase follows. Product 70338
+stays DB2-only; Map/GameObjectDisplayInfo remain unavailable and full Linux
+delivery is incomplete, with Windows deferred. Next proposed: versioned real
+GT20 acceptance, with two loaders for six files; camera discovery/catalog
+provenance remains separate.

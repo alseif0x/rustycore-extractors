@@ -248,14 +248,17 @@ array type. The report is
 REA's documented provider is a different workflow: it imports into an isolated
 temporary project, passes `-readOnly` and `-deleteProject`, loads its packaged
 Java bridge with `-scriptPath`, and leaves Ghidra's default auto-analysis and
-resource settings enabled. `open_binary` selects the target; the first
-Ghidra-backed query starts import and analysis, and REA only exposes operations
-after full auto-analysis completes. Its documented startup deadline is 330,000
+resource settings enabled. In the installed REA 6.4.0, `open_binary` calls
+the provider's `health` operation, which starts import and analysis; a later
+query is not required to start that work. REA only exposes analysis operations
+after full auto-analysis completes. Its startup deadline is 330,000
 ms by default and is configurable through `REA_GHIDRA_STARTUP_TIMEOUT_MS` in
-the REA server environment. The current REA session reports no target open.
-For our DLL, running a Ghidra query through REA would therefore require setting
-that server deadline above the observed one-hour analysis, then querying the
-target; opening it alone would not start the work. See [REA's Ghidra
+the REA server environment. The source-only check on 2026-10-13 observed no
+target open. Opening the DLL through stock REA would require a deadline that
+allows its full import and analysis, plus an appropriate client request
+deadline; the historical one-hour timeout does not predict completion time.
+The installed-source correction is retained in the bounded 70338 investigation
+below. See [REA's Ghidra
 provider guide](https://github.com/morluto/rea/blob/main/docs/installation.md)
 and [provider evaluation](https://github.com/morluto/rea/blob/main/docs/provider-evaluation.md).
 
@@ -279,8 +282,8 @@ much shorter Ghidra cold-starts on other PE/DLL targets, with no sizes that
 would make those timings comparable to this WoW DLL.
 
 This confirms that our long-running direct `analyzeHeadless` job is a manual
-Ghidra investigation, not an REA session. To use stock REA as documented, bind
-this exact binary with `open_binary` and make a Ghidra-backed query; configure
+Ghidra investigation, not an REA session. To use installed stock REA, bind
+this exact binary with `open_binary`, which starts analysis; configure
 both REA's startup allowance and the MCP client's request timeout. Stock REA
 waits for default auto-analysis and currently exposes no documented per-analyzer
 selection. To adopt the Reddit optimization, first reproduce it as an isolated
@@ -3508,3 +3511,90 @@ rebuilt. Product 70338 remains DB2-only and the accepted Linux bundle remains
 unchanged. Real Map/WMO, placements/instances, full-world resources, installed
 RustyCore/server runtime and full extraction remain open. No new bundle,
 Windows acceptance or publication is transferred from this bounded result.
+
+
+### Bounded 70338 static investigation: verified negative — 2026-10-13
+
+Issue #42 closes a finite diagnostic investigation with a failed real attempt,
+not accepted real binary analysis. Installed REA 6.4.0 `open_binary` invokes
+provider `health`, starting import and full default auto-analysis immediately;
+analysis operations wait for completion. The separate manual v6 Ghidra pilot
+uses `-noanalysis -readOnly -deleteProject` and bounded explicit disassembly.
+It is not an REA analysis session or snapshot, and changes no global settings.
+
+The single real attempt uses authentic build-70338 WowB.exe, 101,907,152 bytes,
+SHA-256 `cfe26cc200fda36407736c7e6b5575a1f2ca2b774c8176529814e32d51312185`.
+PE admission records seven sections, SizeOfImage 139,165,696 bytes and 304,691
+runtime intervals / 3,656,292 exception-directory bytes. Imported loaded/
+initialized-block admission exceeds its 134,217,728-byte cap **before seed
+scanning**, reporting the public Java error code `initialized_bytes_cap`.
+SizeOfImage is a different quantity; the exact initialized-byte sum is unknown.
+No real seed/reference/candidate count, function coverage, hotfix causality,
+key recovery or absence of references/keys follows from this failure.
+
+The controller records `script_not_complete` in `v6/real-attempt1/failed.json`.
+Engine exit 0 does not establish script success or accepted analysis, and no
+engine crash is inferred. No detail report or pseudocode is produced. Private
+partial evidence remains retained, and cleanup proves the owned process group
+absent. There is no retry, raised cap, truncated selection or available-prefix
+fallback. The real trace contains nineteen denied network syscalls and zero
+successful calls; it is not an empty trace. The pilot does not execute the game.
+
+The exact final v6 synthetic preflight passes on an authored 3,072-byte PE in
+about twelve seconds: one decoded-instruction Pcode address corroboration,
+one decompiled interval, one rejected misaligned candidate and zero observed
+ReferenceManager edges. Its fact is explicitly `NOT_xref`; corroboration is
+not an inserted or recovered reference edge. All 5,684 synthetic guards remain
+unchanged, cleanup succeeds, and nineteen network calls are denied with zero
+successes. Synthetic decompilation does not transfer to the real target.
+
+The finite controls include 8G JVM heap, a 600-second engine-wait cutoff measured
+from controller start (including setup), 600 CPU seconds/process and Ghidra
+`-max-cpu 2`, not OS affinity. Cleanup, post-guards and receipt work are outside
+the engine cutoff. Heap/counters do not measure total RSS. Input and loaded/
+initialized bytes each cap at 128 MiB; PE image admission separately caps at
+512 MiB. At most six candidate intervals of 64 KiB each, 64 seed matches and
+64 lexical instruction candidates are admitted. Each checked interval has a
+30-second decompiler timeout; each candidate instruction permits sixteen Pcode
+operations. Raw patterns remain candidates, and checked exception intervals
+do not prove complete source functions. Preflight Java details/pseudocode use
+0640 permissions beneath 0700 directory anchors; the PE snapshot uses 0400.
+Private client bytes, addresses, pseudocode and key material are not published.
+
+Earlier versions remain distinct: v1 bootstrap is unaccepted; v2 terminates
+with SIGSYS before Ghidra; v3 yields zero confirmations through its attempted API.
+The isolated API probe observes a NULL prototype-address result and its gate
+fails. V4 is unexecuted. V5 establishes the authored positive mechanism, then
+v6 corrects the gate to require Pcode corroboration rather than a manager edge
+and repeats the exact final positive/misaligned fixture successfully. These
+records are retained without relabeling earlier failed/unaccepted attempts.
+
+Independent terminal review inventories 33 real evidence files and rehashes
+all 5,682 prelaunch source/tool guards after failure, with zero changes. The
+controller's failure branch does not write its own success post-guard map.
+The derived ranges file has a current inventoried hash; its initial launch
+hash was not serialized, so historical ranges immutability is not proven.
+Separate reviewer reads authenticate the original and retained PE snapshot;
+those hash-read visits are separate from pilot traffic and add no acquisition.
+The reviewer accepts only a verified bounded negative diagnostic closure.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/rea-70338-hotfix-pilot-20261013-exy0fve8/`.
+Relative receipt paths and SHA-256:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `v6/source-freeze.json` | `8d3e85254ab221a2c2c3e20fc93d7ee8452485403113c3593dfe08e91bacebd5` |
+| `v6/preflight-attempt1/receipt.json` | `a064af08f650c561ed3550c2695101a35586a99a07fbfe84223551ef72824a08` |
+| `review/final-prelaunch-review-v6.json` | `997c909a2a08245244587d5f36dbd6b24a9c8c62f45d702f552c1a70699fe022` |
+| `v6/real-attempt1/failed.json` | `749d20a3e80bc8efbe8b28ff8c57092fabce2ae4e62861c312e2b6e3b77a16ba` |
+| `review/real-attempt1-review.json` | `1dfd0a481280b2cfbc993453c7e458c21d5f807e7e5287bab3a748505f3f3495` |
+
+No extractor implementation, product admission, bundle or runtime acceptance
+changes. Product 70338 remains DB2-only; Map/GameObjectDisplayInfo remain
+blocked, full Linux extraction remains incomplete and Windows remains deferred.
+The next independent proposed gate is all twenty public GT files on authentic
+70338 with an explicit versioned profile, complete numeric/raw verification
+and both public RustyCore loaders for their six-file subset. It is not yet
+implemented or accepted. Camera acceptance additionally needs target-catalog
+selection and discovery provenance; older-build evidence does not transfer.
