@@ -6,6 +6,8 @@ use std::{collections::BTreeSet, fmt::Write};
 
 mod disk;
 pub use disk::{CollisionStorage, DiskBudget};
+mod offmesh;
+pub use offmesh::{MAX_OFFMESH_CONNECTIONS, OFFMESH_PROFILE, OffMeshConnection};
 
 pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
@@ -119,10 +121,12 @@ pub struct Plan {
     pub skip_liquids: bool,
     pub maximum_slope: u8,
     pub non_steep_slope: u8,
+    /// None retains v1-v5; Some (including empty) explicitly selects v6.
+    pub offmesh: Option<Vec<OffMeshConnection>>,
 }
 
 impl Plan {
-    /// Parse the complete v1-v5 grammar. Exact re-rendering closes spelling,
+    /// Parse the complete v1-v6 grammar. Exact re-rendering closes spelling,
     /// ordering, whitespace, numeric representation and final-newline aliases.
     pub fn parse(input: &str) -> Result<Self, &'static str> {
         if input.len() > MAX_PLAN_BYTES {
@@ -142,6 +146,7 @@ impl Plan {
             "3" => 3,
             "4" => 4,
             "5" => 5,
+            "6" => 6,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -179,7 +184,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=5 => match field(&mut lines, "decryption")? {
+            3..=6 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -187,7 +192,7 @@ impl Plan {
             _ => unreachable!("version was validated above"),
         };
         let collision_storage = if version == 3
-            || (matches!(version, 4 | 5)
+            || (matches!(version, 4..=6)
                 && lines
                     .clone()
                     .next()
@@ -215,6 +220,27 @@ impl Plan {
         if maximum_slope > 90 || non_steep_slope > 90 {
             return Err("product_plan_slopes");
         }
+        let offmesh = if version == 6 {
+            if field(&mut lines, "offmesh")? != OFFMESH_PROFILE {
+                return Err("product_plan_offmesh");
+            }
+            let mut connections = Vec::new();
+            while lines
+                .clone()
+                .next()
+                .is_some_and(|line| line.starts_with("offmesh-connection\t"))
+            {
+                if connections.len() == MAX_OFFMESH_CONNECTIONS {
+                    return Err("product_plan_offmesh_limit");
+                }
+                connections.push(OffMeshConnection::parse(
+                    lines.next().ok_or("product_plan_format")?,
+                )?);
+            }
+            Some(connections)
+        } else {
+            None
+        };
         let mut db2 = Vec::new();
         for line in lines {
             if db2.len() == schema_catalog.max_entries() {
@@ -246,6 +272,7 @@ impl Plan {
             skip_liquids,
             maximum_slope: maximum_slope as u8,
             non_steep_slope: non_steep_slope as u8,
+            offmesh,
         };
         plan.validate()?;
         if plan.render() != input {
@@ -256,6 +283,20 @@ impl Plan {
 
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
+        if let Some(connections) = &self.offmesh {
+            if self.schema_catalog != SchemaCatalog::PinnedMetadataV1
+                || ![70170, 70205].contains(&self.build)
+                || !self.contains(Component::Navigation)
+            {
+                return Err("product_plan_offmesh_scope");
+            }
+            if connections.len() > MAX_OFFMESH_CONNECTIONS {
+                return Err("product_plan_offmesh_limit");
+            }
+            for connection in connections {
+                connection.validate()?;
+            }
+        }
         if ![70170, 70205, 70338].contains(&self.build) {
             return Err("product_plan_build");
         }
@@ -357,6 +398,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.offmesh.is_some() {
+            return 6;
+        }
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return 4,
             SchemaCatalog::WowDbDefs70338V1 => return 5,
@@ -372,6 +416,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.offmesh.is_some() {
+            return "forever-product-v6";
+        }
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return "forever-product-v4",
             SchemaCatalog::WowDbDefs70338V1 => return "forever-product-v5",
@@ -415,7 +462,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=5, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -433,6 +480,13 @@ impl Plan {
             self.maximum_slope,
             self.non_steep_slope,
         );
+        if let Some(connections) = &self.offmesh {
+            writeln!(output, "offmesh\t{OFFMESH_PROFILE}")
+                .expect("writing into String cannot fail");
+            for connection in connections {
+                connection.render(&mut output);
+            }
+        }
         for entry in &self.db2 {
             writeln!(output, "db2\t{}\t{}", entry.name, entry.id)
                 .expect("writing into String cannot fail");
@@ -476,3 +530,5 @@ mod tests;
 
 #[cfg(test)]
 mod disk_tests;
+#[cfg(test)]
+pub(crate) mod offmesh_tests;

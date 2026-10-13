@@ -36,6 +36,7 @@ fn subset() -> Plan {
         skip_liquids: false,
         maximum_slope: 55,
         non_steep_slope: 55,
+        offmesh: None,
     }
 }
 fn complete() -> Plan {

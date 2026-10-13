@@ -2818,3 +2818,109 @@ The authored selection excludes the 83 known acquisition failures explicitly;
 no original plan or failed batch is upgraded. This is complete acceptance of
 that selection, with intrinsic DB2 validation and exact source bytes. It adds
 no row-oracle, real multisection, full-catalog, geometry or runtime acceptance.
+
+### Current native analysis identity — 2026-10-13
+
+The current installed `WowB.exe` is 101,907,152 bytes, SHA-256
+`cfe26cc200fda36407736c7e6b5575a1f2ca2b774c8176529814e32d51312185`.
+REA's complete PE resource inventory reports 28 resources; an independent
+decoder of its exact version-resource range confirms the declared UTF-16
+version string `1.60.1.70338`. The fixed DWORD version parts are
+`160,1,7033,8`, rather than direct human-version components. The older REA
+TactKey string/xref reports are bound to build 70205 and cannot supply a
+70338 native breakpoint. The observed Wine process is named `WowB.exe`, but
+this inspection does not bind its loaded PE image to the current disk file or
+establish its in-world state.
+
+REA evidence ID:
+`ev_b4ff6f2a173f40a186b24c6ed97623a3bbcc466030555b5aa4bb34ec8c6003a8`.
+The initial 64 MiB artifact budget rejects this executable; the explicit
+128 MiB resource-inventory attempt succeeds. No extraction/parser product
+limit changes. The independent version decoder's initial fixed-field
+assumption failed and is retained in the corrected metadata-only report:
+`/mnt/nvme2/datos/forever-product-runs/native-70338-identity-20261013-uolbdjdd/report.json`,
+SHA-256 `06bbab7767a55041838764e2b57fe658dc076f56765946a55b2e6a1346f957b9`.
+No process attach, memory read, client restart or key recovery occurred.
+
+The next supported observation boundary is hotfix reception/application and
+cache writing, covering direct `TactKey`/`TactKeyLookup` records and optional
+`BroadcastText` data. The [pinned TACTKeys documentation](https://github.com/wowdev/TACTKeys/blob/f800811762b2e9ea638bf6dfdb4707382c497943/README.md)
+describes these channels; the [pinned Trinity validator](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/src/server/game/DataStores/DB2Stores.cpp#L1778)
+admits the 24-byte optional key payload, and its
+[hotfix handlers](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/src/server/game/Handlers/HotfixHandler.cpp#L22)
+append the tagged optional data. This identifies a protocol boundary supported
+by these sources, without an identified native 70338 function, executed observation
+or evidence that the server will deliver the six missing keys.
+
+### Product v6 inline off-mesh acceptance — 2026-10-13
+
+The Linux product now exposes explicit inline connections through the separate
+[v6 plan contract](../contracts/forever-product-contract-v6.json), restricted to
+`pinned-metadata-v1` and builds 70170/70205. It preserves all v1–v5 identities and
+the build-70338 DB2-only scope. Up to 1,024 connections carry canonical f32 bits,
+source order and duplicates inside the unchanged 128 KiB plan. All records
+validate before I/O; the plan hash binds them to recovery. The driver supplies
+them to the existing navigation runner, and verification compares each global
+map's records exactly. Nonempty connections with an empty Map source reject
+both extraction and verification, including a common sealed package without
+globals. This does not add complete navigation inventory/topology verification.
+
+The exact Rust increment adds 25 product tests: all 165 product library tests
+pass in debug and release, with product all-target Clippy and scoped formatting.
+The independently repeated Linux workspace passes 2,716 tests / 26 ignored
+across 42 summaries, all-target Clippy and full formatting. All 260 source/state
+contract and 118 distribution/sealer checks pass; the new static contract checks
+are also selected by both Linux and Windows CI source. The 418 Rust/Cargo input
+files remain unchanged through the workspace run. Core report:
+`/mnt/nvme2/datos/forever-product-runs/product-offmesh-v6-root-20261013-8kjtzvtg/core-validation.json`,
+SHA-256 `e7ec17dd984bb6421e1489ed8a7a12f9a29a34224f04505a31bef96a3afe4a41`.
+Product scoped report:
+`/mnt/nvme2/datos/rustycore-extractor-work/runs/candidate/product-offmesh-v6-20261013-f0qp1L/summary.json`,
+SHA-256 `3f5d3f7b248f29a7fe20602691210a62800fc5d9f9e9021afb2fad4444e7b170`.
+
+Both debug/release CLI profiles pass eight methods / 61 processes each against
+complete authored CASC, WDC5, WDT and ADT inputs. The two-island terrain has
+walkable height variation. Eight original Detour consumer calls execute sixteen
+routes per profile: seven forward and one reverse route reach their target;
+the reverse success belongs to the bidirectional case. Cases include no link,
+one-way, bidirectional, source order/duplicates and build-70170/esES. One complete
+tile per profile matches the original pinned `TileBuilder` bytes. This last
+comparison does not execute the original global MMap producer; global connection
+records additionally match independent 44-byte wire calculations.
+
+Provided-key/resident, disabled-key/leased-disk and provided-key/leased-disk
+extraction and verification also pass. The final modality recovers after
+SIGKILL, reproduces its uninterrupted manifest exactly and executes the directed
+query. Four authored nonsecret keys are used; no real key acceptance is added.
+Changed connection bits, direction and order reject recovery context; semantic
+global tampering rejects after rebuilding synthetic integrity metadata. Each
+profile has 59 empty runtime network traces and two expected SIGKILL traces,
+under network syscall denial. A 378-file guard binds the retained original
+sources, objects, dependency files, input fixtures and executables before/after.
+The original consumer/producer pin remains
+`02245dcd245e7433e524577656177723d3e4992e`.
+
+Retained reports:
+
+| Profile | External run | Acceptance SHA-256 | Closure SHA-256 |
+| --- | --- | --- | --- |
+| Debug | `/mnt/nvme2/datos/forever-product-runs/product-offmesh-v6-20261013-o8gq78p6` | `132cbead9f919e968522c5a71fb5a733a94cc03e29e405a6ba831b86ed5c2e72` | `d410dc77b86b9069b66504441612a78498196929c43de5008c7ddb47d9ecd47b` |
+| Release | `/mnt/nvme2/datos/forever-product-runs/product-offmesh-v6-20261013-_3knztdh` | `a70382108ddbe0937348c853cc09391041eec1c39d5d72f32b3b9a022d4f6834` | `f0acb4c9f664ca58521eae95c6b0a835660cf760649a070732b3cd44a5de0adb` |
+
+The first flat-terrain run remains failed at
+`product-offmesh-v6-20261013-oz5v5gqw`: its tile matched C++, but native nearest
+queries returned zero references. Header Y bounds are both 1, generated vertex
+Y is 1.26666665 and ground BV leaves quantize to Y=2 while the clamped query
+covers 0..1. Moving the fixture's height variation onto walkable geometry
+permits the later positive routes; production bounds/BV code is unchanged.
+The later corpus does not establish general flat-terrain routability. Its
+metadata limitation report SHA-256 is
+`68753f482a20c841b3841571cf5c94e1f69aeecc6efbe832f0e1559501906d6e`.
+The earlier unit run's 33 Git-ancestor temporary-directory failures and the
+superseded build-only QA attempt are also retained.
+
+This closes the explicit synthetic product connection gate. It does not add
+real geometry/routes, general endpoint snapping, server activation, Windows
+product support, a newly reproducible v6 bundle or full extractor acceptance.
+The 83 unavailable build-70338 DB2 inputs and the remaining component/runtime
+gates remain open.
