@@ -1953,3 +1953,12 @@ one equivalent Clippy correction invalidated its freeze and remains retained.
 These are local synthetic/source checks, not native MSVC product, reproducible
 Windows distribution, real-client or runtime acceptance. Exact report hashes
 are retained in docs/forever-windows-producer-msvc-v2.md.
+
+The first explicit MSVC-v2 native run (38348243944, job 115134527122,
+functional 5440090015fc618ad39ff3326eed0b1c61a87a67) passes both offline seal
+preflights and native feature Clippy, 2,359 Windows workspace tests / 21 ignored,
+and focused 30 namespace / 21 package / one actual AMD64 gate per profile. The full
+product helper fails importing authored Python-3.11-incompatible fixture syntax
+before any CLI case. That failed run and unchanged 1,078-file source guard are
+retained in docs/forever-windows-product.md; no full product or loaded-v2 binding
+acceptance is inferred. The correction preserves exact synthetic fixture bytes.

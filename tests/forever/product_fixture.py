@@ -118,8 +118,9 @@ def store(path, payloads, build=70205, locale='enUS'):
         f'encoding-size = {len(encoding)} {len(encoding)+39}\nbuild-uid = wow_classic_beta\nbuild-name = synthetic-1.60.1.{build}\n').encode()
     config_key=hashlib.md5(config).hexdigest()
     cp=path/'Data/config'/config_key[:2]/config_key[2:4]/config_key;cp.parent.mkdir(parents=True);cp.write_bytes(config)
+    cdn_key = (b'\x55' * 16).hex()
     (path/'.build.info').write_text('Product!STRING:0|Active!DEC:1|Version!STRING:0|Build Key!HEX:16|CDN Key!HEX:16|Tags!STRING:0\n'
-        f'wow_classic_beta|1|1.60.1.{build}|{config_key}|{(b"\x55"*16).hex()}|{locale}\n')
+        f'wow_classic_beta|1|1.60.1.{build}|{config_key}|{cdn_key}|{locale}\n')
     records += [(root_ekey,root),(encoding_ekey,encoding)]
     archive=bytearray();rows=[]
     for key,content in records:

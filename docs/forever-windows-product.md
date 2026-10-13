@@ -249,3 +249,54 @@ passing distribution tests / one platform skip. The v1 failures above remain
 failed; no native v2 CLI result is inferred. See the exact source/test report
 hashes and independent review in
 [the MSVC-v2 acceptance record](forever-windows-producer-msvc-v2.md).
+
+
+## First explicit MSVC-v2 native attempt — retained failure
+
+Functional commit `5440090015fc618ad39ff3326eed0b1c61a87a67`,
+[Rust run 38348243944 / Windows job 115134527122](https://github.com/alseif0x/rustycore-extractors/actions/runs/38348243944/job/115134527122),
+passes debug/release offline v2 PE sealing and explicit-feature native MSVC
+Clippy. Windows workspace acceptance is 2,359 passed / 21 ignored across 42
+targets. Each focused profile passes 30 namespace, 21 package and one actual
+native-AMD64 machine-query test, with zero focused ignored cases. All 82 Python
+sealer tests execute (81 pass and one Unix-only skip).
+
+The product helper then fails importing `product_fixture.py:122` under Python
+3.11.9: a backslash-bearing bytes literal occurs inside an f-string expression.
+The local Python 3.14 parser accepted that newer syntax. No actual product CLI
+case executes, and the release product-case loop is not reached. This run is a
+retained failure, not complete v2 product acceptance. The correction only moves
+the synthetic CDN-key expression outside the f-string; its bytes must remain
+identical and imported-fixture syntax receives explicit regression coverage.
+
+The full-product debug candidate was sealed as
+`9b896341da677e5f9883a573ad52f129b887d3ab408d1ca8210d4f5fb144612b`
+from unsealed
+`141264a8a39b50db1422e787180ef04b5b64dff51fad27571ee7390d9dc32364`.
+These runner binaries are observed, not downloaded or retained. The complete
+1,078-file product source guard remains unchanged, digest
+`748be14f8393d08b9f895f6dff2932c7156274362b437db24c1ec7a717a0ca1c`.
+External retained files under the existing Windows product laboratory:
+
+- `root-logs/native-sixth-windows-job-api.log`:
+  `021c944c9b29f857647900517e129f0a43a0cad67ad25ca8fba183bebb448fea`.
+- `root-logs/native-sixth-retained-failure.json`:
+  `b5fe2e3ef21bf0f6564a0e2955989b93ac50f8119538c9f31b364f27ed9c06e7`.
+
+The original five v1 failures remain retained. No actual loaded-v2 producer
+binding, complete product extraction/recovery, Windows distribution, real-client
+or runtime acceptance is inferred from this attempt.
+
+
+The subsequent fixture correction has byte-for-byte before/after evidence:
+eight stores, 156 files / 1,426,566 bytes, sixteen plans, four payload inventories
+and the authored toy key file are unchanged. Three source regressions check the
+original backslash failure, the exact eight-module local import closure and an
+isolated import discovering all fifteen cases without executing them. Local
+Python is 3.14.4; the explicit legacy f-string check supplements `ast`'s feature
+version option, without claiming a local Python-3.11 execution. The retained
+`fixture-python311-byte-comparison.json` report has SHA256
+`2b55f373d5938c5e2b4444b0f391458a1741644f955e2a7ec35085bfda3d062a`.
+Rust/Cargo, both producer parsers, payloads and the workflow are unchanged from
+5440090 by this correction. Native import and product CLI acceptance remain
+separate gates.

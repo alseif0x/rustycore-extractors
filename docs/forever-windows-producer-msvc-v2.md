@@ -127,3 +127,16 @@ results is later than the frozen run and changes no Rust/Cargo or Python source.
 Native MSVC product execution, Windows distribution and complete real-client /
 runtime extraction remain pending. No full extractor or release acceptance is
 established by these local checks.
+
+
+## Subsequent native preflight — product import still fails
+
+Run 38348243944 / Windows job 115134527122 on functional commit
+`5440090015fc618ad39ff3326eed0b1c61a87a67` passes both v2 offline seal
+preflights, explicit-feature MSVC lint and both native machine-query tests.
+The complete Windows workspace and focused namespace/package tests also pass.
+The product-case import then fails on Python-3.11-incompatible authored fixture
+syntax; zero actual product CLI cases execute. This is retained failed native
+product evidence, not successful loaded-v2 binding or full-product acceptance.
+See [the complete retained run](forever-windows-product.md) for counts, hashes
+and scope. No Rust parser or payload change is required by that import failure.

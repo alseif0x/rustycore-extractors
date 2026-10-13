@@ -3,8 +3,11 @@
 import ast
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,6 +15,40 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
+
+
+def python311_tree(source, filename):
+    tree = ast.parse(source, filename=filename, feature_version=(3, 11))
+    # On newer CPython, feature_version does not restore pre-PEP701 f-string
+    # tokenization. Explicitly retain the legacy restriction that caused the
+    # native 3.11 import failure; actual 3.11 compile/import remains authoritative.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FormattedValue):
+            expression = ast.get_source_segment(source, node.value)
+            if expression is None or '\\' in expression:
+                raise SyntaxError('Python 3.11 f-string expression contains a backslash: ' + filename)
+    return tree
+
+
+def native_import_closure():
+    roots = (ROOT / 'tests/forever', ROOT / 'tools')
+    pending = [roots[0] / 'test_windows_product_cli.py']
+    visited = {}
+    while pending:
+        path = pending.pop()
+        if path in visited:
+            continue
+        tree = python311_tree(path.read_text(encoding='utf-8'), str(path.relative_to(ROOT)))
+        visited[path] = tree
+        for node in ast.walk(tree):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else (
+                [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module else [])
+            for name in names:
+                for root in roots:
+                    dependency = root.joinpath(*name.split('.')).with_suffix('.py')
+                    if dependency.is_file():
+                        pending.append(dependency)
+    return visited
 
 
 class WindowsProductContract(unittest.TestCase):
@@ -108,6 +145,41 @@ class WindowsProductContract(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertFalse(self.c['validation']['network_syscall_tracing'])
         self.assertNotIn('strace', source)
+
+    def test_python311_grammar_guard_catches_original_fstring_failure(self):
+        old = 'value = f"{(b\'\\x55\' * 16).hex()}"'
+        with self.assertRaises(SyntaxError):
+            python311_tree(old, 'original-synthetic-regression.py')
+        python311_tree('cdn_key = (b"\\x55" * 16).hex()\nvalue = f"{cdn_key}"', 'fixed.py')
+
+    def test_native_cli_entire_local_import_closure_uses_python311_grammar(self):
+        closure = native_import_closure()
+        self.assertEqual({path.stem for path in closure}, {
+            'test_windows_product_cli', 'product_fixture', 'product_disk_fixture',
+            'product_keys_fixture', 'product_offmesh_fixture', 'db2_oracle',
+            'test_db2_oracle', 'seal_forever_windows'})
+
+    def test_native_cli_fixture_closure_imports_without_running_native_cases(self):
+        script = '''import importlib, json, sys, unittest
+sys.path[:0] = sys.argv[1:]
+module = importlib.import_module('test_windows_product_cli')
+names = ('product_fixture', 'product_disk_fixture', 'product_keys_fixture',
+         'product_offmesh_fixture', 'db2_oracle', 'test_db2_oracle', 'seal_forever_windows')
+print(json.dumps({'modules': sorted(name for name in names if name in sys.modules),
+                  'cases': unittest.defaultTestLoader.loadTestsFromModule(module).countTestCases()}))
+'''
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+        for name in ('FOREVER_WINDOWS_PRODUCT_BINARY', 'FOREVER_WINDOWS_PRODUCT_UNSEALED',
+                     'FOREVER_WINDOWS_PRODUCT_CASES'):
+            env.pop(name, None)
+        result = subprocess.run([sys.executable, '-c', script, str(ROOT / 'tests/forever'),
+                                 str(ROOT / 'tools')], cwd=ROOT, env=env, capture_output=True,
+                                text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {
+            'modules': sorted(['product_fixture', 'product_disk_fixture', 'product_keys_fixture',
+                               'product_offmesh_fixture', 'db2_oracle', 'test_db2_oracle',
+                               'seal_forever_windows']), 'cases': 15})
 
     def test_synthetic_golden_is_complete_and_internally_bound(self):
         for key in ('golden', 'golden_70170'):
