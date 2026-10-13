@@ -15,7 +15,7 @@ use forever_vmap::{
     placement::{self, Placement, ids},
     wmo,
 };
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod spooled;
 
 #[cfg(test)]
@@ -56,7 +56,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn validate_resources(
         self,
         profile: super::resources::Profile,

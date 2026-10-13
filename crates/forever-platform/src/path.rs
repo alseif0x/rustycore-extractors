@@ -82,6 +82,14 @@ impl AbsolutePath {
     pub fn as_str(&self) -> &str {
         &self.text
     }
+    #[cfg(windows)]
+    pub(crate) fn retained_metadata_bytes(&self) -> Option<usize> {
+        self.ends
+            .capacity()
+            .checked_mul(std::mem::size_of::<usize>())?
+            .checked_add(self.text.capacity())
+            .and_then(|n| n.checked_add(std::mem::size_of::<Self>()))
+    }
     pub fn ancestor_count(&self) -> usize {
         self.ends.len()
     }
@@ -130,6 +138,20 @@ fn validate_component(value: &str) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn retained_path_metadata_charges_actual_capacities() {
+        let path = AbsolutePath::parse("C:\\source\\input", Limits::default()).unwrap();
+        assert_eq!(
+            path.retained_metadata_bytes(),
+            Some(
+                std::mem::size_of::<AbsolutePath>()
+                    + path.text.capacity()
+                    + path.ends.capacity() * std::mem::size_of::<usize>()
+            )
+        );
+    }
 
     #[test]
     fn admitted_unicode_and_exact_prefixes() {

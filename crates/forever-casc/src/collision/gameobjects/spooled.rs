@@ -19,7 +19,10 @@ use forever_vmap::{
     wmo::liquid::LiquidLookup,
 };
 
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-spooled-gameobject-startup-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-spooled-gameobject-startup-v1";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause {
     Startup(super::Error),
@@ -422,5 +425,5 @@ fn reserved_vec<T, L: LiquidLookup + ?Sized>(
     collector.reserve_external(actual.checked_sub(requested).ok_or(super::Error::State)?)?;
     Ok(vec)
 }
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;

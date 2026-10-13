@@ -21,9 +21,12 @@ use crate::collision::{
 use forever_vmap::{RawM2, gameobject_models, vmo, wmo::raw};
 use std::mem::size_of;
 pub mod package;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-selected-vmo-stage-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-selected-vmo-stage-v1";
 pub const MAX_MEMORY_BYTES: usize = crate::collision::run::inventory::MAX_COMBINED_MEMORY_BYTES;
 const MAGIC: &[u8; 8] = b"RCEVMO1\0";
 const HEADER: usize = 92;

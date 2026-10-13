@@ -473,10 +473,13 @@ class DistributionTests(unittest.TestCase):
     def test_optional_windows_qa_allowlist_is_exact(self):
         self.assertEqual(m.OPTIONAL_WINDOWS_QA_SOURCE, (
             "docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1",
-            "docs/forever-windows-producer-msvc-v2.md"))
+            "docs/forever-windows-producer-msvc-v2.md", "docs/forever-windows-disk-world.md",
+            "tools/check_forever_windows_disk_world.ps1"))
         for name in ("source/docs/forever-windows-product-extra.md",
                      "source/tools/check_forever_windows_product_extra.ps1",
                      "source/docs/forever-windows-producer-msvc-v3.md",
+                     "source/docs/forever-windows-disk-world-extra.md",
+                     "source/tools/check_forever_windows_disk_world_extra.ps1",
                      "source/tools/unreviewed.ps1", "bin/forever-extractor.exe"):
             with self.subTest(name=name):
                 self.assertFalse(m.bundle_path_allowed(name))

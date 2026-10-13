@@ -46,7 +46,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 Linux leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, v6 pinned-metadata inline off-mesh navigation, or v7 Windows exclusive-append disk-world collision. Supplied-key v2-v7 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v7 extract/resume with disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; disk storage requires its explicit platform. Windows disk storage requires native AMD64 MSVC with windows-msvc-seal-v2. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
     }
     if !["inspect", "extract", "resume", "verify"].contains(&command) || args.len() % 2 != 1 {
         return Err("product_usage".into());
@@ -85,7 +85,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     if matches!(command, "extract" | "resume") {
         match (plan.collision_storage, options.contains_key("--scratch")) {
             (CollisionStorage::Resident, true) => return Err("product_scratch_forbidden".into()),
-            (CollisionStorage::LeasedDiskV1(_), false) => {
+            (CollisionStorage::LeasedDiskV1(_) | CollisionStorage::WindowsDiskV1(_), false) => {
                 return Err("product_scratch_required".into());
             }
             _ => {}
@@ -108,12 +108,12 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     } else {
         ""
     };
-    let collision_storage_capability = match plan.collision_storage {
-        CollisionStorage::Resident => "",
-        CollisionStorage::LeasedDiskV1(_) => {
-            ",\"collision_storage\":\"linux-leased-append-disk-world-v1\""
-        }
-    };
+    let collision_storage_capability = plan
+        .collision_storage
+        .id()
+        .map_or_else(String::new, |profile| {
+            format!(",\"collision_storage\":\"{profile}\"")
+        });
     let schema_capability = match plan.schema_catalog {
         forever_extractor::plan::SchemaCatalog::PinnedMetadataV1 => String::new(),
         forever_extractor::plan::SchemaCatalog::WowDbDefs70205V1 => {

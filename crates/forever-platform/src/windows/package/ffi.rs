@@ -293,8 +293,25 @@ pub(super) enum Mode {
     Read,
     Modify,
     Lock,
+    // Only the separate append owner uses this unshared read/write handle.
+    Archive,
 }
 pub(super) fn create(parent: &File, name: &str, directory: bool, sid: &Sid) -> Result<File, Error> {
+    create_mode(
+        parent,
+        name,
+        if directory {
+            Mode::Directory
+        } else {
+            Mode::Modify
+        },
+        sid,
+    )
+}
+pub(super) fn create_archive(parent: &File, name: &str, sid: &Sid) -> Result<File, Error> {
+    create_mode(parent, name, Mode::Archive, sid)
+}
+fn create_mode(parent: &File, name: &str, mode: Mode, sid: &Sid) -> Result<File, Error> {
     let mut storage = [0_u32; 24];
     let acl_pointer = storage.as_mut_ptr().cast();
     acl(acl_pointer, sid, FULL)?;
@@ -315,17 +332,7 @@ pub(super) fn create(parent: &File, name: &str, directory: bool, sid: &Sid) -> R
     {
         return Err(Error::Privacy);
     }
-    native_open(
-        parent,
-        name,
-        if directory {
-            Mode::Directory
-        } else {
-            Mode::Modify
-        },
-        true,
-        sd,
-    )
+    native_open(parent, name, mode, true, sd)
 }
 pub(super) fn open(parent: &File, name: &str, mode: Mode) -> Result<File, Error> {
     native_open(parent, name, mode, false, null_mut())
@@ -369,6 +376,10 @@ fn native_open(
         Mode::Read => (0x0012_0081, 1),
         Mode::Modify => (0x0013_0083, 1),
         Mode::Lock => (0x0012_0083, 3),
+        // GENERIC_READ|GENERIC_WRITE|SYNCHRONIZE, no sharing or DELETE access.
+        // Generic write is required by FlushFileBuffers. The public append API
+        // restricts writes; this is not a kernel append-only access claim.
+        Mode::Archive => (0xc010_0000, 0),
     };
     let status = unsafe {
         NtCreateFile(
@@ -438,6 +449,32 @@ pub(super) fn exact_name(file: &File, expected: &str) -> Result<(), Error> {
         .eq(expected.encode_utf16())
     {
         return Err(Error::Alias);
+    }
+    Ok(())
+}
+/// The new append profile requires complete volume-root ancestry. A SUBST drive
+/// mapped below that root can otherwise hide protected or .git ancestors.
+/// Full-volume drive aliases still report the root name and remain admissible.
+pub(super) fn volume_root(file: &File) -> Result<(), Error> {
+    let mut storage = [0_u64; 8192];
+    let mut io = Io::default();
+    let status = unsafe {
+        NtQueryInformationFile(
+            file.as_raw_handle(),
+            &mut io,
+            storage.as_mut_ptr().cast(),
+            size_of_val(&storage) as u32,
+            9,
+        )
+    };
+    if status != 0 || io.status as u32 != 0 || io.information != 6 {
+        return Err(Error::Unsupported);
+    }
+    // SAFETY: completion proved six initialized output bytes; these are a
+    // four-byte length followed by one UTF16 volume-relative root separator.
+    let bytes = unsafe { std::slice::from_raw_parts(storage.as_ptr().cast::<u8>(), 6) };
+    if bytes != [2, 0, 0, 0, 92, 0] {
+        return Err(Error::Unsupported);
     }
     Ok(())
 }

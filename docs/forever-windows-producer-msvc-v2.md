@@ -158,3 +158,17 @@ The next CI plan gives the complete two-profile product helper a dedicated
 and lint checks remain. See [the retained failed attempt](forever-windows-product.md)
 for exact binary, source and report hashes. Partial debug success is not full
 native product, Windows distribution, real-client or runtime acceptance.
+## Complete native resident-product evidence — 2026-10-13
+
+The later functional `cc4180c4a45a38bda399d0c3ae0327c17ecdc852` passes
+[native run 38352005262 / product job 115146296460](https://github.com/alseif0x/rustycore-extractors/actions/runs/38352005262/job/115146296460):
+both explicit MSVC-v2 seal preflights, native feature Clippy, the actual AMD64
+gate and all 15 sealed-product CLI methods per debug/release profile. The two
+profiles retain 74 commands across 30 case reports, including unsealed/modified
+producer rejection and six-component synthetic extraction/recovery.
+PR #25 merges it as `4519a0d5ca4ca0374db1be145653f7a59ae91058` with the same
+tree as the tested PR checkout. Exact binaries, source guard, reports and retained
+earlier failures are recorded in [the resident-product acceptance](forever-windows-product.md#accepted-native-resident-product--2026-10-13).
+This supplies the native loaded-v2 product evidence missing from the earlier
+attempts. It does not establish reproducible Windows distribution, publisher
+authentication, every possible loader write, real-client or runtime acceptance.

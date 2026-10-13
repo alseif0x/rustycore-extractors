@@ -19,6 +19,7 @@ use std::{
     path::Path,
     rc::Rc,
 };
+pub(crate) mod append_support;
 #[allow(unsafe_code)]
 mod ffi;
 mod membership;
@@ -236,6 +237,17 @@ impl Root {
         Self::open_kind(path, limits, false)
     }
     fn open_kind(path: &Path, limits: Limits, create: bool) -> Result<Self, Error> {
+        Self::open_kind_checked(path, limits, create, |_| Ok(()))
+    }
+    // Separate append consumers tie protected identities to the actual anchors
+    // immediately before relative creation. Existing package entrypoints retain
+    // their original admission and behavior through the no-op closure above.
+    fn open_kind_checked(
+        path: &Path,
+        limits: Limits,
+        create: bool,
+        precreate: impl FnOnce(&[Held]) -> Result<(), Error>,
+    ) -> Result<Self, Error> {
         let limits = limits.validate()?;
         let parsed = AbsolutePath::parse(path.to_str().ok_or(Error::Path)?, PathLimits::default())
             .map_err(|_| Error::Path)?;
@@ -250,6 +262,7 @@ impl Root {
         }
         let sid = ffi::process_sid()?;
         let (ancestors, drive, name) = anchors(&parsed, limits.max_handles)?;
+        precreate(&ancestors)?;
         let parent = &ancestors.last().ok_or(Error::Path)?.file;
         let file = if create {
             ffi::create(parent, &name, true, &sid)?

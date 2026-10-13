@@ -167,3 +167,70 @@ fn windows_disk_plan_rejects_all_execution_entries_before_io() {
         "product_disk_unsupported"
     );
 }
+
+#[cfg(not(all(
+    windows,
+    target_arch = "x86_64",
+    target_pointer_width = "64",
+    target_env = "msvc",
+    feature = "windows-msvc-seal-v2"
+)))]
+#[test]
+fn windows_v7_requires_explicit_msvc_v2_build_before_all_execution_io() {
+    let mut plan = resident();
+    plan.collision_storage = CollisionStorage::WindowsDiskV1(crate::plan::DiskBudget {
+        raw_bytes: 1024,
+        wdt_bytes: 1024,
+        cache_bytes: 1024,
+        placement_bytes: 1024,
+        vmo_bytes: 1024,
+        map_bytes: 1024,
+        output_bytes: 1024,
+    });
+    assert_eq!(Plan::parse(&plan.render()), Ok(plan.clone()));
+    let path = Path::new("nonexistent-authored-windows-v7-input");
+    assert_eq!(admit(&plan).unwrap_err().code, "product_disk_unsupported");
+    assert_eq!(
+        open(&plan, path).err().unwrap().code,
+        "product_disk_unsupported"
+    );
+    assert_eq!(
+        inspect(&plan, path, [0; 32], None).unwrap_err().code,
+        "product_disk_unsupported"
+    );
+    assert_eq!(
+        extract(&plan, path, path, [0; 32], false).unwrap_err().code,
+        "product_disk_unsupported"
+    );
+    assert_eq!(
+        extract_disk(&plan, path, path, [0; 32], true, None, path)
+            .unwrap_err()
+            .code,
+        "product_disk_unsupported"
+    );
+    assert_eq!(
+        crate::verify::verify(&plan, path, None).unwrap_err().code,
+        "product_disk_unsupported"
+    );
+}
+
+#[test]
+fn invalid_windows_v7_budget_rejects_before_platform_or_input() {
+    let mut plan = resident();
+    plan.collision_storage = CollisionStorage::WindowsDiskV1(crate::plan::DiskBudget {
+        raw_bytes: 0,
+        wdt_bytes: 1024,
+        cache_bytes: 1024,
+        placement_bytes: 1024,
+        vmo_bytes: 1024,
+        map_bytes: 1024,
+        output_bytes: 1024,
+    });
+    let path = Path::new("nonexistent-authored-windows-v7-input");
+    for result in [
+        admit(&plan),
+        extract_disk(&plan, path, path, [0; 32], false, None, path).map(|_| ()),
+    ] {
+        assert_eq!(result.unwrap_err().code, "product_plan_disk_budget");
+    }
+}

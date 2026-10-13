@@ -17,7 +17,10 @@ use super::{
 use crate::local_store::LocalStore;
 use forever_vmap::wmo::{self, doodads, liquid::LiquidLookup};
 
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-collision-payload-spool-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-collision-payload-spool-v1";
 const MAGIC: &[u8; 8] = b"RCEPLD1\0";
 const HEADER: usize = 52;
 const BINDING: usize = 12;
@@ -1313,5 +1316,5 @@ impl SpoolingExtraction {
         result
     }
 }
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;

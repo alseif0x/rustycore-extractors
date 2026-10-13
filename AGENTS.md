@@ -1984,3 +1984,83 @@ presence/absence and exact allowlist; 81 focused packager tests pass with an
 authored mock compiler. This repairs source closure while preserving the v10
 profile and older snapshots without the optional files. It is not a new
 compiled/reproducible Linux bundle or Windows distribution acceptance.
+
+## Accepted native Windows resident product — 2026-10-13
+
+PR #25 closes issue #24 and integrates functional
+`cc4180c4a45a38bda399d0c3ae0327c17ecdc852` as
+`4519a0d5ca4ca0374db1be145653f7a59ae91058`. Native Rust run 38352005262,
+product job 115146296460, accepts both debug/release profiles on Windows 2022,
+x64/MSVC and fixed local NTFS: 30 namespace, 21 package and one actual AMD64
+gate per profile, plus 15 CLI methods / 37 commands per profile. Thirty retained
+reports bind all 74 commands; all 1,078 tracked source files remain unchanged.
+Both separate build/locale goldens cover all six nonempty components. Recovery
+terminates after DB2 sealing, not during disk-world collision. Earlier failed
+and cancelled native attempts retain their outcomes. All assets are authored
+synthetic, with no new original C++ or real-client execution. Network attempts
+are not measured; neither distribution nor runtime/full extraction is accepted.
+Exact commit/tree, binary, inventory and retained report hashes are in
+docs/forever-windows-product.md and docs/forever-windows-producer-msvc-v2.md.
+
+Issue #26 / branch `codex/forever-windows-disk-world`, based on that merge,
+separately develops explicit plan v7 and
+`windows-exclusive-append-disk-world-v1`. It reuses Windows state/transaction v3
+and public manifest v1, preserving the Linux leased backend and older plan gates.
+Its pending contract, limits, fresh-only scratch and native acceptance gates are
+in docs/forever-windows-disk-world.md. Implementation or cross-compilation is not
+native disk-world acceptance and does not close real acquisition, runtime,
+distribution or the full extractor goal. No further client memory/key scanning
+is part of this increment.
+
+The disk-world source union now passes 2,762 Linux ordinary workspace tests /
+26 historical ignored / 42 targets per debug/release profile, workspace Clippy
+and full formatting, with 449 Rust/Cargo inputs unchanged. Windows GNU workspace
+all-target Clippy passes defaults and the MSVC-v2 feature; it is compile-only.
+Source checks pass 307 contracts and 162 distribution methods / one Windows-only
+skip. Two bounded Linux v3 disk worlds match all six components and the complete
+35-file / 142,622-byte build-bearing goldens, with four empty denied-network
+traces; a separate padded-M2 fixture probe passes. The planned native inventories
+include 4,100 complete supplied models, actual large archive streaming, 17 CLI
+methods, termination during a RAW append extent and distinct-volume scratch.
+No native disk-world result is yet accepted. Exact local source/attempt/report
+hashes and observation limits are in docs/forever-windows-disk-world.md.
+
+The first disk-world native run 38360542371 at functional `664ecbd` passes both
+hosted Linux profiles and native MSVC-v2 preflight/lint, then its three dedicated
+Windows jobs fail the LF-only source guard before their helper/CLI starts.
+Observed hashes equal the exact uniform CRLF projections of the two unchanged
+Linux Rust files. The correction admits only pinned LF or uniform CRLF checkout
+bytes; mixed/lone-CR/content/whitespace/BOM/final-LF changes reject. Three new
+regressions bring local contracts to 310. The independent Windows workspace was
+still live at the retained observation; no terminal/CLI acceptance is inferred.
+See the retained failure and scope in docs/forever-windows-disk-world.md.
+
+External Git-filtered CRLF source QA also exposes three historical literal-byte
+gates outside current Windows CI subsets. Fourteen exact attribute rules now
+retain LF for the two route/framing documents and twelve navigation imports,
+without changing their byte pins. The final three-overlay source reproduction
+passes 311 contracts / 18 focal methods and 162 distribution methods / one
+Linux-host Windows-only skip, with 1,099 copied files and the main Git index
+unchanged. It is source-only Linux QA; earlier failed stages stay retained and
+no native product result is inferred. Exact report hashes are in the disk doc.
+
+The final first-run Windows workspace observation is cancelled by the explicit
+20-minute job ceiling. All 17 spool cases, five resource cases, the fixture and
+23 of 24 pipeline cases finish; the 4,100-model path has no result. No later
+workspace step or dedicated CLI acceptance follows. The terminal record keeps
+all logs, API steps and the timeout annotation; hosted Linux/C++ success does
+not accept that incomplete Windows run. See the disk-world document.
+
+The next source revision gives only Windows workspace and disk-world matrix
+jobs a 60-minute ceiling, retaining all scale cases and the Linux/resident
+20-minute ceilings. The closed per-role validator rejects larger or invalid
+budgets. This is a bounded diagnostic rerun, not native acceptance or a measured
+full-world throughput claim; no Rust/Cargo source changes in this correction.
+
+The second disk-world run 38364014811 passes its dedicated source checks, then
+both profiles fail the selected 20-test append command. Buffered stdout is lost
+before the helper's failure exit, so no failing test/cause or successful group
+count is inferred. The next helper streams stdout and preserves the exit/count
+guards, with a regression. All 449 Rust/Cargo inputs remain unchanged; native
+failure diagnosis and acceptance stay open. Superseded pending jobs must retain
+their actual cancellation outcomes separately. See the disk-world document.

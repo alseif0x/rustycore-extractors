@@ -24,6 +24,8 @@ use std::path::Path;
 mod disk;
 #[cfg(windows)]
 mod windows;
+#[cfg(any(windows, test))]
+mod windows_disk_capacity;
 #[cfg(windows)]
 use windows::extract_inner;
 
@@ -77,13 +79,26 @@ fn open_inner(
 
 /// Admit the product execution platform before client, key or output I/O.
 /// Plans remain portable to inspect without a client. Windows supports all
-/// resident producers; the separately versioned Linux disk profile does not
-/// acquire paths or silently select a resident fallback there.
+/// resident producers. Each disk profile admits only its explicit platform;
+/// unsupported builds never acquire paths or select a resident fallback.
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(windows)]
-    if !matches!(plan.collision_storage, CollisionStorage::Resident) {
+    if matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
         return Err("product_disk_unsupported".into());
+    }
+    if matches!(plan.collision_storage, CollisionStorage::WindowsDiskV1(_)) {
+        if !cfg!(all(
+            windows,
+            target_arch = "x86_64",
+            target_pointer_width = "64",
+            target_env = "msvc",
+            feature = "windows-msvc-seal-v2"
+        )) {
+            return Err("product_disk_unsupported".into());
+        }
+        #[cfg(windows)]
+        windows::disk::admit()?;
     }
     Ok(())
 }
@@ -163,7 +178,7 @@ pub fn extract_with_keys(
     extract_inner(plan, client, output, producer, resume, Some(keys), None)
 }
 
-/// Explicit Linux leased disk-world collision extraction. Scratch is a private
+/// Explicit platform-specific disk-world collision extraction. Scratch is a private
 /// operator-owned directory; each attempt retains a new exclusive namespace.
 /// Plan budgets, source/output boundaries and physical space admit before client
 /// acquisition or common package creation. Resume reruns unfinished producers.
@@ -189,7 +204,7 @@ fn extract_inner(
     keys: Option<crate::input::SuppliedKeys>,
     scratch: Option<&Path>,
 ) -> Result<package::Summary, Error> {
-    plan.validate()?;
+    admit(plan)?;
     let preflight = match (plan.collision_storage, scratch) {
         (CollisionStorage::Resident, None) => None,
         (CollisionStorage::Resident, Some(_)) => return Err("product_scratch_forbidden".into()),
@@ -203,6 +218,9 @@ fn extract_inner(
                 client,
                 keys.as_ref().map(|keys| keys.source.as_path()),
             )?)
+        }
+        (CollisionStorage::WindowsDiskV1(_), _) => {
+            return Err("product_disk_unsupported".into());
         }
     };
     let (mut store, key_source) = match keys {
@@ -248,6 +266,7 @@ fn execute(
     mut run: Run,
     #[cfg(target_os = "linux")] preflight: Option<disk::Preflight>,
     #[cfg(windows)] key_source: Option<&forever_platform::windows::ReadFile>,
+    #[cfg(windows)] preflight: Option<&windows::disk::Preflight<'_>>,
 ) -> Result<package::Summary, Error> {
     let completed = run.completed_components()?;
     for component in Component::ALL {
@@ -256,6 +275,10 @@ fn execute(
         }
         #[cfg(windows)]
         windows::verify_keys(key_source)?;
+        #[cfg(windows)]
+        if let Some(disk) = &preflight {
+            disk.verify_unchanged()?;
+        }
         let result = match component {
             Component::Db2 => db2(plan, store, &mut run),
             Component::GameTables => game_tables(store, &mut run),
@@ -271,7 +294,10 @@ fn execute(
                 }
                 #[cfg(windows)]
                 {
-                    vmaps(store, &mut run)
+                    match &preflight {
+                        Some(disk) => disk.run(store, &mut run),
+                        None => vmaps(store, &mut run),
+                    }
                 }
             }
             Component::Navigation => mmaps(plan, store, output, &mut run),
@@ -285,7 +311,6 @@ fn execute(
             .map_err(|e| Error::from(e.code()))?;
         #[cfg(windows)]
         windows::verify_keys(key_source)?;
-        #[cfg(target_os = "linux")]
         if let Some(disk) = &preflight {
             disk.verify_unchanged()?;
         }
@@ -297,7 +322,6 @@ fn execute(
         .map_err(|e| Error::from(e.code()))?;
     #[cfg(windows)]
     windows::verify_keys(key_source)?;
-    #[cfg(target_os = "linux")]
     if let Some(disk) = &preflight {
         disk.verify_unchanged()?;
     }

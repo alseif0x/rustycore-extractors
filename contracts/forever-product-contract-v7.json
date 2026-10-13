@@ -1,0 +1,105 @@
+{
+  "contract": "forever-product-v7",
+  "version": 7,
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "scope": "Explicit Windows exclusive-append disk-world source candidate; native acceptance is a separate gate.",
+  "builds": [70170, 70205],
+  "locales": ["enUS", "esES"],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "windows-x86_64-msvc-native-amd64-fixed-local-ntfs",
+  "commands": ["inspect", "extract", "resume", "verify"],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "collision_storage": "windows-exclusive-append-disk-world-v1",
+    "collision_required": true,
+    "automatic_storage_selection": false,
+    "ordered_prefix_keys": ["forever-product", "build", "locale", "index", "root"],
+    "schema_catalog": {
+      "omitted": "pinned-metadata-v1",
+      "explicit": "wowdbdefs-70205-v1",
+      "explicit_build": 70205,
+      "position": "after root and before decryption when present",
+      "build_70338_admitted": false
+    },
+    "decryption": ["disabled", "provided-salsa20-v1"],
+    "storage_position": "after decryption and before components",
+    "ordered_budget_keys": [
+      "collision-raw-bytes", "collision-wdt-bytes", "collision-cache-bytes",
+      "collision-placement-bytes", "collision-vmo-bytes", "collision-map-bytes",
+      "collision-output-bytes"
+    ],
+    "minimum_spool_bytes": 32,
+    "maximum_spool_bytes": 137438953472,
+    "minimum_output_bytes": 1,
+    "maximum_output_bytes": 68719476736,
+    "whole_product_output_budget": true,
+    "components": ["db2", "gt", "cameras", "maps", "vmaps", "mmaps"],
+    "selection_and_dependencies": "Preserve existing bounded all/map/tile dependencies and coordinate spelling.",
+    "offmesh": {
+      "optional": true,
+      "profile": "inline-f32-bits-v1",
+      "source_contract": "contracts/forever-product-contract-v6.json",
+      "maximum_records": 1024,
+      "requires_navigation": true,
+      "requires_pinned_metadata": true,
+      "record_order_duplicates_and_float_bits_preserved": true,
+      "catalog_extension": false
+    },
+    "paths_and_key_material": false,
+    "version_selection": "Explicit Windows storage selects v7 before catalog or optional offmesh; older storage preserves older version selection."
+  },
+  "admission": {
+    "client_commands": "Windows x86_64, 64-bit, MSVC and explicit windows-msvc-seal-v2 feature; actual native AMD64 gate and loaded sealed producer before key/client/scratch/output I/O.",
+    "unsupported": "product_disk_unsupported before key/client/scratch/output I/O; plan parsing is permitted",
+    "plan_only_inspect_portable": true,
+    "old_plan_admission_gates_unchanged": true,
+    "verify": "Native AMD64 and supported target/feature admission precede output I/O; no client, keys, scratch or loaded-producer seal required.",
+    "producer_profile": "forever-windows-producer-seal-msvc-v2"
+  },
+  "scratch": {
+    "required_for": ["extract", "resume"],
+    "not_required_for": ["inspect", "verify"],
+    "namespace": "Fresh private exclusive namespace for each unfinished collision attempt.",
+    "adopt_existing": false,
+    "remove_old_failed_namespace": false,
+    "resume": "Verify sealed components, rerun unfinished producers with a fresh scratch namespace and replay exact retained artifact receipts."
+  },
+  "identities": {
+    "plan": "SHA-256 of all canonical TSV bytes, including storage, all seven budgets, catalog and optional offmesh records.",
+    "source": "Existing authenticated forever-logical-collection-v1 identity; not physical availability or a complete archive snapshot.",
+    "producer": "Actual loaded PE through the explicit MSVC-v2 contract; not publisher authentication.",
+    "keys": "Key values, names, counts, hashes and paths remain excluded from CLI JSON, public plans and package context."
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "manifest_version": 1,
+    "windows_state_version": 3,
+    "windows_transaction_version": 3,
+    "filesystem_profile": "forever-windows-product-ntfs-v1",
+    "new_context_field": false,
+    "state_migration": false,
+    "power_loss_durability_claimed": false
+  },
+  "verification": {
+    "scope": "Existing intrinsic artifact integrity/formats and explicit plan context, including optional exact offmesh sources.",
+    "complete_geometry_inventory_proved": false,
+    "ancestor_associations_proved": false,
+    "detour_topology_proved": false,
+    "runtime_accepted": false
+  },
+  "failure_envelope": "forever-product-v7 after valid plan admission; generic pre-admission errors retain forever-product-v1; path-free stable codes.",
+  "storage_contract": "contracts/forever-windows-disk-world-contract-v1.json",
+  "legacy_contracts_unchanged": ["forever-product-v1", "forever-product-v2", "forever-product-v3", "forever-product-v4", "forever-product-v5", "forever-product-v6"],
+  "validation": {
+    "status": "implementation-pending-native-acceptance",
+    "static_checks_are_execution_evidence": false,
+    "native_disk_world_accepted": false,
+    "real_client_accepted": false,
+    "distribution_accepted": false,
+    "publication_authorized": false,
+    "new_registry_dependencies": []
+  },
+  "full_extractor_complete": false
+}

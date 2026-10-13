@@ -1,0 +1,353 @@
+{
+  "contract": "forever-windows-collision-disk-v1",
+  "version": 1,
+  "issue": 26,
+  "product_contract": "forever-product-v7",
+  "scope": "Windows exclusive-append six-owner collision pipeline source candidate; native acceptance pending.",
+  "storage_profile": "windows-exclusive-append-disk-world-v1",
+  "backend_profile": "windows-exclusive-append-v1",
+  "volume_profile": "windows-fixed-ntfs-spool-volumes-v1",
+  "resource_profile": "windows-collision-disk-world-resources-v1",
+  "platform": "windows-x86_64-msvc-native-amd64-fixed-local-ntfs",
+  "runtime_native_amd64_required": true,
+  "new_registry_dependencies": [],
+  "network_api": false,
+  "client_data_in_git": false,
+  "publication_authorized": false,
+  "pipeline": {
+    "owners_created_before_startup": [
+      "raw",
+      "wdt",
+      "cache",
+      "placement",
+      "vmo",
+      "map"
+    ],
+    "order": [
+      "GameObject startup",
+      "world and placement acquisition",
+      "selected VMO conversion",
+      "complete package assembly",
+      "visit completed package",
+      "Run.put"
+    ],
+    "collision_publication_before_complete_assembly": false,
+    "geometry_algorithms_changed": false,
+    "record_envelopes_and_ordinal_handles_changed": false,
+    "linux_spool_or_archive_changed": false,
+    "serial_id_order_changed": false,
+    "parent_replay_or_binding_changed": false,
+    "available_prefix_fallback": false,
+    "resident_storage_fallback": false
+  },
+  "append": {
+    "handle": "Private GENERIC_READ|GENERIC_WRITE handle with SHARE0; no public raw file handle.",
+    "guarantee": "API-restricted pending-extent writes and immutable committed prefix; not kernel-enforced append access.",
+    "container_header_bytes": 32,
+    "record_header_bytes": 64,
+    "digest_scratch_bytes": 8192,
+    "commit_order": [
+      "guard and capture EOF",
+      "provisional new header",
+      "exact streaming body and SHA-256",
+      "patch new extent header only",
+      "flush",
+      "exact EOF and same-handle reread/hash",
+      "settle identity",
+      "commit ordinal"
+    ],
+    "patch_committed_prefix": false,
+    "uncommitted_drop_error_or_panic": "Sticky poison; no partial committed record.",
+    "complete_header_and_body_verification": true,
+    "per_record_retained_file_metadata": false,
+    "fcntl_lease_or_oplock_claimed": false,
+    "same_sid_isolation": false,
+    "atomic_snapshot": false
+  },
+  "namespace": {
+    "fresh_only": true,
+    "exclusive_creation": true,
+    "protected_owner_dacl": true,
+    "reparse_rejected": true,
+    "hardlinks_rejected": true,
+    "source_key_and_output_overlap_rejected": true,
+    "old_failed_scratch_adopted_or_removed": false,
+    "identity_eof_and_ancestor_guards": true,
+    "drive_roots": "Candidate/protected drive-root handles must report the actual NTFS volume root; SUBST mappings inside a directory reject before mutation. Full-volume aliases retain identity checks."
+  },
+  "physical_preflight": {
+    "space_profile": "windows-native-amd64-ntfs-available-space-v1",
+    "query": "Available space by retained directory handle, with real volume identity and allocation unit.",
+    "fixed_local_ntfs_only": true,
+    "quota_aware_caller_available_bytes": true,
+    "same_volume_reservations_aggregated": true,
+    "group_by_drive_letter": false,
+    "inodes": null,
+    "scratch_namespace_objects": 20,
+    "endpoint_headroom_bytes": 67108864,
+    "observation_is_atomic_reservation": false,
+    "capacity_guaranteed_after_preflight": false
+  },
+  "limits": {
+    "downward_only": true,
+    "spool_file_bytes": 137438953472,
+    "complete_product_output_bytes": 68719476736,
+    "combined_logical_bytes": 2147483648,
+    "common_run_allowance_bytes": 270532608,
+    "external_guard_allowance_bytes": 16777216,
+    "conversion_ceiling_bytes": 1860173824,
+    "namespace_constructor_logical_bytes": 4194304,
+    "preflight_allowance_bytes": 4194304,
+    "source_metadata_caller_residency_charged_separately": true,
+    "capacity_growth_old_plus_new_charged": true,
+    "not_claimed": [
+      "RSS bound",
+      "exact allocator usage",
+      "all CPU work",
+      "unlimited world size",
+      "full-world throughput"
+    ]
+  },
+  "publication": {
+    "protocol": "Existing Windows product namespace and state/transaction v3 with public manifest v1.",
+    "linux_hardlink_publisher_ported": false,
+    "context": "Existing plan/source/producer hashes; v7 canonical plan binds new storage and budgets.",
+    "recovery": "Sealed components verify and skip; unfinished producer recomputes with fresh scratch and exact receipt replay.",
+    "power_loss_durability_claimed": false
+  },
+  "validation": {
+    "status": "implementation-pending-native-acceptance",
+    "cross_compile_is_native_acceptance": false,
+    "native_disk_world_accepted": false,
+    "required_native_gates": [
+      "Actual fixed local NTFS append/space and collision-layer tests in debug and release.",
+      "Complete nonempty all-six-component v7 product outputs match independent Linux disk inventories.",
+      "Real disk streaming beyond 4096 model/request and 256 MiB cumulative source/RAW resident ceilings.",
+      "Terminate during collision and resume into fresh scratch, retaining the old namespace without adoption or deletion.",
+      "Loaded PE/source/key guards, exact context/replay and combined output budgets.",
+      "Aliases, case, reparse, hardlinks, resource limits, callback failures and sticky poison.",
+      "Existing Linux leased and native Windows resident regressions remain accepted."
+    ],
+    "network_tracing_performed": false,
+    "network_attempts": "not_measured",
+    "native_cpp_execution": false,
+    "real_client_accepted": false,
+    "runtime_accepted": false,
+    "distribution_accepted": false,
+    "native_test_groups": [
+      {
+        "package": "forever-platform",
+        "prefix": "windows::append::tests::",
+        "source": "crates/forever-platform/src/windows/append/tests.rs",
+        "names": [
+          "native_architecture_gate_rejects_failure_and_emulation",
+          "limits_are_downward_and_reject_before_owner_creation",
+          "exact_extent_patch_flush_same_handle_read_and_committed_prefix",
+          "uncommitted_drop_and_panic_stick_without_truncation",
+          "pending_bounds_cannot_patch_committed_prefix_or_read_unwritten_bytes",
+          "io_chunk_total_and_incomplete_commit_limits_are_terminal",
+          "share_zero_blocks_foreign_reads_writes_delete_and_reopen",
+          "unexpected_membership_and_eof_changes_poison_permanently",
+          "protected_inputs_exclude_containment_and_observed_changes_win_poison",
+          "private_namespace_is_fresh_and_accepts_independent_six_owners",
+          "streaming_more_than_256_mib_retains_constant_owner_metadata_and_handles",
+          "ordinary_scratch_directory_requires_exact_private_owner_dacl",
+          "hardlink_creation_is_excluded_or_observed_as_integrity_failure",
+          "ordinary_junction_owner_and_parent_are_rejected_without_symlink_privilege",
+          "git_ancestor_is_rejected_before_fresh_owner_mutation",
+          "forgotten_transaction_cannot_reuse_or_overwrite_pending_suffix",
+          "subdirectory_drive_alias_cannot_hide_protected_ancestors",
+          "protected_hardlinked_key_rejects_before_owner_creation",
+          "mutable_snapshot_rejects_observed_link_eof_and_identity_churn",
+          "observed_protected_key_change_overrides_logical_poison_and_stays_sticky"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-platform",
+        "prefix": "windows::space::tests::",
+        "source": "crates/forever-platform/src/windows/space/tests.rs",
+        "names": [
+          "caller_quotas_units_and_missing_inode_count_are_explicit",
+          "anomalous_negative_units_and_overflow_fail_closed",
+          "real_ntfs_observation_uses_directory_volume_and_survives_child_creation"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-platform",
+        "prefix": "path::tests::",
+        "source": "crates/forever-platform/src/path.rs",
+        "names": [
+          "retained_path_metadata_charges_actual_capacities",
+          "admitted_unicode_and_exact_prefixes",
+          "reject_device_unc_relative_aliases",
+          "reject_reserved_names_case_extensions_and_superscripts",
+          "exact_depth_and_component_limits",
+          "downward_limits_and_utf16_accounting"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-casc",
+        "prefix": "collision::spool::tests::",
+        "source": "crates/forever-casc/src/collision/spool/windows/tests.rs",
+        "names": [
+          "windows_profiles_are_explicit_and_numeric_caps_are_downward_only",
+          "empty_binary_and_chunked_records_roundtrip_exactly_once",
+          "archive_exclusion_blocks_foreign_read_write_truncate_and_delete",
+          "fresh_namespace_rejects_existing_output_without_overwrite",
+          "protected_source_containment_rejects_before_create",
+          "descriptors_charge_full_growth_overlap_without_records",
+          "record_disk_active_and_reload_boundaries_count_framing",
+          "insufficient_container_budget_rejects_before_namespace_creation",
+          "short_or_long_stream_poison_without_committing_a_record",
+          "write_callback_error_is_preserved_and_partial_bytes_are_not_reused",
+          "caught_write_panic_permanently_invalidates_the_owner",
+          "caught_read_panic_is_visible_to_metadata_only_owner_checks",
+          "read_callback_failure_poison_preserves_cumulative_attempts",
+          "failed_callback_capture_drops_before_final_namespace_guards",
+          "refused_reload_drops_uninvoked_capture_before_final_namespace_guards",
+          "disk_world_streams_more_than_4096_committed_records_in_one_file",
+          "streamed_aggregate_above_256_mib_keeps_only_one_bounded_reload_active"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-casc",
+        "prefix": "collision::assemble::staged::models::package::windows_tests::",
+        "source": "crates/forever-casc/src/collision/assemble/staged/models/package/windows_tests.rs",
+        "names": [
+          "empty_world_exposes_only_complete_dtree_inventory",
+          "empty_active_maps_keep_numeric_order_and_exact_nested_names",
+          "complete_m2_map_model_tree_tile_and_index_bytes_match",
+          "duplicate_ids_keep_every_model_name_before_first_id_wins",
+          "startup_only_duplicates_omissions_and_no_collision_preserve_lists",
+          "unused_acquired_wmo_doodad_dependency_is_excluded",
+          "cached_startup_wmo_and_later_liquid_wmo_keep_exact_bytes",
+          "authenticated_runner_parent_only_tile_preserves_child_index",
+          "grandchild_empty_own_cache_barrier_matches_closed_world",
+          "authenticated_mixed_nearer_payload_mismatch_is_terminal",
+          "whole_geometry_model_map_record_and_work_caps_reject_before_bundle_write",
+          "exact_file_and_output_byte_boundaries_accept_then_lower_rejects",
+          "assembly_association_and_component_work_caps_are_not_per_map",
+          "upward_phase_and_component_limits_always_reject",
+          "nonempty_bundle_repository_is_rejected_without_reuse",
+          "private_bundle_record_disk_and_active_caps_fail_whole_selection",
+          "visitor_late_typed_failure_poison_retains_caller_progress",
+          "metadata_inventory_is_io_free_and_visitation_reads_each_body_once",
+          "bundle_and_model_validation_budget_is_cumulative",
+          "typed_package_error_stays_bounded_without_heap_boxing",
+          "disk_world_all_six_owners_match_resident_bytes_and_counters",
+          "disk_resource_mixing_rejects_before_world_acquisition",
+          "resource_mixing_rejects_vmo_and_final_map_before_any_record_write",
+          "disk_world_4100_unique_models_and_256_mib_sources_complete_all_six_owners"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-casc",
+        "prefix": "collision::resources::tests::",
+        "source": "crates/forever-casc/src/collision/resources/tests.rs",
+        "names": [
+          "bounded_factories_are_every_original_default",
+          "expanded_factories_preserve_file_parser_memory_and_format_ceilings",
+          "every_collector_cumulative_field_is_explicit_and_downward_only",
+          "expanded_collector_cannot_raise_file_memory_or_geometry_safety_limits",
+          "declared_cumulative_capacities_fit_checked_x64_arithmetic"
+        ],
+        "features": null
+      },
+      {
+        "package": "forever-extractor",
+        "prefix": "plan::windows_disk_tests::",
+        "source": "crates/forever-extractor/src/plan/windows_disk_tests.rs",
+        "names": [
+          "v7_explicit_profile_roundtrips_all_six_components_and_decryption_modes",
+          "v1_through_v6_never_accept_the_windows_storage_literal",
+          "v7_requires_windows_storage_without_alias_or_resident_fallback",
+          "v7_preserves_70205_catalog_identity_and_has_priority_over_v4",
+          "v7_optional_offmesh_retains_v6_scope_and_precedence",
+          "v7_nonempty_offmesh_preserves_bits_duplicates_order_and_v6_limits",
+          "v7_rejects_70338_and_requires_collision_in_manually_constructed_plans",
+          "v7_all_seven_downward_budgets_have_the_existing_exact_bounds",
+          "v7_storage_and_each_budget_change_the_canonical_plan_hash",
+          "v7_rejects_unknown_fields_key_material_noncanonical_whitespace_and_eof",
+          "switching_back_to_old_storage_restores_old_versions_without_windows_fields"
+        ],
+        "features": "windows-msvc-seal-v2"
+      },
+      {
+        "package": "forever-extractor",
+        "prefix": "driver::windows_disk_capacity::tests::",
+        "source": "crates/forever-extractor/src/driver/windows_disk_capacity.rs",
+        "names": [
+          "same_volume_aggregates_both_endpoints_and_minimum_observation",
+          "separate_volumes_keep_independent_bounds_and_known_inode_caps",
+          "same_volume_uses_largest_allocation_unit_and_retains_known_inode_cap",
+          "output_budget_is_whole_package_and_every_spool_is_charged",
+          "zero_units_overflow_and_invalid_budget_reject_without_io"
+        ],
+        "features": "windows-msvc-seal-v2"
+      },
+      {
+        "package": "forever-extractor",
+        "prefix": "driver::windows::disk::tests::",
+        "source": "crates/forever-extractor/src/driver/windows/disk/tests.rs",
+        "names": [
+          "readonly_preflight_accepts_private_siblings_without_output_or_namespace_creation",
+          "preflight_rejects_source_output_and_key_aliases_before_mutation",
+          "own_directory_changes_are_allowed_and_observed_guard_failure_is_permanent",
+          "scratch_requires_explicit_private_dacl_before_output_creation"
+        ],
+        "features": "windows-msvc-seal-v2"
+      },
+      {
+        "package": "forever-casc",
+        "prefix": "collision::disk_fixture::",
+        "source": "crates/forever-casc/src/collision/disk_fixture.rs",
+        "names": [
+          "streaming_fixture_authenticates_multiple_encoding_pages_and_unique_full_ekeys"
+        ],
+        "features": null
+      }
+    ],
+    "cli_test_names": [
+      "test_70170_esES_all_six_match_linux_artifact_inventory",
+      "test_70205_enUS_all_six_match_linux_artifact_inventory",
+      "test_artifact_and_unknown_inventory_tampering_reject_verification",
+      "test_fresh_outputs_have_exact_same_manifest_and_artifacts",
+      "test_key_inside_scratch_rejects_without_output_or_namespace",
+      "test_missing_scratch_rejects_before_missing_keys_client_or_output",
+      "test_optional_empty_offmesh_all_six",
+      "test_output_budget_bounds_noncollision_db2_before_scratch_creation",
+      "test_plan_and_client_inspect_require_no_scratch_or_output",
+      "test_raw_budget_failure_retains_scratch_without_collision_prefix",
+      "test_resume_changed_budget_rejects_before_scratch_mutation",
+      "test_second_ntfs_volume_scratch_preserves_exact_complete_package",
+      "test_source_scratch_and_output_overlap_reject_before_mutation",
+      "test_space_shortfall_rejects_before_source_acquisition_or_output",
+      "test_supplied_toy_keys_all_six",
+      "test_terminate_during_collision_then_resume_fresh_scratch",
+      "test_unsealed_and_changed_loaded_seals_reject_before_scratch_creation"
+    ]
+  },
+  "sources": {
+    "append": "crates/forever-platform/src/windows/append.rs",
+    "space": "crates/forever-platform/src/windows/space.rs",
+    "spool": "crates/forever-casc/src/collision/spool/windows.rs",
+    "resources": "crates/forever-casc/src/collision/resources.rs",
+    "plan": "crates/forever-extractor/src/plan.rs",
+    "driver": "crates/forever-extractor/src/driver/windows.rs",
+    "preflight": "crates/forever-extractor/src/driver/windows_disk_capacity.rs",
+    "native_cli": "tests/forever/test_windows_disk_product_cli.py",
+    "native_script": "tools/check_forever_windows_disk_world.ps1"
+  },
+  "source_hash_profile": "pinned-lf-or-uniform-crlf-checkout-v1",
+  "unchanged_linux_sha256": {
+    "crates/forever-casc/src/collision/spool.rs": "31971708562e3294b04887b7986a8263cd5932828d1fd45fc32239fd2e6b16cd",
+    "crates/forever-casc/src/collision/spool/archive.rs": "a863ad1108e16ceec1fd43a0d397fdfcb4fb16f629df174382299c8171209e80"
+  },
+  "documentation": "docs/forever-windows-disk-world.md",
+  "full_extractor_complete": false
+}

@@ -19,10 +19,13 @@ PINS = {
 WORKSPACE_JOBS = ('linux', 'windows')
 PRODUCT_JOB = 'windows-product'
 PRODUCT_RUN = '. ./tools/check_forever_windows_product.ps1'
+DISK_JOB = 'windows-disk-world'
+DISK_RUN = ". ./tools/check_forever_windows_disk_world.ps1 -BuildProfile '${{ matrix.profile }}'"
+TIMEOUT_CEILINGS = {'linux': 20, 'windows': 60, PRODUCT_JOB: 20, DISK_JOB: 60}
 
 
 def validate_boundary(workflow):
-    if set(workflow['jobs']) != {*WORKSPACE_JOBS, PRODUCT_JOB}:
+    if set(workflow['jobs']) != {*WORKSPACE_JOBS, PRODUCT_JOB, DISK_JOB}:
         raise ValueError('job_roles')
     if workflow['permissions'] != {'contents': 'read'}:
         raise ValueError('permissions')
@@ -35,8 +38,9 @@ def validate_boundary(workflow):
         raise ValueError('toolchain')
     if 'runner.' in json.dumps(workflow['env']):
         raise ValueError('context_availability')
-    for job in workflow['jobs'].values():
-        if not 1 <= job['timeout-minutes'] <= 20:
+    for role, job in workflow['jobs'].items():
+        timeout = job.get('timeout-minutes')
+        if type(timeout) is not int or not 1 <= timeout <= TIMEOUT_CEILINGS[role]:
             raise ValueError('timeout')
         steps = job['steps']
         if steps[0].get('uses') != 'actions/checkout@' + PINS['actions/checkout']:
@@ -92,6 +96,7 @@ class ForeverCiContract(unittest.TestCase):
     def test_windows_workspace_covers_read_consumers_and_unsupported_output_guards(self):
         job = self.workflow['jobs']['windows']
         self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertEqual(job['timeout-minutes'], 60)
         tests = [s['run'] for s in job['steps'] if s.get('run', '').startswith('cargo test ')]
         self.assertEqual(len(tests), 1)
         self.assertEqual(tests[0].splitlines()[0], 'cargo test --offline --locked --workspace --all-targets --no-default-features')
@@ -143,6 +148,21 @@ class ForeverCiContract(unittest.TestCase):
                              'test_forever_windows_read_contract.py', 'test_forever_windows_consumers_contract.py'):
                 self.assertIn(filename, text)
 
+    def test_windows_disk_world_has_separate_profile_time_budgets(self):
+        job = self.workflow['jobs'][DISK_JOB]
+        self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertEqual(job['timeout-minutes'], 60)
+        self.assertEqual(job['strategy'], {'fail-fast': False,
+                                          'matrix': {'profile': ['debug', 'release']}})
+        self.assertEqual(job['defaults'], {'run': {'shell': 'pwsh'}})
+        self.assertEqual(job['steps'][:7], self.workflow['jobs']['windows']['steps'][:7])
+        self.assertEqual(job['steps'][-1]['run'], DISK_RUN)
+        self.assertNotIn('needs', job)
+        self.assertNotIn(PRODUCT_RUN, [s.get('run') for s in job['steps']])
+        self.assertIn('test_forever_windows_disk_world_contract.py', job['steps'][-2]['run'])
+        for other in (PRODUCT_JOB, *WORKSPACE_JOBS):
+            self.assertNotIn(DISK_RUN, [s.get('run') for s in self.workflow['jobs'][other]['steps']])
+
     def test_metadata_cli_is_explicitly_built_and_addressed(self):
         for name in WORKSPACE_JOBS:
             job = self.workflow['jobs'][name]
@@ -189,6 +209,9 @@ class ForeverCiContract(unittest.TestCase):
     def test_rejects_missing_product_job(self):
         self.rejects_mutation(lambda w: w['jobs'].pop(PRODUCT_JOB), 'job_roles')
 
+    def test_rejects_missing_disk_world_job(self):
+        self.rejects_mutation(lambda w: w['jobs'].pop(DISK_JOB), 'job_roles')
+
     def test_rejects_product_network_enabled_lint(self):
         self.rejects_mutation(lambda w: next(s for s in w['jobs'][PRODUCT_JOB]['steps']
                                              if s.get('name') == 'Check explicit MSVC v2 producer lint policy')
@@ -201,6 +224,26 @@ class ForeverCiContract(unittest.TestCase):
 
     def test_rejects_product_timeout_above_twenty_minutes(self):
         self.rejects_mutation(lambda w: w['jobs'][PRODUCT_JOB].update({'timeout-minutes': 21}), 'timeout')
+
+    def test_time_budgets_are_closed_per_role(self):
+        self.assertEqual({role: job['timeout-minutes']
+                          for role, job in self.workflow['jobs'].items()}, TIMEOUT_CEILINGS)
+
+    def test_rejects_linux_timeout_above_twenty_minutes(self):
+        self.rejects_mutation(lambda w: w['jobs']['linux'].update({'timeout-minutes': 21}), 'timeout')
+
+    def test_rejects_disk_and_workspace_timeouts_above_sixty_minutes(self):
+        for role in ('windows', DISK_JOB):
+            with self.subTest(role=role):
+                self.rejects_mutation(lambda w: w['jobs'][role].update({'timeout-minutes': 61}), 'timeout')
+
+    def test_rejects_nonpositive_and_noninteger_timeouts(self):
+        for role in self.workflow['jobs']:
+            for timeout in (0, -1, True, 20.0, '20', None):
+                with self.subTest(role=role, timeout=timeout):
+                    self.rejects_mutation(lambda w: w['jobs'][role].update({'timeout-minutes': timeout}), 'timeout')
+            with self.subTest(role=role, timeout='absent'):
+                self.rejects_mutation(lambda w: w['jobs'][role].pop('timeout-minutes'), 'timeout')
 
     def test_rejects_write_permission(self):
         self.rejects_mutation(lambda w: w['permissions'].update(contents='write'), 'permissions')

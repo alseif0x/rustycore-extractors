@@ -367,3 +367,61 @@ compiled Linux bundle or Windows distribution acceptance. The Linux source-v10
 profile and mandatory inventory retain their earlier scope; missing optional
 QA files remain admitted for older snapshots. Real two-build and moved-source
 reproducibility still require their own exact artifact evidence.
+
+## Accepted native resident product — 2026-10-13
+
+[PR #25](https://github.com/alseif0x/rustycore-extractors/pull/25) integrates
+functional commit `cc4180c4a45a38bda399d0c3ae0327c17ecdc852` into `forever`
+as `4519a0d5ca4ca0374db1be145653f7a59ae91058` and closes issue #24.
+[Rust run 38352005262 / product job 115146296460](https://github.com/alseif0x/rustycore-extractors/actions/runs/38352005262/job/115146296460)
+passes on native Windows 2022, x64/MSVC and fixed local NTFS. Its PR checkout is
+`902bbb6bc585d805476fc3416c857ca85d37e37b`; functional, PR-checkout and actual
+merge commits have the identical tree
+`fee2d6e4aec770a42ac239df41c1df2b6d25fd8c`. The separate Windows workspace,
+Linux debug/release and both C++ jobs also succeed. Earlier failed and cancelled
+attempts above remain historical; this run supplies the complete resident result.
+
+Both profiles pass the exact 30 namespace tests, 21 package tests and one actual
+native AMD64 gate. The actual sealed-product CLI passes all 15 methods in each
+profile: debug takes 588.907 seconds and release 64.698 seconds, with 37 process
+records each. Thirty case reports retain all 74 commands. Nonempty six-component
+outputs for 70205/enUS and 70170/esES match their separate Linux artifact goldens.
+The suite also covers explicit toy Salsa20 keys, independent verification,
+fresh-output equality, process termination after the DB2 seal and recovery,
+wrong-plan recovery, unsealed and changed producer seals, completed writers,
+missing model dependencies, artifact/inventory tampering and source/output
+overlap. It confirms Linux disk-profile rejection before missing input paths.
+The termination boundary is after DB2 sealing, not during disk-world collision.
+
+All 1,078 tracked source files remain unchanged. The logged Windows source
+inventory SHA256 is
+`ca2710c3f5899c396f10a711bca88d7713c7af19bd29104a83b5898886584439`.
+The observed sealed binary SHA256 values are:
+
+- debug: `ccf759a2edbfbf051042033d3575f3c83f63ee69fa9d0cd763db522e6bebcd5e`;
+- release: `bed1a564a4f5792b328da8e0b82b69203bbf1700e601408a6f3cbb02e2c54748`.
+
+These binaries were observed in the native log, not downloaded or packaged.
+Retained evidence is under the external
+`windows-product-20261013-bc74jzeo` laboratory:
+
+- `native-ninth-accepted/acceptance.json`:
+  `d8b2af61151090100779555f6bef27c6d9c5d3bc77616af7066c1337f822a7d4`;
+- `root-logs/native-ninth-windows-product-job-api.log`:
+  `ce4d2af762d2369543fa9fa83bc96981b3c2192d78c034619517f6967772e34f`;
+- `root-logs/native-product-integrated.json`:
+  `96a6b8062b8c60c99682a2ab00f10847fd207afaf9a87431290b04823ef94481`.
+
+The collector cross-checks the acquired run/job/checkout records, exact test and
+report inventories, all report hashes and unchanged source. It does not itself
+authenticate API input files or obtain the binaries. All assets are authored
+synthetic; no original C++ or real client is executed by this CLI corpus.
+Network attempts are `not_measured`, not zero. This accepts bounded native
+resident product/recovery and loaded MSVC-v2 identity, without Windows bundle
+reproducibility, publisher authentication, real geometry or runtime acceptance.
+
+[Issue #26](https://github.com/alseif0x/rustycore-extractors/issues/26) separately
+develops Windows disk-world collision storage. Its v7 profile and pending native
+gates are documented in [the disk-world scope](forever-windows-disk-world.md).
+Resident acceptance does not remove its 4,096-model/read or 256 MiB cumulative
+source/RAW limits and does not establish full extraction.

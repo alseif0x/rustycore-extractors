@@ -121,12 +121,13 @@ pub struct Plan {
     pub skip_liquids: bool,
     pub maximum_slope: u8,
     pub non_steep_slope: u8,
-    /// None retains v1-v5; Some (including empty) explicitly selects v6.
+    /// Some (including empty) selects v6 for earlier storage modes. Windows v7
+    /// independently admits this same optional, bounded off-mesh capability.
     pub offmesh: Option<Vec<OffMeshConnection>>,
 }
 
 impl Plan {
-    /// Parse the complete v1-v6 grammar. Exact re-rendering closes spelling,
+    /// Parse the complete v1-v7 grammar. Exact re-rendering closes spelling,
     /// ordering, whitespace, numeric representation and final-newline aliases.
     pub fn parse(input: &str) -> Result<Self, &'static str> {
         if input.len() > MAX_PLAN_BYTES {
@@ -147,6 +148,7 @@ impl Plan {
             "4" => 4,
             "5" => 5,
             "6" => 6,
+            "7" => 7,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -172,6 +174,16 @@ impl Plan {
                 "wowdbdefs-70205-v1" => SchemaCatalog::WowDbDefs70205V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
+            7 if lines
+                .clone()
+                .next()
+                .is_some_and(|line| line.starts_with("schema-catalog\t")) =>
+            {
+                match field(&mut lines, "schema-catalog")? {
+                    "wowdbdefs-70205-v1" => SchemaCatalog::WowDbDefs70205V1,
+                    _ => return Err("product_plan_schema_catalog"),
+                }
+            }
             5 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
@@ -184,21 +196,21 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 => match field(&mut lines, "decryption")? {
+            3..=7 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if version == 3
+        let collision_storage = if matches!(version, 3 | 7)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
                     .next()
                     .is_some_and(|line| line.starts_with("collision-storage\t")))
         {
-            CollisionStorage::parse(&mut lines)?
+            CollisionStorage::parse(&mut lines, version)?
         } else {
             CollisionStorage::Resident
         };
@@ -220,7 +232,13 @@ impl Plan {
         if maximum_slope > 90 || non_steep_slope > 90 {
             return Err("product_plan_slopes");
         }
-        let offmesh = if version == 6 {
+        let offmesh = if version == 6
+            || (version == 7
+                && lines
+                    .clone()
+                    .next()
+                    .is_some_and(|line| line.starts_with("offmesh\t")))
+        {
             if field(&mut lines, "offmesh")? != OFFMESH_PROFILE {
                 return Err("product_plan_offmesh");
             }
@@ -300,6 +318,11 @@ impl Plan {
         if ![70170, 70205, 70338].contains(&self.build) {
             return Err("product_plan_build");
         }
+        if matches!(self.collision_storage, CollisionStorage::WindowsDiskV1(_))
+            && ![70170, 70205].contains(&self.build)
+        {
+            return Err("product_plan_disk_scope");
+        }
         if self.schema_catalog == SchemaCatalog::WowDbDefs70205V1 && self.build != 70205 {
             return Err("product_plan_schema_catalog");
         }
@@ -314,7 +337,7 @@ impl Plan {
         if self.components == 0 || self.components & !63 != 0 {
             return Err("product_plan_components");
         }
-        if let CollisionStorage::LeasedDiskV1(budget) = self.collision_storage {
+        if let Some(budget) = self.collision_storage.disk_budget() {
             if !self.contains(Component::Collision) {
                 return Err("product_plan_dependencies");
             }
@@ -398,6 +421,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if matches!(self.collision_storage, CollisionStorage::WindowsDiskV1(_)) {
+            return 7;
+        }
         if self.offmesh.is_some() {
             return 6;
         }
@@ -416,6 +442,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if matches!(self.collision_storage, CollisionStorage::WindowsDiskV1(_)) {
+            return "forever-product-v7";
+        }
         if self.offmesh.is_some() {
             return "forever-product-v6";
         }
@@ -462,7 +491,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=7, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -532,3 +561,5 @@ mod tests;
 mod disk_tests;
 #[cfg(test)]
 pub(crate) mod offmesh_tests;
+#[cfg(test)]
+mod windows_disk_tests;
