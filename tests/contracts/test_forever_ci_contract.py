@@ -122,6 +122,20 @@ class ForeverCiContract(unittest.TestCase):
             self.assertLess(names.index('Install exact Rust version'), names.index('Fetch locked registry closure'))
             self.assertLess(names.index('Fetch locked registry closure'), next(i for i, name in enumerate(names) if name and name.startswith('Test ')))
 
+    def test_windows_strict_pe_preflight_precedes_workspace(self):
+        steps = self.workflow['jobs']['windows']['steps']
+        names = [s.get('name') for s in steps]
+        name = 'Preflight native producer PE directory profile'
+        self.assertLess(names.index('Fetch locked registry closure'), names.index(name))
+        self.assertLess(names.index(name), names.index('Test Rust workspace on synthetic inputs'))
+        step = steps[names.index(name)]
+        self.assertEqual(step['run'], "$ErrorActionPreference = 'Stop'\n. ./tools/check_forever_windows_product.ps1 -PePreflight")
+        script = (ROOT / 'tools/check_forever_windows_product.ps1').read_text(encoding='utf-8')
+        self.assertIn("'WINDOWS_PE_PREFLIGHT '", script)
+        self.assertIn("'WINDOWS_PE_PREFLIGHT_SOURCE '", script)
+        self.assertIn("'diagnostic_only': True, 'admission_unchanged': True", script)
+        self.assertIn('seal --input $unsealed --output $sealed --zero-checksum', script)
+
     def rejects_mutation(self, change, code):
         workflow = copy.deepcopy(self.workflow)
         change(workflow)

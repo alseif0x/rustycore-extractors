@@ -169,6 +169,13 @@
           }
         },
         {
+          "name": "Preflight native producer PE directory profile",
+          "run": "$ErrorActionPreference = 'Stop'\n. ./tools/check_forever_windows_product.ps1 -PePreflight",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
           "name": "Test Rust workspace on synthetic inputs",
           "run": "cargo test --offline --locked --workspace --all-targets --no-default-features\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
           "env": {

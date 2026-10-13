@@ -1,11 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Authored 2026-10-11: original purely synthetic PE-layout fixtures, not loader evidence.
 import hashlib
+import io
+import json
+import os
 import struct
+import tempfile
 import unittest
 import importlib.util
 import pathlib
 import sys
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("forever_windows_seal", ROOT / "tools/seal_forever_windows.py")
@@ -90,6 +96,47 @@ def with_import(target=0x30a0):
 
 
 class SealTests(unittest.TestCase):
+    def preflight(self, data):
+        script = (ROOT / 'tools/check_forever_windows_product.ps1').read_text(encoding='utf-8')
+        diagnostic = script.split("$diagnostic = @'\n", 1)[1].split("\n'@", 1)[0]
+        with tempfile.TemporaryDirectory() as temporary:
+            target = pathlib.Path(temporary)
+            for profile in ('debug', 'release'):
+                (target / profile).mkdir()
+                (target / profile / 'forever-extractor.exe').write_bytes(data)
+            capture = io.StringIO()
+            with patch.dict(os.environ, {'CARGO_TARGET_DIR': str(target)}), redirect_stdout(capture):
+                exec(compile(diagnostic, 'native-pe-preflight', 'exec'), {})
+            for profile in ('debug', 'release'):
+                self.assertEqual((target / profile / 'forever-extractor.exe').read_bytes(), data)
+        return [json.loads(line.removeprefix('WINDOWS_PE_PREFLIGHT '))
+                for line in capture.getvalue().splitlines()]
+
+    def test_preflight_reports_both_profiles_without_admitting_unsupported_directory(self):
+        data = fixture()
+        directory(data, 10, RVA[2], 512)
+        put(data, RAW[2], 512)
+        reports = self.preflight(bytes(data))
+        self.assertEqual([r['profile'] for r in reports], ['debug', 'release'])
+        for report in reports:
+            self.assertEqual(report['sha256'], hashlib.sha256(data).hexdigest())
+            self.assertEqual(report['bytes'], len(data))
+            self.assertEqual(len(report['directories']), 16)
+            self.assertEqual(report['directories'][10], {'index': 10, 'rva': RVA[2], 'size': 512})
+            self.assertEqual(report['load_config'], {'prefix_hex': bytes(data[RAW[2]:RAW[2]+512]).hex(),
+                                                     'prefix_bytes': 512, 'truncated': False})
+            self.assertTrue(report['diagnostic_only'])
+            self.assertTrue(report['admission_unchanged'])
+        self.reject(data, 'pe_unsupported_directory')
+
+    def test_preflight_never_reads_an_unmapped_or_out_of_file_directory(self):
+        data = fixture()
+        directory(data, 10, 0x9000, 64)
+        self.assertTrue(all(r['load_config'] is None for r in self.preflight(bytes(data))))
+        directory(data, 10, RVA[2], 64)
+        put(data, TABLE+2*40+20, len(data))
+        self.assertTrue(all(r['load_config'] is None for r in self.preflight(bytes(data))))
+
     def reject(self, data, code=None):
         with self.assertRaises(p.Reject) as caught:
             p.locate(bytes(data))

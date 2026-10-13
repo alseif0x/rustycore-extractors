@@ -160,6 +160,29 @@ source inventory, fixture or output artifact is uploaded by this workflow.
 Retained evidence must distinguish the downloaded job log and reconstructed
 reports from those temporary files. Network observations remain unmeasured.
 
+The third native run, functional commit `6d77c6a`, confirms the Win32 reader:
+49 synthetic sealer tests pass, including the actual Windows `.exe` identity
+test; one Unix-only test is excluded. All focused namespace/package inventories
+again pass in both profiles. This run remains an overall failure:
+[run 38343831466 / Windows job 115120582241](https://github.com/alseif0x/rustycore-extractors/actions/runs/38343831466/job/115120582241)
+stops at `pe_unsupported_directory` while sealing the actual debug MSVC PE.
+No full product CLI case executes. The log does not identify the rejected
+directory, so this evidence does not establish that it is load-config or CFG.
+The retained failed log SHA-256 is
+`83ec8c170ef08aa72bd844c75ce1b94318af29999d74ff4068efe06bde54ba42`.
+The 1,075-file source guard remains unchanged, with inventory SHA-256
+`ceb7fcbaab2b00e27f31cb0c8f0004bd21f4efc58116743eb26b5e8068b76dc6`.
+
+The subsequent CI plan builds both actual product profiles immediately after
+the locked fetch and records bounded PE directory/section metadata and at most
+512 bytes of mapped load-config data before calling the strict sealer. This
+diagnostic neither modifies the input nor admits a new directory. Both profiles
+are recorded before the first seal attempt; the separate preflight source guard
+also runs on failure. The full workspace/product suite follows only after
+successful PE admission. Local checks cover that ordering and synthetic
+diagnostic bounds; native diagnosis and complete product acceptance remain
+pending. No runner binary or client data is uploaded.
+
 ## Primary API references
 
 The implementation uses handle-relative
