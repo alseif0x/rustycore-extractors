@@ -46,7 +46,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nforever-extractor verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT] (Linux only)\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; verify-links additionally checks published terrain tile sets and navigation tile/global presence. No runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nforever-extractor verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT] (Linux only)\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, v6 pinned-metadata inline off-mesh navigation, or Linux v8 selected map and ancestors (v7 reserved). Supplied-key v2-v6/v8 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6/v8 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; verify-links additionally checks published terrain tile sets and navigation tile/global presence. V8 navigation builds each map's own candidates across the selected map and ancestor dependencies; maps without own candidates emit no MMaps. V8 verification enforces that whole domain and its terrain/navigation links; global GameObject startup remains required. No runtime/full-client claim.".into());
     }
     #[cfg(not(target_os = "linux"))]
     if command == "verify-links" {
@@ -139,8 +139,16 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 connections.len()
             )
         });
+    let map_domain_capability = plan.map_domain.map_or_else(String::new, |id| {
+        format!(
+            ",\"map_domain\":\"{}\",\"requested_map\":{id},\"gameobject_scope\":\"{}\",\"placement_ids\":\"{}\"",
+            forever_extractor::plan::MAP_DOMAIN_PROFILE,
+            forever_extractor::plan::GAMEOBJECT_SCOPE_PROFILE,
+            forever_extractor::plan::PLACEMENT_ID_DOMAIN_PROFILE,
+        )
+    });
     let capability = format!(
-        "{schema_capability}{decryption_capability}{collision_storage_capability}{offmesh_capability}"
+        "{schema_capability}{decryption_capability}{collision_storage_capability}{offmesh_capability}{map_domain_capability}"
     );
     if command == "inspect" && !options.contains_key("--client") {
         if options.contains_key("--keys") {
@@ -175,14 +183,27 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 return Ok(format!(
                     "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
                     plan.contract(),
-                    verify::links::SCOPE,
-                    verify::links::PROFILE,
+                    if plan.map_domain.is_some() {
+                        forever_extractor::plan::MAP_DOMAIN_VERIFY_SCOPE
+                    } else {
+                        verify::links::SCOPE
+                    },
+                    if plan.map_domain.is_some() {
+                        forever_extractor::plan::MAP_DOMAIN_VERIFICATION_PROFILE
+                    } else {
+                        verify::links::PROFILE
+                    },
                     summary.json()
                 ));
             }
             let summary = verify::verify(&plan, path("--output")?, expected)?;
+            let scope = if plan.map_domain.is_some() {
+                forever_extractor::plan::MAP_DOMAIN_VERIFY_SCOPE
+            } else {
+                "artifact_integrity_and_intrinsic_formats"
+            };
             return Ok(format!(
-                "{{\"contract\":\"{}\",\"scope\":\"artifact_integrity_and_intrinsic_formats\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
+                "{{\"contract\":\"{}\",\"scope\":\"{scope}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
                 plan.contract(),
                 summary.json()
             ));

@@ -65,7 +65,8 @@ fn verify_inner(
     }
     let mut facts = Facts::default();
     #[cfg(target_os = "linux")]
-    let mut link_facts = matches!(scope, Scope::Links).then(links::Facts::default);
+    let mut link_facts =
+        (matches!(scope, Scope::Links) || plan.map_domain.is_some()).then(links::Facts::default);
     #[cfg(not(target_os = "linux"))]
     let _ = scope;
     let mut failure = None;
@@ -106,11 +107,16 @@ fn verify_inner(
     if facts.db2 != plan.db2.iter().map(|e| e.name.clone()).collect()
         || (plan.contains(Component::GameTables) && facts.gt != gt::Table::ALL.len())
         || (plan.contains(Component::Cameras)
-            && facts.cameras != facts.camera_source.ok_or("product_camera_source")?)
+            && &facts.cameras
+                != facts
+                    .camera_source
+                    .as_ref()
+                    .ok_or("product_camera_source")?)
         || (plan.contains(Component::Collision) && !facts.dtree)
     {
         return Err("product_inventory".into());
     }
+    facts.finish_domain(plan)?;
     #[cfg(target_os = "linux")]
     if let Some(links) = link_facts {
         links.finish(plan)?;
@@ -126,8 +132,65 @@ struct Facts {
     camera_source: Option<BTreeSet<u32>>,
     trees: BTreeMap<u32, usize>,
     dtree: bool,
+    domain: Option<crate::map_domain::Domain>,
+    domain_terrain_maps: Vec<u32>,
+    domain_terrain_lists: Vec<u32>,
+    domain_collision_maps: Vec<u32>,
+    domain_collision_payload_maps: Vec<u32>,
+    domain_navigation_globals: Vec<u32>,
 }
 impl Facts {
+    fn finish_domain(&self, plan: &Plan) -> Result<(), Error> {
+        if plan.map_domain.is_none() {
+            return Ok(());
+        }
+        let domain = self.domain.as_ref().ok_or("product_map_domain_source")?;
+        if Some(domain.requested()) != plan.map_domain {
+            return Err("product_map_domain_source".into());
+        }
+        let mismatch = |code, component| Error {
+            code,
+            component: Some(component),
+        };
+        if domain.ids().len() != self.domain_terrain_lists.len()
+            || domain
+                .ids()
+                .iter()
+                .any(|id| !self.domain_terrain_lists.contains(id))
+            || self
+                .domain_terrain_maps
+                .iter()
+                .any(|&id| !domain.contains(id))
+        {
+            return Err(mismatch("product_map_domain_terrain", Component::Terrain));
+        }
+        if self
+            .domain_collision_maps
+            .iter()
+            .any(|&id| !domain.contains(id))
+            || self.trees.len() != domain.ids().len()
+            || domain.ids().iter().any(|id| !self.trees.contains_key(id))
+        {
+            return Err(mismatch(
+                "product_map_domain_collision",
+                Component::Collision,
+            ));
+        }
+        let own_navigation = |id: &u32| {
+            self.domain_terrain_maps.contains(id) || self.domain_collision_payload_maps.contains(id)
+        };
+        let mut expected_globals = domain.ids().iter().filter(|id| own_navigation(id));
+        if plan.contains(Component::Navigation)
+            && (self.domain_navigation_globals.len() != expected_globals.clone().count()
+                || expected_globals.any(|id| !self.domain_navigation_globals.contains(id)))
+        {
+            return Err(mismatch(
+                "product_map_domain_navigation",
+                Component::Navigation,
+            ));
+        }
+        Ok(())
+    }
     fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
         if bytes.is_empty() {
             return Err("product_empty_artifact".into());
@@ -144,6 +207,15 @@ impl Facts {
                     return Err("product_inventory".into());
                 }
                 validate_db2(plan, name, bytes)?;
+                if name == "Map"
+                    && let Some(requested) = plan.map_domain
+                {
+                    self.domain = Some(crate::map_domain::Domain::derive(
+                        bytes,
+                        requested,
+                        plan.contains(Component::Navigation),
+                    )?);
+                }
                 if name == "Map"
                     && plan
                         .offmesh
@@ -192,7 +264,11 @@ impl Facts {
                     .and_then(|v| v.strip_suffix(".tilelist"))
                 {
                     let id = decimal(map)?;
-                    admit(plan.terrain, id, None, false)?;
+                    if plan.map_domain.is_some() {
+                        domain_map(&mut self.domain_terrain_lists, id)?;
+                    } else {
+                        admit(plan.terrain, id, None, false)?;
+                    }
                     if path != &format!("maps/{id:04}.tilelist") {
                         return Err("product_artifact_name".into());
                     }
@@ -200,7 +276,11 @@ impl Facts {
                         .map_err(|_| Error::from("product_tilelist"))?;
                 } else {
                     let (map, x, y) = terrain_map_name(path)?;
-                    admit(plan.terrain, map, Some((x, y)), false)?;
+                    if plan.map_domain.is_some() {
+                        domain_map(&mut self.domain_terrain_maps, map)?;
+                    } else {
+                        admit(plan.terrain, map, Some((x, y)), false)?;
+                    }
                     forever_terrain::maps::verify(bytes, plan.build, 128 * 1024 * 1024)
                         .map_err(|e| Error::from(e.code()))?;
                 }
@@ -220,6 +300,9 @@ impl Facts {
                         .and_then(|v| v.split_once('/'))
                         .ok_or("product_artifact_name")?;
                     let map = decimal(folder)?;
+                    if plan.map_domain.is_some() {
+                        domain_map(&mut self.domain_collision_maps, map)?;
+                    }
                     if folder != format!("{map:04}") {
                         return Err("product_artifact_name".into());
                     }
@@ -236,6 +319,9 @@ impl Facts {
                         } else {
                             assembly::TileView::parse(bytes, Default::default())
                                 .map_err(|e| Error::from(e.code()))?;
+                            if plan.map_domain.is_some() {
+                                domain_map(&mut self.domain_collision_payload_maps, map)?;
+                            }
                         }
                     }
                 }
@@ -245,7 +331,12 @@ impl Facts {
                 let name = path.strip_prefix("mmaps/").ok_or("product_artifact_name")?;
                 if let Some(map) = name.strip_suffix(".mmap") {
                     let id = decimal(map)?;
-                    admit(plan.navigation, id, None, true)?;
+                    if plan.map_domain.is_none() {
+                        admit(plan.navigation, id, None, true)?;
+                    }
+                    if plan.map_domain.is_some() {
+                        domain_map(&mut self.domain_navigation_globals, id)?;
+                    }
                     if path != &mmap::global_path(id) {
                         return Err("product_artifact_name".into());
                     }
@@ -264,7 +355,9 @@ impl Facts {
                     let map = decimal(parts[0])?;
                     let row = decimal(parts[1])?;
                     let col = decimal(parts[2])?;
-                    admit(plan.navigation, map, Some((col, row)), true)?;
+                    if plan.map_domain.is_none() {
+                        admit(plan.navigation, map, Some((col, row)), true)?;
+                    }
                     if row >= 64
                         || col >= 64
                         || mmap::tile_path(map, row as u8, col as u8)
@@ -279,6 +372,26 @@ impl Facts {
             }
         }
         Ok(())
+    }
+}
+// Five sorted vectors each retain at most1024u32s; one old/new growth
+// overlap adds at most another4096bytes. These facts reserve24KiB separately
+// from the compact source domain's64KiB, not allocator/RSS accounting.
+fn domain_map(maps: &mut Vec<u32>, id: u32) -> Result<(), Error> {
+    match maps.binary_search(&id) {
+        Ok(_) => Ok(()),
+        Err(at) => {
+            if maps.len() >= 1024 {
+                return Err("product_map_domain_limit".into());
+            }
+            maps.try_reserve_exact(1)
+                .map_err(|_| Error::from("product_allocation"))?;
+            if maps.capacity() > 1024 {
+                return Err("product_map_domain_limit".into());
+            }
+            maps.insert(at, id);
+            Ok(())
+        }
     }
 }
 fn verify_offmesh_sources(
@@ -382,3 +495,6 @@ fn admit(
         Err("product_selection_mismatch".into())
     }
 }
+
+#[cfg(test)]
+mod domain_tests;

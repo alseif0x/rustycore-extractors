@@ -20,6 +20,10 @@ a later delivery, preserved in deferred draft PR #27. Historical cross-platform
 requirements below do not make Windows a prerequisite for the Linux milestone.
 Completed, validated implementations merge into `forever`; their feature branches
 are deleted while pending source and the legacy version line remain preserved.
+The installed authentic source currently retains build 70338 (and Classic 70003)
+configurations, not the earlier 70205 configuration. Historical 70205 evidence
+remains valid for its recorded source; it cannot reopen that source now. Build
+70338 remains DB2-only pending separate real geometry acceptance.
 
 ## Required components
 
@@ -33,7 +37,7 @@ are deleted while pending source and the legacy version line remain preserved.
 | Terrain maps | Local startup/WDT/root-ADT/MAPS/tile-list runner has 20 synthetic CLI cases per debug/release profile, with 48 MAPS / 24 lists and 6,864 exact GridMap queries per profile; real probe fails at the first complete Map read; integrated supplied-ADT conversion matches 248 complete synthetic files from the original pinned C++ parser/converter across two runs, with strict verification and 35,464 actual GridMap queries; 154 synthetic tests; preceding assembly acceptance covers another 380 files / 54,340 queries | Complete real local terrain acquisition; versioned real MAPS semantics, including liquids and bounds, compared against Forever C++ output and appropriate RustyCore readers |
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
-| Product interface | Linux inspect/extract/resume/verify connect all six Rust producers through explicit v1–v6 plans, including supplied keys, leased collision storage, target DB2 catalogs and inline navigation connections; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); build 70338 is DB2-only and strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
+| Product interface | Linux inspect/extract/resume/verify connect all six Rust producers through explicit v1–v6 plans, including supplied keys, leased collision storage, target DB2 catalogs and inline navigation connections; v8 adds a requested map plus its effective ancestor domain, global GameObject startup and automatic domain/link verification; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); build 70338 is DB2-only and strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
 | Distribution | Linux source recipe v10 accepts functional `6f1a6fa` with two identical fresh archives, an exact moved-source offline rebuild and 72 packaged synthetic methods across product v1–v6; the preceding v10 binary retains its own real 1,078-table acceptance, which is not transferred to this newer binary; older v9 evidence remains historical. Frozen corresponding source, exact registry archives/notices and qualified system linkage are retained. Windows read/output/membership foundations have separate native evidence; Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
 
 ## Version differences that must be resolved
@@ -3161,3 +3165,111 @@ Independent acceptance review SHA-256:
 `087f3b1895bc08732674e1af5f8275f98ed46fed037dac29159bc8a1bdc2dcbc`.
 The Linux real-input, full-world, VMap association, runtime and distribution
 gates remain open. Windows development stays deferred.
+
+
+### Linux source/key revalidation — 2026-10-13
+
+The installed authentic source now retains build configurations for 70003 and
+70338 only (three config files / 166,896 bytes). Historical 70205 receipts bind
+its former logical source identity, but do not retain the build/config bytes
+needed to reopen it through LocalStore. The stale 70170 fixture is not a
+replacement, and physical retention of historical ENCODING/ROOT remains unknown.
+This does not upgrade or discard historical 70205 acceptance.
+
+The final build-70338 DBCache contains three valid TactKey rows, byte-identical
+to the surviving 70338 temporary snapshot already covered by the documented
+join. These rows resolve none of the six missing key names. Only one of the two
+previously documented 70338 snapshots survives. The public TACTKeys head also
+remains the examined `f800811762b2e9ea638bf6dfdb4707382c497943` snapshot. There
+is no new usable key evidence; the preceding 83 encrypted-file failures remain
+unresolved, without another full-catalog retry or memory scan.
+
+Reports under
+`/mnt/nvme2/datos/forever-product-runs/linux-real-acquisition-20261013-vdwwt83k`:
+
+- `recovery/recovery-report.json`, SHA-256
+  `34a2439efca8900ff5bc9d5d5c75e0083b56aa0bbe6ca52a352380b5973e46`;
+- `cache/report.json`, SHA-256
+  `5925f075bac6ea7e34b65a84c12579b4ef60e17b11f59091b5136c61d5b00cb7`;
+- `root/acquisition-followup.json`, SHA-256
+  `9dbac7b60f577adc2b3481395b19c225cc050718695e01711cb095566e36c15c`.
+
+### Linux map-domain v8 implementation and validation — 2026-10-13
+
+The [product profile](forever-product.md#linux-selected-map-and-ancestor-domain-v8--2026-10-13)
+connects selected complete terrain, leased-disk collision and navigation across
+one requested map plus its effective ancestor domain. Global GameObject startup
+is explicit; serial IDs are local to this domain. Its new navigation view
+preserves complete selected direct numeric rows and supplies ancestor MMaps
+without inventing a child output when own candidates are absent.
+
+Frozen Linux workspace V3 passes 2,832 ordinary tests / 26 ignored across 42
+targets per debug/release profile, all-target Clippy and complete formatting.
+All 440 Cargo/crates files are identical before/after; inventory SHA-256
+`4d6750cc6d81484a22353a2eff3938b1998c2b8c8ef7ce12bc9d286ff74fff1d`.
+Report: `impl/workspace-v3/workspace-report.json`, SHA-256
+`240ba4f1f80ec09a73244960f7ba5b93c6339029c9cee4393d1de85c52bce633`,
+under `/mnt/nvme2/datos/forever-product-runs/linux-map-domain-20261013-hywoais4`.
+The ignored corpora remain unexecuted. All 329 source contracts pass;
+distribution source tests pass 162 / one skip, without creating a bundle.
+
+The initial integrated attempts remain unsuccessful. One authored case expected
+requested-only terrain, contradicting the complete ancestor domain. Another
+placed parent and child records in the same spatial tile: the nearest ancestor
+payload had three records while the child inherited index described two.
+The strict association rejection is preserved as a negative; moving the authored
+parent MDDF to a distinct tile provides a valid positive. Read-only archive
+diagnosis: `impl/diagnostics/cosmetic-readonly.json`, SHA-256
+`468b44e21d118ea491ec25c004e7d45798f215d2fb663896ee127d5bb333944b`.
+
+Attempt 2 passes 25 of 26 cases per profile but remains failed. Its remaining
+case exposed that explicit navigation selection rejects a map with no own
+candidates. The pinned original MapBuilder discovers own tilelists/payloads and
+skips a map with none; ancestors supply runtime fallback. Source SHA-256
+`72dd44c242c8cb4c2b08ee478d6a74b98463d34c18b1c12ec8dddc226712a461`
+matches the retained native inventory. V8 now generates the whole domain's own
+navigation candidates, including ancestor dependencies; legacy explicit-map
+rejection remains unchanged. Attempt 3 independently validates the corrected
+frozen source and passes all 29 methods / 116 commands per debug/release profile.
+Six positive original collision comparisons match 72 files / 8,468 bytes per
+profile. A complete original ConvertADT output matches 33,093 bytes, with 49
+exact height queries through the actual RustyCore GridMap reader. Navigation
+matches the existing v6 execution over explicitly projected complete closures;
+this does not execute new original native map selection or complete native
+navigation. The own-empty child retains ancestor outputs, and the genuinely
+empty complete domain emits zero MMaps. Actual SIGKILL/resume reproduces the
+clean selected-domain package and rejects a divergent selected plan.
+
+Eight retained v1/v2/v3/v6 all-six-component golden runs match 280 artifacts /
+1,140,976 bytes per profile. V4/v5 preserve four complete DB2 source files per
+profile. Across profiles, all 29 result arrays and input inventories match;
+33 manifest comparisons differ only in producer executable SHA-256, with 741
+artifact visits / 5,181,615 exact bytes. Those visits include intentionally
+rehashed negative packages: they are not 33 accepted packages.
+
+The runner's 608 source paths remain unchanged (compact inventory SHA-256
+`c994add3f243ee3cfc896b1fb3249a4712d8ee7bcc95d6a74ac2012039d11fcb`).
+The separate broader source/tool/workflow/native inventory retains 656 paths,
+freeze-file SHA-256
+`5d3c15cadfb70224caa857d0ab15ab76c9a210f78e7ea5ecd3a0926354db826d`;
+688 original/native/Boost/wrapper/binary entries also remain unchanged. These
+inventories are distinct from the preceding 440-file Cargo workspace inventory.
+Each profile has 115 empty traces and one expected nonempty fsync/SIGKILL trace;
+a complete-line audit finds zero network events and zero unknown lines.
+
+Retained final reports under the evidence root above:
+
+- `qa/attempt3/final-acceptance.json`, SHA-256
+  `baf49cea114b99fe49e3f5e48c78988eb15aff5bfb1c85c62d6a82a6c20aac92`;
+- `qa/attempt3/independent-evidence-audit.json`, SHA-256
+  `5faa8cb14ba183d05904e3b8e86b96c610474deaa876211624c268e906090a16`;
+- `root/review/independent-review.json`, SHA-256
+  `e99fec1bac10090acef4018861322f4e5182d182997cce15dee00ed8b5f4ded4`.
+
+The subsequent AGENTS/product/completion documentation update is outside the
+frozen executable source and is not rebuilt into these binaries.
+
+Neither this implementation nor its synthetic comparison establishes complete
+real acquisition, 70338 geometry support, full-world throughput, server
+activation, dynamic queries or a new reproducible distribution. The complete
+Linux extractor goal remains open; Windows work remains deferred.

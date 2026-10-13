@@ -5,6 +5,8 @@
 #[cfg(any(target_os = "linux", windows))]
 pub mod driver;
 pub mod input;
+#[cfg(any(target_os = "linux", windows))]
+mod map_domain;
 pub mod plan;
 pub mod producer;
 #[cfg(any(target_os = "linux", windows))]

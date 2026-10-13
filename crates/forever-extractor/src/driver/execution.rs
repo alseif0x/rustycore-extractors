@@ -9,6 +9,9 @@ use package::Component;
 /// Adapter-owned capabilities survive every producer and final package seal.
 /// Some input leases require an additional check before each active producer.
 pub(super) trait Adapter {
+    fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
+        None
+    }
     fn verify_before_producer(&self) -> Result<(), Error> {
         Ok(())
     }
@@ -69,7 +72,12 @@ impl<A: Adapter> Work for Production<'_, A> {
         self.adapter.verify_before_producer()
     }
     fn db2(&mut self) -> Result<(), Error> {
-        super::db2(self.plan, self.store, &mut self.run)
+        super::db2(
+            self.plan,
+            self.store,
+            &mut self.run,
+            self.adapter.map_domain(),
+        )
     }
     fn game_tables(&mut self) -> Result<(), Error> {
         super::game_tables(self.store, &mut self.run)
@@ -78,13 +86,24 @@ impl<A: Adapter> Work for Production<'_, A> {
         super::cameras(self.store, &mut self.run)
     }
     fn terrain(&mut self) -> Result<(), Error> {
-        super::maps(self.plan, self.store, &mut self.run)
+        super::maps(
+            self.plan,
+            self.store,
+            &mut self.run,
+            self.adapter.map_domain(),
+        )
     }
     fn collision(&mut self) -> Result<(), Error> {
         self.adapter.extract_collision(self.store, &mut self.run)
     }
     fn navigation(&mut self) -> Result<(), Error> {
-        super::mmaps(self.plan, self.store, self.output, &mut self.run)
+        super::mmaps(
+            self.plan,
+            self.store,
+            self.output,
+            &mut self.run,
+            self.adapter.map_domain(),
+        )
     }
     fn verify_inputs(&self) -> Result<(), Error> {
         self.store

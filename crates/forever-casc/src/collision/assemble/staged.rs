@@ -14,7 +14,9 @@
 //! with the original collector. Borrowed input and declared callback allocations
 //! are caller-owned; counters are conservative logical admission, not RSS.
 //! Same-mount/disk/read/reload limits of v1 repositories remain unchanged.
-use crate::collision::{gameobjects, inventory_spool as inventory, payload, run, spool, world};
+use crate::collision::{
+    gameobjects, inventory_spool as inventory, payload, plan, run, spool, world,
+};
 use forever_vmap::placement::{self, DirBin};
 use std::mem::size_of;
 pub mod models;
@@ -500,14 +502,14 @@ impl Stage {
     fn validate_topology(&mut self, topology: &world::Topology) -> Result<(), StageError> {
         let result = (|| {
             self.check()?;
-            let active = topology.all().iter().filter(|m| m.active()).count();
+            let active = topology.selected_active().count();
             if active != self.stats()?.maps {
                 return Err(StageError::Binding);
             }
             for e in &self.entries {
                 let map = topology
                     .get(e.context.map_id)
-                    .filter(|m| m.active())
+                    .filter(|m| m.active() && topology.contains_selected(m.id()))
                     .ok_or(StageError::Binding)?;
                 if e.context.replayed && map.parent_map_id() != Some(e.context.original_map_id) {
                     return Err(StageError::Binding);
@@ -664,10 +666,29 @@ fn input_guards(
 /// must fit the original combined limit; this never increases a v1 component.
 /// All output remains a private intermediate, even on complete success.
 pub fn extract(
+    startup: gameobjects::spooled::Startup<'_>,
+    wdts: inventory::Inventory,
+    caches: inventory::Inventory,
+    repository: spool::Spool,
+    limits: Limits,
+) -> Result<Staged, Error> {
+    extract_selected(
+        startup,
+        wdts,
+        caches,
+        repository,
+        plan::MapSelection::All,
+        limits,
+    )
+}
+/// Authenticated selected-domain acquisition through the same private disk
+/// owners and stage. Complete topology survives into final package assembly.
+pub fn extract_selected(
     mut startup: gameobjects::spooled::Startup<'_>,
     mut wdts: inventory::Inventory,
     mut caches: inventory::Inventory,
     mut repository: spool::Spool,
+    selection: plan::MapSelection,
     limits: Limits,
 ) -> Result<Staged, Error> {
     let admission: Result<usize, Error> = (|| {
@@ -721,12 +742,13 @@ pub fn extract(
             });
         }
     };
-    let world = world::inventory::extract(
+    let world = world::inventory::extract_selected(
         startup,
         wdts,
         caches,
         Capture(&mut stage),
         0,
+        selection,
         world::inventory::Limits {
             max_combined_memory_bytes: combined,
             ..limits.world

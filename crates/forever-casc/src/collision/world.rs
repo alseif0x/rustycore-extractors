@@ -167,6 +167,8 @@ pub struct Topology {
     rows: Vec<TopologyEntry>,
     by_id: Vec<usize>,
     direct_count: usize,
+    selection: plan::MapSelection,
+    selected: Vec<usize>,
     resident_bytes: usize,
 }
 #[derive(Clone, Copy)]
@@ -211,6 +213,28 @@ impl Topology {
             .binary_search_by_key(&id, |&i| self.rows[i].id)
             .ok()?;
         Some(&self.rows[self.by_id[at]])
+    }
+    pub const fn selection(&self) -> plan::MapSelection {
+        self.selection
+    }
+    pub fn contains_selected(&self, id: u32) -> bool {
+        self.get(id).is_some_and(|entry| match self.selection {
+            plan::MapSelection::All => entry.active(),
+            plan::MapSelection::MapAndAncestors(_) => {
+                self.selected.binary_search(&entry.physical_ordinal).is_ok()
+            }
+        })
+    }
+    pub fn selected_active(&self) -> impl Iterator<Item = &TopologyEntry> {
+        self.rows.iter().filter(|entry| {
+            entry.active()
+                && match self.selection {
+                    plan::MapSelection::All => true,
+                    plan::MapSelection::MapAndAncestors(_) => {
+                        self.selected.binary_search(&entry.physical_ordinal).is_ok()
+                    }
+                }
+        })
     }
     pub const fn direct_count(&self) -> usize {
         self.direct_count

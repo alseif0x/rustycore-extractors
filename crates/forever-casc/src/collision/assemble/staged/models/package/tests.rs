@@ -440,6 +440,13 @@ impl Drop for Private {
     }
 }
 fn prepared(f: &CollisionFixture, p: &Private) -> Prepared {
+    prepared_selected(f, p, crate::collision::plan::MapSelection::All)
+}
+fn prepared_selected(
+    f: &CollisionFixture,
+    p: &Private,
+    selection: crate::collision::plan::MapSelection,
+) -> Prepared {
     let mut store = f.open(false);
     let startup = gameobjects::spooled::extract_startup_fdid(
         &mut store,
@@ -459,11 +466,12 @@ fn prepared(f: &CollisionFixture, p: &Private) -> Prepared {
     };
     let mut limits = p.resources.stage_limits();
     limits.world.world.run.placements.ids.max_memory_bytes = 1024 * 1024;
-    let staged = placements::extract(
+    let staged = placements::extract_selected(
         startup,
         inv("wdts"),
         inv("caches"),
         p.spool(f, "placements", p.resources.spool_limits()),
+        selection,
         limits,
     )
     .unwrap();
@@ -571,10 +579,41 @@ fn compare_completed(
             .map(|m| m.stats().unique_spawns)
             .sum::<usize>()
     );
-    assert_eq!(
-        c.prepared().stage().world().startup().extraction().facts(),
-        expected.world().startup().extraction().facts()
-    );
+    let actual_facts = c.prepared().stage().world().startup().extraction().facts();
+    let expected_facts = expected.world().startup().extraction().facts();
+    if matches!(
+        c.prepared().stage().world().topology().selection(),
+        crate::collision::plan::MapSelection::All
+    ) {
+        assert_eq!(actual_facts, expected_facts);
+    } else {
+        // The selected owner authenticated the complete original Map; the
+        // independent reference authenticates only the closure Map. All other
+        // complete reads, raw bytes, models and acquisition work agree.
+        assert_eq!(
+            (
+                actual_facts.build,
+                actual_facts.reads,
+                actual_facts.dependency_requests,
+                actual_facts.raw_bytes,
+                actual_facts.models
+            ),
+            (
+                expected_facts.build,
+                expected_facts.reads,
+                expected_facts.dependency_requests,
+                expected_facts.raw_bytes,
+                expected_facts.models
+            )
+        );
+        assert_eq!(
+            actual_facts.source_bytes
+                - c.prepared().stage().world().tables()[0]
+                    .source()
+                    .byte_count(),
+            expected_facts.source_bytes - expected.world().tables()[0].source().byte_count()
+        );
+    }
     assert!(a.peak_admitted_bytes <= MAX_MEMORY_BYTES);
     c.verify_unchanged().unwrap();
     (c, p, expected)
@@ -2017,4 +2056,105 @@ fn leased_append_backend_mixing_rejects_selected_models_and_final_map_archive() 
             0
         );
     }
+}
+
+#[test]
+fn selected_domain_complete_disk_package_matches_independent_closure_world() {
+    use crate::collision::plan::MapSelection;
+    let mut original = files(&[
+        (90, 190, -1),
+        (3, 103, 2),
+        (1, 101, -1),
+        (2, 102, 1),
+        (80, 180, -1),
+    ]);
+    original[0].2 = gameobject_db2(&[(4, 204)], &[]);
+    original.extend([
+        (180, None, b"unrelated malformed WDT".to_vec()),
+        (101, None, wdt(None, Some(111))),
+        (102, None, wdt(None, None)),
+        (103, None, wdt(None, None)),
+        (111, None, m2_adt(201, 42)),
+        (201, None, m2(true)),
+        (204, None, m2(true)),
+    ]);
+    // An independently complete closure-only input preserves relative source
+    // order and proves the selected serial ID domain, not full-world IDs.
+    let mut closure = original.clone();
+    closure[1].2 = map_db2(&[(3, 103, 2), (1, 101, -1), (2, 102, 1)], &[]);
+    let reference = CollisionFixture::new(&closure);
+    let expected = old(&reference).unwrap();
+    let f = CollisionFixture::new(&original);
+    let p = Private::new();
+    let selected = prepared_selected(&f, &p, MapSelection::MapAndAncestors(3));
+    assert_eq!(selected.stage().world().topology().all().len(), 5);
+    assert_eq!(
+        selected
+            .stage()
+            .world()
+            .topology()
+            .selected_active()
+            .map(|m| m.id())
+            .collect::<Vec<_>>(),
+        [3, 1, 2]
+    );
+    let c = assemble(
+        selected,
+        p.spool(&f, "maps", p.resources.spool_limits()),
+        p.resources.package_limits(),
+    )
+    .unwrap();
+    let (c, _p, _) = compare_completed(c, p, expected);
+    assert_eq!(c.stats().unwrap().maps, 3);
+    assert_eq!(c.stats().unwrap().selected_models, 2);
+    assert_eq!(c.stats().unwrap().parent_only_tiles, 1);
+}
+#[test]
+fn selected_domain_ids_are_deterministic_and_can_differ_from_full_world_slice() {
+    use crate::collision::plan::MapSelection;
+    let mut input = files(&[(90, 190, -1), (1, 101, -1)]);
+    input.extend([
+        (190, None, wdt(None, Some(191))),
+        (191, None, m2_adt(201, 99)),
+        (101, None, wdt(None, Some(111))),
+        (111, None, m2_adt(201, 42)),
+        (201, None, m2(true)),
+    ]);
+    let f = CollisionFixture::new(&input);
+    let all = old(&f).unwrap();
+    let all_bytes = all
+        .maps()
+        .iter()
+        .find(|m| m.map_id() == 1)
+        .unwrap()
+        .ordered_dir_bin()
+        .to_vec();
+    let mut results = Vec::new();
+    for _ in 0..2 {
+        let p = Private::new();
+        let mut selected = prepared_selected(&f, &p, MapSelection::MapAndAncestors(1));
+        let selected_dir = selected
+            .stage
+            .with_map(1, 64 * 1024 * 1024, |m| Ok::<_, u8>(m.bytes().to_vec()))
+            .unwrap();
+        assert_ne!(selected_dir, all_bytes);
+        let mut c = assemble(
+            selected,
+            p.spool(&f, "maps", p.resources.spool_limits()),
+            p.resources.package_limits(),
+        )
+        .unwrap();
+        let bytes = c
+            .with_map(1, 0, |m| {
+                Ok::<_, u8>(
+                    m.artifacts()
+                        .map(|a| (a.name().to_string(), a.bytes().to_vec()))
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .unwrap();
+        results.push(bytes);
+    }
+    assert_eq!(results[0], results[1]);
+    assert!(!all_bytes.is_empty());
 }

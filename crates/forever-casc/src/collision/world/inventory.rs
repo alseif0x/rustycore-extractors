@@ -275,11 +275,34 @@ impl Completed {
 /// transferred intact into the runner; no release gap or double reservation.
 /// Failure exposes no Completed. WDT/cache and cumulative policy limits remain.
 pub fn extract<S: run::inventory::Sink>(
+    startup: gameobjects::spooled::Startup<'_>,
+    wdts: Inventory,
+    caches: Inventory,
+    sink: S,
+    sink_heap_allowance: usize,
+    limits: Limits,
+) -> Result<Completed, Error<S::Error>> {
+    extract_selected(
+        startup,
+        wdts,
+        caches,
+        sink,
+        sink_heap_allowance,
+        plan::MapSelection::All,
+        limits,
+    )
+}
+/// Complete graph validation with acquisition restricted to one active direct
+/// map and its effective ancestors. Global GameObject startup is unchanged.
+/// One serial Session spans this domain; its IDs are not full-world IDs.
+#[allow(clippy::too_many_arguments)]
+pub fn extract_selected<S: run::inventory::Sink>(
     mut startup: gameobjects::spooled::Startup<'_>,
     wdts: Inventory,
     caches: Inventory,
     sink: S,
     sink_heap_allowance: usize,
+    selection: plan::MapSelection,
     limits: Limits,
 ) -> Result<Completed, Error<S::Error>> {
     let combined = limits.max_combined_memory_bytes;
@@ -318,9 +341,10 @@ pub fn extract<S: run::inventory::Sink>(
                 .ok_or(super::Error::Limit)?,
         );
         startup.collector_mut().reserve_external(graph_budget)?;
-        let maps = plan::Maps::from_materialized(
+        let maps = plan::Maps::from_materialized_selection(
             &rows,
             direct_count,
+            selection,
             plan::Limits {
                 max_memory_bytes: graph_budget,
                 ..limits.maps

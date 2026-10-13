@@ -28,6 +28,7 @@ fn resident() -> Plan {
         maximum_slope: 55,
         non_steep_slope: 55,
         offmesh: None,
+        map_domain: None,
     }
 }
 

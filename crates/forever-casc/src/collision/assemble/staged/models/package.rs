@@ -780,7 +780,7 @@ impl Completed {
             .world
             .topology()
             .get(id)
-            .is_some_and(|m| m.active())
+            .is_some_and(|m| m.active() && self.models.stage.world.topology().contains_selected(id))
         {
             return Err(Kind::Binding.into());
         }

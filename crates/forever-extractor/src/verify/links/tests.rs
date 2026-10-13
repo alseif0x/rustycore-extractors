@@ -27,6 +27,7 @@ fn plan(selection: Selection) -> Plan {
         maximum_slope: 55,
         non_steep_slope: 55,
         offmesh: None,
+        map_domain: None,
     }
 }
 fn artifact(component: Component, path: &str, bytes: &[u8]) -> Artifact {

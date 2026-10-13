@@ -428,6 +428,14 @@ fn reduced_world() -> world::inventory::Limits {
     l
 }
 fn acquire(f: &CollisionFixture, p: &Private, limits: super::Limits) -> Result<Staged, Error> {
+    acquire_selected(f, p, plan::MapSelection::All, limits)
+}
+fn acquire_selected(
+    f: &CollisionFixture,
+    p: &Private,
+    selection: plan::MapSelection,
+    limits: super::Limits,
+) -> Result<Staged, Error> {
     let mut store = f.open(false);
     let startup = gameobjects::spooled::extract_startup_fdid(
         &mut store,
@@ -447,11 +455,12 @@ fn acquire(f: &CollisionFixture, p: &Private, limits: super::Limits) -> Result<S
         )
         .unwrap()
     };
-    super::extract(
+    super::extract_selected(
         startup,
         inv("wdts"),
         inv("caches"),
         p.spool(f.path(), "placements", SpoolLimits::default()),
+        selection,
         limits,
     )
 }
@@ -1210,4 +1219,82 @@ fn compact_typed_error_guards_have_no_duplicate_storage_or_heap_indirection() {
         access.cause,
         AccessCause::Access(Cause::Stage(StageError::Limit))
     );
+}
+
+#[test]
+fn selected_domain_projects_all_globals_before_any_depth_ordered_adt() {
+    let mut input = files(&[(90, 190, -1), (3, 103, 2), (1, 101, -1), (2, 102, 1)]);
+    input.extend([
+        (103, None, wdt(Some(301), Some(113))),
+        (101, None, wdt(None, Some(111))),
+        (102, None, wdt(None, Some(112))),
+        (111, None, m2_adt(201, 7)),
+        (112, None, m2_adt(201, 7)),
+        (113, None, chunk(b"MVER", &18u32.to_le_bytes())),
+        (201, None, m2(true)),
+        (301, None, wmo_root(302, None)),
+        (302, None, wmo_group(true, false, false)),
+    ]);
+    let f = CollisionFixture::new(&input);
+    let p = Private::new();
+    let mut out = acquire_selected(
+        &f,
+        &p,
+        plan::MapSelection::MapAndAncestors(3),
+        super::Limits {
+            world: reduced_world(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut chronological = out.stage.entries.clone();
+    chronological.sort_unstable_by_key(|e| e.sequence);
+    assert_eq!(
+        chronological
+            .iter()
+            .map(|e| (e.context.map_id, e.context.kind))
+            .collect::<Vec<_>>(),
+        [
+            (3, run::Kind::Global),
+            (1, run::Kind::Global),
+            (2, run::Kind::Global),
+            (1, run::Kind::Tile { x: 0, y: 0 }),
+            (2, run::Kind::Tile { x: 0, y: 0 }),
+            (3, run::Kind::Tile { x: 0, y: 0 })
+        ]
+    );
+    // The child's global WMO client ID7 is inserted before the root M2 with
+    // that same serial allocator key. One domain Session must retain ID7.
+    out.with_map(1, 0, |view| {
+        assert_eq!(view.records().next().unwrap().id(), 7);
+        Ok::<_, ()>(())
+    })
+    .unwrap();
+    assert_eq!(out.world().report().ids.calls, 3);
+    assert_eq!(out.world().report().ids.entries, 1);
+    assert_eq!(out.world().report().own_tiles, 3);
+    assert_eq!(out.world().report().replayed_tiles, 0);
+}
+#[test]
+fn selected_stage_rejects_an_extra_out_of_domain_global_and_poisons() {
+    let mut input = files(&[(1, 101, -1), (2, 102, -1)]);
+    input.push((101, None, wdt(None, None)));
+    let f = CollisionFixture::new(&input);
+    let p = Private::new();
+    let mut out = acquire_selected(
+        &f,
+        &p,
+        plan::MapSelection::MapAndAncestors(1),
+        super::Limits {
+            world: reduced_world(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    out.stage.append(global(2), &[]).unwrap();
+    assert_eq!(
+        out.stage.validate_topology(out.world.topology()),
+        Err(StageError::Binding)
+    );
+    assert!(out.stage.check().is_err());
 }

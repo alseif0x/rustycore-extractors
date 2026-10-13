@@ -1,4 +1,4 @@
-# Forever product interface v1–v6
+# Forever product interface: v1–v6 and Linux v8
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -679,3 +679,82 @@ Independent acceptance review SHA-256:
 `087f3b1895bc08732674e1af5f8275f98ed46fed037dac29159bc8a1bdc2dcbc`.
 The Linux real-input, full-world, VMap association, runtime and distribution
 gates remain open. Windows development stays deferred.
+
+
+## Linux selected map and ancestor domain v8 — 2026-10-13
+
+The explicit [map-domain contract](../contracts/forever-linux-map-domain-contract-v1.json)
+adds product plan v8 for Linux, builds 70170/70205 and the pinned metadata
+catalog. It requires the existing leased disk collision profile, DB2/terrain/
+collision components and a complete published `Map` DB2. V1–v6 canonical bytes,
+hashes and execution semantics remain unchanged; v7 is reserved by the deferred
+Windows draft. Build 70338 remains DB2-only under v5.
+
+After the existing disk-budget fields, v8 declares these canonical fields:
+
+```tsv
+map-domain	map-and-ancestors-v1
+map-id	7
+gameobject-scope	global-startup-v1
+placement-ids	selected-closure-serial-ids-v1
+```
+
+The ID above illustrates grammar, not a real-client map recommendation. Terrain
+must select that whole map. Navigation is `none` or the same `map:<id>` request;
+when selected it requires `LiquidType` and the explicit inline offmesh section,
+including an empty section. Supplied connections remain scoped to the requested
+map. Existing key and scratch requirements still apply.
+
+Extract/resume authenticates and validates the complete Map before creating or
+resuming package state. It rejects duplicate, cyclic, missing or copy-only graph
+relationships and inactive selected members. The domain contains the requested
+map and its actual effective ancestors: nonnegative ParentMapID takes precedence;
+otherwise CosmeticParentMapID is used. Both branches are never combined. The
+complete source graph and original physical ordinals survive collision planning,
+but only domain WDTs and ADTs are acquired. Present dependency failures remain
+terminal; an available prefix is not a successful file.
+
+Terrain publishes whole-map MAPS/tilelists for the complete domain. Collision
+publishes each domain tree and its tiles/indexes, selected VMOs and the global
+GameObject dtree. GameObject startup remains global: its models are dependencies
+even when they have no selected-map placement. Globals precede own ADTs, and one
+serial allocation Session spans the domain. IDs are deterministic within that
+domain; they need not equal a slice of a full-world extraction. Independently
+extracted domains cannot generally be combined without an ID/rebinding policy.
+
+Navigation also generates ancestor dependencies. A compact view retains the
+original selected **direct** numeric Map rows, their order, flags and both parent
+fields; it does not replay copies or fabricate SourceRecords. Discovery uses
+that closed view and original own-candidate semantics. Each map with own MAPS or
+payload `.vmtile` candidates generates navigation. A map with only an empty
+tilelist and inherited `.vmtileidx` emits no invented global/tiles; its ancestors'
+MMaps are included instead. A genuinely empty complete domain can therefore
+finish with zero MMaps. Source graph/root-parameter validation remains mandatory;
+not all navigation startup errors are admitted during the initial Map preflight.
+
+The domain retains at most 1,024 members. Core selection reserves at most 64 KiB;
+product domain plus the navigation numeric view share a separately checked
+64 KiB ceiling. Their actual vector capacities reduce component budgets.
+Complete Map input is capped at 16 MiB, with a conservative 690,028,544-byte
+preparation reservation and 2 GiB combined admission. No component ceiling is
+raised. These logical allowances do not measure allocator overhead or RSS.
+
+Both v8 `verify` and `verify-links` always enforce domain/link checks over the
+same verified artifact buffers. They derive the domain from the published Map,
+require exactly its terrain tilelists and VMap trees, match published MAPS to
+list bits, and require precisely the navigation globals justified by own MAPS/
+`.vmtile` candidates. Inherited indexes do not justify a global. Five bounded
+sorted fact vectors reserve 24 KiB separately from the source-domain allowance.
+The checks do not prove expected WDT tile completeness, VMap associations,
+Detour topology, publisher authenticity or runtime acceptance. V1–v6 intrinsic
+verification retains its previous scope.
+
+The implementation passes 2,832 Linux workspace tests / 26 ignored across 42
+targets in each profile, all-target Clippy and complete formatting. Source
+contracts pass 329 checks; distribution source tests pass 162 with one skip.
+Independent integrated acceptance passes 29 methods / 116 commands per profile,
+with exact original collision/terrain comparisons, ancestor navigation against
+explicit v6 closure references, recovery equality and retained legacy golden
+artifacts. Its guarded reports and unsuccessful earlier attempts are recorded
+in [the completion evidence](forever-completion.md). No new distribution bundle
+or real-client/full-world/runtime completion is established by this step.

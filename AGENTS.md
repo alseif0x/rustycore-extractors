@@ -2094,3 +2094,32 @@ Independent acceptance review SHA-256:
 `087f3b1895bc08732674e1af5f8275f98ed46fed037dac29159bc8a1bdc2dcbc`.
 The Linux real-input, full-world, VMap association, runtime and distribution
 gates remain open. Windows development stays deferred.
+
+
+### Linux selected map-domain product v8 — 2026-10-13
+
+The explicit v8 profile selects one complete map plus actual effective ancestors,
+using existing Linux leased-disk storage and builds 70170/70205. Complete Map
+validation precedes output create/resume; complete-source graph metadata and
+original relative serial order remain. GameObject startup is global. Placement
+IDs belong to the selected domain and cannot generally be merged with IDs from
+independent domains. V1–v6 semantics remain; v7 is reserved by the deferred draft.
+Terrain/VMaps cover the whole domain. Navigation also supplies ancestor MMaps,
+using only original own MAPS/payload-VMap candidates; inherited indexes alone
+never invent a child's global. A genuinely empty complete domain emits no MMaps.
+V8 verification always checks domain membership, exact terrain-list/VMap-tree
+sets, terrain/list equality and own-candidate navigation-global equality.
+The product domain plus numeric navigation view share 64 KiB / 1,024 members;
+verifier fact vectors reserve a separate 24 KiB. No existing ceiling increases
+and no RSS bound is claimed. Workspace V3 passes 2,832 Linux tests / 26 ignored
+per profile, Clippy and format. Independent integrated acceptance passes 29
+methods / 116 commands per profile, six original collision comparisons with
+72 exact files / 8,468 bytes, one original terrain output / 49 GridMap queries,
+ancestor navigation against explicit v6 closures and exact SIGKILL/resume.
+Eight retained legacy golden runs match 280 artifacts / 1,140,976 bytes per
+profile. All source/input/binary/native guards pass; 115 traces are empty and
+one expected fsync/SIGKILL trace contains no network event. Detailed scope,
+separate source inventories and report hashes are in `docs/forever-completion.md`;
+failed earlier attempts remain failed. Final documentation is not rebuilt.
+Real input, full-world, runtime and distribution gates remain open. Build 70338
+continues DB2-only. See `docs/forever-product.md` and the versioned JSON contract.
