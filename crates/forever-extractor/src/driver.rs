@@ -14,9 +14,18 @@ use forever_casc::{
 };
 use forever_db2::{CharacterTable, DecodedTable, HEADER_SIZE, Header, RecordError};
 use forever_navigation::{inventory, models, offmesh, pipeline, recast, tilebuilder::Coordinate};
+#[cfg(target_os = "linux")]
+use inventory::fs as navigation_input;
+#[cfg(windows)]
+use inventory::windows as navigation_input;
 use std::path::Path;
 
+#[cfg(target_os = "linux")]
 mod disk;
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+use windows::extract_inner;
 
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
@@ -42,7 +51,7 @@ fn open_inner(
     client: &Path,
     keys: Option<forever_casc::keys::Keyring>,
 ) -> Result<LocalStore, Error> {
-    plan.validate()?;
+    admit(plan)?;
     validate_keys(plan, keys.is_some())?;
     let options = OpenOptions {
         locale: plan.locale,
@@ -64,6 +73,43 @@ fn open_inner(
             .map_err(|e| Error::from(e.code()))?;
     }
     Ok(store)
+}
+
+/// Admit the product execution platform before client, key or output I/O.
+/// Plans remain portable to inspect without a client. Windows supports all
+/// resident producers; the separately versioned Linux disk profile does not
+/// acquire paths or silently select a resident fallback there.
+pub fn admit(plan: &Plan) -> Result<(), Error> {
+    plan.validate()?;
+    #[cfg(windows)]
+    if !matches!(plan.collision_storage, CollisionStorage::Resident) {
+        return Err("product_disk_unsupported".into());
+    }
+    Ok(())
+}
+
+/// Inspect a client while retaining the supplied key's read lease through
+/// source/context admission. No key values or physical key identity enter it.
+pub fn inspect(
+    plan: &Plan,
+    client: &Path,
+    producer: [u8; 32],
+    keys: Option<crate::input::SuppliedKeys>,
+) -> Result<Context, Error> {
+    admit(plan)?;
+    validate_keys(plan, keys.is_some())?;
+    #[cfg(windows)]
+    {
+        windows::inspect(plan, client, producer, keys)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let store = match keys {
+            Some(keys) => open_with_keys(plan, client, keys.into_keyring()),
+            None => open(plan, client),
+        }?;
+        context(plan, &store, producer)
+    }
 }
 
 fn validate_keys(plan: &Plan, present: bool) -> Result<(), Error> {
@@ -133,6 +179,7 @@ pub fn extract_disk(
     extract_inner(plan, client, output, producer, resume, keys, Some(scratch))
 }
 
+#[cfg(target_os = "linux")]
 fn extract_inner(
     plan: &Plan,
     client: &Path,
@@ -199,22 +246,34 @@ fn execute(
     store: &mut LocalStore,
     output: &Path,
     mut run: Run,
-    preflight: Option<disk::Preflight>,
+    #[cfg(target_os = "linux")] preflight: Option<disk::Preflight>,
+    #[cfg(windows)] key_source: Option<&forever_platform::windows::ReadFile>,
 ) -> Result<package::Summary, Error> {
     let completed = run.completed_components()?;
     for component in Component::ALL {
         if !plan.contains(component) || completed & component.bit() != 0 {
             continue;
         }
+        #[cfg(windows)]
+        windows::verify_keys(key_source)?;
         let result = match component {
             Component::Db2 => db2(plan, store, &mut run),
             Component::GameTables => game_tables(store, &mut run),
             Component::Cameras => cameras(store, &mut run),
             Component::Terrain => maps(plan, store, &mut run),
-            Component::Collision => match &preflight {
-                Some(disk) => disk.run(store, &mut run),
-                None => vmaps(store, &mut run),
-            },
+            Component::Collision => {
+                #[cfg(target_os = "linux")]
+                {
+                    match &preflight {
+                        Some(disk) => disk.run(store, &mut run),
+                        None => vmaps(store, &mut run),
+                    }
+                }
+                #[cfg(windows)]
+                {
+                    vmaps(store, &mut run)
+                }
+            }
             Component::Navigation => mmaps(plan, store, output, &mut run),
         };
         result.map_err(|mut error| {
@@ -224,6 +283,9 @@ fn execute(
         store
             .verify_unchanged()
             .map_err(|e| Error::from(e.code()))?;
+        #[cfg(windows)]
+        windows::verify_keys(key_source)?;
+        #[cfg(target_os = "linux")]
         if let Some(disk) = &preflight {
             disk.verify_unchanged()?;
         }
@@ -233,6 +295,9 @@ fn execute(
     store
         .verify_unchanged()
         .map_err(|e| Error::from(e.code()))?;
+    #[cfg(windows)]
+    windows::verify_keys(key_source)?;
+    #[cfg(target_os = "linux")]
     if let Some(disk) = &preflight {
         disk.verify_unchanged()?;
     }
@@ -433,10 +498,10 @@ fn vmaps(store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
     Ok(())
 }
 struct NavigationSink<'a>(&'a mut Run);
-impl inventory::fs::run::Sink for NavigationSink<'_> {
+impl navigation_input::run::Sink for NavigationSink<'_> {
     type Error = Error;
-    fn emit(&mut self, event: inventory::fs::run::Event<'_>) -> Result<(), Error> {
-        use inventory::fs::run::Event;
+    fn emit(&mut self, event: navigation_input::run::Event<'_>) -> Result<(), Error> {
+        use navigation_input::run::Event;
         match event {
             Event::Global { map_id, bytes } => {
                 self.0.put(
@@ -467,7 +532,7 @@ impl inventory::fs::run::Sink for NavigationSink<'_> {
 }
 fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> Result<(), Error> {
     use forever_db2::{catalog, terrain_sources};
-    use inventory::fs::run::{self as nav, Cause};
+    use navigation_input::run::{self as nav, Cause};
     let map = read(
         store,
         catalog::find("Map").unwrap().file_data_id,
@@ -516,7 +581,7 @@ fn mmaps(plan: &Plan, store: &mut LocalStore, output: &Path, run: &mut Run) -> R
             .map_err(|e| Error::from(e.code()))?;
         return Ok(());
     }
-    let mut input = inventory::fs::Package::open(
+    let mut input = navigation_input::Package::open(
         &output.join("maps"),
         &output.join("vmaps"),
         &source,
@@ -568,6 +633,9 @@ fn navigation_connections(plan: &Plan, map_empty: bool) -> Result<Vec<offmesh::S
 mod offmesh_tests;
 
 #[cfg(test)]
+mod platform_tests;
+
+#[cfg(all(test, target_os = "linux"))]
 mod disk_admission_tests {
     use super::*;
     use crate::plan::DiskBudget;

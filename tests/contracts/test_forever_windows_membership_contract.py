@@ -162,7 +162,7 @@ class WindowsMembershipContract(unittest.TestCase):
         source = read('tools/package_forever.py')
         self.assertIn('forever-seven-crate-linux-product-db2-catalog-source-v10', source)
         main = read('crates/forever-extractor/src/main.rs')
-        self.assertIn('#[cfg(not(target_os = "linux"))]', main)
+        self.assertIn('#[cfg(not(any(target_os = "linux", windows)))]', main)
         self.assertIn('product_platform', main)
         self.assertNotIn('membership::verify_membership', main)
 

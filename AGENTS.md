@@ -1910,3 +1910,23 @@ the initial phase's 4,096-byte budget excess is explicitly retained. There are
 no dumps, saved candidates, attach, signals or client mutations, and no further
 memory scan at this checkpoint. Full phase limits, guards and external report
 hashes are recorded in docs/forever-completion.md. No encrypted input gate closes.
+
+## Windows resident product source candidate — 2026-10-13
+
+Issue #24 connects all six resident product producers to the separate
+`forever-windows-package-namespace-v1` backend. The public package remains v1;
+Windows internal state is v3 / `forever-windows-product-ntfs-v1`, distinct from
+Linux state v2. Temporary path leases replace per-artifact retained handles;
+same-lease reads, protected owner DACLs, exact case names, closed inventories,
+identity-checked rename/removal, locks and recovery retain explicit limits.
+Windows client commands require the actual loaded sealed PE. Supplied-key
+leases and source/output exclusions survive the complete producer run.
+The Linux leased collision disk profile rejects before acquisition on Windows.
+Existing plan/build gates remain: build 70338 is DB2-only; full resident geometry
+plans retain 70170/70205. Namespace and package tests are cross-compiled locally;
+actual Windows/NTFS execution must be recorded separately before acceptance.
+The native CI plan uses authored synthetic assets, independent reopening,
+TerminateProcess/resume and separate build-bearing artifact goldens. It does
+not trace network calls, establish power-loss durability, publish a release or
+close real-client/runtime/full-extraction gates. See
+`docs/forever-windows-product.md` and its versioned contract.

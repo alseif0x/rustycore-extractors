@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: explicit offline product invocation.
 use forever_casc::integrity;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 use forever_casc::package::Context;
 use forever_extractor::{
     Error, input,
@@ -31,6 +31,7 @@ fn main() {
                 || error.code == "product_keys_forbidden"
                 || error.code == "product_scratch_required"
                 || error.code == "product_scratch_forbidden"
+                || error.code == "product_disk_unsupported"
             {
                 2
             } else {
@@ -45,7 +46,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux product IO. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
     }
     if !["inspect", "extract", "resume", "verify"].contains(&command) || args.len() % 2 != 1 {
         return Err("product_usage".into());
@@ -149,9 +150,10 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             integrity::hex(&integrity::digest(&bytes))
         ));
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         use forever_extractor::{driver, verify};
+        driver::admit(&plan)?;
         if command == "verify" {
             let expected = if let Some(p) = options.get("--expect-context") {
                 let b = input::bytes(p, 1024)?;
@@ -170,21 +172,21 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         }
         // Hash the loaded Linux executable, even if its ordinary pathname was
         // replaced by a concurrent build. This kernel-owned link is deliberate.
+        #[cfg(target_os = "linux")]
         let producer = integrity::reader(
             std::fs::File::open("/proc/self/exe")
                 .map_err(|_| Error::from("product_binary_identity"))?,
             forever_extractor::MAX_BINARY_BYTES,
         )
         .map_err(|_| Error::from("product_binary_identity"))?;
+        #[cfg(windows)]
+        let producer = forever_extractor::producer::loaded_identity()
+            .map_err(|error| Error::from(error.code()))?;
         // The explicit file is loaded only for client commands, after closed
         // plan/option admission. It is never hashed into context or reported.
         let keys = options.get("--keys").map(|p| input::keys(p)).transpose()?;
         if command == "inspect" {
-            let store = match keys {
-                Some(keys) => driver::open_with_keys(&plan, path("--client")?, keys.into_keyring()),
-                None => driver::open(&plan, path("--client")?),
-            }?;
-            let context = driver::context(&plan, &store, producer)?;
+            let context = driver::inspect(&plan, path("--client")?, producer, keys)?;
             return Ok(format!(
                 "{{\"contract\":\"{}\",\"status\":\"admitted\",\"context\":{},\"availability_checked\":false{capability},\"full_extractor_complete\":false}}",
                 plan.contract(),
@@ -226,7 +228,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             summary.json()
         ))
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = path;
         Err("product_platform".into())

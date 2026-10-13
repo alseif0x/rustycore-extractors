@@ -165,7 +165,7 @@ class WindowsConsumersContract(unittest.TestCase):
         self.assertFalse(self.c['outputs']['private_dacl_backend'])
         self.assertFalse(self.c['outputs']['durable_publication_backend'])
         product = read('crates/forever-extractor/src/main.rs')
-        self.assertIn('#[cfg(not(target_os = "linux"))]', product)
+        self.assertIn('#[cfg(not(any(target_os = "linux", windows)))]', product)
         self.assertIn('Err("product_platform".into())', product)
 
     def test_scope_excludes_real_windows_and_publication_acceptance(self):

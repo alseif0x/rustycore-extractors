@@ -16,6 +16,7 @@ use std::{
 mod ffi;
 
 pub mod output;
+pub mod package;
 pub mod producer;
 
 /// Conservative readonly NTFS lease profile; not a product support claim.

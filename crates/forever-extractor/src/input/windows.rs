@@ -27,8 +27,8 @@ fn key_error(error: Error) -> crate::Error {
 }
 
 /// Read one explicitly selected complete key file. The opaque return value holds
-/// its NTFS lease, including ancestors. Consuming it releases that lease; a future
-/// Windows output driver still needs file-identity alias protection of its own.
+/// its NTFS lease, including ancestors. The product driver retains it through
+/// completion and supplies it to package identity/alias admission.
 pub fn keys(path: &Path) -> Result<SuppliedKeys, crate::Error> {
     let lease = open(path).map_err(key_error)?;
     let bytes = lease
@@ -39,6 +39,7 @@ pub fn keys(path: &Path) -> Result<SuppliedKeys, crate::Error> {
     lease.verify_unchanged().map_err(key_error)?;
     Ok(SuppliedKeys {
         keyring,
+        source: path.to_owned(),
         _source_lease: lease,
     })
 }

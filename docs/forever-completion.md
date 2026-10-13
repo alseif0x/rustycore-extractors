@@ -3004,3 +3004,21 @@ no real acceptance transfers to this bundle. Later documentation is not rebuilt.
 There is no new real geometry, server/runtime or Windows product evidence,
 and the 83 encrypted 70338 inputs remain unresolved. Nothing is published and
 the full extractor goal stays open.
+
+### Windows resident product source candidate — 2026-10-13
+
+[Issue #24](https://github.com/alseif0x/rustycore-extractors/issues/24) now has a
+separate bounded NTFS namespace and Windows state-v3 package backend connecting
+the six resident producers. Source supports actual loaded PE sealing, provided
+key leases, complete inventory/identity preflight and recovery; Linux leased
+disk storage remains explicitly unsupported on Windows. Older Linux state-v2
+and Windows foundation profiles retain their original scope.
+
+The native CI plan lists exact namespace/package cases, seals the real product
+in debug/release, and checks all six producers against separate authored
+build-70205/enUS and build-70170/esES Linux inventories. Each has 35 artifacts /
+142,622 bytes. Actual process termination/resume and source/binary/key/fixture
+guards are explicit. These are planned synthetic Windows product checks, not
+real-client, original C++, full-world, server/runtime or distribution acceptance.
+Native execution remains pending; see
+[the Windows product contract](forever-windows-product.md).

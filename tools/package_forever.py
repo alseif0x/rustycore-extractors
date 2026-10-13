@@ -200,6 +200,11 @@ def tree_files(root, skip_pycache=True, allowed_directories=None):
 
 def selected_paths(source):
     result = set(REQUIRED)
+    # Optional current-source Windows QA closure. Older v10 frozen snapshots
+    # predate these paths; their existing recipe/inventory stays rebuildable.
+    for name in ("docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1"):
+        if (source / name).exists():
+            result.add(name)
     for name in DOCS:
         if (source / name).exists():
             result.add(name)

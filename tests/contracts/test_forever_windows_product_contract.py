@@ -1,0 +1,154 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Source/corpus/workflow consistency; native execution is separate evidence."""
+import ast
+import hashlib
+import json
+from pathlib import Path
+import re
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def read(path):
+    return (ROOT / path).read_text(encoding='utf-8')
+
+
+class WindowsProductContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.c = json.loads(read('contracts/forever-windows-product-contract-v1.json'))
+        cls.s = {name: read(path) for name, path in cls.c['sources'].items()}
+
+    def test_separate_profiles_preserve_historical_and_target_gates(self):
+        c = self.c
+        self.assertEqual(c['contract'], 'forever-windows-product-ntfs-v1')
+        self.assertEqual(c['namespace_profile'], 'forever-windows-package-namespace-v1')
+        self.assertEqual(c['producer_profile'], 'forever-windows-producer-seal-v1')
+        self.assertEqual(c['components'], ['db2', 'gt', 'cameras', 'maps', 'vmaps', 'mmaps'])
+        self.assertTrue(c['windows_resident_product_enabled'])
+        self.assertFalse(c['linux_leased_disk_enabled_on_windows'])
+        self.assertEqual(c['targets']['70338'], {'plan_version': 5, 'components': ['db2']})
+        self.assertEqual(c['new_registry_dependencies'], [])
+        for field in ('network_api', 'client_data_in_git', 'publication_authorized', 'full_extractor_complete'):
+            self.assertFalse(c[field])
+        for name in ('output', 'membership', 'producer'):
+            historical = json.loads(read(f'contracts/forever-windows-{name}-contract-v1.json'))
+            self.assertFalse(historical['windows_product_enabled'])
+
+    def test_windows_state_is_distinct_from_unchanged_public_and_linux_formats(self):
+        c = self.c['package']
+        self.assertEqual((c['manifest_version'], c['windows_state_version'], c['linux_state_version']), (1, 3, 2))
+        self.assertFalse(c['state_migration'])
+        self.assertFalse(c['power_loss_durability_claimed'])
+        self.assertIn('"state_version\\\":3', self.s['package'])
+        self.assertIn('"transaction_version\\\":3', self.s['package'])
+        self.assertIn(self.c['contract'], self.s['package'])
+        disk = read('crates/forever-casc/src/package/disk.rs')
+        self.assertIn('hard_link(', disk)
+        self.assertNotIn('hard_link(', self.s['package'] + self.s['recovery'])
+
+    def test_producer_identity_and_disk_admission_are_explicit(self):
+        main = read('crates/forever-extractor/src/main.rs')
+        self.assertIn('producer::loaded_identity()', main)
+        self.assertLess(main.index('driver::admit(&plan)?'), main.index('producer::loaded_identity()'))
+        self.assertLess(main.index('driver::admit(&plan)?'), main.index('input::keys(p)'))
+        self.assertIn('product_disk_unsupported', self.s['driver'])
+        self.assertIn('inventory::windows as navigation_input', self.s['driver'])
+        self.assertIn('verify_keys(key_source.as_ref())', read('crates/forever-extractor/src/driver/windows.rs'))
+        self.assertIn('input::SuppliedKeys', read('crates/forever-extractor/src/driver/windows.rs'))
+        for field in ('loaded_producer_required_for_client_commands',
+                      'same_lease_hash_and_inspection', 'replay_unsealed_facts',
+                      'complete_writer_resume_rejected', 'recovery_preflight_before_mutation'):
+            self.assertTrue(self.c['guards'][field])
+        self.assertFalse(self.c['guards']['plan_only_inspect_requires_seal'])
+        self.assertFalse(self.c['guards']['verify_requires_seal'])
+
+    def test_scalable_namespace_has_independent_budgets_and_no_raw_file_api(self):
+        source = self.s['namespace']
+        for marker in ('pub struct Root', 'pub struct Limits', 'pub struct Entry',
+                       'pub fn observe', 'pub fn verify_membership', 'pub fn with_new_file',
+                       'pub fn with_read_file', 'pub fn rename_no_replace', 'pub fn remove_same',
+                       'pub fn lock', 'pub fn protect_output', 'pub fn file_identity'):
+            self.assertIn(marker, source)
+        self.assertIn(self.c['namespace_profile'], source)
+        self.assertNotIn('PrivateRoot', source)
+        self.assertNotRegex(source, r'pub fn[^\n]*->[^\n]*\bFile\b')
+        self.assertIn('#[allow(unsafe_code)]\nmod ffi;', source)
+        self.assertNotRegex(source, r'\bunsafe\s*\{')
+        self.assertEqual(self.c['limits']['namespace_entries'], 786_464)
+        self.assertEqual(self.c['limits']['namespace_handles'], 96)
+        for field in ('atomic_snapshot', 'same_sid_isolation'):
+            self.assertFalse(self.c['guards'][field])
+
+    def test_exact_native_test_inventories_match_authored_functions(self):
+        for key, path in [('namespace', 'crates/forever-platform/src/windows/package/tests.rs'),
+                          ('package', 'crates/forever-casc/src/package/windows/tests.rs')]:
+            names = re.findall(r'#\[test\]\s*fn (\w+)\(', read(path))
+            self.assertTrue(names)
+            self.assertEqual(len(names), len(set(names)))
+            self.assertEqual(names, self.c['validation']['native_test_names'][key])
+            self.assertNotIn('#[ignore', read(path))
+
+    def test_exact_native_cli_inventory_and_boundary_are_explicit(self):
+        source = self.s['native_cli']
+        tree = ast.parse(source)
+        names = sorted(n.name for cls in tree.body if isinstance(cls, ast.ClassDef)
+                       for n in cls.body if isinstance(n, ast.FunctionDef) and n.name.startswith('test_'))
+        self.assertEqual(names, self.c['validation']['cli_test_names'])
+        self.assertEqual(len(names), 15)
+        for marker in ('process.kill()', 'observed_db2_seal_before_final_manifest',
+                       'pe_digest_mismatch', 'producer_unsealed', 'product_disk_unsupported',
+                       'self.assertEqual(snapshot(self.client), self.inputs)',
+                       'self.plan.write_bytes(text.encode())'):
+            self.assertIn(marker, source)
+        self.assertFalse(self.c['validation']['network_syscall_tracing'])
+        self.assertNotIn('strace', source)
+
+    def test_synthetic_golden_is_complete_and_internally_bound(self):
+        for key in ('golden', 'golden_70170'):
+            golden = json.loads(self.s[key])
+            facts = golden['artifacts']
+            self.assertEqual(len(facts), self.c['validation']['golden_artifacts'])
+            self.assertEqual(sum(a['bytes'] for a in facts), self.c['validation']['golden_bytes'])
+            encoded = ''.join(json.dumps(a, separators=(',', ':')) + '\n' for a in facts).encode()
+            self.assertEqual(hashlib.sha256(encoded).hexdigest(), golden['inventory_sha256'])
+            self.assertFalse(golden['native_cpp_execution'])
+            self.assertFalse(golden['real_client_inputs'])
+            self.assertEqual(golden['linux_source_commit'], '6f1a6fa2f17fb174ec74cbd7b9440b026b66e973')
+            self.assertEqual({a['component'] for a in facts}, set(self.c['components']))
+            for a in facts:
+                self.assertRegex(a['sha256'], '^[0-9a-f]{64}$')
+                self.assertFalse(a['path'].startswith(('/', '..')))
+
+    def test_native_workflow_runs_both_profiles_with_exact_counts(self):
+        workflow = json.loads(read('.github/workflows/forever-rust.yml'))
+        job = workflow['jobs']['windows']
+        self.assertEqual(job['runs-on'], 'windows-2022')
+        steps = [s for s in job['steps'] if s.get('run') == '. ./tools/check_forever_windows_product.ps1']
+        self.assertEqual(len(steps), 1)
+        self.assertEqual(steps[0]['env']['CARGO_TARGET_DIR'], '${{ runner.temp }}/forever-rust-target')
+        script = self.s['native_script']
+        for marker in ("$volume.FileSystem -ne 'NTFS'", "$volume.DriveType -ne 'Fixed'",
+                       "foreach ($release in @($false, $true))", "foreach ($profile in @('debug', 'release'))",
+                       '--offline', '--locked', '--test-threads=1', '-- --list',
+                       'native package test inventory mismatch', '0 failed; 0 ignored;',
+                       'seal --input $unsealed --output $sealed --zero-checksum',
+                       'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'):
+            self.assertIn(marker, script)
+        for j in workflow['jobs'].values():
+            runs = '\n'.join(s.get('run', '') for s in j['steps'])
+            self.assertIn('test_forever_windows_product_contract.py', runs)
+
+    def test_documented_scope_does_not_turn_a_source_candidate_into_acceptance(self):
+        doc = read(self.c['documentation'])
+        for marker in ('Cross-compilation is not native Windows/NTFS acceptance',
+                       'No release or client-data publication is authorized',
+                       'same SID', 'without an atomic', 'not RSS',
+                       'cross-platform Rust artifact regression',
+                       'not an injected power-loss', 'Native execution and CI report identities are pending'):
+            self.assertIn(marker, doc)
+
+
+if __name__ == '__main__':
+    unittest.main()

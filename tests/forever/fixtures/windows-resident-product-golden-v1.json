@@ -1,0 +1,223 @@
+{
+  "scope": "authored_synthetic_cross_platform_artifact_regression",
+  "linux_source_commit": "6f1a6fa2f17fb174ec74cbd7b9440b026b66e973",
+  "linux_binary_sha256": "a318428a0ef70eb3fa36ab6a34325a2ba9bf495f137a6797e4cde8f3b4d9fdbf",
+  "fixture": "product_disk_fixture.files + product_fixture.plan resident v1",
+  "artifacts": [
+    {
+      "component": "cameras",
+      "path": "cameras/FILE0000012D.xxx",
+      "bytes": 24,
+      "sha256": "c3c6ba18eb4aa728cd2638b64facc7248519eea9b54e1fd00d7f5a2fb22f7f74"
+    },
+    {
+      "component": "cameras",
+      "path": "cameras/FILE0000012E.xxx",
+      "bytes": 24,
+      "sha256": "60f6e0b64d59ea41737536daa502ed59b31652de10d8e3be1bc742fd3fa93cbc"
+    },
+    {
+      "component": "db2",
+      "path": "dbc/enUS/CinematicCamera.db2",
+      "bytes": 448,
+      "sha256": "11d331712ff8d29e849048ca70b529fcb228c569fa5da3253bf82c518b9699df"
+    },
+    {
+      "component": "db2",
+      "path": "dbc/enUS/LiquidType.db2",
+      "bytes": 832,
+      "sha256": "63641bc31ed2318f94cc4d5de81f4f1ca02e6856e541abf735fde4dd90b5a62b"
+    },
+    {
+      "component": "db2",
+      "path": "dbc/enUS/Map.db2",
+      "bytes": 1087,
+      "sha256": "2af9e6c85185704d2d51a979b45bef2647252fe88a6d39f79c1ea17f87c1813a"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ArtifactKnowledgeMultiplier.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ArtifactLevelXP.txt",
+      "bytes": 21,
+      "sha256": "856c313ed7136aac6e9df81673527046147029396d3fc881cfb68e50aa5d43cb"
+    },
+    {
+      "component": "gt",
+      "path": "gt/BarberShopCostBase.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/BaseMp.txt",
+      "bytes": 130,
+      "sha256": "250acd077e592c1abf49a30352e7be4096c48e2bf46489eac50d8346a7273780"
+    },
+    {
+      "component": "gt",
+      "path": "gt/BaseProfessionRatings.txt",
+      "bytes": 37,
+      "sha256": "65483029d04b3a951194825f7abd62e79d876a8ccfca88cabab58fbbe4f2fa3a"
+    },
+    {
+      "component": "gt",
+      "path": "gt/BattlePetTypeDamageMod.txt",
+      "bytes": 38,
+      "sha256": "0604a0e64123a1b755664892e728ef444e960d6a3720d56d45a57ff8d00f3b2a"
+    },
+    {
+      "component": "gt",
+      "path": "gt/BattlePetXP.txt",
+      "bytes": 21,
+      "sha256": "856c313ed7136aac6e9df81673527046147029396d3fc881cfb68e50aa5d43cb"
+    },
+    {
+      "component": "gt",
+      "path": "gt/CombatRatings.txt",
+      "bytes": 283,
+      "sha256": "0f33c4b5f310d3dddcfdf9110ff931d41b4fb37b090e6ca2eec5528f1343ddd5"
+    },
+    {
+      "component": "gt",
+      "path": "gt/CombatRatingsMultByILvl.txt",
+      "bytes": 37,
+      "sha256": "0a428f4e0e9eb3c03634717dcdbb90da548d5be354d2dd2f52deb045fd8d86bf"
+    },
+    {
+      "component": "gt",
+      "path": "gt/HonorLevel.txt",
+      "bytes": 26,
+      "sha256": "8be056f8389b02ccdfaa02dad7e4e93a8489b9f9a2cfa03a71bae894203a2a4e"
+    },
+    {
+      "component": "gt",
+      "path": "gt/HpPerSta.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ItemLevelByLevel.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ItemLevelSquish.txt",
+      "bytes": 31,
+      "sha256": "ac3d53294ffa890b285ee000ffbe2c1a169fe4e62ee7246e10f97efcf9718c6f"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ItemSocketCostPerLevel.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/NPCManaCostScaler.txt",
+      "bytes": 13,
+      "sha256": "e9062b0dec36011a782f2a7b038f9cba1099ea193830111f4ced20b73a759bab"
+    },
+    {
+      "component": "gt",
+      "path": "gt/ProfessionRatings.txt",
+      "bytes": 33,
+      "sha256": "8638a79b018b8eb52c3d12a9290c2e75f3f59353e8d42f50a9fae10ef5b7871b"
+    },
+    {
+      "component": "gt",
+      "path": "gt/SandboxScaling.txt",
+      "bytes": 30,
+      "sha256": "8a3ec0348cedaccdc25e97e682cb56fa66de07c150b383bd2f1203130596d114"
+    },
+    {
+      "component": "gt",
+      "path": "gt/SpellScaling.txt",
+      "bytes": 211,
+      "sha256": "a3d2367be3c56ecb091a096ebc1fefff927f916fa306d8a465ae0d18da4079fd"
+    },
+    {
+      "component": "gt",
+      "path": "gt/StaminaMultByILvl.txt",
+      "bytes": 37,
+      "sha256": "0a428f4e0e9eb3c03634717dcdbb90da548d5be354d2dd2f52deb045fd8d86bf"
+    },
+    {
+      "component": "gt",
+      "path": "gt/xp.txt",
+      "bytes": 45,
+      "sha256": "ffbfc725e44da39e60c0a2305fce3f5296ed969f6c65487abb5bbc2444dd5d2c"
+    },
+    {
+      "component": "maps",
+      "path": "maps/0007.tilelist",
+      "bytes": 4108,
+      "sha256": "ca9ed9147f910a9d064b335ab3780bc39d4109bb48de0d7e2cdc226cc97cc2d7"
+    },
+    {
+      "component": "maps",
+      "path": "maps/0007_32_32.map",
+      "bytes": 33093,
+      "sha256": "f0052cf5ef10b414d4c9b38fd77888cdad52ee27e10cb555325fce769c7d4825"
+    },
+    {
+      "component": "mmaps",
+      "path": "mmaps/0007.mmap",
+      "bytes": 40,
+      "sha256": "e6c95e85ef71a3b567b72507dc44457b63f94838b8cbe252f308f2746d56445c"
+    },
+    {
+      "component": "mmaps",
+      "path": "mmaps/0007_32_32.mmtile",
+      "bytes": 101008,
+      "sha256": "5cc313bf532de066efa4f9860b2352eb1cae5b3ff20788f89c913fbe5a21b5f8"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/0007/0007.vmtree",
+      "bytes": 64,
+      "sha256": "e515bef32e69f7caac41fe69402046e299bd1e50985a187a4ce1b0110d6e7876"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/0007/0007_00_00.vmtile",
+      "bytes": 168,
+      "sha256": "687bc178028dd9588e6b3f10aa1d32b68df9e578ffde13837ccb178929239a34"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/0007/0007_00_00.vmtileidx",
+      "bytes": 20,
+      "sha256": "9b4e0e87f8579e71a8816f01b9b24a0e9247ed61b8af3b44c47cd511a289bd1b"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/FILE00000190.xxx.vmo",
+      "bytes": 248,
+      "sha256": "26e44ef0a2109c0afeaf7d9901fb7c9f97ab3b67ed6094021f3fc0e864c56ee1"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/FILE000001F5.xxx.vmo",
+      "bytes": 248,
+      "sha256": "7a9da0a162df4599082f77d41bc0e3650edf677217fd3d72d81467e58a2e599c"
+    },
+    {
+      "component": "vmaps",
+      "path": "vmaps/GameObjectModels.dtree",
+      "bytes": 152,
+      "sha256": "ab6b29b69c469fb0aa3d818d05354ecdbd4c0ba82f79dba3565c11ae55714472"
+    }
+  ],
+  "file_count": 35,
+  "total_bytes": 142622,
+  "inventory_sha256": "5f960c8fdd94ef87b7dcb9435d7d5a2e8d1a0e9f28a10b05b033c214db829bf5",
+  "native_cpp_execution": false,
+  "real_client_inputs": false
+}

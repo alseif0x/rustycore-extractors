@@ -163,14 +163,14 @@ class WindowsProducerContract(unittest.TestCase):
         self.assertFalse(self.c['seal']['authentication'])
         self.assertIn('exactly the 32-byte digest slot', self.c['seal']['canonical_digest'])
 
-    def test_extractor_stays_unsafe_forbidden_and_main_dispatch_disabled(self):
+    def test_extractor_stays_unsafe_forbidden_with_separate_product_dispatch(self):
         self.assertIn('unsafe_code = "forbid"', read('Cargo.toml'))
         self.assertNotRegex(self.s['consumer'], r'\bunsafe\s*\{')
         self.assertIn('#[allow(unsafe_code)]\nmod ffi;', self.s['platform'])
         main = read('crates/forever-extractor/src/main.rs')
-        self.assertIn('#[cfg(not(target_os = "linux"))]', main)
+        self.assertIn('#[cfg(not(any(target_os = "linux", windows)))]', main)
         self.assertIn('product_platform', main)
-        self.assertNotIn('producer::loaded_identity(', main)
+        self.assertIn('producer::loaded_identity()', main)
         self.assertIn('pub mod producer;', read('crates/forever-extractor/src/lib.rs'))
 
     def test_loaded_helper_retains_final_verification_even_after_pe_failure(self):

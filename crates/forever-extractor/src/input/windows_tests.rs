@@ -70,6 +70,21 @@ fn consuming_keys_releases_source_lease_and_returns_opaque_keyring() {
 }
 
 #[test]
+fn product_key_parts_keep_the_original_lease_after_keyring_transfer() {
+    let temp = Temp::new();
+    fs::write(temp.file(), FIXTURE).unwrap();
+    let (keyring, source_path, lease) = keys(&temp.file()).unwrap().into_windows_parts();
+    assert_eq!(source_path, temp.file());
+    assert_eq!(keyring.len(), 1);
+    drop(keyring);
+    assert!(OpenOptions::new().write(true).open(temp.file()).is_err());
+    assert!(fs::remove_file(temp.file()).is_err());
+    lease.verify_unchanged().unwrap();
+    drop(lease);
+    fs::write(temp.file(), FIXTURE).unwrap();
+}
+
+#[test]
 fn existing_writable_handle_rejects_both_input_adapters() {
     let temp = Temp::new();
     fs::write(temp.file(), FIXTURE).unwrap();
