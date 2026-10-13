@@ -4,6 +4,8 @@ RCE_PRODUCT_BINARY and RCE_MAP_DOMAIN_CASES select a frozen executable and
 fresh external corpus. Optional RCE_MAP_DOMAIN_NATIVE_BUILD selects a retained
 original C++ build report; native executes only complete toy positives AFTER
 Rust extraction and both independent verification commands succeed.
+RCE_MAP_DOMAIN_GRID_SOURCE optionally selects an absolute external GridMap .rs
+file; its expected SHA remains the retained terrain-reader report value.
 """
 import hashlib
 import json
@@ -28,9 +30,29 @@ CASES = os.environ.get('RCE_MAP_DOMAIN_CASES')
 NATIVE_BUILD = os.environ.get('RCE_MAP_DOMAIN_NATIVE_BUILD')
 ADT_BUILD = os.environ.get('RCE_MAP_DOMAIN_ADT_BUILD')
 TERRAIN_REPORT = os.environ.get('RCE_MAP_DOMAIN_TERRAIN_REPORT')
+GRID_SOURCE = os.environ.get('RCE_MAP_DOMAIN_GRID_SOURCE')
 REPO = Path(__file__).resolve().parents[2]
 PIN = '02245dcd245e7433e524577656177723d3e4992e'
 sha = lambda data: hashlib.sha256(data).hexdigest()
+
+
+def checked_grid_source(expected_sha256, explicit, repo=REPO):
+    """Select one source dependency; explicit invalid input never falls back."""
+    if not isinstance(expected_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', expected_sha256):
+        raise AssertionError('grid_source_expected_hash')
+    path = (Path(explicit) if explicit is not None else
+            repo.parent / 'rustycore/crates/wow-map/src/grid_map.rs')
+    if explicit is not None and not path.is_absolute():
+        raise AssertionError('grid_source_absolute')
+    try:
+        if not path.is_file():
+            raise AssertionError('grid_source_file')
+        actual = sha(path.read_bytes())
+    except OSError:
+        raise AssertionError('grid_source_read') from None
+    if actual != expected_sha256:
+        raise AssertionError('grid_source_hash')
+    return path
 
 
 def hashes(root):
@@ -82,6 +104,14 @@ def native_guards(path):
 class ProductMapDomainCli(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.explicit_grid_source = None
+        cls.explicit_grid_sha256 = None
+        if GRID_SOURCE is not None:
+            if not TERRAIN_REPORT:
+                raise AssertionError('grid_source_report_required')
+            retained = json.loads(Path(TERRAIN_REPORT).read_text())
+            cls.explicit_grid_sha256 = retained['actual_grid_map_source_sha256']
+            cls.explicit_grid_source = checked_grid_source(cls.explicit_grid_sha256, GRID_SOURCE)
         os.umask(0o077)
         cls.corpus = Path(CASES).resolve()
         cls.corpus.mkdir(mode=0o700, parents=True)
@@ -90,6 +120,8 @@ class ProductMapDomainCli(unittest.TestCase):
         cls.binary_before = sha(Path(BINARY).read_bytes())
         cls.sources_before = source_hashes()
         cls.native_report, cls.native_sources = native_guards(NATIVE_BUILD) if NATIVE_BUILD else (None, {})
+        if cls.explicit_grid_source is not None:
+            cls.native_sources[str(cls.explicit_grid_source)] = cls.explicit_grid_sha256
         cls.base = cls.corpus / '_base'
         cls.base.mkdir(mode=0o700)
         cls.base_payloads = fixture.files()
@@ -375,7 +407,11 @@ class ProductMapDomainCli(unittest.TestCase):
     def test_selected_terrain_matches_original_conversion_and_checked_reader(self):
         if not ADT_BUILD or not TERRAIN_REPORT:
             self.skipTest('retained guarded terrain converters/readers not selected')
-        self.prepare(); self.accept()
+        retained = json.loads(Path(TERRAIN_REPORT).read_text())
+        grid_source = checked_grid_source(retained['actual_grid_map_source_sha256'], GRID_SOURCE)
+        self.prepare()
+        self.inputs[str(grid_source)] = retained['actual_grid_map_source_sha256']
+        self.accept()
         build = json.loads(Path(ADT_BUILD).read_text())
         source = Path(build['source_root'])
         inventory_path = source / 'inventory.json'
@@ -407,7 +443,6 @@ class ProductMapDomainCli(unittest.TestCase):
         self.assertTrue(summary['original_parser'] and summary['original_converter'])
         published = self.output / 'maps/0007_32_32.map'
         self.assertEqual(native_map.read_bytes(), published.read_bytes())
-        retained = json.loads(Path(TERRAIN_REPORT).read_text())
         rust_reader = cpp_reader = None
         for name, expected in retained['binaries'].items():
             path = Path(name)
@@ -418,9 +453,6 @@ class ProductMapDomainCli(unittest.TestCase):
             elif path.name == 'terrain-grid-oracle':
                 cpp_reader = path
         self.assertIsNotNone(rust_reader); self.assertIsNotNone(cpp_reader)
-        grid_source = REPO.parent / 'rustycore/crates/wow-map/src/grid_map.rs'
-        self.assertEqual(sha(grid_source.read_bytes()), retained['actual_grid_map_source_sha256'])
-        self.inputs[str(grid_source)] = retained['actual_grid_map_source_sha256']
         query = self.root / 'queries.bin'
         points = [(float(x), float(y)) for y in (-533, -200, -1, 0, 1, 200, 533)
                   for x in (-533, -200, -1, 0, 1, 200, 533)]
@@ -598,6 +630,74 @@ class ProductMapDomainCli(unittest.TestCase):
         self.assertEqual(result['gameobject_scope'], fixture.GAMEOBJECT)
         self.assertEqual(result['placement_ids'], fixture.PLACEMENT_IDS)
         self.assertFalse(self.output.exists())
+
+
+class GridSourceGuards(unittest.TestCase):
+    """Authored path/hash checks; no product, native process or client input."""
+    def setUp(self):
+        import tempfile
+        self.private = tempfile.TemporaryDirectory(prefix='forever-grid-source-')
+        self.addCleanup(self.private.cleanup)
+        self.root = Path(self.private.name).resolve()
+        self.repo = self.root / 'moved/source'
+        self.default = self.repo.parent / 'rustycore/crates/wow-map/src/grid_map.rs'
+        self.default.parent.mkdir(parents=True)
+        self.body = b'// authored default GridMap source fixture\n'
+        self.default.write_bytes(self.body)
+        self.expected = sha(self.body)
+
+    def test_historical_default_path_and_hash_are_preserved(self):
+        self.assertEqual(checked_grid_source(self.expected, None, self.repo), self.default)
+
+    def test_absolute_external_source_supports_moved_bundle_without_sibling_checkout(self):
+        external = self.root / 'external grid_map.rs'
+        external.write_bytes(self.body)
+        self.default.unlink()
+        self.assertEqual(checked_grid_source(self.expected, str(external), self.repo), external)
+
+    def test_explicit_source_is_selected_even_when_default_has_different_bytes(self):
+        external = self.root / 'external.rs'
+        external.write_bytes(b'// authored explicitly selected source\n')
+        expected = sha(external.read_bytes())
+        self.assertEqual(checked_grid_source(expected, str(external), self.repo), external)
+
+    def test_empty_and_relative_explicit_paths_reject_without_valid_default_fallback(self):
+        for explicit in ('', 'grid_map.rs', './grid_map.rs'):
+            with self.subTest(explicit=explicit):
+                with self.assertRaisesRegex(AssertionError, '^grid_source_absolute$'):
+                    checked_grid_source(self.expected, explicit, self.repo)
+
+    def test_missing_and_directory_explicit_paths_reject_without_default_fallback(self):
+        for explicit in (self.root / 'missing.rs', self.root):
+            with self.subTest(explicit=explicit):
+                with self.assertRaisesRegex(AssertionError, '^grid_source_file$'):
+                    checked_grid_source(self.expected, str(explicit), self.repo)
+
+    def test_mismatched_explicit_hash_rejects_without_matching_default_fallback(self):
+        external = self.root / 'changed.rs'
+        external.write_bytes(b'// authored different source\n')
+        with self.assertRaisesRegex(AssertionError, '^grid_source_hash$'):
+            checked_grid_source(self.expected, str(external), self.repo)
+
+    def test_retained_expected_hash_must_be_exact_lowercase_sha256(self):
+        for expected in (None, '', '0' * 63, 'A' * 64):
+            with self.subTest(expected=expected):
+                with self.assertRaisesRegex(AssertionError, '^grid_source_expected_hash$'):
+                    checked_grid_source(expected, None, self.repo)
+
+    def test_explicit_invalid_dependency_rejects_before_any_product_or_native_command(self):
+        from unittest.mock import patch
+        report = self.root / 'authored-retained-report.json'
+        report.write_text(json.dumps({'actual_grid_map_source_sha256': self.expected}))
+        for selected_report, code in ((None, 'grid_source_report_required'),
+                                      (str(report), 'grid_source_file')):
+            with self.subTest(report=selected_report):
+                with patch.dict(globals(), {'GRID_SOURCE': str(self.root / 'missing.rs'),
+                                           'TERRAIN_REPORT': selected_report}):
+                    with patch.object(ProductMapDomainCli, 'command') as command:
+                        with self.assertRaisesRegex(AssertionError, '^' + code + '$'):
+                            ProductMapDomainCli.setUpClass()
+                        command.assert_not_called()
 
 
 if __name__ == '__main__':
