@@ -1,0 +1,77 @@
+{
+  "contract": "forever-common-execution-v1",
+  "scope": "private six-component orchestration boundary; not a product format or new OS capability",
+  "components": [
+    "db2",
+    "gt",
+    "cameras",
+    "maps",
+    "vmaps",
+    "mmaps"
+  ],
+  "public_plan_versions_unchanged": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "public_api_unchanged": true,
+  "new_registry_dependencies": [],
+  "sources": {
+    "execution": "crates/forever-extractor/src/driver/execution.rs",
+    "linux": "crates/forever-extractor/src/driver.rs",
+    "windows": "crates/forever-extractor/src/driver/windows.rs"
+  },
+  "lifecycle": [
+    "read_completed",
+    "skip_unselected_or_completed",
+    "verify_before_active_producer",
+    "produce",
+    "tag_producer_error_only",
+    "verify_store_then_adapter",
+    "seal_component",
+    "verify_store_then_adapter_final",
+    "seal_package"
+  ],
+  "linux": {
+    "collision": "admitted leased disk or resident",
+    "scratch_guard": "after each active producer and before final seal",
+    "scratch_owned_through_finish": true
+  },
+  "windows": {
+    "collision": "resident",
+    "key_guard": "before and after each active producer, before final seal, and outer every-return guard",
+    "key_lease_owned_through_finish": true
+  },
+  "unit_test_names": [
+    "all_six_producers_keep_order_verification_and_seals",
+    "completed_and_unselected_stages_have_no_producer_or_checks",
+    "entirely_completed_resume_still_verifies_before_final_seal",
+    "collision_dispatches_only_through_its_adapter_stage",
+    "completion_read_failure_has_no_checks_producers_or_seals",
+    "pre_producer_verification_failure_prevents_production_and_sealing",
+    "every_producer_failure_tags_its_component_and_prevents_its_seal",
+    "post_producer_verification_failure_prevents_component_and_final_seals",
+    "final_verification_failure_prevents_package_seal",
+    "component_seal_failure_prevents_later_producers_and_package_seal",
+    "final_seal_error_is_returned_without_component_relabeling"
+  ],
+  "unchanged_gates": [
+    "build and locale admission",
+    "complete authenticated sources",
+    "explicit plans",
+    "explicit supplied keys",
+    "producer identity",
+    "resource ceilings",
+    "package state and manifest versions",
+    "offline operation"
+  ],
+  "new_cli_required": false,
+  "automatic_plan_added": false,
+  "full_extractor_complete": false,
+  "new_real_client_acceptance": false,
+  "new_native_windows_acceptance_recorded": false,
+  "new_distribution_acceptance": false
+}

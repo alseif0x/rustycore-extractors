@@ -22,6 +22,7 @@ use std::path::Path;
 
 #[cfg(target_os = "linux")]
 mod disk;
+mod execution;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -235,73 +236,34 @@ fn extract_inner(
     } else {
         Run::create(output, context, protected, package_limits)?
     };
-    execute(plan, &mut store, output, run, preflight)
+    execution::execute(plan, &mut store, output, run, LinuxExecution { preflight })
 }
 
 #[cfg(test)]
 mod keys_tests;
 
-fn execute(
-    plan: &Plan,
-    store: &mut LocalStore,
-    output: &Path,
-    mut run: Run,
-    #[cfg(target_os = "linux")] preflight: Option<disk::Preflight>,
-    #[cfg(windows)] key_source: Option<&forever_platform::windows::ReadFile>,
-) -> Result<package::Summary, Error> {
-    let completed = run.completed_components()?;
-    for component in Component::ALL {
-        if !plan.contains(component) || completed & component.bit() != 0 {
-            continue;
-        }
-        #[cfg(windows)]
-        windows::verify_keys(key_source)?;
-        let result = match component {
-            Component::Db2 => db2(plan, store, &mut run),
-            Component::GameTables => game_tables(store, &mut run),
-            Component::Cameras => cameras(store, &mut run),
-            Component::Terrain => maps(plan, store, &mut run),
-            Component::Collision => {
-                #[cfg(target_os = "linux")]
-                {
-                    match &preflight {
-                        Some(disk) => disk.run(store, &mut run),
-                        None => vmaps(store, &mut run),
-                    }
-                }
-                #[cfg(windows)]
-                {
-                    vmaps(store, &mut run)
-                }
-            }
-            Component::Navigation => mmaps(plan, store, output, &mut run),
-        };
-        result.map_err(|mut error| {
-            error.component = Some(component);
-            error
-        })?;
-        store
-            .verify_unchanged()
-            .map_err(|e| Error::from(e.code()))?;
-        #[cfg(windows)]
-        windows::verify_keys(key_source)?;
-        #[cfg(target_os = "linux")]
-        if let Some(disk) = &preflight {
+/// Linux owns the admitted scratch lease. Its guards retain the existing
+/// post-producer/final positions; resident execution has no extra input lease.
+#[cfg(target_os = "linux")]
+struct LinuxExecution {
+    preflight: Option<disk::Preflight>,
+}
+
+#[cfg(target_os = "linux")]
+impl execution::Adapter for LinuxExecution {
+    fn verify_inputs(&self) -> Result<(), Error> {
+        if let Some(disk) = &self.preflight {
             disk.verify_unchanged()?;
         }
-        // Each producer completed, including the validated empty-world case.
-        run.finish_component(component)?;
+        Ok(())
     }
-    store
-        .verify_unchanged()
-        .map_err(|e| Error::from(e.code()))?;
-    #[cfg(windows)]
-    windows::verify_keys(key_source)?;
-    #[cfg(target_os = "linux")]
-    if let Some(disk) = &preflight {
-        disk.verify_unchanged()?;
+
+    fn extract_collision(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+        match &self.preflight {
+            Some(disk) => disk.run(store, run),
+            None => vmaps(store, run),
+        }
     }
-    Ok(run.finish()?)
 }
 
 fn read(store: &mut LocalStore, id: u32, limit: u64) -> Result<Vec<u8>, Error> {

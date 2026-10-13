@@ -3022,3 +3022,73 @@ guards are explicit. These are planned synthetic Windows product checks, not
 real-client, original C++, full-world, server/runtime or distribution acceptance.
 Native execution remains pending; see
 [the Windows product contract](forever-windows-product.md).
+
+
+## Shared execution boundary and workflow research — 2026-10-13
+
+The operator's client-folder example is exploratory, not a path-only CLI
+requirement. [Issue #28](https://github.com/alseif0x/rustycore-extractors/issues/28)
+prioritizes common extraction execution before further OS-specific expansion.
+The Windows leased-disk candidate in PR #27 remains separate and unaccepted;
+its code and additional CI jobs are not dependencies of this increment.
+
+Reviewed primary sources at TrinityCore Forever `8c5325b`, wow.tools.local
+`cf33a49`, cascette-rs `2d1294b` and CascLib `38a3466` distinguish physical
+storage access from format conversion. TrinityCore's
+[orchestration script](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/contrib/extractor.sh)
+runs map extraction, collision extraction, collision assembly, then navigation.
+Its tools allow explicit paths or working-directory defaults. MMaps are generated
+from extracted terrain/collision inputs. wow.tools.local separately configures
+folder/product/locale and its storage/DB2 dependencies; cascette's README describes
+Rust CASC libraries and planned/ported CLI tools, not a completed compatible
+server extractor. The newer Trinity tree changes no acquisition implementation
+relative to the pinned oracle `02245dcd245e7433e524577656177723d3e4992e`;
+the added DB2 list entry is already present in our catalogs.
+
+The candidate moves the existing six-producer loop into private
+`driver::execution`, in DB2/GT/cameras/terrain/collision/navigation order.
+Concrete producers, public API, plans v1-v6, hashes, build/key gates, resource
+ceilings, output bytes and package formats retain their contracts. Linux owns
+scratch preflight and collision storage selection. Windows retains its supplied-key
+lease and every-return check. The common boundary has no OS selection or path
+acquisition; it checks store then adapter before component/final seals and skips
+completed stages. Eleven authored lifecycle tests cover order, skips and failures.
+The existing three CI roles select its ten source-contract checks; corresponding
+source automatically includes the new Rust module, JSON contract and Python tests.
+
+Research report SHA-256:
+`a10e9e8de8848375cbefa165d5cb6ad093388ebca0493e62a807cb2676ba4b1e`.
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/common-execution-20261013-w9fqnb60/`.
+See `contracts/forever-common-execution-contract-v1.json`. This private refactor
+adds no automatic plan, new OS support, real-client or runtime acceptance, or
+reproducible distribution. Final baseline/candidate and native acceptance are
+recorded separately; the full extractor goal remains open.
+
+
+### Subsequent common-execution local acceptance
+
+The frozen implementation passes 2,754 ordinary workspace tests / 26 ignored
+across 42 targets in each Linux profile, formatting and all-target Clippy.
+Windows GNU product Clippy passes both default and explicit seal-v2 selections;
+these are compile checks, not native execution. All 301 source-contract checks
+pass; distribution source checks pass 162 tests with one platform skip, without
+building a new reproducible bundle.
+
+Independent baseline/candidate debug/release comparisons pass 28 authored
+synthetic plan cases. Fourteen candidate cases match all six nonempty component
+groups: 35 files / 142,622 bytes per case, with 490 direct artifact comparisons /
+1,996,708 bytes. Six candidate SIGKILL/resume cases reproduce the entire clean
+output inventory, bytes and manifest. Context fields match across binaries
+except producer SHA-256. All 104 runtime traces contain no network calls;
+84 are empty and the others contain only fsync/signals. Baseline 1,078 and
+candidate 1,081 source paths, all four binaries and every plan/input remain
+unchanged during the run. Later acceptance documentation is not rebuilt.
+
+QA report SHA-256:
+`ba753677b5abc8d6b78f801d915f005b2896bbae7f068f09e4f78ce6c7e70a58`.
+Coordinator's independent complete-byte review SHA-256:
+`d7a24b459587c84db8841b70c995fcbda0c70755829e2318da393e09db1d8ae0`.
+Both are retained under the evidence root above. No native C++, real-client,
+new native Windows, runtime, full-world or reproducible-distribution acceptance
+is inferred; those gates and the full extractor goal remain open.
