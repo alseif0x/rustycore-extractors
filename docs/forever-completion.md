@@ -23,8 +23,8 @@ or client-data upload is authorized by this checklist.
 | Terrain maps | Local startup/WDT/root-ADT/MAPS/tile-list runner has 20 synthetic CLI cases per debug/release profile, with 48 MAPS / 24 lists and 6,864 exact GridMap queries per profile; real probe fails at the first complete Map read; integrated supplied-ADT conversion matches 248 complete synthetic files from the original pinned C++ parser/converter across two runs, with strict verification and 35,464 actual GridMap queries; 154 synthetic tests; preceding assembly acceptance covers another 380 files / 54,340 queries | Complete real local terrain acquisition; versioned real MAPS semantics, including liquids and bounds, compared against Forever C++ output and appropriate RustyCore readers |
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
-| Product interface | Canonical v1 N/Z and separate v2 explicit supplied-key plans; Linux inspect/extract/resume/verify connect all six Rust producers; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
-| Distribution | Legacy C++ suite; Linux v10 ships both target catalogs and product v4/v5 with two identical fresh archives, an exact moved-source offline rebuild and 64 packaged synthetic test methods across v1-v5; the earlier v9 bundle of `b692ed3` and its 50 packaged cases remain historical; frozen corresponding source, exact registry archives/notices and qualified system linkage are retained; Windows read foundation is [recorded](forever-distribution.md); the separate [private-output foundation](forever-windows-output.md) has fourteen ordinary native fixed-NTFS cases per debug/release profile, while privileged reparse and Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
+| Product interface | Linux inspect/extract/resume/verify connect all six Rust producers through explicit v1–v6 plans, including supplied keys, leased collision storage, target DB2 catalogs and inline navigation connections; final package v1/internal state v2. Recovery, one-tile six-component packages and bounded real DB2/GT/camera evidence are recorded in the [product scope](forever-product.md); build 70338 is DB2-only and strict Map failure remains | Complete real all-component acquisition/output and runtime acceptance, scalable full-world operation and distribution; intrinsic verification does not prove complete geometry inventories/associations or Detour topology |
+| Distribution | Linux source recipe v10 accepts functional `6f1a6fa` with two identical fresh archives, an exact moved-source offline rebuild and 72 packaged synthetic methods across product v1–v6; the preceding v10 binary retains its own real 1,078-table acceptance, which is not transferred to this newer binary; older v9 evidence remains historical. Frozen corresponding source, exact registry archives/notices and qualified system linkage are retained. Windows read/output/membership foundations have separate native evidence; Windows product/recovery/distribution remain open | Reproducible Linux/Windows Rust packages with recorded acceptance, exact dependency/license closure, notices and corresponding source, synthetic CI and local full-output/runtime acceptance |
 
 ## Version differences that must be resolved
 
@@ -2852,6 +2852,54 @@ append the tagged optional data. This identifies a protocol boundary supported
 by these sources, without an identified native 70338 function, executed observation
 or evidence that the server will deliver the six missing keys.
 
+### Bounded live-image and key follow-up — 2026-10-13
+
+A later read-only `/proc` investigation corroborates selected PE headers and
+the declared version resource of the Wine-mapped image. Its VERSION payload is
+792 bytes, declares `1.60.1.70338` and has SHA-256
+`f2b8c0418a3fca8c8a112c166c5cc106429ef2373b3ddcddc9cf2299695bffaa`,
+identical to the previously fixed disk resource. Selected structural fields
+and section layout match; ImageBase is relocated. Changing only ImageBase in
+the disk header does not reproduce the whole runtime-header hash, and that
+remaining difference is unknown. This binds the observed declared resource and
+selected fields, not the complete loaded image, publisher authenticity,
+executed code or initialization of its TACT structures.
+
+The initial exact-name probe examines the first 256 MiB of private anonymous/
+heap mappings, excluding the shared image alias. Six complete encrypted BLTE
+representatives / 12,123 bytes are prepared for full decoding and CKey-MD5
+validation, but zero name matches yield zero candidates to validate. It does
+not search all eligible memory. The helper incorrectly allocates the full
+256 MiB after an earlier 4,096-byte identity read: total 268,439,552 bytes,
+exceeding that phase's requested global limit by 4,096 bytes. This deviation
+is retained explicitly; it is not relabeled as a passing budget guard.
+
+The separate identity phase reads 9,128 bytes within its 16 KiB budget. A later
+32 MiB writable-section plan stops before reading because `.data` is larger.
+The subsequent explicit 48 MiB plan first directly corroborates its runtime
+RVA, virtual/raw sizes, raw pointer and characteristics against disk, then
+examines all 44,156,385 bytes of `.data`. Its total is 44,160,481 new bytes,
+including the header check, in 28.8 seconds. Again there are zero matches,
+candidates or recovered keys. PID/starttime and the target alias stay stable;
+other mappings change, so this is not an atomic memory snapshot. The negative
+result covers only the searched representations/ranges at their read times,
+not all heaps, encodings, pointer layouts or key-delivery channels.
+
+The accumulated read count is 312,609,161 bytes, preserving the initial
+4,096-byte excess. No more memory scans run at this checkpoint. No dumps,
+candidate keys or memory windows are retained, and no key file is created.
+The helpers perform no attach, signals, client mutations or network requests;
+the game's own traffic is outside this audit. The 83 encrypted DB2 candidates
+remain unresolved. All reports remain outside Git under
+`/mnt/nvme2/datos/forever-product-runs/`:
+
+| Phase | Report | SHA-256 |
+| --- | --- | --- |
+| Initial bounded probe | `runtime-tact-70338-20261013-xw943miu/closeout.json` | `d9f65aa2f043cb71fe5b5e0f5e7f2e48ecb9f81645d9279256984d6162e4aeb3` |
+| Relocated PE/resource | `runtime-pe-70338-20261013-0p88dqh3/closeout.json` | `b36bca0f45538f9b2628d44bd93485ad30ec724510d8ce027795f35b4c75538c` |
+| Oversized plan, no reads | `runtime-tact-pe-write-70338-20261013-fp6h0qqe/plan.json` | `d404a0210bf9367775bd98c56d138d1752401d54b6af1ed1011eb2409d1f4d5a` |
+| Complete corroborated `.data` range | `runtime-tact-pe-data-70338-20261013-jd6blq0t/closeout.json` | `e8b533314ad420a38637bde38a2d307cfdde82a07fedb7a6805743851712b463` |
+
 ### Product v6 inline off-mesh acceptance — 2026-10-13
 
 The Linux product now exposes explicit inline connections through the separate
@@ -2919,8 +2967,40 @@ metadata limitation report SHA-256 is
 The earlier unit run's 33 Git-ancestor temporary-directory failures and the
 superseded build-only QA attempt are also retained.
 
-This closes the explicit synthetic product connection gate. It does not add
+This closes the explicit synthetic product connection gate. That run does not add
 real geometry/routes, general endpoint snapping, server activation, Windows
 product support, a newly reproducible v6 bundle or full extractor acceptance.
 The 83 unavailable build-70338 DB2 inputs and the remaining component/runtime
 gates remain open.
+
+### Reproducible v6 Linux product checkpoint — 2026-10-13
+
+The subsequent immutable bundle closes the bounded Linux reproducibility gate
+for functional commit `6f1a6fa2f17fb174ec74cbd7b9440b026b66e973` only. PR #21
+merges the same tree into `forever` at `62093c477bfd72a1c12ea71db425912f3383838a`,
+with all five Linux/Windows CI checks successful. The unchanged source recipe
+v10 includes the nine new shipped paths. Two offline builds reproduce one archive
+and binary; moving the shipped source and rebuilding offline reproduces the
+binary exactly. All 72 shipped synthetic CLI methods pass without skips,
+including the eight v6 methods, sixteen original Detour routes, one original
+TileBuilder byte comparison and interruption recovery.
+
+Archive SHA-256:
+`258c8fe40b799048b8684fe68548c91df9aabdbcd7b4dcc76a87d74f66adeb6e`.
+Binary SHA-256:
+`a318428a0ef70eb3fa36ab6a34325a2ba9bf495f137a6797e4cde8f3b4d9fdbf`.
+The retained 625-file source, thirteen toolchain notices, 371 native guards,
+228 runtime traces and separate compiler IPC classification are documented in
+[distribution acceptance](forever-distribution.md#executed-v6-product-bundle-with-the-v10-source-recipe--2026-10-13).
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/distribution-v6-6f1a6fa-8vfh8hk3/`.
+Acceptance report SHA-256:
+`cdf2d4a0c66f95509e1770a5c3bbc6e6557c298c3dacae4494f7fbcdbd8fedeb`.
+Independent coordinator review SHA-256:
+`c03acb6055ec0feea3c206f60e421d87b165eceb62906e1a88ca878b1412d51a`.
+
+The prior real 1,078-table acceptance remains bound to its own older binary;
+no real acceptance transfers to this bundle. Later documentation is not rebuilt.
+There is no new real geometry, server/runtime or Windows product evidence,
+and the 83 encrypted 70338 inputs remain unresolved. Nothing is published and
+the full extractor goal stays open.

@@ -1876,5 +1876,37 @@ and one original TileBuilder tile-byte comparison, including provided keys,
 leased disk and interrupted recovery. The initial flat corpus remains failed
 despite native byte equality; the later varying-height corpus does not establish
 general flat routability. Exact source/report guards, hashes and scope are in
-docs/forever-completion.md. No new real-client/routes, Windows product, runtime,
-v6 reproducible bundle or full extractor completion is established.
+docs/forever-completion.md. At that source checkpoint, no new real-client/routes,
+Windows product, runtime, v6 reproducible bundle or full extractor completion
+was established.
+
+## Accepted Linux v6 product bundle using source recipe v10 — 2026-10-13
+
+Functional commit `6f1a6fa2f17fb174ec74cbd7b9440b026b66e973` is integrated
+into forever by PR #21 / merge `62093c477bfd72a1c12ea71db425912f3383838a`.
+The unchanged v10 source recipe already includes its nine new shipped paths.
+Two fresh offline archives and a moved-source binary rebuild match exactly;
+72 packaged synthetic CLI methods pass across v1–v6 without skips. This run
+retains eight original Detour consumer calls / sixteen routes, one exact
+TileBuilder case, 371 unchanged native guards and 228 runtime traces including
+help with no network calls. Compiler IPC is classified separately. All 625
+selected source files and thirteen toolchain notice files are bound to the
+frozen source; independent coordinator review checks artifacts and retained
+evidence. Exact hashes and qualified ABI/scope are in docs/forever-distribution.md.
+
+This is a local candidate for that functional source. Later documentation is
+not rebuilt. The older binary's real 1,078-DB2 acceptance does not transfer to
+this new binary. The 83 encrypted 70338 inputs, real geometry/runtime, Windows
+product/distribution and full extraction remain gates. Nothing is published.
+
+The separate read-only live-client follow-up corroborates selected mapped PE
+fields and the exact VERSION resource declaring 1.60.1.70338; it does not hash
+or authenticate the complete loaded image. Its relocated header has additional
+unknown differences from disk. Exact-name probes over the first 256 MiB of
+anonymous/heap mappings and the complete 44,156,385-byte `.data` range find no
+matches, candidates or keys. These are bounded live negatives, not absence from
+all heaps/channels. Total reads are 312,609,161 bytes across separate phases;
+the initial phase's 4,096-byte budget excess is explicitly retained. There are
+no dumps, saved candidates, attach, signals or client mutations, and no further
+memory scan at this checkpoint. Full phase limits, guards and external report
+hashes are recorded in docs/forever-completion.md. No encrypted input gate closes.
