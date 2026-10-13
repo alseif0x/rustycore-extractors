@@ -2204,3 +2204,31 @@ Markdown updates are not rebuilt. This accepts only this real M2 selection;
 70338 product admission stays DB2-only. WMO, placements, VMO/query, full-world
 resources, server runtime and full extraction remain open. The preceding Linux
 bundle is unchanged; no new bundle or Windows acceptance is claimed.
+
+
+### Real 70338 M2 VMO and direct rays — 2026-10-13
+
+Issue #40 accepts the complete retained 28-RAW collision selection from issue
+#38 through the existing VMO and direct-model query APIs. Repository source
+`fd3e7afa3e661d71bfe1f9fbcd60d7823f576483` is unchanged; only external QA and
+later documentation are added. All 28 VMO files / 51,328 bytes (maximum 28,136)
+match original conversion/read-write roundtrips, with 723 vertices and 1,302
+triangles. Both Rust conversions and all Rust queries complete before any
+original consumer; every original primary/roundtrip VMO also passes strict Rust
+admission before native queries. Each backend executes 672 query records
+(six axis rays × two modes × two ignore settings), with 328 hits / 344 misses
+and 336 ignore controls. Two Rust profiles plus native execute 2,016 calls;
+Rust records 3,039 node visits / 1,344 triangle tests per profile, without native
+counter parity. All 62 real and 80 synthetic runtime traces are empty; the
+synthetic run includes 18 exact Rust-only negatives. Ten helper unit methods
+pass per profile, with Clippy/format through validation3. Earlier failed build/
+validation attempts remain failed. The fresh native closure has 40 compile
+invocations (38 original-source compiles, two authored wrappers) / 1,221
+dependency inputs, with separate complete source/build guards.
+Logical memory is bounded by 8 MiB caller plus 8 MiB active work; process limits,
+staged traffic and hash visits are separate, without an RSS claim. Receipt
+hashes and full scope are in docs/forever-collision.md and
+docs/forever-completion.md. No client/CASC acquisition, product admission,
+repository API or bundle changes follow. Product 70338 stays DB2-only; WMO,
+placements/instances, real maps, full-world resources, installed runtime and full
+extraction remain open. Windows stays deferred; these docs are not rebuilt.
