@@ -1200,3 +1200,75 @@ not identify the cause of every missing candidate or repair the earlier native
 ran. The completed library/QA path is synthetic acceptance only. Real complete
 inputs, unified versioned product publication, area/liquid/flight runtime and
 full extraction remain gates.
+
+
+## Real build-70338 liquid source acceptance — 2026-10-13
+
+The private `forever-db2` `terrain_sources` example now accepts `LiquidObject`,
+using the existing closed reader and serial materializer. Its explicit private
+JSON retains direct order, copy pairs and ID-sorted materialized projections;
+stdout retains status/counts only. Existing modes, 16 MiB input ceiling, complete
+read checks and exclusive 0600 output remain. Eight authored tests pass in
+Linux debug/release, including every truncated prefix, malformed metadata,
+copy/default/overwrite semantics and existing-output preservation.
+
+Three complete retained build-70338/esES DB2s are bound to the previously
+accepted product-v5 manifest and independent acquisition census. No current
+client/CASC read or new acquisition is performed.
+
+| Complete source | Input bytes | Direct records | Copy pairs | Materialized entries |
+| --- | ---: | ---: | ---: | ---: |
+| LiquidMaterial | 330 | 4 | 1 | 5 |
+| LiquidObject | 10,620 | 57 | 1,213 | 1,270 |
+| LiquidType | 15,113 | 57 | 0 | 57 |
+| Total | 26,063 | 118 | 1,214 | 1,332 |
+
+Debug/release each match every projected ID/value, direct order and copy pair
+against an independent Python oracle and original pinned DB2FileLoader getters.
+The three unchanged `ReadLiquidMaterialTable`, `ReadLiquidObjectTable` and
+`ReadLiquidTypeTable` functions from original System.cpp also execute and match
+the complete materialized maps. Only unordered output order is sorted.
+LiquidObject physical field 2 preserves signed16 source bits as u16. Unused
+fields receive strict Rust/Python decoding/validation; this is projected
+consumer evidence, not comparison of every ignored native field. The original
+LiquidObject startup table is not queried by terrain conversion in this closure.
+
+Each profile passes 21 authored positives, 27 Rust-only negatives, three real
+sources, six output-exclusivity guards and two invocation guards: 83 commands
+with 83 empty denied-network runtime traces. Nine native compile/link traces
+are empty; Rust builds are locked/offline but have no compiler syscall trace.
+All runtime projection JSON bytes match between profiles. The 656-file source,
+190-entry native/compatibility dependency, external QA, binary and input guards
+remain unchanged. The failed first compiler trace guard (expected SIGCHLD only)
+is retained separately; suppressing compiler signal reporting fixes that trace
+scope without changing the source or admitting network calls.
+
+Original source is pinned to `02245dcd245e7433e524577656177723d3e4992e`.
+The CASC acquisition layer is an authored immutable memory adapter; original
+DB2 source/getters/copy loops and the three typed startup functions execute.
+Native CASC, malformed native inputs, complete ConvertADT, geometry acquisition,
+reader queries and server runtime do not execute in this acceptance.
+
+The frozen Linux workspace passes 2,840 ordinary tests / 26 ignored across
+42 targets in each profile, full Clippy and formatting; the 440 Cargo/crates
+paths remain unchanged. Source contracts pass 329 tests; distribution source
+tests pass 162 with one skip, without a new bundle. The final documentation
+update is outside the executable source freeze and is not rebuilt.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-liquids-20261013-37a0xn__`.
+
+- `impl/workspace-report.json`, SHA-256
+  `fa7636717d44b7035542c6fd044ef15c6f2283de7042cbb065b6b5f82cd52396`;
+- `qa/attempt1/acceptance.json`, SHA-256
+  `d64c0ba480481d94c56af8c4b6dafefd20fd3eac7a96e4031c60a65f7f53a137`;
+- `qa/attempt1/independent-evidence-audit.json`, SHA-256
+  `3635b5bf66847746edd5fe563734920b5b0553d00cbeb3ea0ea3bdf459954118`;
+- `qa/review/final-review.json`, SHA-256
+  `abe0b874a68327d523c1ff89562b25c4f465703b21f85efefd35fd15f24585f7`.
+
+This closes real projected startup-reader acceptance for these three sources.
+Product v1–v8 admission and geometry build gates are unchanged. Map and
+GameObjectDisplayInfo remain unavailable encrypted candidates; build 70338
+remains product-v5 DB2-only. Complete real terrain, collision, navigation,
+full-world operation, runtime and a current Linux distribution remain open.
