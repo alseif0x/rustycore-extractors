@@ -46,14 +46,20 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; no runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nforever-extractor verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT] (Linux only)\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, or v6 pinned-metadata inline off-mesh navigation. Supplied-key v2-v6 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Linux and Windows resident product IO; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; verify-links additionally checks published terrain tile sets and navigation tile/global presence. No runtime/full-client claim.".into());
     }
-    if !["inspect", "extract", "resume", "verify"].contains(&command) || args.len() % 2 != 1 {
+    #[cfg(not(target_os = "linux"))]
+    if command == "verify-links" {
+        return Err("product_platform".into());
+    }
+    if !["inspect", "extract", "resume", "verify", "verify-links"].contains(&command)
+        || args.len() % 2 != 1
+    {
         return Err("product_usage".into());
     }
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
-        "verify" => &["--plan", "--output", "--expect-context"][..],
+        "verify" | "verify-links" => &["--plan", "--output", "--expect-context"][..],
         _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
     };
     let mut options = BTreeMap::new();
@@ -79,7 +85,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     if matches!(command, "extract" | "resume") {
         path("--client")?;
         path("--output")?;
-    } else if command == "verify" {
+    } else if matches!(command, "verify" | "verify-links") {
         path("--output")?;
     }
     if matches!(command, "extract" | "resume") {
@@ -95,7 +101,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_keys_forbidden".into());
     }
     if plan.requires_keys()
-        && command != "verify"
+        && !matches!(command, "verify" | "verify-links")
         && (command != "inspect" || options.contains_key("--client"))
         && !options.contains_key("--keys")
     {
@@ -154,7 +160,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     {
         use forever_extractor::{driver, verify};
         driver::admit(&plan)?;
-        if command == "verify" {
+        if matches!(command, "verify" | "verify-links") {
             let expected = if let Some(p) = options.get("--expect-context") {
                 let b = input::bytes(p, 1024)?;
                 Some(Context::parse(
@@ -163,6 +169,17 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             } else {
                 None
             };
+            #[cfg(target_os = "linux")]
+            if command == "verify-links" {
+                let summary = verify::verify_links(&plan, path("--output")?, expected)?;
+                return Ok(format!(
+                    "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
+                    plan.contract(),
+                    verify::links::SCOPE,
+                    verify::links::PROFILE,
+                    summary.json()
+                ));
+            }
             let summary = verify::verify(&plan, path("--output")?, expected)?;
             return Ok(format!(
                 "{{\"contract\":\"{}\",\"scope\":\"artifact_integrity_and_intrinsic_formats\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",

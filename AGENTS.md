@@ -18,6 +18,19 @@ incrementally with Rust behind the same compatibility contract.
 - Plan/index: `https://github.com/alseif0x/rustycore-extractors/issues/13`
 - Default development branch: `forever`; legacy version line: `3.4.3`
 
+### Current delivery priority — 2026-10-13
+
+Complete the Linux extractor first: real acquisition, complete component outputs,
+full-world resources, runtime acceptance and a reproducible Linux package.
+Windows development and distribution are deferred until that Linux delivery is
+complete. PR #27 remains a preserved, unaccepted draft; existing platform code
+and historical evidence retain their recorded scopes.
+
+Use one focused active implementation branch. Merge each completed and validated
+implementation into `forever` and delete its merged local/remote branch.
+GitHub automatically deletes merged feature branches. Preserve uncommitted work
+and pending implementations; retain the `3.4.3` version line.
+
 ### Forever branch scope
 
 The operator made this repository public, renamed `main` to `3.4.3`, and selected
@@ -2054,3 +2067,30 @@ Coordinator's independent complete-byte review SHA-256:
 Both are retained under the evidence root above. No native C++, real-client,
 new native Windows, runtime, full-world or reproducible-distribution acceptance
 is inferred; those gates and the full extractor goal remain open.
+
+
+### Linux output-links executed local acceptance
+
+The frozen implementation passes 2,777 ordinary Linux workspace tests / 26
+ignored across 42 targets in debug and release, with formatting and all-target
+Clippy clean. The product has 226 passing tests per profile, including 23 new
+unit cases. All 311 source contracts pass; distribution source tests pass 162
+with one platform skip, without a new reproducible bundle.
+
+Independent CLI QA passes 20 methods / 64 commands per profile, with 128 empty
+denied-network traces. Its authored 35-file / 87,667-byte base packages match
+between debug/release. Separately, 20 new-profile checks accept the preceding
+35-file / 142,622-byte v1/v2/v3/v6 complete/recovered packages, with exact expected
+contexts, unchanged outputs and 20 empty traces. These are separate fixture
+inventories; no new geometry producer or real-client acceptance is inferred.
+An independent review checks all 1,086 frozen source paths and retained evidence.
+The subsequent acceptance documentation is not rebuilt into those binaries.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-output-links-20261013-pyw2o1xq/`.
+QA report SHA-256:
+`2f74ca579526efea9c520291fc41806a85a70ca3a8faceb67caf226b2b605d3b`.
+Independent acceptance review SHA-256:
+`087f3b1895bc08732674e1af5f8275f98ed46fed037dac29159bc8a1bdc2dcbc`.
+The Linux real-input, full-world, VMap association, runtime and distribution
+gates remain open. Windows development stays deferred.

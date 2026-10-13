@@ -620,3 +620,62 @@ Coordinator's independent complete-byte review SHA-256:
 Both are retained under the evidence root above. No native C++, real-client,
 new native Windows, runtime, full-world or reproducible-distribution acceptance
 is inferred; those gates and the full extractor goal remain open.
+
+
+## Explicit Linux terrain/navigation output links — 2026-10-13
+
+[Issue #30](https://github.com/alseif0x/rustycore-extractors/issues/30) adds the
+explicit Linux `verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT]`
+capability, profile `forever-terrain-navigation-links-v1`. It reuses complete
+package integrity, plan/context binding and intrinsic format verification in
+one package traversal. The existing `verify` invocation keeps its intrinsic-only
+scope and behavior; plans v1-v6 and package formats retain their identities.
+
+For all-map or single-map terrain selections, each observed map's whole tilelist
+must equal its published MAPS coordinates. Missing lists, missing/extra MAPS and
+MMap tiles without their map global fail explicitly. Empty lists and global-only
+navigation are valid; tile subsets retain their no-whole-map-list rule. Facts
+retain fixed bitsets and navigation presence, not artifact buffers. At most
+8,192 observed terrain/navigation map IDs are admitted, charged at a conservative
+4,096 logical metadata bytes each (32 MiB). This is bounded admission accounting,
+not an exact allocator/RSS measurement; older package/file ceilings still apply.
+
+The command reports the explicit profile and limited link scope, with
+`full_extractor_complete=false`. It checks relationships among published files;
+it does not prove omitted unobserved maps, complete CASC acquisition, VMap model
+or parent associations, Detour topology or runtime acceptance. No client, key or
+scratch input is required. Windows rejects this capability before input I/O.
+
+The current installed client declares build 70338; the older fixture declares
+70170 and links its Data directory. A complete immutable 70205 source has not
+been re-established. The five historical 70205 DB2 acceptance followups and the
+ItemDisplayInfoMaterialRes diagnostic remain separate pending real-input work;
+70338 evidence is not transferred to 70205. No new client payload/key/memory read
+was performed by this source/metadata audit.
+
+
+### Linux output-links executed local acceptance
+
+The frozen implementation passes 2,777 ordinary Linux workspace tests / 26
+ignored across 42 targets in debug and release, with formatting and all-target
+Clippy clean. The product has 226 passing tests per profile, including 23 new
+unit cases. All 311 source contracts pass; distribution source tests pass 162
+with one platform skip, without a new reproducible bundle.
+
+Independent CLI QA passes 20 methods / 64 commands per profile, with 128 empty
+denied-network traces. Its authored 35-file / 87,667-byte base packages match
+between debug/release. Separately, 20 new-profile checks accept the preceding
+35-file / 142,622-byte v1/v2/v3/v6 complete/recovered packages, with exact expected
+contexts, unchanged outputs and 20 empty traces. These are separate fixture
+inventories; no new geometry producer or real-client acceptance is inferred.
+An independent review checks all 1,086 frozen source paths and retained evidence.
+The subsequent acceptance documentation is not rebuilt into those binaries.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-output-links-20261013-pyw2o1xq/`.
+QA report SHA-256:
+`2f74ca579526efea9c520291fc41806a85a70ca3a8faceb67caf226b2b605d3b`.
+Independent acceptance review SHA-256:
+`087f3b1895bc08732674e1af5f8275f98ed46fed037dac29159bc8a1bdc2dcbc`.
+The Linux real-input, full-world, VMap association, runtime and distribution
+gates remain open. Windows development stays deferred.
