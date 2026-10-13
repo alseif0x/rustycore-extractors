@@ -758,3 +758,87 @@ transferred to this new binary. Build 70338 remains DB2-only; v6 geometry stays
 restricted to builds 70170/70205. Real complete geometry/runtime, the 83 encrypted
 70338 inputs, Windows product/distribution and full extraction remain open.
 No client assets or keys are packaged and nothing is published.
+
+
+### Executed current Linux v8 bundle with the v10 recipe — 2026-10-13
+
+Issue #36 accepts the local Linux package of functional commit
+`2452a7e16fade9a08cd71b6a901f83ab488b1a28`, tree
+`abbc124bb137fff493801cb7b06bc110de83afb6`, under unchanged source profile
+`forever-seven-crate-linux-product-db2-catalog-source-v10`. The existing recipe
+selects current v8/product-links sources and the liquid diagnostic without a
+profile, dependency, toolchain or production-format change. The focused QA
+change accepts `RCE_MAP_DOMAIN_GRID_SOURCE` as an explicit absolute GridMap
+source path whose SHA-256 must match the retained original receipt. The absent
+variable keeps the historical default; explicit invalid input has no fallback.
+This makes the shipped suite executable from a moved source tree.
+
+Two fresh offline builds, including a path with spaces, produce identical
+3,879,295-byte archives, manifests and 3,368,520-byte binaries. Both archives
+pass the closed verifier. A moved extracted-source offline rebuild with isolated
+HOME/CARGO_HOME/target reproduces the binary exactly. The inventory contains 720
+payloads; selected source contains 663 files / 15,928,610 bytes, each byte equal
+to the committed snapshot. The seven-crate closure retains two registry
+archives, 38 vendor files and thirteen checked toolchain notices. The unrelated
+untracked configuration backup is excluded.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Archive | `10c241fbb74fca7209c69fa27b461fe2ee75e59ecb8317b672592d6daf79dd00` |
+| Shipped and moved-rebuilt binary | `0ea8fc2b4e0b73be63f099343b8e162c8feafa8b41526e25e950e78bd8dc5470` |
+| Selected source | `abfe4131f32e5f7b8297f2c4f23a8aeb16aee19d74a4d0d45b84073d1533648a` |
+| Source-freeze report | `d73492db8f6c54881901d97d79eed31b5c64445f71dae55d1f6757764a9c5767` |
+
+The immutable shipped suites pass 129 methods without skips: seventeen v1,
+twenty v2, thirteen v3, fourteen v4/v5, eight v6, twenty output-links, twenty-nine
+v8 and eight GridSource guards. Ten are pure fixture/path guards (two catalog
+and eight GridSource); 129 is not a CLI-process count. The v8 execution includes
+exact SIGKILL/resume, selected domain/ancestor outputs, strict association,
+unrelated-source exclusion and verification. Its results match the immutable
+PR #33 receipt in all 29 cases and 33 authenticated manifest inventories,
+with 741 artifact visits / 5,181,615 exact bytes; producer SHA-256 is the only
+context difference. Rehashed rejected negative inventories are included, so
+these are not 33 accepted packages. Fresh and resumed manifests/artifacts agree
+byte for byte.
+
+Original supplied-input comparison executes six collision assembly cases /
+72 exact files / 8,468 bytes, one original ConvertADT output / 49 actual GridMap
+queries, eight original Detour consumer calls / sixteen routes and one exact
+original TileBuilder comparison. Retained authored synthetic inputs and memory
+adapters preserve their scopes: no native CASC routing, native map selection,
+malformed-native parity or complete original C++ navigation pipeline is implied.
+All 823 native/dependency/report guards, selected sources, binaries and separate
+input guards remain unchanged.
+
+The complete runtime trace inventory has 407 entries: 393 empty, thirteen
+expected SIGKILL and one fsync baseline; full-line review finds zero network
+events or unknown bodies. Each of the three compiler traces separately retains
+fourteen same-PID AF_UNIX pairs and fourteen empty receptions, with local
+signals classified. These are local compiler IPC, not empty runtime traces.
+Outer Python orchestration and ELF inspection are outside traced child scope.
+
+The actual ELF requires `libgcc_s.so.1`, `libm.so.6`, `libc.so.6` and
+`ld-linux-x86-64.so.2`, with interpreter `/lib64/ld-linux-x86-64.so.2` and maximum
+observed GLIBC symbol version 2.34. Compatible external linker/runtime is still
+required; no universal Linux ABI or static-linkage acceptance is claimed.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-current-bundle-20261013-27rcxr5j/`.
+
+| Report | SHA-256 |
+| --- | --- |
+| `qa/attempt1/acceptance.json` | `63ddf83a328d64ad10e28b1e6dfaf03b9ae93bc03bfdbabefea6fe76ce4985fa` |
+| `qa/review/final-review.json` | `366efe53c99addd2a8012a17166474f545ccc0a515ebf58b8fb0404b3d67765f` |
+| `qa/attempt1/pr33-byte-context-resume-comparison.json` | `32e058135dc518123e50c0e1a284ce35df286db2581a24c45f17383fae2bba95` |
+
+The independent final review checks both closed archives, full source bytes,
+the moved rebuild, all runtime/compiler traces and external/native receipts
+without repeating builds or native execution. This accepts bounded current
+Linux distribution for the frozen source. The subsequent three-file Markdown
+delta (`AGENTS.md`, `docs/forever-completion.md`, this document) is not rebuilt
+and does not replace any compiled/package bytes. The historical real 1,078-table
+v5 acceptance remains bound to its prior binary and is not transferred here.
+Build 70338 stays DB2-only; v8 geometry stays restricted to 70170/70205. Real
+complete geometry, full-world resources, RustyCore/server runtime and complete
+extraction remain open. Windows development/distribution stays deferred. No
+client assets or keys are packaged and nothing is published.

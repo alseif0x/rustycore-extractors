@@ -2144,3 +2144,35 @@ no bundle is created. Source metadata, exact comparison scope and guarded report
 hashes are in docs/forever-terrain.md and docs/forever-completion.md. Final docs
 are not rebuilt. Product/geometry gates stay unchanged, 70338 stays DB2-only,
 Map/GameObjectDisplayInfo stay unavailable and full Linux extraction stays open.
+
+
+### Current Linux v8 bundle accepted locally — 2026-10-13
+
+Issue #36 accepts a reproducible local Linux bundle of frozen functional commit
+`2452a7e16fade9a08cd71b6a901f83ab488b1a28`, using the unchanged v10 recipe.
+Two offline builds produce identical 3,879,295-byte archives and 3,368,520-byte
+binaries; a moved-source offline rebuild reproduces the binary. The archive
+contains 720 inventoried payloads, including 663 selected source files /
+15,928,610 bytes. Archive SHA-256 is
+`10c241fbb74fca7209c69fa27b461fe2ee75e59ecb8317b672592d6daf79dd00`;
+binary SHA-256 is
+`0ea8fc2b4e0b73be63f099343b8e162c8feafa8b41526e25e950e78bd8dc5470`.
+All 129 packaged test methods pass: 119 exercise product/link/domain behavior
+and ten are pure fixture/path guards, not 129 CLI processes. They include all
+29 v8 methods, 20 output-links methods and exact interrupted resume. Receipt-
+bound PR #33 comparisons cover 33 inventories / 741 artifact visits /
+5,181,615 bytes, including rejected negative inventories, not 33 accepted
+packages. Original supplied-input comparisons retain six collision cases /
+72 files / 8,468 bytes, one ConvertADT output / 49 GridMap queries, eight
+Detour calls / sixteen routes and one TileBuilder comparison. All 823 external
+native/dependency/report guards remain unchanged. Runtime traces total 407:
+393 empty, thirteen expected SIGKILL and one fsync baseline, with zero network
+events; three compiler traces separately classify local AF_UNIX IPC. The ELF
+requires GLIBC_2.34 and its recorded dynamic closure, without universal ABI
+acceptance. Detailed hashes and scopes are in docs/forever-distribution.md and
+docs/forever-completion.md. Only these three Markdown files change after the
+frozen source; they are not rebuilt. This closes bounded current Linux
+distribution evidence. Historical real 1,078-table acceptance remains bound to
+its older binary. Build 70338 stays DB2-only; real geometry, full-world outputs,
+server/runtime activation and full extraction remain open. Windows stays
+deferred; nothing is published and no client assets or keys are packaged.
