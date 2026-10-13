@@ -2004,3 +2004,112 @@ RustyCore's optional checked terrain library connects binary VMap readers and
 static queries with synthetic acceptance. Full real geometry initialization,
 server lifecycle and runtime acceptance remain completion gates. See the
 [full extractor checklist](forever-completion.md).
+
+
+## Real build-70338 bounded M2 acquisition and RAW conversion — 2026-10-13
+
+Issue #38 adds the optional Linux QA mode
+`collision_local <client> <plan> <new-output> --m2-70338` at frozen functional
+commit `d89d58b20fed0d6a9c43976b988e7f77cee88566`, tree
+`b11858ac1da8a3c3275cb6ab2c33d9366ca17486`. This is a private example profile,
+not a product plan. Default arguments, `--names`, stdout and correlation bytes
+retain their previous behavior. The new flag excludes names/WMO and rejects
+plans over 31 requests before client I/O; genuine build metadata and the strict
+store must both admit exactly 70338 before model FDID reads. It uses no supplied
+keys, Map, GameObjectDisplayInfo or liquid startup.
+
+The original 31-request plan SHA-256
+`c92cbadaa8bd7adba050576d224be19871e034a8e98d034baeb3d5f9a91d1b84` is recovered
+and authenticated against the historical private correlation/receipt, preserving
+its exact order before current model reads. The historical failed 32 preflight
+remains separate. Current membership is checked in the complete retained
+accepted-v5 CreatureModelData 70338 table: 71,674 bytes, 1,156 direct records and
+1,178 resolved records. All 31 are members. WoWDBDefs commit
+`d6f50d4f351193e84226aa62a36faa0f58528afa`, definition Git blob
+`ebd24db8831cdc1b5b853e4b642d324d4d6dc249`, explicitly names `FileDataID<u32>`
+at physical field 2 under layout `0F5449F8`; regenerating the descriptor matches
+the 70338 catalog exactly. Private IDs/rows remain external. Membership proves
+candidate provenance, not availability; complete current acquisition is a
+separate executed phase.
+
+The single real attempt accepts **31 complete 70338/esES M2 sources /
+15,277,222 bytes**, maximum 3,661,318 bytes. Direct Rust validates all 31 in both
+profiles, then strict native CASC reproduces every source byte; only after all 31
+comparisons pass do **31 original Model::open calls** execute through the
+retained memory adapter. Native states and RAW writing match **28 RAW files /
+27,100 bytes and three NoCollision outcomes**. These are measured current
+results, not expected outcomes copied from the historical run. Direct debug/release inventories agree: 61 files each (31 sources, 28 RAW and
+two private receipts). Collector debug/release inventories agree: 30 files each
+(28 RAW and two private receipts). RAW bytes
+agree across all five views (two direct, original Model and two collectors). The collector's additional
+`source-context.tsv` is mode 0600 and records the actual 70338 store content
+identity; RAW/correlation files are also private. Any selected failure would
+reject the entire run; no available-prefix selection is accepted.
+
+Per backend/run, source admission is at most 3,661,318 bytes per file and
+15,277,222 cumulatively; RAW admission is at most 27,100 bytes. Collector reads,
+models and requests are capped at 31 with zero dependencies. Source acquisition
+uses the remaining cumulative cap before allocation; M2 RAW encoded length is
+checked before allocation. Direct Rust reserves 64 MiB for caller ownership and
+reduces the store's 1 GiB combined logical allowance by that reservation; source
+vector capacities, borrowed parser views and RAW allocation overlap have
+separate checks. A 4 GiB per-process address-space limit is a different OS
+process constraint. Neither describes exact allocator use or measured RSS, and
+native logical/RSS parity is not claimed.
+
+The complete campaign makes 155 client model acquisition requests /
+76,386,110 bytes across two direct runs, one native CASC run and two collectors.
+Original Model consumes 31 additional private-file inputs / 15,277,222 bytes.
+Thus 186 experimental source visits / 91,663,332 bytes are recorded. These are
+complete model/request visits, not all archive I/O, candidate attempts or memory
+copies. The native closure retains 45 CASC source/dependency files and 44 original
+Model source/dependency files, with the wrapper/adapter scopes recorded
+separately. Only complete validated positives run natively; malformed-native
+failure parity is not inferred.
+
+All 66 real runtime traces are empty under network syscall denial. Separate
+synthetic integration passes 22 CLI commands per profile / 44 empty traces and
+eight matching positive inventories, covering invalid/conflicting flags,
+WMO/32-request rejection before a nonexistent client, genuine authored 70205
+metadata rejection before bootstrap, 70338 Collision/NoCollision, exact private
+identity/modes, 31 requests, exact/exceeded source/RAW caps, legacy 70205/70338
+literal stdout/correlation and output exclusivity. Network traces do not observe
+allocator calls; the source review supplies preallocation-order evidence.
+Twelve example tests and 2,852 ordinary workspace tests / 26 ignored / 42 targets
+pass per profile, with Clippy/format, 329 contracts and 162 distribution checks /
+one skip. Ignored corpora are not rerun; no foundation implementation changes.
+
+Helper build 1's OpenSSL configure failure and build 2's Cargo PATH failure remain
+retained; build 3 passes. There is only one real attempt. The successful helper
+build has 28 compiler/inspection traces, with twelve local AF_UNIX pairs and
+twelve empty receptions per Rust profile (24 each total), classified separately
+from the empty runtime traces. Outer Python orchestration is not traced.
+The independent retained-evidence audit rechecks 2,606 guard entries and six
+phase inventories; its final freeze contains 638 files, without new client reads
+or binary execution.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-m2-cc972f7g/`.
+
+| Report | SHA-256 |
+| --- | --- |
+| `qa/real-attempt1/acceptance.json` | `5a6a41c3a83ab0849d28924ce514c4945d8f99e2075aa397cd334724fc24c788` |
+| `qa/real-attempt1/independent-evidence-audit.json` | `55a4ef9b8610bc50755fdce264407674793c15a86858176b8a48634aaaf606c6` |
+| `qa/real-attempt1/final-evidence-freeze.json` | `34702672d04d53c21a16f10839811368cf4ac2f2be310964b8c4c0de6e0c605b` |
+| `qa/review/final-real-review.json` | `56eaf27aadb8a3ef9dc0c4c150ad37675f1068c6bd520a364f8efe1636400f31` |
+| `qa/helper-build3/build-report.json` | `49c0d32ba7d6ca5f2f1e145ceb7c8d73db009f408cc00230d4c93f74d0f0d5ce` |
+| `qa/synthetic-attempt2/acceptance.json` | `0ab94f10e84afe02e654f75383ead1de849126dab218357fc7126969521c40a1` |
+| `impl/current-membership-summary.json` | `82c527aaab1a85287f5e216dc9e49f137a2813e8f31210a20f44428db13d4926` |
+| `impl/workspace-report.json` | `223a15bc10c8bee16ee9dc238160dbd3da8b34565f9e30e521ba82eb59157ea6` |
+
+The final independent review accepts the finite replay without findings,
+rechecking the receipts, chronology, complete sources/RAW comparisons, guards
+and runtime/compiler evidence without new model acquisition or native execution.
+The fixed sample does not establish additional M2 variant coverage.
+
+The subsequent AGENTS/collision/completion Markdown delta is not rebuilt into
+these binaries. The accepted current Linux distribution remains immutable; no
+new bundle is produced. This accepts real M2 acquisition/RAW conversion for the
+fixed 31 selection only. Product 70338 remains DB2-only; no WMO, placements, VMO,
+queries, full-world extraction or installed RustyCore/server runtime acceptance
+is added. Full Linux extraction remains open; Windows stays deferred.

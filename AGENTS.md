@@ -2176,3 +2176,31 @@ distribution evidence. Historical real 1,078-table acceptance remains bound to
 its older binary. Build 70338 stays DB2-only; real geometry, full-world outputs,
 server/runtime activation and full extraction remain open. Windows stays
 deferred; nothing is published and no client assets or keys are packaged.
+
+
+### Real 70338 M2 sample accepted — 2026-10-13
+
+Issue #38 adds only the optional Linux `collision_local --m2-70338` diagnostic
+profile; existing arguments/defaults and product admission remain unchanged.
+Frozen functional commit `d89d58b20fed0d6a9c43976b988e7f77cee88566` replays the
+fixed authenticated historical 31-FDID plan after proving all 31 are current
+CreatureModelData 70338 members. The complete retained table has 1,156 direct /
+1,178 resolved records / 71,674 bytes; pinned WoWDBDefs FileDataID is physical
+field 2, unsigned 32. Actual real 70338/esES acquisition accepts 31 complete sources
+/ 15,277,222 bytes (maximum 3,661,318), producing 28 RAW / 27,100 bytes and three
+NoCollision outcomes. Those are measured current results. All 31 Rust-validated
+sources match native CASC bytes before any of the 31 original Model::open calls;
+all states/RAWs match, and direct/collector debug/release inventories agree.
+Per-backend limits only reduce the existing ceilings. The campaign records
+155 client model acquisitions / 76,386,110 bytes plus 31 private original-model
+input visits / 15,277,222 bytes: 186 visits / 91,663,332 bytes, not physical
+archive I/O or memory/RSS measurements. All 66 real and 44 synthetic runtime
+traces are empty; compiler local IPC has separate qualified traces. Workspace
+passes 2,852 ordinary tests / 26 ignored across 42 targets per profile, twelve
+example tests, Clippy/format, 329 contracts and 162 distribution checks/one skip.
+Detailed receipts, memory/native scopes and retained build failures are in
+`docs/forever-collision.md` and `docs/forever-completion.md`. Later three-file
+Markdown updates are not rebuilt. This accepts only this real M2 selection;
+70338 product admission stays DB2-only. WMO, placements, VMO/query, full-world
+resources, server runtime and full extraction remain open. The preceding Linux
+bundle is unchanged; no new bundle or Windows acceptance is claimed.
