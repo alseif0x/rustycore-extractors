@@ -348,3 +348,22 @@ External evidence in the existing Windows product laboratory:
 
 The run remains failed. Complete native product acceptance, reproducible
 Windows distribution, real geometry/runtime and full extraction remain gates.
+
+## Source bundle topology correction
+
+Review of the current Linux packager finds three optional Windows QA paths
+selected by `selected_paths` but rejected by its own `bundle_path_allowed`.
+The unmodified 3731145 checkout selects 646 source paths and rejects exactly
+the product documentation, native QA helper and MSVC-v2 documentation. This
+would prevent inventory construction for the actual source checkout; the
+older minimal synthetic source fixtures did not contain those optional files.
+
+One explicit three-path tuple now drives selection and admission. Four new
+regressions check the actual selected source set, presence and absence of the
+optional files, and rejection of neighboring names and Windows executables.
+The focused packager suite passes 81 methods. Its archive/rebuild tests use an
+authored mock compiler; they are source-topology/codec evidence, not a newly
+compiled Linux bundle or Windows distribution acceptance. The Linux source-v10
+profile and mandatory inventory retain their earlier scope; missing optional
+QA files remain admitted for older snapshots. Real two-build and moved-source
+reproducibility still require their own exact artifact evidence.

@@ -1975,3 +1975,12 @@ all inventories and the 20-minute per-job ceiling. Run/checkout identity is
 logged explicitly. Retained partial evidence is in docs/forever-windows-product.md;
 complete native product, Windows distribution, real-client/runtime and full
 extraction remain gates.
+
+The subsequent source-topology correction shares one exact three-path optional
+Windows QA tuple between the Linux packager's selection and admission. The
+prior 3731145 source selects 646 paths but rejects those three at inventory
+construction. Four regression methods cover the actual source set, optional
+presence/absence and exact allowlist; 81 focused packager tests pass with an
+authored mock compiler. This repairs source closure while preserving the v10
+profile and older snapshots without the optional files. It is not a new
+compiled/reproducible Linux bundle or Windows distribution acceptance.
