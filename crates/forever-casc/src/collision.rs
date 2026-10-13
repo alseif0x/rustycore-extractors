@@ -13,18 +13,23 @@
 //! source. Typed requests retain their existing parser admission rules.
 //! Neither placement publication, VMap assembly nor runtime loading occurs here.
 pub mod assemble;
+#[cfg(test)]
+mod disk_fixture;
 pub mod gameobjects;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod inventory_spool;
 mod names;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod payload;
 pub mod placements;
 pub mod plan;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod resources;
 pub mod run;
 #[cfg(target_os = "linux")]
+pub mod spool;
+#[cfg(windows)]
+#[path = "collision/spool/windows.rs"]
 pub mod spool;
 #[cfg(test)]
 mod tests;
@@ -110,7 +115,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     fn validate_resources(self, profile: resources::Profile) -> Result<(), Error> {
         let cap = profile.collector_limits();
         if !profile.supported()
@@ -365,7 +370,7 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
     source_bytes: usize,
     raw_bytes: usize,
     failed: Option<Error>,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     payloads: Option<payload::Repository>,
 }
 impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
@@ -398,7 +403,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: 0,
             raw_bytes: 0,
             failed: None,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             payloads: None,
         })
     }
@@ -450,7 +455,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         let cap = self.vector_reservation_cap(&self.requests, 1, true)?;
         reserve(&mut self.requests, 1, &mut self.live, cap)?;
         self.requests.push(handle);
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if self.payloads.is_some() {
             let compact = payload::compact_bytes(&self.models, &self.requests)?;
             self.payloads
@@ -494,7 +499,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: self.source_bytes,
             raw_bytes: self.raw_bytes,
             failed: self.failed,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             payloads: self.payloads,
         })
     }
@@ -663,7 +668,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         compact_vector: bool,
     ) -> Result<usize, Error> {
         let cap = self.available_total()?;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if let Some(repository) = &self.payloads
             && add(values.len(), additional)? > values.capacity()
         {
@@ -693,7 +698,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             }
             return Ok(cap);
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", windows)))]
         let _ = (values, additional, compact_vector);
         Ok(cap)
     }
@@ -703,7 +708,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             .max_memory_bytes
             .checked_sub(self.store.stats().resident_bytes)
             .ok_or(Error::Limit)?;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if let Some(repository) = &self.payloads {
             let compact = payload::compact_bytes(&self.models, &self.requests)?;
             repository
@@ -771,7 +776,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             return Err(Error::Limit);
         }
         let cap = self.available_total()?;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         let cap = if let Some(repository) = &self.payloads {
             let compact = payload::compact_bytes(&self.models, &self.requests)?;
             let remaining = repository
@@ -794,7 +799,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             Some(id) => Origin::Id(id),
             None => Origin::Name(copy(prepared.canonical(), &mut self.live, cap)?),
         };
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         let cap = if self.payloads.is_some() && self.models.len() == self.models.capacity() {
             // Admit full new Model allocation while old allocation and the
             // just-created name/origin vectors are still resident.
@@ -815,7 +820,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source: None,
             wmo: None,
         });
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if self.payloads.is_some() {
             let compact = payload::compact_bytes(&self.models, &self.requests)?;
             let repository_bytes = self.payloads.as_ref().ok_or(Error::State)?.resident_bytes();
@@ -847,7 +852,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             Class::Wmo => self.convert_wmo(handle, bytes)?,
         }
         self.models[handle.0].pending = false;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if self.payloads.is_some() {
             let compact = payload::compact_bytes(&self.models, &self.requests)?;
             let repository = self.payloads.as_mut().ok_or(Error::State)?;
@@ -887,13 +892,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 Some(_) => Err(Error::Alias),
             };
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         let provisional = if self.payloads.is_some() {
             Some(self.insert_model(Class::M2, &prepared)?)
         } else {
             None
         };
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", windows)))]
         let provisional: Option<ModelHandle> = None;
         let (bytes, facts) = self.read(InputRef::FileDataId(id))?;
         let Some(class) = classify(facts.first_magic)? else {

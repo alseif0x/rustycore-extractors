@@ -8,9 +8,12 @@
 use super::{payload, plan, spool};
 use forever_vmap::placement::{self, DirBin, cache};
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-wdt-cache-inventory-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-wdt-cache-inventory-v1";
 pub const MAX_ENTRIES: usize = 4096;
 pub const MAX_HEAP_BYTES: usize = 512 * 1024 * 1024;
 pub const MAX_ACTIVE_BYTES: usize = 256 * 1024 * 1024;

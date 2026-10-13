@@ -16,9 +16,14 @@ use super::{Prepared, payload, spool};
 use crate::collision::{Class, assemble as resident, run};
 use forever_vmap::{assembly, placement};
 use std::mem::size_of;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(all(test, windows))]
+mod windows_tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-assembled-vmap-package-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-assembled-vmap-package-v1";
 pub const MAX_MEMORY_BYTES: usize = super::MAX_MEMORY_BYTES;
 const HEADER: usize = 64;
 const TILE_HEADER: usize = 48;

@@ -57,7 +57,7 @@ impl Default for SharedLimits {
     }
 }
 impl SharedLimits {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn validate_resources(
         self,
         profile: super::super::resources::Profile,

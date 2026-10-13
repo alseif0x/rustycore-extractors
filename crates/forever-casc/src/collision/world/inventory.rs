@@ -12,9 +12,12 @@ use crate::collision::{
     run,
 };
 use forever_vmap::wmo::liquid::LiquidLookup;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-authenticated-disk-world-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-authenticated-disk-world-v1";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause<E> {
     World(super::Error),

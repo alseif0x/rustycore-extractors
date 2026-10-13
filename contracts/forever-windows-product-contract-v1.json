@@ -3,7 +3,7 @@
   "version": 1,
   "namespace_profile": "forever-windows-package-namespace-v1",
   "producer_profile": "forever-windows-producer-seal-v1",
-  "scope": "bounded resident Windows product source candidate; native execution must be recorded separately",
+  "scope": "bounded resident Windows product with separately recorded authored-synthetic native acceptance; no disk-world, real-client, runtime or distribution claim",
   "windows_resident_product_enabled": true,
   "linux_leased_disk_enabled_on_windows": false,
   "new_registry_dependencies": [],
@@ -83,7 +83,17 @@
     "recovery_preflight_before_mutation": true
   },
   "validation": {
-    "native_execution_status": "pending",
+    "native_execution_status": "accepted-synthetic-resident-debug-release",
+    "accepted_run": 38352005262,
+    "accepted_job": 115146296460,
+    "functional_commit": "cc4180c4a45a38bda399d0c3ae0327c17ecdc852",
+    "checkout_commit": "902bbb6bc585d805476fc3416c857ca85d37e37b",
+    "merge_commit": "4519a0d5ca4ca0374db1be145653f7a59ae91058",
+    "identical_tree": "fee2d6e4aec770a42ac239df41c1df2b6d25fd8c",
+    "accepted_case_reports": 30,
+    "accepted_command_records": 74,
+    "retained_acceptance_sha256": "d8b2af61151090100779555f6bef27c6d9c5d3bc77616af7066c1337f822a7d4",
+    "network_attempts": "not_measured",
     "network_syscall_tracing": false,
     "native_test_names": {
       "namespace": [

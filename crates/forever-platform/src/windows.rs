@@ -15,9 +15,11 @@ use std::{
 #[allow(unsafe_code)]
 mod ffi;
 
+pub mod append;
 pub mod output;
 pub mod package;
 pub mod producer;
+pub mod space;
 
 /// Conservative readonly NTFS lease profile; not a product support claim.
 pub const WINDOWS_READ_PROFILE: &str = "forever-windows-read-ntfs-v1";

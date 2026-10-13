@@ -15,9 +15,12 @@ use forever_vmap::{
     placement::{cache, ids},
     wmo::liquid::LiquidLookup,
 };
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-spooled-shared-world-run-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-spooled-shared-world-run-v1";
 /// Owned implementations enforce their declared heap allowance. The runner
 /// drops them before releasing it. No retained memory may escape that contract.
 /// Caller Map rows/strings and immutable source residency remain separate.

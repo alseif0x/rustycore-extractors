@@ -15,9 +15,12 @@ use forever_vmap::{
 };
 use std::ops::Range;
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-spooled-serial-placements-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-spooled-serial-placements-v1";
 const SCRATCH: usize = 62 + placement::MAX_NAME_BYTES;
 /// The owned sink must bound ALL retained heap (including side buffers and
 /// growth overlap) by its declared allowance. Disk publication is external.

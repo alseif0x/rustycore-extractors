@@ -19,9 +19,12 @@ use forever_vmap::placement::{self, DirBin};
 use std::mem::size_of;
 pub mod models;
 pub use models::package;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-authenticated-placement-stage-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-authenticated-placement-stage-v1";
 pub const MAX_HEAP_BYTES: usize = super::MAX_STAGE_BYTES;
 pub const MAX_CALLBACKS: usize = 4096;
 const GUARD_BYTES: usize = 512 * 1024;

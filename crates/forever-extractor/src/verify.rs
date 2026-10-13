@@ -5,7 +5,7 @@
 use crate::{
     Error,
     driver::validate_db2,
-    plan::{CollisionStorage, OffMeshConnection, Plan, Selection},
+    plan::{OffMeshConnection, Plan, Selection},
 };
 use forever_casc::{
     cameras,
@@ -30,7 +30,7 @@ pub fn verify(
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
     let mut limits = package::Limits::default();
-    if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
+    if let Some(budget) = plan.collision_storage.disk_budget() {
         limits.total_bytes = budget.output_bytes;
     }
     let mut facts = Facts::default();

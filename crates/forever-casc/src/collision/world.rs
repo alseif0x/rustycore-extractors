@@ -29,9 +29,9 @@ use forever_vmap::wmo::liquid::LiquidLookup;
 use std::mem::size_of;
 
 mod input;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod inventory;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod spooled;
 #[cfg(test)]
 mod tests;
@@ -78,7 +78,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
         self.run.validate_resources(profile).map_err(Error::Run)?;
         let mut bounded = self;

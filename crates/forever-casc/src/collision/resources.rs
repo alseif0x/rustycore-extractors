@@ -24,8 +24,14 @@ fn wide(bytes: u64) -> usize {
 impl Profile {
     pub const fn id(self) -> &'static str {
         match self {
+            #[cfg(target_os = "linux")]
             Self::BoundedV1 => "linux-collision-bounded-resources-v1",
+            #[cfg(target_os = "linux")]
             Self::DiskWorldV1 => "linux-collision-disk-world-resources-v1",
+            #[cfg(windows)]
+            Self::BoundedV1 => "windows-collision-bounded-resources-v1",
+            #[cfg(windows)]
+            Self::DiskWorldV1 => "windows-collision-disk-world-resources-v1",
         }
     }
     pub(crate) const fn supported(self) -> bool {

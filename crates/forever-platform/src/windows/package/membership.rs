@@ -6,6 +6,43 @@ mod ffi;
 const BUFFER_BYTES: usize = 1024;
 const NAME_OFFSET: usize = 80;
 
+/// The append owner holds its data handle with SHARE0, so it cannot be reopened
+/// by the normal package observer. Check this fixed two-file namespace against
+/// the retained data/lock identities with bounded single-entry enumeration.
+pub(super) fn archive_membership(root: &Root, archive: Identity) -> Result<(), Error> {
+    let mut buffer = ffi::Buffer::new();
+    let mut restart = true;
+    let mut seen = [false; 4];
+    for _ in 0..5 {
+        root.spend(1)?;
+        let Some(length) = ffi::query(&root.root.file, &mut buffer, restart)? else {
+            return if seen[2] && seen[3] {
+                Ok(())
+            } else {
+                Err(Error::Membership)
+            };
+        };
+        restart = false;
+        let record = decode(&buffer.bytes()[..length])?;
+        let (index, expected, directory) = match record.name.as_str() {
+            "." => (0, root.root.identity, true),
+            ".." => (
+                1,
+                root.ancestors.last().ok_or(Error::Identity)?.identity,
+                true,
+            ),
+            LOCK_NAME => (2, root.lock_identity.get().ok_or(Error::Identity)?, false),
+            append_support::ARCHIVE_NAME => (3, archive, false),
+            _ => return Err(Error::Membership),
+        };
+        if seen[index] || record.file_id != expected.file_index || record.directory != directory {
+            return Err(Error::Membership);
+        }
+        seen[index] = true;
+    }
+    Err(Error::Membership)
+}
+
 pub(super) fn observe(root: &Root, reserved: usize) -> Result<Vec<Entry>, Error> {
     let before = super::super::ffi::identity(&root.root.file).map_err(|_| Error::Identity)?;
     let mut entries = Vec::new();

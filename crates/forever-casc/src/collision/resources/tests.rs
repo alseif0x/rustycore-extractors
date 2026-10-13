@@ -68,7 +68,10 @@ fn expanded_factories_preserve_file_parser_memory_and_format_ceilings() {
         (a.max_memory_bytes, a.max_maps, a.assembly),
         (b.max_memory_bytes, b.max_maps, b.assembly)
     );
+    #[cfg(target_os = "linux")]
     assert_eq!(p.id(), "linux-collision-disk-world-resources-v1");
+    #[cfg(windows)]
+    assert_eq!(p.id(), "windows-collision-disk-world-resources-v1");
 }
 #[test]
 fn every_collector_cumulative_field_is_explicit_and_downward_only() {

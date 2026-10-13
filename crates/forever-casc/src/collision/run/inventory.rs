@@ -23,10 +23,13 @@ use forever_vmap::{
     placement::{DirBin, ids},
     wmo::liquid::LiquidLookup,
 };
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;
 pub use super::spooled::Sink;
+#[cfg(target_os = "linux")]
 pub const PROFILE: &str = "linux-private-disk-wdt-cache-shared-run-v1";
+#[cfg(windows)]
+pub const PROFILE: &str = "windows-private-disk-wdt-cache-shared-run-v1";
 pub const MAX_COMBINED_MEMORY_BYTES: usize = 2 * 1024 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limits {

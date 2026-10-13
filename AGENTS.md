@@ -1984,3 +1984,43 @@ presence/absence and exact allowlist; 81 focused packager tests pass with an
 authored mock compiler. This repairs source closure while preserving the v10
 profile and older snapshots without the optional files. It is not a new
 compiled/reproducible Linux bundle or Windows distribution acceptance.
+
+## Accepted native Windows resident product — 2026-10-13
+
+PR #25 closes issue #24 and integrates functional
+`cc4180c4a45a38bda399d0c3ae0327c17ecdc852` as
+`4519a0d5ca4ca0374db1be145653f7a59ae91058`. Native Rust run 38352005262,
+product job 115146296460, accepts both debug/release profiles on Windows 2022,
+x64/MSVC and fixed local NTFS: 30 namespace, 21 package and one actual AMD64
+gate per profile, plus 15 CLI methods / 37 commands per profile. Thirty retained
+reports bind all 74 commands; all 1,078 tracked source files remain unchanged.
+Both separate build/locale goldens cover all six nonempty components. Recovery
+terminates after DB2 sealing, not during disk-world collision. Earlier failed
+and cancelled native attempts retain their outcomes. All assets are authored
+synthetic, with no new original C++ or real-client execution. Network attempts
+are not measured; neither distribution nor runtime/full extraction is accepted.
+Exact commit/tree, binary, inventory and retained report hashes are in
+docs/forever-windows-product.md and docs/forever-windows-producer-msvc-v2.md.
+
+Issue #26 / branch `codex/forever-windows-disk-world`, based on that merge,
+separately develops explicit plan v7 and
+`windows-exclusive-append-disk-world-v1`. It reuses Windows state/transaction v3
+and public manifest v1, preserving the Linux leased backend and older plan gates.
+Its pending contract, limits, fresh-only scratch and native acceptance gates are
+in docs/forever-windows-disk-world.md. Implementation or cross-compilation is not
+native disk-world acceptance and does not close real acquisition, runtime,
+distribution or the full extractor goal. No further client memory/key scanning
+is part of this increment.
+
+The disk-world source union now passes 2,762 Linux ordinary workspace tests /
+26 historical ignored / 42 targets per debug/release profile, workspace Clippy
+and full formatting, with 449 Rust/Cargo inputs unchanged. Windows GNU workspace
+all-target Clippy passes defaults and the MSVC-v2 feature; it is compile-only.
+Source checks pass 307 contracts and 162 distribution methods / one Windows-only
+skip. Two bounded Linux v3 disk worlds match all six components and the complete
+35-file / 142,622-byte build-bearing goldens, with four empty denied-network
+traces; a separate padded-M2 fixture probe passes. The planned native inventories
+include 4,100 complete supplied models, actual large archive streaming, 17 CLI
+methods, termination during a RAW append extent and distinct-volume scratch.
+No native disk-world result is yet accepted. Exact local source/attempt/report
+hashes and observation limits are in docs/forever-windows-disk-world.md.

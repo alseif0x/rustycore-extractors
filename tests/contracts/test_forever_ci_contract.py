@@ -19,10 +19,12 @@ PINS = {
 WORKSPACE_JOBS = ('linux', 'windows')
 PRODUCT_JOB = 'windows-product'
 PRODUCT_RUN = '. ./tools/check_forever_windows_product.ps1'
+DISK_JOB = 'windows-disk-world'
+DISK_RUN = ". ./tools/check_forever_windows_disk_world.ps1 -BuildProfile '${{ matrix.profile }}'"
 
 
 def validate_boundary(workflow):
-    if set(workflow['jobs']) != {*WORKSPACE_JOBS, PRODUCT_JOB}:
+    if set(workflow['jobs']) != {*WORKSPACE_JOBS, PRODUCT_JOB, DISK_JOB}:
         raise ValueError('job_roles')
     if workflow['permissions'] != {'contents': 'read'}:
         raise ValueError('permissions')
@@ -143,6 +145,21 @@ class ForeverCiContract(unittest.TestCase):
                              'test_forever_windows_read_contract.py', 'test_forever_windows_consumers_contract.py'):
                 self.assertIn(filename, text)
 
+    def test_windows_disk_world_has_separate_profile_time_budgets(self):
+        job = self.workflow['jobs'][DISK_JOB]
+        self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertEqual(job['timeout-minutes'], 20)
+        self.assertEqual(job['strategy'], {'fail-fast': False,
+                                          'matrix': {'profile': ['debug', 'release']}})
+        self.assertEqual(job['defaults'], {'run': {'shell': 'pwsh'}})
+        self.assertEqual(job['steps'][:7], self.workflow['jobs']['windows']['steps'][:7])
+        self.assertEqual(job['steps'][-1]['run'], DISK_RUN)
+        self.assertNotIn('needs', job)
+        self.assertNotIn(PRODUCT_RUN, [s.get('run') for s in job['steps']])
+        self.assertIn('test_forever_windows_disk_world_contract.py', job['steps'][-2]['run'])
+        for other in (PRODUCT_JOB, *WORKSPACE_JOBS):
+            self.assertNotIn(DISK_RUN, [s.get('run') for s in self.workflow['jobs'][other]['steps']])
+
     def test_metadata_cli_is_explicitly_built_and_addressed(self):
         for name in WORKSPACE_JOBS:
             job = self.workflow['jobs'][name]
@@ -188,6 +205,9 @@ class ForeverCiContract(unittest.TestCase):
 
     def test_rejects_missing_product_job(self):
         self.rejects_mutation(lambda w: w['jobs'].pop(PRODUCT_JOB), 'job_roles')
+
+    def test_rejects_missing_disk_world_job(self):
+        self.rejects_mutation(lambda w: w['jobs'].pop(DISK_JOB), 'job_roles')
 
     def test_rejects_product_network_enabled_lint(self):
         self.rejects_mutation(lambda w: next(s for s in w['jobs'][PRODUCT_JOB]['steps']
