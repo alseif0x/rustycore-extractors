@@ -2123,3 +2123,24 @@ separate source inventories and report hashes are in `docs/forever-completion.md
 failed earlier attempts remain failed. Final documentation is not rebuilt.
 Real input, full-world, runtime and distribution gates remain open. Build 70338
 continues DB2-only. See `docs/forever-product.md` and the versioned JSON contract.
+
+
+### Real 70338 liquid startup readers — 2026-10-13
+
+The private terrain_sources example adds LiquidObject through the unchanged
+closed reader/materializer. Eight authored tests pass in debug/release. Three
+complete retained product-v5/esES sources (26,063 bytes) match original getters,
+copy accessors and all three unchanged ReadLiquid* startup functions: 118 direct
+records, 1,214 copy pairs and 1,332 materialized entries. Counts are measured,
+not inferred. LiquidObject signed16 physical field2 preserves original u16 bits;
+unused fields validate in Rust/Python, without claiming native ignored-field or
+terrain-query parity. Per profile, 21 authored positives, 27 Rust-only negatives,
+three real tables and eight CLI/output guards pass 83 commands with empty
+runtime network traces. All 656 source/190 native/external/binary/input guards
+pass; CASC is an authored memory adapter, not original native routing.
+Workspace passes 2,840 ordinary tests / 26 ignored across 42 targets per profile,
+Clippy and format. All 329 contracts and 162 distribution checks/one skip pass;
+no bundle is created. Source metadata, exact comparison scope and guarded report
+hashes are in docs/forever-terrain.md and docs/forever-completion.md. Final docs
+are not rebuilt. Product/geometry gates stay unchanged, 70338 stays DB2-only,
+Map/GameObjectDisplayInfo stay unavailable and full Linux extraction stays open.

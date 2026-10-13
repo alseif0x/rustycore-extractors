@@ -30,7 +30,7 @@ remains valid for its recorded source; it cannot reopen that source now. Build
 | Component | Current evidence | Completion requirement |
 | --- | --- | --- |
 | Local acquisition | Explicit Rust-local component CLI passes five DB2/GT/camera plans with 61 artifact comparisons and closed-profile verification; native remains default for those component CLIs; the Rust-only unified product admits explicit v2 supplied keys with synthetic acceptance; separate name API has original C++ synthetic comparison and real negative-query evidence | Complete supported-profile and actual real encrypted acceptance; positive real named-file reads; no implicit network or zero-filled missing data |
-| DB2 catalog | 56 reviewed schemas retain their v2 policy; pinned catalog accounts for all 1,126 declarations; separate `wowdbdefs-70205-v1` and `wowdbdefs-70338-v1` catalogs each pin 1,161 build-specific declarations; 70205 matches all 1,023 surveyed complete headers, while the 70338 survey acquired 1,078 complete files and left 83 encrypted candidates; the earlier 70205 survey matches 1,023 artifacts / 719,466 rows against Python, with 103 explicit failures; separate closed terrain sources have synthetic and two-table local acceptance | All required extraction tables and physical variants accounted for; unsupported/incomplete inputs reported without success claims; complete required reader acceptance |
+| DB2 catalog | 56 reviewed schemas retain their v2 policy; pinned catalog accounts for all 1,126 declarations; separate `wowdbdefs-70205-v1` and `wowdbdefs-70338-v1` catalogs each pin 1,161 build-specific declarations; 70205 matches all 1,023 surveyed complete headers, while the 70338 survey acquired 1,078 complete files and left 83 encrypted candidates; the earlier 70205 survey matches 1,023 artifacts / 719,466 rows against Python, with 103 explicit failures; separate closed terrain sources have synthetic and two-table 70205 local acceptance plus three-table real 70338 liquid startup-reader acceptance | All required extraction tables and physical variants accounted for; unsupported/incomplete inputs reported without success claims; complete required reader acceptance |
 | DB2 reader acceptance | Separate names, appearance and item specialization loaders accepted; Birth and initialization have synthetic complete-loader evidence; all 49 spell tables now have complete public typed-load projection acceptance on five populated synthetic worlds; the older four-table generic-reader comparison remains separate; the build-70205 target catalog matches Rust's standalone diagnostic on three complete local esES DB2s (ChrClasses 9 rows, ChrRaces 58, CinematicCamera 10); explicit Rust-local v4 batches verify those three files and a 1,024-table package with exact per-file bytes matching legacy-profile output; product v4/v5 code routes multi-section target-catalog DB2s through the bounded catalog reader, but no real multi-section file has passed that route; the immutable v10 Linux binary extracts/verifies an explicit 70338/esES selection of 1,078 files / 29,213,383 bytes against the fresh complete-read census, without a new row-oracle comparison | Complete public Forever loaders, including Birth, initialization and all 49 spell tables, on complete local inputs; real product acceptance of multi-section files, encrypted/sparse variants and output TACT metadata |
 | Game tables | Complete 20-file catalog with native v2 and Rust-local v3 verification; 14 numeric tables / 22,082 f32 cells match C++; six raw-only files; both public six-file RustyCore loader groups accepted with both backends | Preserve this component evidence in the unified product interface; retain numeric versus raw-only scope |
 | Cameras | Native v1 and Rust-local v2 acquisition/output verification; ten camera files plus source DB2 match C++ bytes, independent discovery and filenames | Preserve component evidence in the unified interface; M2/waypoint/runtime acceptance needs a separate reader contract |
@@ -3273,3 +3273,42 @@ Neither this implementation nor its synthetic comparison establishes complete
 real acquisition, 70338 geometry support, full-world throughput, server
 activation, dynamic queries or a new reproducible distribution. The complete
 Linux extractor goal remains open; Windows work remains deferred.
+
+
+### Real build-70338 liquid dependency readers — 2026-10-13
+
+The [three-table evidence](forever-terrain.md#real-build-70338-liquid-source-acceptance--2026-10-13)
+closes projected startup-reader compatibility on complete retained 70338/esES
+LiquidMaterial, LiquidObject and LiquidType sources. The private diagnostic now
+exposes LiquidObject through the existing reader/materializer. Actual source
+counts are 118 direct records / 1,214 copy pairs / 26,063 bytes; exact original
+getters and all three unchanged ReadLiquid* functions reproduce all 1,332
+materialized entries in debug/release. This uses an authored memory CASC adapter
+and retained accepted v5 files, without current client acquisition, native CASC,
+malformed native execution, ConvertADT or server runtime. Unused fields validate
+in Rust/Python; native comparison covers the consumer projections.
+
+Both profiles pass eight diagnostic tests, 2,840 ordinary workspace tests /
+26 ignored across 42 targets, full Clippy and formatting. Independent CLI QA
+passes 83 commands per profile: 21 authored positives, 27 Rust-only negatives,
+three real inputs and eight output/invocation guards, all with empty denied-
+network runtime traces. Projection bytes agree between profiles; all source,
+original/native, external QA, binary and input guards pass. Contract tests pass
+329; distribution source tests pass 162 with one skip, without a new bundle.
+Complete private values remain outside Git and the model context. The later
+three-file documentation update is not rebuilt into the frozen binaries.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-liquids-20261013-37a0xn__`.
+Acceptance SHA-256:
+`d64c0ba480481d94c56af8c4b6dafefd20fd3eac7a96e4031c60a65f7f53a137`.
+Independent retained-evidence audit SHA-256:
+`3635b5bf66847746edd5fe563734920b5b0553d00cbeb3ea0ea3bdf459954118`.
+Independent final source/receipt/byte review SHA-256:
+`abe0b874a68327d523c1ff89562b25c4f465703b21f85efefd35fd15f24585f7`.
+See the terrain record for workspace and complete trace/source scopes.
+
+No product admission or geometry build gate changes. Map and
+GameObjectDisplayInfo remain unavailable; 70338 remains DB2-only. Complete real
+acquisition, full-world geometry outputs, runtime activation and a current
+reproducible Linux package remain required for the full extractor goal.
