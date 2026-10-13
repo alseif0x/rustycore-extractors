@@ -2056,3 +2056,11 @@ jobs a 60-minute ceiling, retaining all scale cases and the Linux/resident
 20-minute ceilings. The closed per-role validator rejects larger or invalid
 budgets. This is a bounded diagnostic rerun, not native acceptance or a measured
 full-world throughput claim; no Rust/Cargo source changes in this correction.
+
+The second disk-world run 38364014811 passes its dedicated source checks, then
+both profiles fail the selected 20-test append command. Buffered stdout is lost
+before the helper's failure exit, so no failing test/cause or successful group
+count is inferred. The next helper streams stdout and preserves the exit/count
+guards, with a regression. All 449 Rust/Cargo inputs remain unchanged; native
+failure diagnosis and acceptance stay open. Superseded pending jobs must retain
+their actual cancellation outcomes separately. See the disk-world document.

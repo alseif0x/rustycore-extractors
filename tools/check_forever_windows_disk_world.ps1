@@ -66,9 +66,8 @@ function Test-ExactInventory($group) {
     $listed = @($listing | Where-Object { $_.StartsWith($prefix) -and $_.EndsWith(': test') } | Sort-Object)
     if ([string]::Join("`n", $listed) -cne [string]::Join("`n", $expected)) { throw 'native disk test inventory mismatch' }
     Write-Output "Selected exactly $($expected.Count) tests from $prefix; profile=$BuildProfile"
-    $results = & cargo @arguments $prefix -- --test-threads=1 --color never
+    & cargo @arguments $prefix -- --test-threads=1 --color never | Tee-Object -Variable results
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    $results | Write-Output
     $summary = '^test result: ok\. ' + $expected.Count + ' passed; 0 failed; 0 ignored;'
     if (@($results | Where-Object { $_ -match $summary }).Count -ne 1) { throw 'native disk result count mismatch' }
 }

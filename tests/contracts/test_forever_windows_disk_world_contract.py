@@ -107,6 +107,15 @@ class WindowsDiskWorldContract(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, '^source_checkout_digest$'):
                 require_pinned_checkout(changed, expected)
 
+    def test_native_helper_streams_failed_group_output_before_exit_without_replay(self):
+        helper = read('tools/check_forever_windows_disk_world.ps1')
+        self.assertIn(
+            '    & cargo @arguments $prefix -- --test-threads=1 --color never | Tee-Object -Variable results\n'
+            '    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n'
+            "    $summary = '^test result: ok\\. '", helper)
+        self.assertNotIn('$results = & cargo', helper)
+        self.assertNotIn('$results | Write-Output', helper)
+
     def test_historical_literal_source_and_document_pins_keep_lf_checkout_bytes(self):
         attributes = read('.gitattributes').splitlines()
         historical = json.loads(read('contracts/forever-windows-navigation-contract-v1.json'))

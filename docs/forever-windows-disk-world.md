@@ -287,3 +287,25 @@ The final documentation records that snapshot; it does not rebuild native
 binaries. All 449 frozen Rust/Cargo inputs remain identical. The preceding local
 315-case attempt retains its one stale timeout assertion failure, corrected in
 the successful repeat; no earlier failed result is overwritten.
+
+## Second native attempt: failed append group, missing detail
+
+Rust run 38364014811 at correction `bdc90d39c1e4aa628bddaded7db88df7db462e6d`
+uses checkout `2aad945732cb959701fafc28e36c9941dbc76e07` with the same tree
+`ef5c34f99f2316784f368feb08c533a167d5b4fe`. Both dedicated jobs pass all
+selected source contracts, including the 18 disk methods. Debug job 115184702484
+and release job 115184702240 then select the exact 20 append tests and fail their
+test command with exit 1. The helper buffers stdout and exits before replaying
+it, so these logs do not reveal which test or assertion failed. No passing
+append-group count or failure cause is inferred, and zero CLI cases execute.
+Both jobs retain the unchanged 1,099-file source digest
+`e00f671accfc781e9629397627ef1e1400c4866e23981668ecb8837f35aca4fa`.
+The retained API/log guard record is `native-second-harness-failure.json`.
+
+The next helper revision streams test stdout through `Tee-Object` while
+retaining the exact native exit code and successful-count check, without a
+second replay. A source regression keeps output visible before the failure
+exit. It changes neither Rust/Cargo inputs, tests nor admission rules; identifying
+and resolving the native append failure remains required. Superseding this failed
+run may cancel its still-active workspace/resident jobs; such cancellation is
+not a timeout or a completed result. No second-attempt disk acceptance is claimed.
