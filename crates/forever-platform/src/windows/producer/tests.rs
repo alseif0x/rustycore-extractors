@@ -115,3 +115,160 @@ fn sealed_chunk_work_limit_rejects_without_poisoning() {
     ));
     producer.verify_unchanged().unwrap();
 }
+
+#[test]
+fn selected_literal_is_exact_and_rejects_other_profile_without_fallback() {
+    let mut payload = ffi::test_initial_payload();
+    assert_eq!(&payload[..32], &MARKER);
+    assert_eq!(&payload[32..], &[0; 32]);
+    assert_eq!(admit_payload(&payload), Err(Error::Unsealed));
+    payload[32] = 1;
+    assert_eq!(admit_payload(&payload), Ok(()));
+    let other = if cfg!(all(feature = "producer-msvc-v2", target_env = "msvc")) {
+        assert_eq!(
+            WINDOWS_PRODUCER_PROFILE,
+            "forever-windows-producer-seal-msvc-v2"
+        );
+        assert_eq!(MARKER, *b"RCE-FOREVER-PE-SEAL-V2\0\0\0\0\0\0\0\0\0\0");
+        *b"RCE-FOREVER-PE-SEAL-V1\0\0\0\0\0\0\0\0\0\0"
+    } else {
+        assert_eq!(WINDOWS_PRODUCER_PROFILE, "forever-windows-producer-seal-v1");
+        assert_eq!(MARKER, *b"RCE-FOREVER-PE-SEAL-V1\0\0\0\0\0\0\0\0\0\0");
+        *b"RCE-FOREVER-PE-SEAL-V2\0\0\0\0\0\0\0\0\0\0"
+    };
+    payload[..32].copy_from_slice(&other);
+    assert_eq!(admit_payload(&payload), Err(Error::Unsealed));
+    payload[..32].copy_from_slice(&MARKER);
+    payload[31] = 1;
+    assert_eq!(admit_payload(&payload), Err(Error::Unsealed));
+}
+
+#[test]
+fn machine_admission_requires_success_unknown_process_and_native_amd64() {
+    assert_eq!(admit_architecture(1, 0, 0x8664), Ok(()));
+    // BOOL success means nonzero, not one particular positive representation.
+    assert_eq!(admit_architecture(2, 0, 0x8664), Ok(()));
+    for (success, process, native) in [
+        (0, 0, 0),
+        (0, 0, 0x8664),
+        (1, 0, 0),
+        (1, 0x014c, 0x8664),
+        (1, 0x8664, 0x8664),
+        (1, 0, 0xaa64),
+        (1, 0x8664, 0xaa64),
+        (1, 0xa641, 0xaa64),
+        (1, 0x01c4, 0xaa64),
+        (1, 0, 0x0200),
+    ] {
+        assert_eq!(
+            admit_architecture(success, process, native),
+            Err(Error::Architecture)
+        );
+    }
+    assert_eq!(Error::Architecture.code(), "producer_architecture");
+}
+
+#[test]
+fn mocked_machine_gate_precedes_loaded_snapshot_without_path_fallback() {
+    for (success, process, native) in [(0, 0, 0x8664), (1, 0x8664, 0xaa64), (1, 0, 0xaa64)] {
+        let acquired = Cell::new(false);
+        let result = ffi::guarded_snapshot(
+            || admit_architecture(success, process, native),
+            || {
+                acquired.set(true);
+                Err(Error::Module)
+            },
+        );
+        assert!(matches!(result, Err(Error::Architecture)));
+        assert!(!acquired.get());
+    }
+    let acquired = Cell::new(false);
+    let result = ffi::guarded_snapshot(
+        || admit_architecture(1, 0, 0x8664),
+        || {
+            acquired.set(true);
+            Err(Error::Module)
+        },
+    );
+    assert!(matches!(result, Err(Error::Module)));
+    assert!(acquired.get());
+}
+
+#[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+#[test]
+fn msvc_v2_native_machine_query_admits_actual_amd64_test_process() {
+    // Native CI uses Windows Server2022 AMD64. The profile deliberately rejects
+    // this test on ARM64/emulation instead of claiming compatible acceptance.
+    ffi::native_architecture().unwrap();
+    assert!(matches!(ffi::snapshot(), Err(Error::Unsealed)));
+}
+
+#[test]
+fn mocked_architecture_recheck_failure_poisons_owner_before_snapshot_or_file_guard() {
+    // This constructs synthetic owner fields over the authored test executable;
+    // it does not claim that those bytes have a valid live PE seal.
+    let path = std::env::current_exe().unwrap();
+    let limits = Limits::default();
+    let source = ReadFile::open(&path, limits, LinkPolicy::Allow).unwrap();
+    let mut payload = ffi::test_initial_payload();
+    payload[32] = 1;
+    let owner = LoadedProducer {
+        payload,
+        payload_rva: 64,
+        source,
+        limits,
+        invalid: Cell::new(false),
+    };
+    let acquired = Cell::new(false);
+    let result = owner.verify_snapshot(|| {
+        ffi::guarded_snapshot(
+            || admit_architecture(1, 0x8664, 0xaa64),
+            || {
+                acquired.set(true);
+                Err(Error::Module)
+            },
+        )
+    });
+    assert_eq!(result, Err(Error::Changed));
+    assert!(!acquired.get());
+    assert!(owner.invalid.get());
+    assert_eq!(
+        owner.verify_snapshot(|| {
+            acquired.set(true);
+            Err(Error::Module)
+        }),
+        Err(Error::Changed)
+    );
+    assert!(!acquired.get());
+}
+#[test]
+fn mocked_payload_profile_or_rva_change_poison_without_adopting_candidate() {
+    for changed_rva in [false, true] {
+        let limits = Limits::default();
+        let source =
+            ReadFile::open(&std::env::current_exe().unwrap(), limits, LinkPolicy::Allow).unwrap();
+        let mut payload = ffi::test_initial_payload();
+        payload[32] = 1;
+        let owner = LoadedProducer {
+            payload,
+            payload_rva: 64,
+            source,
+            limits,
+            invalid: Cell::new(false),
+        };
+        let mut replacement = payload;
+        if !changed_rva {
+            replacement[21] = if replacement[21] == b'1' { b'2' } else { b'1' };
+        }
+        assert_eq!(
+            owner.verify_snapshot(|| Ok(ffi::Snapshot {
+                payload: replacement,
+                payload_rva: if changed_rva { 65 } else { 64 }
+            })),
+            Err(Error::Changed)
+        );
+        assert!(owner.invalid.get());
+        assert_eq!(owner.payload(), payload);
+        assert_eq!(owner.payload_rva(), 64);
+    }
+}

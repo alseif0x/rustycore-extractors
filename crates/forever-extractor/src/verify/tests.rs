@@ -737,6 +737,7 @@ fn v2_verification_needs_no_keys_and_rejects_the_same_artifacts_under_v1_plan() 
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn v3_verifier_enforces_whole_package_budget_without_scratch_or_keys() {
     use crate::plan::{CollisionStorage, DiskBudget};
     let mut plan = db2_plan();

@@ -2,12 +2,12 @@
 // Authored 2026-10-11: offline versioned product orchestration.
 //! Selected producer completion, plan binding and artifact validation do not
 //! establish full real-client extraction, runtime compatibility or distribution.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod driver;
 pub mod input;
 pub mod plan;
 pub mod producer;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub mod verify;
 
 pub const CONTRACT: &str = "forever-product-v1";

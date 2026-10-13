@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: original scoped loaded-module Win32 FFI and seal storage.
+// Modified 2026-10-13: opt-in MSVC v2 process-machine gate before module/path I/O.
 
 use super::{Error, MARKER, PAYLOAD_BYTES};
 use crate::path::Limits;
@@ -27,6 +28,14 @@ unsafe extern "system" {
     fn GetModuleHandleW(name: *const u16) -> *mut c_void;
     fn GetModuleHandleExW(flags: u32, address: *const u16, module: *mut *mut c_void) -> i32;
     fn GetModuleFileNameW(module: *mut c_void, output: *mut u16, size: u32) -> u32;
+    #[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+    fn GetCurrentProcess() -> *mut c_void;
+    #[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+    fn IsWow64Process2(
+        process: *mut c_void,
+        process_machine: *mut u16,
+        native_machine: *mut u16,
+    ) -> i32;
 }
 
 pub(super) struct Snapshot {
@@ -35,14 +44,49 @@ pub(super) struct Snapshot {
 }
 
 pub(super) fn snapshot() -> Result<Snapshot, Error> {
+    #[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+    {
+        guarded_snapshot(native_architecture, loaded_snapshot)
+    }
+    #[cfg(not(all(feature = "producer-msvc-v2", target_env = "msvc")))]
+    {
+        loaded_snapshot()
+    }
+}
+
+#[cfg(any(test, all(feature = "producer-msvc-v2", target_env = "msvc")))]
+pub(super) fn guarded_snapshot(
+    architecture: impl FnOnce() -> Result<(), Error>,
+    snapshot: impl FnOnce() -> Result<Snapshot, Error>,
+) -> Result<Snapshot, Error> {
+    architecture()?;
+    snapshot()
+}
+
+#[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+pub(super) fn native_architecture() -> Result<(), Error> {
+    let mut process_machine = 0_u16;
+    let mut native_machine = 0_u16;
+    // SAFETY: GetCurrentProcess returns a borrowed pseudo handle, never owned or
+    // closed. Both USHORT outputs are initialized, exactly sized and remain live
+    // for this synchronous call. No pathname or filesystem query precedes it.
+    let success = unsafe {
+        IsWow64Process2(
+            GetCurrentProcess(),
+            &mut process_machine,
+            &mut native_machine,
+        )
+    };
+    super::admit_architecture(success, process_machine, native_machine)
+}
+
+fn loaded_snapshot() -> Result<Snapshot, Error> {
     let address = ptr::addr_of!(LOADED_PAYLOAD);
     // SAFETY: live immutable initialized static, naturally aligned for [u8;64].
     // Volatile prevents folding the offline-patched digest to its zero initializer.
     // No process mutation of readonly code/data is admitted by this protocol.
     let payload = unsafe { ptr::read_volatile(address) };
-    if payload[..32] != MARKER || payload[32..].iter().all(|byte| *byte == 0) {
-        return Err(Error::Unsealed);
-    }
+    super::admit_payload(&payload)?;
     let module = main_module()?;
     let mut containing = ptr::null_mut();
     // SAFETY: FROM_ADDRESS treats this valid static pointer as an address, not a
@@ -117,4 +161,9 @@ pub(super) fn module_path(limits: Limits) -> Result<PathBuf, Error> {
         path.push(text);
         return Ok(path);
     }
+}
+
+#[cfg(test)]
+pub(super) fn test_initial_payload() -> [u8; PAYLOAD_BYTES] {
+    initial_payload()
 }

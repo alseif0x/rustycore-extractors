@@ -2,10 +2,17 @@
 
 The separate [producer seal contract](../contracts/forever-windows-producer-contract-v1.json)
 is `forever-windows-producer-seal-v1`. It supplies original bounded acquisition,
-a pure PE verifier and an offline sealing tool. The Windows product driver,
-output publication and distribution remain disabled. Preliminary production-API
-execution under Wine passes; actual Windows/NTFS acceptance remains pending.
-This source increment does not complete the extractor.
+a pure PE verifier and an offline sealing tool. At that foundation checkpoint,
+the Windows product driver, output publication and distribution were disabled;
+preliminary production-API execution under Wine did not supply native acceptance.
+The later [resident Windows product](forever-windows-product.md) uses this seal
+with its separate NTFS backend and records actual native execution independently.
+Neither checkpoint completes the extractor or a Windows distribution.
+
+The later opt-in [MSVC v2 candidate](forever-windows-producer-msvc-v2.md) uses a
+distinct marker and explicit native-AMD64 gate for its closed observed
+load-config shape. V1 remains the default and still rejects directory 10.
+Its historical source/execution reports below do not accept v2.
 
 ## Loaded evidence and candidate bytes
 

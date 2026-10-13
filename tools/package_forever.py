@@ -51,6 +51,7 @@ TOOLCHAIN_NOTICES = {
 }
 TEST_SUFFIXES = {".py", ".rs", ".cpp", ".h", ".hpp", ".tsv", ".json", ".md"}
 DOCS = ("README.md", "docs/forever-product.md", "docs/forever-completion.md", "docs/forever-distribution.md", "docs/forever-ci.md", "docs/forever-windows-producer.md")
+OPTIONAL_WINDOWS_QA_SOURCE = ("docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1", "docs/forever-windows-producer-msvc-v2.md")
 WINDOWS_INPUT_SOURCE = ("crates/forever-platform/README.md", "crates/forever-platform/src/path.rs", "crates/forever-platform/src/windows.rs", "crates/forever-platform/src/windows/ffi.rs", "crates/forever-platform/src/windows/tests.rs", "crates/forever-casc/src/admission.rs", "crates/forever-casc/src/local_store.rs", "crates/forever-casc/src/local_store/io.rs", "crates/forever-casc/src/local_store/io/windows.rs", "crates/forever-casc/src/local_store/io/windows/tests.rs", "crates/forever-extractor/src/input.rs", "crates/forever-extractor/src/input/windows.rs", "crates/forever-extractor/src/input/windows_tests.rs", "contracts/forever-windows-consumers-contract-v1.json", "tests/contracts/test_forever_windows_consumers_contract.py")
 WINDOWS_PRODUCER_SOURCE = ("crates/forever-platform/src/windows/producer.rs", "crates/forever-platform/src/windows/producer/ffi.rs", "crates/forever-platform/src/windows/producer/tests.rs", "crates/forever-extractor/src/producer.rs", "crates/forever-extractor/src/producer/tests.rs", "crates/forever-extractor/examples/windows_producer_identity.rs", "tools/seal_forever_windows.py", "tests/distribution/test_windows_seal.py", "contracts/forever-windows-producer-contract-v1.json", "tests/contracts/test_forever_windows_producer_contract.py")
 WINDOWS_VMAP_SOURCE = ('crates/forever-vmap/Cargo.toml', 'crates/forever-vmap/src/store.rs', 'crates/forever-vmap/src/store/windows.rs', 'crates/forever-vmap/src/store/windows/tests.rs', 'contracts/forever-windows-vmap-contract-v1.json', 'tests/contracts/test_forever_windows_vmap_contract.py', 'docs/forever-windows-vmap.md')
@@ -200,6 +201,11 @@ def tree_files(root, skip_pycache=True, allowed_directories=None):
 
 def selected_paths(source):
     result = set(REQUIRED)
+    # Optional current-source Windows QA closure. Older v10 frozen snapshots
+    # predate these paths; their existing recipe/inventory stays rebuildable.
+    for name in OPTIONAL_WINDOWS_QA_SOURCE:
+        if (source / name).exists():
+            result.add(name)
     for name in DOCS:
         if (source / name).exists():
             result.add(name)
@@ -423,7 +429,7 @@ def bundle_path_allowed(name):
     if not name.startswith("source/"):
         return False
     relative = name[7:]
-    if relative in REQUIRED or relative in DOCS or relative == ".cargo/config.toml":
+    if relative in REQUIRED or relative in DOCS or relative in OPTIONAL_WINDOWS_QA_SOURCE or relative == ".cargo/config.toml":
         return True
     pieces = relative.split("/")
     if pieces[0] == "dependency-archives":

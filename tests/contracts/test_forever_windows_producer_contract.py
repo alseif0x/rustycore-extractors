@@ -92,7 +92,14 @@ class WindowsProducerContract(unittest.TestCase):
         file = source.index('ReadFile::open(&path, limits, LinkPolicy::Allow)')
         self.assertLess(snapshot, path)
         self.assertLess(path, file)
-        self.assertIn('Error::Unsealed', self.s['platform_ffi'])
+        # Both explicit profiles share the same pure payload admission helper.
+        ffi = self.s['platform_ffi']
+        loaded = ffi[ffi.index('fn loaded_snapshot()'):]
+        self.assertLess(loaded.index('super::admit_payload(&payload)?;'),
+                        loaded.index('let module = main_module()?;'))
+        admission = source[source.index('fn admit_payload('):]
+        self.assertIn('Error::Unsealed', admission)
+        self.assertIn('payload[32..].iter().all(|byte| *byte == 0)', admission)
         self.assertIn('before module pathname query or filesystem acquisition', self.c['loaded']['unsealed'])
 
     def test_limits_match_complete_guarded_chunked_acquisition(self):
@@ -163,21 +170,21 @@ class WindowsProducerContract(unittest.TestCase):
         self.assertFalse(self.c['seal']['authentication'])
         self.assertIn('exactly the 32-byte digest slot', self.c['seal']['canonical_digest'])
 
-    def test_extractor_stays_unsafe_forbidden_and_main_dispatch_disabled(self):
+    def test_extractor_stays_unsafe_forbidden_with_separate_product_dispatch(self):
         self.assertIn('unsafe_code = "forbid"', read('Cargo.toml'))
         self.assertNotRegex(self.s['consumer'], r'\bunsafe\s*\{')
         self.assertIn('#[allow(unsafe_code)]\nmod ffi;', self.s['platform'])
         main = read('crates/forever-extractor/src/main.rs')
-        self.assertIn('#[cfg(not(target_os = "linux"))]', main)
+        self.assertIn('#[cfg(not(any(target_os = "linux", windows)))]', main)
         self.assertIn('product_platform', main)
-        self.assertNotIn('producer::loaded_identity(', main)
+        self.assertIn('producer::loaded_identity()', main)
         self.assertIn('pub mod producer;', read('crates/forever-extractor/src/lib.rs'))
 
     def test_loaded_helper_retains_final_verification_even_after_pe_failure(self):
         consumer = self.s['consumer']
         helper = consumer[consumer.index('pub fn loaded_identity_evidence()'):]
         operations = ['LoadedProducer::capture(', '.read_all(MAX_FILE_BYTES)',
-                      'let identity = verify_pe(', 'source.verify_unchanged()',
+                      'let identity = verify_pe_with_profile(', 'source.verify_unchanged()',
                       'identity.map(']
         positions = [helper.index(operation) for operation in operations]
         self.assertEqual(positions, sorted(positions))

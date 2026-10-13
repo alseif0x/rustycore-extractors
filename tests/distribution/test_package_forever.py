@@ -437,6 +437,50 @@ class DistributionTests(unittest.TestCase):
         self.assertFalse(m.bundle_path_allowed("source/.github/workflows/unreviewed.yml"))
         self.assertFalse(m.bundle_path_allowed("source/.github/secrets.json"))
 
+    def test_current_selected_source_paths_are_all_admitted(self):
+        selected = m.selected_paths(REPO)
+        self.assertTrue(selected)
+        for name in selected:
+            with self.subTest(name=name):
+                self.assertTrue(m.bundle_path_allowed("source/" + name))
+
+    def test_optional_windows_qa_source_is_shipped_when_present(self):
+        for name in m.OPTIONAL_WINDOWS_QA_SOURCE:
+            path = self.source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(("authored optional Windows QA:" + name + "\n").encode())
+        self.build()
+        manifest = m.verify_archive(self.root / "output/forever-extractor-linux.tar.gz")
+        self.assertEqual(manifest["source_snapshot"]["profile"], m.SOURCE_PROFILE)
+        for name in m.OPTIONAL_WINDOWS_QA_SOURCE:
+            with self.subTest(name=name):
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual((self.root / "output/source" / name).read_bytes(),
+                                 (self.source / name).read_bytes())
+
+    def test_optional_windows_qa_source_absence_preserves_v10_rebuild(self):
+        self.assertTrue(all(not (self.source / name).exists() for name in m.OPTIONAL_WINDOWS_QA_SOURCE))
+        root = self.unpack("legacy-v10")
+        manifest, _ = m.verify_bundle(root)
+        self.assertEqual(manifest["source_snapshot"]["profile"],
+                         "forever-seven-crate-linux-product-db2-catalog-source-v10")
+        self.assertTrue(all("source/" + name not in manifest["inventory"]
+                            for name in m.OPTIONAL_WINDOWS_QA_SOURCE))
+        with patch.object(m, "compile_source", self.compiler):
+            rebuilt = m.rebuild_bundle(root, self.root / "rebuilt-legacy-v10")
+        self.assertEqual(rebuilt["binary_sha256"], manifest["inventory"]["bin/forever-extractor"]["sha256"])
+
+    def test_optional_windows_qa_allowlist_is_exact(self):
+        self.assertEqual(m.OPTIONAL_WINDOWS_QA_SOURCE, (
+            "docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1",
+            "docs/forever-windows-producer-msvc-v2.md"))
+        for name in ("source/docs/forever-windows-product-extra.md",
+                     "source/tools/check_forever_windows_product_extra.ps1",
+                     "source/docs/forever-windows-producer-msvc-v3.md",
+                     "source/tools/unreviewed.ps1", "bin/forever-extractor.exe"):
+            with self.subTest(name=name):
+                self.assertFalse(m.bundle_path_allowed(name))
+
     def test_platform_crate_and_exact_ci_workflow_are_required(self):
         platform = self.source / "crates/forever-platform/Cargo.toml"
         platform.unlink()

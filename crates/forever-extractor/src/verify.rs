@@ -28,7 +28,7 @@ pub fn verify(
     output: &Path,
     expected: Option<Context>,
 ) -> Result<package::Summary, Error> {
-    plan.validate()?;
+    crate::driver::admit(plan)?;
     let mut limits = package::Limits::default();
     if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
         limits.total_bytes = budget.output_bytes;

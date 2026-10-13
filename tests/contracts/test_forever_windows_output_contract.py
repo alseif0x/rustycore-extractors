@@ -54,7 +54,7 @@ class WindowsPrivateOutputContract(unittest.TestCase):
                       'publication_authorized', 'full_extractor_complete'):
             self.assertFalse(self.c[field])
         main = read('crates/forever-extractor/src/main.rs')
-        self.assertIn('#[cfg(not(target_os = "linux"))]', main)
+        self.assertIn('#[cfg(not(any(target_os = "linux", windows)))]', main)
         self.assertIn('product_platform', main)
         self.assertNotIn('windows::output', main)
         self.assertNotIn('PrivateRoot', main)

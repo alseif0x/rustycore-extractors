@@ -2,17 +2,18 @@
 // Authored 2026-10-11: common versioned artifact-integrity package contract.
 //! A complete package proves selected producer completion and byte inventory,
 //! not semantic format/client/runtime compatibility. No CASC or network access.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 use crate::sha256;
 use crate::{
     Locale,
     verify::json::{self, Json},
 };
 #[cfg(target_os = "linux")]
+use std::fs;
+#[cfg(any(target_os = "linux", windows))]
 use std::io::BufRead;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 use std::{
-    fs,
     io::{self, Read, Write},
     path::Path,
 };
@@ -21,7 +22,11 @@ mod disk;
 mod model;
 #[cfg(target_os = "linux")]
 pub use disk::{Put, Run, verify, verify_with};
+#[cfg(windows)]
+pub mod windows;
 pub use model::{Artifact, Component, Context, Limits, Summary};
+#[cfg(windows)]
+pub use windows::{Put, Run, verify, verify_with};
 #[cfg(all(test, target_os = "linux"))]
 mod tests;
 pub const MANIFEST: &str = "forever-package.json";
@@ -77,7 +82,7 @@ impl std::error::Error for Error {}
 fn hex(d: &[u8; 32]) -> String {
     d.iter().map(|b| format!("{b:02x}")).collect()
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn digest(b: &[u8]) -> [u8; 32] {
     let mut h = sha256::Sha256::new();
     h.update(b);
@@ -126,7 +131,7 @@ fn parse(s: &str) -> Result<Json, Error> {
     }
     json::parse(s).map_err(|_| Error::Schema)
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn line<R: BufRead>(r: &mut R) -> Result<Vec<u8>, Error> {
     let mut v = Vec::new();
     std::io::Read::take(&mut *r, (LINE + 1) as u64)

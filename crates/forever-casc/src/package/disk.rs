@@ -2,7 +2,8 @@
 // Authored 2026-10-11: exclusive Linux package staging and offline integrity QA.
 #![cfg(target_os = "linux")]
 use super::*;
-use model::Inventory;
+pub(super) use model::receipt;
+use model::{Inventory, footer, header, manifest_fact, seal};
 use std::{
     fs::{DirBuilder, File, Metadata, OpenOptions},
     os::{
@@ -305,12 +306,6 @@ impl Root {
         Ok(PackageLock(f))
     }
 }
-pub(super) fn receipt(a: &Artifact) -> String {
-    format!(
-        ".state/files/{}.json",
-        hex(&digest(a.path.to_ascii_lowercase().as_bytes()))
-    )
-}
 fn context(root: &Root, limits: Limits) -> Result<Context, Error> {
     let b = root.small(".state/context.json", limits)?;
     Context::parse(std::str::from_utf8(&b).map_err(|_| Error::Schema)?)
@@ -342,23 +337,6 @@ fn collect(root: &Root, context: Context, limits: Limits) -> Result<Inventory, E
     }
     inventory.sort()?;
     Ok(inventory)
-}
-fn seal(context: Context, c: Component, inventory: &Inventory) -> String {
-    let mut h = sha256::Sha256::new();
-    let mut count = 0usize;
-    let mut bytes = 0u64;
-    for a in inventory.facts.iter().filter(|a| a.component == c) {
-        h.update(a.json().as_bytes());
-        h.update(b"\n");
-        count += 1;
-        bytes += a.bytes;
-    }
-    format!(
-        "{{\"component\":\"{}\",\"context_sha256\":\"{}\",\"files\":{count},\"bytes\":{bytes},\"inventory_sha256\":\"{}\"}}",
-        c.name(),
-        hex(&digest(context.json().as_bytes())),
-        hex(&h.finish())
-    )
 }
 fn check_seals(
     root: &Root,
@@ -397,20 +375,6 @@ fn seals(
         }
     }
     Ok(mask)
-}
-fn header(context: Context) -> String {
-    format!(
-        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"artifacts\":[\n",
-        context.json()
-    )
-}
-fn footer(s: Summary) -> String {
-    format!(
-        "],\"file_count\":{},\"total_bytes\":{},\"inventory_sha256\":\"{}\"}}\n",
-        s.files,
-        s.bytes,
-        hex(&s.inventory_sha256)
-    )
 }
 fn manifest(
     root: &Root,
@@ -463,34 +427,6 @@ fn manifest(
         .map_err(|_| Error::Exists)?;
     fs::remove_file(anchor(&p).join(leaf)).map_err(|_| Error::Io)?;
     sync(&root.held)
-}
-fn manifest_fact(context: Context, inventory: &Inventory) -> Result<Artifact, Error> {
-    let mut hash = sha256::Sha256::new();
-    let mut bytes = 0u64;
-    let mut emit = |s: &str| -> Result<(), Error> {
-        bytes = bytes.checked_add(s.len() as u64).ok_or(Error::Limit)?;
-        hash.update(s.as_bytes());
-        Ok(())
-    };
-    emit(&header(context))?;
-    for (i, a) in inventory.facts.iter().enumerate() {
-        emit(&format!(
-            "{}{}\n",
-            a.json(),
-            if i + 1 == inventory.facts.len() {
-                ""
-            } else {
-                ","
-            }
-        ))?;
-    }
-    emit(&footer(inventory.summary(context)))?;
-    Ok(Artifact {
-        component: Component::Db2,
-        path: MANIFEST.to_owned(),
-        bytes,
-        sha256: hash.finish(),
-    })
 }
 // Bind the OS lock to this owner, even when a child briefly retains a duplicate
 // open description before exec closes its CLOEXEC descriptors. Closing only our

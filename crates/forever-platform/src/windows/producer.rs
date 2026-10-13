@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: original guarded loaded-executable seal acquisition.
+// Modified 2026-10-13: explicit MSVC v2 literal and native-AMD64 acquisition gate.
 
 use super::{LinkPolicy, ReadFile};
 use crate::path::Limits;
@@ -11,11 +12,18 @@ mod ffi;
 mod tests;
 
 /// Acquisition protocol only; cryptographic PE validation belongs to the caller.
+/// The optional MSVC profile has a distinct literal and native-AMD64 gate.
+#[cfg(not(all(feature = "producer-msvc-v2", target_env = "msvc")))]
 pub const WINDOWS_PRODUCER_PROFILE: &str = "forever-windows-producer-seal-v1";
+#[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+pub const WINDOWS_PRODUCER_PROFILE: &str = "forever-windows-producer-seal-msvc-v2";
 pub const MAX_PRODUCER_BYTES: usize = 256 * 1024 * 1024;
 pub const MAX_PRODUCER_CHUNKS: usize = 4096;
 pub const PAYLOAD_BYTES: usize = 64;
+#[cfg(not(all(feature = "producer-msvc-v2", target_env = "msvc")))]
 pub const MARKER: [u8; 32] = *b"RCE-FOREVER-PE-SEAL-V1\0\0\0\0\0\0\0\0\0\0";
+#[cfg(all(feature = "producer-msvc-v2", target_env = "msvc"))]
+pub const MARKER: [u8; 32] = *b"RCE-FOREVER-PE-SEAL-V2\0\0\0\0\0\0\0\0\0\0";
 
 /// Static diagnostics, without a filename, raw handle, or OS error string.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,6 +35,7 @@ pub enum Error {
     Input,
     Changed,
     Allocation,
+    Architecture,
 }
 impl Error {
     pub const fn code(self) -> &'static str {
@@ -38,6 +47,7 @@ impl Error {
             Self::Input => "producer_input",
             Self::Changed => "producer_changed",
             Self::Allocation => "producer_allocation",
+            Self::Architecture => "producer_architecture",
         }
     }
 }
@@ -70,7 +80,8 @@ pub struct LoadedProducer {
 }
 impl LoadedProducer {
     /// Rejects an all-zero digest before querying the module pathname or opening
-    /// any file. Nonzero seals still require the caller's strict PE/hash check.
+    /// any file. The explicit MSVC v2 profile first requires a successful native
+    /// AMD64 machine query. Nonzero seals require the caller's strict PE/hash check.
     pub fn capture(limits: Limits) -> Result<Self, Error> {
         let limits = limits.validate().map_err(platform_error)?;
         let snapshot = ffi::snapshot()?;
@@ -102,11 +113,18 @@ impl LoadedProducer {
     /// the retained file/ancestor identities. Any observed failure poisons this
     /// object permanently; this is not a second cryptographic content check.
     pub fn verify_unchanged(&self) -> Result<(), Error> {
+        self.verify_snapshot(ffi::snapshot)
+    }
+
+    fn verify_snapshot(
+        &self,
+        snapshot: impl FnOnce() -> Result<ffi::Snapshot, Error>,
+    ) -> Result<(), Error> {
         if self.invalid.get() {
             return Err(Error::Changed);
         }
         let result = (|| {
-            let current = ffi::snapshot()?;
+            let current = snapshot()?;
             if current.payload != self.payload || current.payload_rva != self.payload_rva {
                 return Err(Error::Changed);
             }
@@ -152,4 +170,26 @@ fn admitted_length(size: u64, max_bytes: usize, limits: Limits) -> Result<usize,
         return Err(Error::Limit);
     }
     Ok(len)
+}
+
+// These checks use only captured values. The FFI gate supplies actual process
+// machine values; tests can prove rejection without querying any pathname.
+fn admit_payload(payload: &[u8; PAYLOAD_BYTES]) -> Result<(), Error> {
+    if payload[..32] != MARKER || payload[32..].iter().all(|byte| *byte == 0) {
+        Err(Error::Unsealed)
+    } else {
+        Ok(())
+    }
+}
+#[cfg(any(test, all(feature = "producer-msvc-v2", target_env = "msvc")))]
+fn admit_architecture(
+    success: i32,
+    process_machine: u16,
+    native_machine: u16,
+) -> Result<(), Error> {
+    if success == 0 || process_machine != 0 || native_machine != 0x8664 {
+        Err(Error::Architecture)
+    } else {
+        Ok(())
+    }
 }

@@ -1910,3 +1910,77 @@ the initial phase's 4,096-byte budget excess is explicitly retained. There are
 no dumps, saved candidates, attach, signals or client mutations, and no further
 memory scan at this checkpoint. Full phase limits, guards and external report
 hashes are recorded in docs/forever-completion.md. No encrypted input gate closes.
+
+## Windows resident product source candidate — 2026-10-13
+
+Issue #24 connects all six resident product producers to the separate
+`forever-windows-package-namespace-v1` backend. The public package remains v1;
+Windows internal state is v3 / `forever-windows-product-ntfs-v1`, distinct from
+Linux state v2. Temporary path leases replace per-artifact retained handles;
+same-lease reads, protected owner DACLs, exact case names, closed inventories,
+identity-checked rename/removal, locks and recovery retain explicit limits.
+Windows client commands require the actual loaded sealed PE. Supplied-key
+leases and source/output exclusions survive the complete producer run.
+The Linux leased collision disk profile rejects before acquisition on Windows.
+Existing plan/build gates remain: build 70338 is DB2-only; full resident geometry
+plans retain 70170/70205. Namespace and package tests are cross-compiled locally;
+actual Windows/NTFS execution must be recorded separately before acceptance.
+The native CI plan uses authored synthetic assets, independent reopening,
+TerminateProcess/resume and separate build-bearing artifact goldens. It does
+not trace network calls, establish power-loss durability, publish a release or
+close real-client/runtime/full-extraction gates. See
+`docs/forever-windows-product.md` and its versioned contract.
+
+The later explicit `windows-msvc-seal-v2` extractor feature enables the separate
+`producer-msvc-v2` platform payload only on MSVC. V1 remains the feature-free
+default and retains its directory-10 rejection. The new versioned candidate
+uses its own marker, a native AMD64 machine gate, a closed observed 320-byte
+load-config/88-byte volatile shape and typed exact-once ASLR exceptions.
+The opaque volatile signature `0x80038003` is not labelled an official ABI
+version; no general volatile or ARM64-emulation support is implied. Native
+full-product execution and reproducible Windows distribution remain pending.
+The five preceding MSVC CI failures are retained as failures. See
+`docs/forever-windows-producer-msvc-v2.md`; this does not close real-client,
+runtime or full-extractor gates.
+
+The subsequent MSVC-v2 local freeze passes 2,743 Linux workspace tests / 26
+ignored across 42 targets per profile, 280 contracts and 158 distribution tests /
+one Windows-only skip, plus Clippy and formatting. Focused producer coverage is
+58 Rust tests per profile (37 retained v1, 21 v2) and 81 passing Python sealer
+tests / one platform skip. Independent source review has no remaining blocker.
+The accepted run observes all 1,078 source files unchanged; the first attempt's
+one equivalent Clippy correction invalidated its freeze and remains retained.
+These are local synthetic/source checks, not native MSVC product, reproducible
+Windows distribution, real-client or runtime acceptance. Exact report hashes
+are retained in docs/forever-windows-producer-msvc-v2.md.
+
+The first explicit MSVC-v2 native run (38348243944, job 115134527122,
+functional 5440090015fc618ad39ff3326eed0b1c61a87a67) passes both offline seal
+preflights and native feature Clippy, 2,359 Windows workspace tests / 21 ignored,
+and focused 30 namespace / 21 package / one actual AMD64 gate per profile. The full
+product helper fails importing authored Python-3.11-incompatible fixture syntax
+before any CLI case. That failed run and unchanged 1,078-file source guard are
+retained in docs/forever-windows-product.md; no full product or loaded-v2 binding
+acceptance is inferred. The correction preserves exact synthetic fixture bytes.
+
+The next native run (38349096456, job 115137168501, functional
+3770dc89491d8b0299c3403b26ca7ac71595a30e) passes the Python-3.11 import and
+14 of 15 actual debug product methods, including both all-component goldens,
+toy keys and interruption/resume. The remaining harness call selects default
+v1 while locating the v2 seal; it errors before testing the modified candidate.
+The suite remains failed and release is not reached. Explicit v2 test selection
+has source regressions. The complete helper moves to a dedicated Windows job
+to separate its time budget from workspace checks, retaining both profiles,
+all inventories and the 20-minute per-job ceiling. Run/checkout identity is
+logged explicitly. Retained partial evidence is in docs/forever-windows-product.md;
+complete native product, Windows distribution, real-client/runtime and full
+extraction remain gates.
+
+The subsequent source-topology correction shares one exact three-path optional
+Windows QA tuple between the Linux packager's selection and admission. The
+prior 3731145 source selects 646 paths but rejects those three at inventory
+construction. Four regression methods cover the actual source set, optional
+presence/absence and exact allowlist; 81 focused packager tests pass with an
+authored mock compiler. This repairs source closure while preserving the v10
+profile and older snapshots without the optional files. It is not a new
+compiled/reproducible Linux bundle or Windows distribution acceptance.

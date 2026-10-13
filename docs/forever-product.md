@@ -4,8 +4,10 @@
 20 game tables, camera discovery, terrain conversion, collision assembly and
 sequential navigation producers. The [v1 contract](../contracts/forever-product-contract-v1.json)
 uses an explicit canonical TSV plan and the existing [common package](forever-package.md)
-final manifest v1 / internal recovery state v2. Linux x86_64 has local evidence;
-Windows distribution and full real extraction remain open. V1–v3 plans use the
+final manifest v1. Linux uses internal recovery state v2; the separate
+[Windows resident backend](forever-windows-product.md) uses state v3 and retains
+its own native acceptance record. Linux x86_64 has local evidence; Windows
+distribution and full real extraction remain open. V1–v3 plans use the
 legacy pinned DB2 catalog. V4 binds build 70205 plans to the separately pinned
 `wowdbdefs-70205-v1` catalog; it does not rewrite older package or plan identities.
 V5 binds build 70338 plans to `wowdbdefs-70338-v1` and admits DB2 only; it does

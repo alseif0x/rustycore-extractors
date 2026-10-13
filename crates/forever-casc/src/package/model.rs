@@ -183,6 +183,22 @@ impl Artifact {
     }
 }
 pub(super) fn path(s: &str) -> Result<(), Error> {
+    #[cfg(windows)]
+    if s.split('/').count() > 16
+        || s.split('/').any(|p| {
+            let stem = p.split('.').next().unwrap_or("").trim_end_matches(' ');
+            p.len() > 255
+                || ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"]
+                    .iter()
+                    .any(|n| stem.eq_ignore_ascii_case(n))
+                || (stem.len() == 4
+                    && (stem.as_bytes()[..3].eq_ignore_ascii_case(b"COM")
+                        || stem.as_bytes()[..3].eq_ignore_ascii_case(b"LPT"))
+                    && matches!(stem.as_bytes()[3], b'1'..=b'9'))
+        })
+    {
+        return Err(Error::Path);
+    }
     if s.is_empty()
         || s.len() > 512
         || !s
@@ -220,14 +236,14 @@ impl Summary {
         )
     }
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(super) struct Inventory {
     pub facts: Vec<Artifact>,
     pub bytes: u64,
     owned: usize,
     limits: Limits,
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 impl Inventory {
     pub fn new(limits: Limits) -> Self {
         Self {
@@ -236,6 +252,10 @@ impl Inventory {
             owned: 128 * 1024,
             limits,
         }
+    }
+    #[cfg(windows)]
+    pub fn charged_bytes(&self) -> usize {
+        self.owned
     }
     pub fn remaining(&self) -> usize {
         self.limits.metadata_bytes.saturating_sub(self.owned)
@@ -311,13 +331,13 @@ impl Inventory {
 }
 
 // Sorted siblings may not introduce case aliases for files or directories.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(super) fn folded(a: &str, b: &str) -> std::cmp::Ordering {
     a.bytes()
         .map(|c| c.to_ascii_lowercase())
         .cmp(b.bytes().map(|c| c.to_ascii_lowercase()))
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(super) fn ordered(a: &str, b: &str) -> bool {
     if folded(a, b) != std::cmp::Ordering::Less {
         return false;
@@ -331,4 +351,78 @@ pub(super) fn ordered(a: &str, b: &str) -> bool {
         }
     }
     true
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn receipt(a: &Artifact) -> String {
+    format!(
+        ".state/files/{}.json",
+        hex(&digest(a.path.to_ascii_lowercase().as_bytes()))
+    )
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn seal(context: Context, c: Component, inventory: &Inventory) -> String {
+    let mut h = sha256::Sha256::new();
+    let mut count = 0usize;
+    let mut bytes = 0u64;
+    for a in inventory.facts.iter().filter(|a| a.component == c) {
+        h.update(a.json().as_bytes());
+        h.update(b"\n");
+        count += 1;
+        bytes += a.bytes;
+    }
+    format!(
+        "{{\"component\":\"{}\",\"context_sha256\":\"{}\",\"files\":{count},\"bytes\":{bytes},\"inventory_sha256\":\"{}\"}}",
+        c.name(),
+        hex(&digest(context.json().as_bytes())),
+        hex(&h.finish())
+    )
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn header(context: Context) -> String {
+    format!(
+        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"artifacts\":[\n",
+        context.json()
+    )
+}
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn footer(s: Summary) -> String {
+    format!(
+        "],\"file_count\":{},\"total_bytes\":{},\"inventory_sha256\":\"{}\"}}\n",
+        s.files,
+        s.bytes,
+        hex(&s.inventory_sha256)
+    )
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn manifest_fact(context: Context, inventory: &Inventory) -> Result<Artifact, Error> {
+    let mut hash = sha256::Sha256::new();
+    let mut bytes = 0u64;
+    let mut emit = |s: &str| -> Result<(), Error> {
+        bytes = bytes.checked_add(s.len() as u64).ok_or(Error::Limit)?;
+        hash.update(s.as_bytes());
+        Ok(())
+    };
+    emit(&header(context))?;
+    for (i, a) in inventory.facts.iter().enumerate() {
+        emit(&format!(
+            "{}{}\n",
+            a.json(),
+            if i + 1 == inventory.facts.len() {
+                ""
+            } else {
+                ","
+            }
+        ))?;
+    }
+    emit(&footer(inventory.summary(context)))?;
+    Ok(Artifact {
+        component: Component::Db2,
+        path: MANIFEST.to_owned(),
+        bytes,
+        sha256: hash.finish(),
+    })
 }

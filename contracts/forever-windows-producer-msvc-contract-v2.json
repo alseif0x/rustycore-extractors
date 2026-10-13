@@ -1,0 +1,189 @@
+{
+  "contract": "forever-windows-producer-seal-msvc-v2",
+  "version": 2,
+  "authored": "2026-10-13",
+  "status": "explicit observed-shape source candidate; executed acceptance pending",
+  "license": "GPL-3.0-or-later",
+  "prior_contract": "forever-windows-producer-seal-v1",
+  "prior_profile_unchanged": true,
+  "extractor_feature": "windows-msvc-seal-v2",
+  "platform_feature": "producer-msvc-v2",
+  "target_environment": "msvc",
+  "runtime": {
+    "api": "IsWow64Process2",
+    "success_required": true,
+    "process_machine": 0,
+    "native_machine": 34404,
+    "checked_before_path_or_file_access": true,
+    "rechecked_with_loaded_snapshot": true,
+    "arm64_emulation_accepted": false
+  },
+  "seal": {
+    "marker_ascii": "RCE-FOREVER-PE-SEAL-V2",
+    "marker_nul_padding_bytes": 10,
+    "payload_bytes": 64,
+    "digest_bytes": 32,
+    "canonical_hash": "SHA256 of the entire file with only the 32-byte digest slot zeroed",
+    "result": "SHA256 of the complete sealed file including its digest slot",
+    "actual_loaded_payload_and_start_rva_required": true,
+    "profile_fallback": false,
+    "publisher_authentication": false,
+    "loaded_code_page_measurement": false
+  },
+  "pe": {
+    "machine": 34404,
+    "format": "PE32+",
+    "optional_header_bytes": 240,
+    "directory_count": 16,
+    "checksum": 0,
+    "subsystem": 3,
+    "load_config_directory_index": 10,
+    "unsupported_directory_indexes": [
+      4,
+      7,
+      8,
+      11,
+      13,
+      14,
+      15
+    ],
+    "certificate_support": false,
+    "general_pe_compatibility": false,
+    "dll_characteristics": 33120,
+    "closed_section_roles": {
+      "load_config_volatile_and_guard_slots": {
+        "name": ".rdata",
+        "characteristics": 1073741888
+      },
+      "initial_guard_targets_volatile_accesses_and_tls_callbacks": {
+        "name": ".text",
+        "characteristics": 1610612768
+      },
+      "cookie": {
+        "name": ".data",
+        "characteristics": 3221225536
+      }
+    }
+  },
+  "load_config": {
+    "directory_bytes": 320,
+    "declared_size": 320,
+    "guard_flags": 256,
+    "va_field_offsets": [
+      88,
+      112,
+      120,
+      256,
+      280,
+      288,
+      296,
+      304,
+      312
+    ],
+    "cookie_va_field_offset": 88,
+    "volatile_va_field_offset": 256,
+    "guard_slot_va_field_offsets": [
+      112,
+      120,
+      280,
+      288,
+      296,
+      304,
+      312
+    ],
+    "castguard_va_field_offset": 304,
+    "conservative_cookie_write_bytes": 8,
+    "conservative_guard_slot_write_bytes": 8,
+    "nonzero_guard_slots": 6,
+    "castguard_initial_value": 0,
+    "cookie_initial_value_hex": "00002b992ddfa232",
+    "unknown_fields_zero": true,
+    "distinct_complete_destinations": true,
+    "all_config_va_dir64_exactly_once": true,
+    "all_nonzero_slot_va_dir64_exactly_once": true,
+    "zero_castguard_slot_has_no_relocation": true
+  },
+  "volatile_metadata": {
+    "scope": "closed empirical compiler-output shape, not an official general ABI",
+    "header_bytes": 24,
+    "signature_word_hex": "80038003",
+    "signature_is_interpreted_as_version": false,
+    "access_bytes": 40,
+    "access_count": 10,
+    "range_bytes": 24,
+    "range_count": 3,
+    "complete_contiguous_object_bytes": 88,
+    "accesses_unique_sorted": true,
+    "ranges_unique_sorted_nonoverlapping": true,
+    "ranges_and_accesses_mapped_executable": true,
+    "each_access_in_one_declared_range": true,
+    "dir64_inside_object_rejected": true,
+    "arm64_consumer_or_emulation_acceptance": false
+  },
+  "loader_controls": {
+    "protected": [
+      "seal",
+      "relocation directory",
+      "import directory",
+      "load-config",
+      "volatile header and both tables",
+      "TLS directory and callback table"
+    ],
+    "typed_aslr_exceptions": "exact DIR64 fixups once on the nine config VAs, six nonzero guard-slot VAs, and admitted nonzero TLS VAs/callback entries",
+    "partial_or_duplicate_control_fixups_rejected": true,
+    "iat_and_tls_index_cannot_overwrite_controls": true,
+    "known_cookie_and_slot_writes_cannot_overlap_controls": true,
+    "complete_windows_loader_or_crt_write_enumeration": false,
+    "arbitrary_startup_behavior_validation": false
+  },
+  "limits": {
+    "candidate_and_image_bytes": 268435456,
+    "sections": 96,
+    "relocation_directory_bytes": 1048576,
+    "relocation_entries": 65536,
+    "import_directory_bytes": 1048576,
+    "import_thunks": 65536,
+    "downward_only_acquisition_limits": true,
+    "rss_or_all_cpu_work_bound": false,
+    "tls_callback_slots_including_terminator": 1024,
+    "tls_nonzero_callbacks": 1023,
+    "relocation_write_spans": 65536,
+    "import_write_spans": 65536,
+    "protected_control_spans": 65568,
+    "typed_fixup_entries": 1043,
+    "rust_vector_reservation_chunk_entries": 256,
+    "recursive_parser_stack": false
+  },
+  "sources": {
+    "platform": "crates/forever-platform/src/windows/producer.rs",
+    "platform_ffi": "crates/forever-platform/src/windows/producer/ffi.rs",
+    "platform_tests": "crates/forever-platform/src/windows/producer/tests.rs",
+    "consumer": "crates/forever-extractor/src/producer.rs",
+    "consumer_tests": "crates/forever-extractor/src/producer/tests.rs",
+    "sealer": "tools/seal_forever_windows.py",
+    "sealer_tests": "tests/distribution/test_windows_seal.py",
+    "native_script": "tools/check_forever_windows_product.ps1",
+    "contract_tests": "tests/contracts/test_forever_windows_producer_msvc_contract.py",
+    "documentation": "docs/forever-windows-producer-msvc-v2.md"
+  },
+  "validation": {
+    "source_contract_scope": "source/profile consistency, not execution or loader proof",
+    "compiler_observation": {
+      "commit": "2675e87213a5e37ebc182c4a5298da34674bd88f",
+      "run": 38345728238,
+      "windows_job": 115126572127,
+      "overall_result": "failed_pe_unsupported_directory",
+      "report_sha256": "9253cfe81e213fe1d02effb8a41e8f9f7f944ad73c71652c553e9a38147f23f8",
+      "scope": "debug/release compiler metadata, before any product CLI execution"
+    },
+    "pure_rust_python_acceptance": "pending",
+    "actual_windows_product_acceptance": "pending",
+    "windows_reproducible_distribution": "pending"
+  },
+  "new_registry_dependencies": [],
+  "upstream_implementation_imported": false,
+  "network_api": false,
+  "client_data_in_git": false,
+  "publication_authorized": false,
+  "full_extractor_complete": false
+}

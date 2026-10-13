@@ -1,29 +1,43 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: bounded read-only operator plan/identity inputs.
+#[cfg(all(test, not(windows)))]
+use std::path::PathBuf;
 #[cfg(not(windows))]
 use std::{
     fs::{File, OpenOptions},
     io::Read,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 /// Explicit operator input, never included in Debug, serialization or output.
 /// Key material is retained only in the owned keyring. Secure erasure of the
 /// input buffer or keyring is not guaranteed. Linux retains the canonical source
 /// solely to protect that file from the output writer. Windows retains a readonly
-/// source lease until this value is consumed or dropped; this is not an alias-safe
-/// Windows output protocol, and the Windows product driver remains disabled.
+/// source lease; the product driver keeps it through inspection or extraction
+/// and supplies its identity chain to package admission before mutation.
 pub struct SuppliedKeys {
     pub(crate) keyring: forever_casc::keys::Keyring,
-    #[cfg(not(windows))]
-    pub(crate) source: PathBuf,
+    pub(crate) source: std::path::PathBuf,
     #[cfg(windows)]
     _source_lease: forever_platform::windows::ReadFile,
 }
 
 impl SuppliedKeys {
+    /// Consume only the key material. Product callers use `driver::inspect` or
+    /// `driver::extract_with_keys` to retain Windows source protection instead.
     pub fn into_keyring(self) -> forever_casc::keys::Keyring {
         self.keyring
+    }
+
+    #[cfg(windows)]
+    pub(crate) fn into_windows_parts(
+        self,
+    ) -> (
+        forever_casc::keys::Keyring,
+        std::path::PathBuf,
+        forever_platform::windows::ReadFile,
+    ) {
+        (self.keyring, self.source, self._source_lease)
     }
 }
 
