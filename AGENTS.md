@@ -1962,3 +1962,16 @@ product helper fails importing authored Python-3.11-incompatible fixture syntax
 before any CLI case. That failed run and unchanged 1,078-file source guard are
 retained in docs/forever-windows-product.md; no full product or loaded-v2 binding
 acceptance is inferred. The correction preserves exact synthetic fixture bytes.
+
+The next native run (38349096456, job 115137168501, functional
+3770dc89491d8b0299c3403b26ca7ac71595a30e) passes the Python-3.11 import and
+14 of 15 actual debug product methods, including both all-component goldens,
+toy keys and interruption/resume. The remaining harness call selects default
+v1 while locating the v2 seal; it errors before testing the modified candidate.
+The suite remains failed and release is not reached. Explicit v2 test selection
+has source regressions. The complete helper moves to a dedicated Windows job
+to separate its time budget from workspace checks, retaining both profiles,
+all inventories and the 20-minute per-job ceiling. Run/checkout identity is
+logged explicitly. Retained partial evidence is in docs/forever-windows-product.md;
+complete native product, Windows distribution, real-client/runtime and full
+extraction remain gates.

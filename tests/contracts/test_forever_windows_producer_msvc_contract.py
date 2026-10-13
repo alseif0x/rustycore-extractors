@@ -152,6 +152,32 @@ class WindowsMsvcProducerContract(unittest.TestCase):
         self.assertLess(steps.index(preflight), steps.index(lint))
         self.assertLess(steps.index(lint), steps.index(workspace))
 
+    def test_full_native_run_log_is_bound_to_ci_and_actual_checkout(self):
+        script = self.s['native_script']
+        fields = {
+            'github_run_id': 'GITHUB_RUN_ID', 'github_run_attempt': 'GITHUB_RUN_ATTEMPT',
+            'github_job': 'GITHUB_JOB', 'github_repository': 'GITHUB_REPOSITORY',
+            'github_sha': 'GITHUB_SHA', 'runner_os': 'RUNNER_OS', 'runner_arch': 'RUNNER_ARCH'}
+        for field, environment in fields.items():
+            self.assertIn("'" + environment + "'", script)
+            self.assertIn(field + ' = $env:' + environment, script)
+        for marker in ('[Environment]::GetEnvironmentVariable($name)',
+                       '[string]::IsNullOrWhiteSpace($value)',
+                       "$env:RUNNER_OS -cne 'Windows'", "$env:RUNNER_ARCH -cne 'X64'",
+                       "$env:GITHUB_REPOSITORY -cne 'alseif0x/rustycore-extractors'",
+                       "$env:GITHUB_SHA -cnotmatch '^[0-9a-f]{40}$'",
+                       '$checkoutSha = @(& git rev-parse HEAD)',
+                       '$LASTEXITCODE -ne 0 -or $checkoutSha.Count -ne 1',
+                       "$checkoutSha[0] -cnotmatch '^[0-9a-f]{40}$'",
+                       "type = 'synthetic'", 'checkout_sha = $checkoutSha[0]',
+                       '$runIdentity | ConvertTo-Json -Compress'):
+            self.assertIn(marker, script)
+        self.assertEqual(script.count("'WINDOWS_PRODUCT_RUN '"), 1)
+        emitted = script.index("Write-Output ('WINDOWS_PRODUCT_RUN '")
+        self.assertGreater(emitted, script.index('\nreturn\n}\n'))
+        self.assertLess(emitted, script.index(
+            'python -m unittest discover -s tests/forever -p test_windows_product_cli.py -v'))
+
     def test_current_source_bundle_includes_candidate_without_relabeling_v10(self):
         packager = read('tools/package_forever.py')
         self.assertIn(self.c['sources']['documentation'], packager)

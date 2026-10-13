@@ -276,7 +276,7 @@ class WindowsProductCli(unittest.TestCase):
         self.assertEqual(result['code'], 'producer_unsealed')
         self.assertFalse(self.output.exists())
         data = Path(BINARY).read_bytes()
-        layout = pe.locate(data)
+        layout = pe.locate(data, profile=pe.PROFILE_V2)
         bad = self.root / 'changed-seal.exe'
         bad.write_bytes(data[:layout.slot] + bytes([data[layout.slot] ^ 1]) + data[layout.slot + 1:])
         result = self.invoke('extract', code=None, binary=bad)

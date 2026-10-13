@@ -140,3 +140,21 @@ syntax; zero actual product CLI cases execute. This is retained failed native
 product evidence, not successful loaded-v2 binding or full-product acceptance.
 See [the complete retained run](forever-windows-product.md) for counts, hashes
 and scope. No Rust parser or payload change is required by that import failure.
+
+## Subsequent native debug execution — incomplete suite
+
+Run 38349096456 / Windows job 115137168501, functional commit
+`3770dc89491d8b0299c3403b26ca7ac71595a30e`, passes the corrected Python-3.11
+import and fourteen actual debug product methods using the loaded sealed v2
+producer. Both build/locale all-component goldens, verification, toy-key
+decoding and interruption/resume have separate positive evidence. One method
+errors because its Python call to `locate` still selects the default v1
+marker; it never executes its modified-seal candidate. The suite fails and
+release is not reached. The fix is an explicit v2 selection in that test,
+with no Rust parser, payload or default-profile change.
+
+The next CI plan gives the complete two-profile product helper a dedicated
+20-minute job and logs its run/checkout identity. Existing workspace/preflight
+and lint checks remain. See [the retained failed attempt](forever-windows-product.md)
+for exact binary, source and report hashes. Partial debug success is not full
+native product, Windows distribution, real-client or runtime acceptance.

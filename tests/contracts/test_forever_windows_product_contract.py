@@ -51,6 +51,20 @@ def native_import_closure():
     return visited
 
 
+def require_native_msvc_sealer_profile(source):
+    calls = [node for node in ast.walk(ast.parse(source))
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and isinstance(node.func.value, ast.Name) and node.func.value.id == 'pe'
+             and node.func.attr in ('locate', 'verify')]
+    if not calls:
+        raise ValueError('native_sealer_profile')
+    for call in calls:
+        profile = next((kw.value for kw in call.keywords if kw.arg == 'profile'), None)
+        if not (isinstance(profile, ast.Attribute) and profile.attr == 'PROFILE_V2'
+                and isinstance(profile.value, ast.Name) and profile.value.id == 'pe'):
+            raise ValueError('native_sealer_profile')
+
+
 class WindowsProductContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -146,6 +160,16 @@ class WindowsProductContract(unittest.TestCase):
         self.assertFalse(self.c['validation']['network_syscall_tracing'])
         self.assertNotIn('strace', source)
 
+    def test_native_cli_sealer_calls_select_explicit_msvc_v2(self):
+        require_native_msvc_sealer_profile(self.s['native_cli'])
+
+    def test_native_cli_sealer_profile_guard_rejects_default_and_explicit_v1(self):
+        for source in ('pe.locate(data)', 'pe.locate(data, profile=pe.PROFILE_V1)',
+                       'pe.verify(data, payload, rva)',
+                       'pe.verify(data, payload, rva, profile=pe.PROFILE_V1)'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, '^native_sealer_profile$'):
+                require_native_msvc_sealer_profile(source)
+
     def test_python311_grammar_guard_catches_original_fstring_failure(self):
         old = 'value = f"{(b\'\\x55\' * 16).hex()}"'
         with self.assertRaises(SyntaxError):
@@ -199,11 +223,15 @@ print(json.dumps({'modules': sorted(name for name in names if name in sys.module
 
     def test_native_workflow_runs_both_profiles_with_exact_counts(self):
         workflow = json.loads(read('.github/workflows/forever-rust.yml'))
-        job = workflow['jobs']['windows']
+        job = workflow['jobs']['windows-product']
+        self.assertEqual(job['name'], 'Windows resident product and package recovery')
         self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertEqual(job['timeout-minutes'], 20)
         steps = [s for s in job['steps'] if s.get('run') == '. ./tools/check_forever_windows_product.ps1']
         self.assertEqual(len(steps), 1)
         self.assertEqual(steps[0]['env']['CARGO_TARGET_DIR'], '${{ runner.temp }}/forever-rust-target')
+        self.assertNotIn('. ./tools/check_forever_windows_product.ps1',
+                         [s.get('run') for s in workflow['jobs']['windows']['steps']])
         script = self.s['native_script']
         for marker in ("$volume.FileSystem -ne 'NTFS'", "$volume.DriveType -ne 'Fixed'",
                        "foreach ($release in @($false, $true))", "foreach ($profile in @('debug', 'release'))",

@@ -16,9 +16,14 @@ PINS = {
     'actions/checkout': '11d5960a326750d5838078e36cf38b85af677262',
     'actions/setup-python': 'a26af69be951a213d495a4c3e4e4022e16d87065',
 }
+WORKSPACE_JOBS = ('linux', 'windows')
+PRODUCT_JOB = 'windows-product'
+PRODUCT_RUN = '. ./tools/check_forever_windows_product.ps1'
 
 
 def validate_boundary(workflow):
+    if set(workflow['jobs']) != {*WORKSPACE_JOBS, PRODUCT_JOB}:
+        raise ValueError('job_roles')
     if workflow['permissions'] != {'contents': 'read'}:
         raise ValueError('permissions')
     if set(workflow['on']) != {'pull_request', 'push', 'workflow_dispatch'}:
@@ -92,6 +97,36 @@ class ForeverCiContract(unittest.TestCase):
         self.assertEqual(tests[0].splitlines()[0], 'cargo test --offline --locked --workspace --all-targets --no-default-features')
         builds = [s['run'] for s in job['steps'] if s.get('run', '').startswith('cargo build ')]
         self.assertEqual(builds[0].splitlines()[0], 'cargo build --offline --locked --workspace --bins --no-default-features')
+        self.assertNotIn(PRODUCT_RUN, [s.get('run') for s in job['steps']])
+
+    def test_windows_product_has_dedicated_native_acceptance_job(self):
+        job = self.workflow['jobs'][PRODUCT_JOB]
+        self.assertEqual(job['name'], 'Windows resident product and package recovery')
+        self.assertEqual(job['runs-on'], 'windows-2022')
+        self.assertEqual(job['timeout-minutes'], 20)
+        self.assertEqual(job['defaults'], {'run': {'shell': 'pwsh'}})
+        self.assertNotIn('needs', job)
+        self.assertNotIn('strategy', job)
+        self.assertEqual(job['steps'][:7], self.workflow['jobs']['windows']['steps'][:7])
+        self.assertEqual([step.get('name') for step in job['steps'][2:]], [
+            'Display explicit build-only download plan', 'Install exact Rust version',
+            'Fetch locked registry closure', 'Preflight native producer PE directory profile',
+            'Check explicit MSVC v2 producer lint policy', 'Check Windows product source contracts',
+            'Native resident product and package recovery (debug/release; fixed NTFS)',
+        ])
+        runs = '\n'.join(step.get('run', '') for step in job['steps'])
+        self.assertIn('--features forever-extractor/windows-msvc-seal-v2 -- -D warnings', runs)
+        self.assertIn('--profile minimal --component clippy', runs)
+        self.assertNotIn('--workspace', runs)
+        self.assertEqual(job['steps'][-1]['run'], PRODUCT_RUN)
+        self.assertEqual(job['steps'][-1]['env']['CARGO_TARGET_DIR'], '${{ runner.temp }}/forever-rust-target')
+        for name in WORKSPACE_JOBS:
+            self.assertNotIn(PRODUCT_RUN, [step.get('run') for step in self.workflow['jobs'][name]['steps']])
+        contracts = job['steps'][-2]['run']
+        for filename in ('test_forever_ci_contract.py', 'test_forever_windows_product_contract.py',
+                         'test_forever_windows_producer_msvc_contract.py',
+                         'test_forever_windows_output_contract.py', 'test_forever_windows_membership_contract.py'):
+            self.assertIn('python -m unittest discover -s tests/contracts -p ' + filename + ' -v', contracts)
 
     def test_python_uses_stdlib_checks_without_pip(self):
         for job in self.workflow['jobs'].values():
@@ -99,6 +134,8 @@ class ForeverCiContract(unittest.TestCase):
             self.assertEqual(step['with'], {'python-version': '3.11'})
             text = '\n'.join(s.get('run', '') for s in job['steps'])
             self.assertNotIn('pip ', text)
+        for name in WORKSPACE_JOBS:
+            text = '\n'.join(s.get('run', '') for s in self.workflow['jobs'][name]['steps'])
             for filename in ('test_forever_ci_contract.py', 'test_forever_product_contract.py',
                              'test_forever_product_keys_contract.py', 'test_forever_product_offmesh_contract.py',
                              'test_forever_distribution_contract.py',
@@ -107,7 +144,8 @@ class ForeverCiContract(unittest.TestCase):
                 self.assertIn(filename, text)
 
     def test_metadata_cli_is_explicitly_built_and_addressed(self):
-        for name, job in self.workflow['jobs'].items():
+        for name in WORKSPACE_JOBS:
+            job = self.workflow['jobs'][name]
             step = next(s for s in job['steps'] if s.get('name') == 'Exercise synthetic metadata CLI')
             binary = step['env']['FOREVER_DB2_INSPECT']
             self.assertTrue(binary.startswith('${{ runner.temp }}/forever-rust-target/'))
@@ -120,7 +158,10 @@ class ForeverCiContract(unittest.TestCase):
             names = [s.get('name') for s in job['steps']]
             self.assertLess(names.index('Display explicit build-only download plan'), names.index('Install exact Rust version'))
             self.assertLess(names.index('Install exact Rust version'), names.index('Fetch locked registry closure'))
-            self.assertLess(names.index('Fetch locked registry closure'), next(i for i, name in enumerate(names) if name and name.startswith('Test ')))
+            first_execution = next(i for i, step in enumerate(job['steps'])
+                                   if any(line.startswith(('cargo test ', 'cargo build ', 'cargo clippy ', 'python ', PRODUCT_RUN))
+                                          for line in step.get('run', '').splitlines()))
+            self.assertLess(names.index('Fetch locked registry closure'), first_execution)
 
     def test_windows_strict_pe_preflight_precedes_workspace(self):
         steps = self.workflow['jobs']['windows']['steps']
@@ -144,6 +185,22 @@ class ForeverCiContract(unittest.TestCase):
 
     def test_rejects_runner_context_at_workflow_env_scope(self):
         self.rejects_mutation(lambda w: w['env'].update(CARGO_TARGET_DIR='${{ runner.temp }}/target'), 'context_availability')
+
+    def test_rejects_missing_product_job(self):
+        self.rejects_mutation(lambda w: w['jobs'].pop(PRODUCT_JOB), 'job_roles')
+
+    def test_rejects_product_network_enabled_lint(self):
+        self.rejects_mutation(lambda w: next(s for s in w['jobs'][PRODUCT_JOB]['steps']
+                                             if s.get('name') == 'Check explicit MSVC v2 producer lint policy')
+                              .update(run='cargo clippy --locked --all-targets\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'),
+                              'offline_execution')
+
+    def test_rejects_product_secret_access(self):
+        self.rejects_mutation(lambda w: w['jobs'][PRODUCT_JOB]['steps'][2]['env']
+                             .update(PRIVATE_TOKEN='${{ secrets.PRIVATE_TOKEN }}'), 'data_boundary')
+
+    def test_rejects_product_timeout_above_twenty_minutes(self):
+        self.rejects_mutation(lambda w: w['jobs'][PRODUCT_JOB].update({'timeout-minutes': 21}), 'timeout')
 
     def test_rejects_write_permission(self):
         self.rejects_mutation(lambda w: w['permissions'].update(contents='write'), 'permissions')

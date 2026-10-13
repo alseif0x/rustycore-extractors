@@ -238,6 +238,72 @@
             "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
           },
           "run": "python -m unittest discover -s tests/forever -p test_metadata_cli.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
+        }
+      ]
+    },
+    "windows-product": {
+      "name": "Windows resident product and package recovery",
+      "runs-on": "windows-2022",
+      "timeout-minutes": 20,
+      "defaults": {
+        "run": {
+          "shell": "pwsh"
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+          "with": {
+            "python-version": "3.11"
+          }
+        },
+        {
+          "name": "Display explicit build-only download plan",
+          "run": "Write-Output 'Fetch Rust 1.98.0 minimal toolchain and clippy from static.rust-lang.org via rustup checksum verification; fetch Cargo.lock registry archives only. No client, TACT, listfile or native-reference downloads.'",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Install exact Rust version",
+          "run": "rustup toolchain install 1.98.0 --profile minimal --component clippy\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Fetch locked registry closure",
+          "run": "cargo fetch --locked\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Preflight native producer PE directory profile",
+          "run": "$ErrorActionPreference = 'Stop'\n. ./tools/check_forever_windows_product.ps1 -PePreflight",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check explicit MSVC v2 producer lint policy",
+          "run": "cargo clippy --offline --locked -p forever-platform -p forever-extractor --all-targets --no-default-features --features forever-extractor/windows-msvc-seal-v2 -- -D warnings\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
+          "name": "Check Windows product source contracts",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_ci_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_product_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_producer_msvc_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_output_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\npython -m unittest discover -s tests/contracts -p test_forever_windows_membership_contract.py -v\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
         },
         {
           "name": "Native resident product and package recovery (debug/release; fixed NTFS)",

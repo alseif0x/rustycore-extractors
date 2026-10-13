@@ -188,6 +188,31 @@ foreach ($profile in @('debug', 'release')) {
 return
 }
 
+# Bind this synthetic acceptance log to its explicit CI run and actual checkout.
+# GITHUB_SHA may be a PR merge commit; retain the separately queried HEAD too.
+foreach ($name in @('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_JOB',
+                    'GITHUB_REPOSITORY', 'GITHUB_SHA', 'RUNNER_OS', 'RUNNER_ARCH')) {
+    $value = [Environment]::GetEnvironmentVariable($name)
+    if ([string]::IsNullOrWhiteSpace($value)) { throw ('missing native product run metadata: ' + $name) }
+}
+if ($env:RUNNER_OS -cne 'Windows' -or $env:RUNNER_ARCH -cne 'X64') { throw 'native product run requires Windows X64 metadata' }
+if ($env:GITHUB_REPOSITORY -cne 'alseif0x/rustycore-extractors') { throw 'native product run repository mismatch' }
+if ($env:GITHUB_SHA -cnotmatch '^[0-9a-f]{40}$') { throw 'native product run GitHub SHA invalid' }
+$checkoutSha = @(& git rev-parse HEAD)
+if ($LASTEXITCODE -ne 0 -or $checkoutSha.Count -ne 1 -or $checkoutSha[0] -cnotmatch '^[0-9a-f]{40}$') { throw 'native product run checkout SHA invalid' }
+$runIdentity = [ordered]@{
+    type = 'synthetic'
+    github_run_id = $env:GITHUB_RUN_ID
+    github_run_attempt = $env:GITHUB_RUN_ATTEMPT
+    github_job = $env:GITHUB_JOB
+    github_repository = $env:GITHUB_REPOSITORY
+    github_sha = $env:GITHUB_SHA
+    runner_os = $env:RUNNER_OS
+    runner_arch = $env:RUNNER_ARCH
+    checkout_sha = $checkoutSha[0]
+}
+Write-Output ('WINDOWS_PRODUCT_RUN ' + ($runIdentity | ConvertTo-Json -Compress))
+
 python -m unittest discover -s tests/distribution -p test_windows_seal.py -v
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

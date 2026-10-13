@@ -300,3 +300,51 @@ version option, without claiming a local Python-3.11 execution. The retained
 Rust/Cargo, both producer parsers, payloads and the workflow are unchanged from
 5440090 by this correction. Native import and product CLI acceptance remain
 separate gates.
+
+## Second explicit MSVC-v2 native attempt — partial debug evidence
+
+Functional commit `3770dc89491d8b0299c3403b26ca7ac71595a30e`,
+[run 38349096456 / Windows job 115137168501](https://github.com/alseif0x/rustycore-extractors/actions/runs/38349096456/job/115137168501),
+passes the Python-3.11 fixture import, both offline seal preflights, native
+feature Clippy, the Windows workspace and all focused native inventories.
+Fourteen of fifteen actual debug product methods pass: both build/locale
+goldens, all six components, supplied toy keys, independent verification,
+fresh-output equality, interruption/resume and the admitted rejection cases.
+These are authored synthetic inputs on native Windows/NTFS, without original
+C++ execution, real-client assets or network tracing.
+
+The remaining method first confirms unsealed-producer rejection, then errors
+inside its Python test harness: `pe.locate(data)` selects default v1 for the
+explicit v2 binary and raises `pe_seal_marker` before creating the modified
+candidate. The correction selects `profile=pe.PROFILE_V2` explicitly and adds
+source regressions against omitted/v1 profiles. The native product suite is
+still failed; release cases were not reached. The passing debug methods do
+not establish the missing modified-seal check or complete two-profile acceptance.
+
+The debug suite takes 775.175 seconds; the whole job takes approximately
+19 minutes 15 seconds without reaching release. The subsequent CI plan moves
+the unchanged complete helper to a dedicated `windows-product` job, keeping
+the separate workspace checks, explicit preflight/lint, offline execution,
+both CLI profiles and each job's 20-minute ceiling. This provides separate
+time budgets without reducing the test inventories. The helper also records
+run/attempt/job/repository, Windows/X64 and actual checkout SHA explicitly;
+PR merge checkout and head commit are kept distinct.
+
+The observed full-product debug binary has sealed SHA256
+`41475555d7c216f4f63c36ba0997e4d7a89d46592bcb94d6de367a015ccfc798`
+and unsealed SHA256
+`565abd63d8534b3d37fbc3dae2ce4b007da3fadc7253d195337d5de1eae0137f`.
+They are observed in the log, not downloaded. All 1,078 tracked files remain
+unchanged, source-inventory SHA256
+`7037bdec740f69ec688cc97c5928fc937e70071534c418b912099b3cd67a0a9d`.
+Fifteen complete case reports / 36 process records are reconstructed and their
+logged report hashes verified, including the failing method's partial report.
+External evidence in the existing Windows product laboratory:
+
+- `root-logs/native-seventh-windows-job-api.log`:
+  `f72983d6eb04018ce59fd43cc30c8a4d549ff562ab2e73866a92f5a3799f2fc8`.
+- `native-seventh-retained-failure-v2/failure.json`:
+  `22b9d10403307689afab26d1cac3200d03154c7e88158bd18428e09bd5714f2e`.
+
+The run remains failed. Complete native product acceptance, reproducible
+Windows distribution, real geometry/runtime and full extraction remain gates.
