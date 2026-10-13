@@ -1,3 +1,19 @@
 # Pinned JSON facts and authored fixtures are hashed as exact UTF-8 bytes.
 # Keep checkout bytes stable across Linux and Windows (core.autocrlf included).
 *.json text eol=lf
+
+# Historical documents and navigation imports retain their literal byte pins.
+docs/forever-required-routes.md text eol=lf
+docs/forever-required-framing.md text eol=lf
+Cargo.lock text eol=lf
+crates/forever-navigation/Cargo.toml text eol=lf
+crates/forever-navigation/src/inventory.rs text eol=lf
+crates/forever-navigation/src/inventory/windows.rs text eol=lf
+crates/forever-navigation/src/inventory/windows/guard.rs text eol=lf
+crates/forever-navigation/src/inventory/windows/run.rs text eol=lf
+crates/forever-navigation/src/inventory/windows/run/tests.rs text eol=lf
+crates/forever-navigation/src/inventory/windows/tests.rs text eol=lf
+crates/forever-navigation/src/terrain/load.rs text eol=lf
+crates/forever-navigation/src/terrain/load/windows.rs text eol=lf
+crates/forever-navigation/src/terrain/load/windows/tests.rs text eol=lf
+docs/forever-windows-navigation-readers.md text eol=lf

@@ -128,7 +128,7 @@
     "windows": {
       "name": "Windows workspace read consumers and output guards",
       "runs-on": "windows-2022",
-      "timeout-minutes": 20,
+      "timeout-minutes": 60,
       "defaults": {
         "run": {
           "shell": "pwsh"
@@ -317,7 +317,7 @@
     "windows-disk-world": {
       "name": "Windows disk-world ${{ matrix.profile }} and product recovery",
       "runs-on": "windows-2022",
-      "timeout-minutes": 20,
+      "timeout-minutes": 60,
       "defaults": {
         "run": {
           "shell": "pwsh"

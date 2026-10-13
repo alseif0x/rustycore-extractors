@@ -16,6 +16,21 @@ def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
 
 
+def require_pinned_checkout(data, expected):
+    """Admit exact pinned LF bytes or their uniform CRLF checkout projection.
+
+    Mixed endings and lone CR are not an admitted checkout. No other whitespace,
+    encoding, final-LF or content normalization is performed.
+    """
+    if b'\r' in data:
+        pairs = data.count(b'\r\n')
+        if pairs != data.count(b'\r') or pairs != data.count(b'\n'):
+            raise ValueError('source_checkout_eol')
+        data = data.replace(b'\r\n', b'\n')
+    if hashlib.sha256(data).hexdigest() != expected:
+        raise ValueError('source_checkout_digest')
+
+
 class WindowsDiskWorldContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -62,12 +77,46 @@ class WindowsDiskWorldContract(unittest.TestCase):
         self.assertFalse(p['paths_and_key_material'])
 
     def test_linux_archive_sources_remain_byte_identical(self):
+        self.assertEqual(self.disk['source_hash_profile'], 'pinned-lf-or-uniform-crlf-checkout-v1')
         for path, expected in self.disk['unchanged_linux_sha256'].items():
             with self.subTest(path=path):
-                self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), expected)
+                require_pinned_checkout((ROOT / path).read_bytes(), expected)
         source = read('crates/forever-casc/src/collision.rs')
         self.assertIn('#[cfg(target_os = "linux")]\npub mod spool;', source)
         self.assertIn('#[cfg(windows)]\n#[path = "collision/spool/windows.rs"]\npub mod spool;', source)
+
+    def test_pinned_source_admits_only_lf_and_uniform_crlf_checkout_bytes(self):
+        data = b'// authored source\npub const VALUE: u8 = 7;\n'
+        expected = hashlib.sha256(data).hexdigest()
+        require_pinned_checkout(data, expected)
+        require_pinned_checkout(data.replace(b'\n', b'\r\n'), expected)
+
+    def test_pinned_source_rejects_mixed_endings_and_lone_carriage_returns(self):
+        data = b'first\nsecond\n'
+        expected = hashlib.sha256(data).hexdigest()
+        for changed in (b'first\r\nsecond\n', b'first\rsecond\n',
+                        b'first\r\r\nsecond\r\n'):
+            with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, '^source_checkout_eol$'):
+                require_pinned_checkout(changed, expected)
+
+    def test_pinned_source_rejects_content_whitespace_bom_and_final_lf_changes(self):
+        data = b'first\nsecond\n'
+        expected = hashlib.sha256(data).hexdigest()
+        for changed in (b'first\nSecond\n', b'first \nsecond\n', b'first\nsecond',
+                        b'\xef\xbb\xbf' + data, data + b'\n'):
+            with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, '^source_checkout_digest$'):
+                require_pinned_checkout(changed, expected)
+
+    def test_historical_literal_source_and_document_pins_keep_lf_checkout_bytes(self):
+        attributes = read('.gitattributes').splitlines()
+        historical = json.loads(read('contracts/forever-windows-navigation-contract-v1.json'))
+        paths = ['docs/forever-required-routes.md', 'docs/forever-required-framing.md',
+                 *historical['validated_import_sha256']]
+        self.assertEqual(len(paths), 14)
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertIn(path + ' text eol=lf', attributes)
+                self.assertNotIn(b'\r', (ROOT / path).read_bytes())
 
     def test_existing_product_publication_protocol_is_reused(self):
         p, d = self.product['package'], self.disk['publication']
@@ -190,7 +239,7 @@ class WindowsDiskWorldContract(unittest.TestCase):
         job = workflow['jobs']['windows-disk-world']
         self.assertEqual(job['strategy']['matrix']['profile'], ['debug', 'release'])
         self.assertEqual(job['runs-on'], 'windows-2022')
-        self.assertEqual(job['timeout-minutes'], 20)
+        self.assertEqual(job['timeout-minutes'], 60)
         self.assertEqual(job['steps'][-1]['run'],
                          ". ./tools/check_forever_windows_disk_world.ps1 -BuildProfile '${{ matrix.profile }}'")
 

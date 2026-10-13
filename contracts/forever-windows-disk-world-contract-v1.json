@@ -343,6 +343,7 @@
     "native_cli": "tests/forever/test_windows_disk_product_cli.py",
     "native_script": "tools/check_forever_windows_disk_world.ps1"
   },
+  "source_hash_profile": "pinned-lf-or-uniform-crlf-checkout-v1",
   "unchanged_linux_sha256": {
     "crates/forever-casc/src/collision/spool.rs": "31971708562e3294b04887b7986a8263cd5932828d1fd45fc32239fd2e6b16cd",
     "crates/forever-casc/src/collision/spool/archive.rs": "a863ad1108e16ceec1fd43a0d397fdfcb4fb16f629df174382299c8171209e80"

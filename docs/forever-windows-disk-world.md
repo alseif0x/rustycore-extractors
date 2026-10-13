@@ -130,7 +130,7 @@ No release or client-data publication is authorized. The first full real target
 remains 70205; its missing source inputs and all component/runtime gates remain
 in [the completion checklist](forever-completion.md).
 
-The planned native job has separate 20-minute debug/release matrix budgets and
+The planned native job has separate 60-minute debug/release matrix budgets and
 closed compiled-test inventories, including actual streaming archives and the
 4,100-model complete supplied-world path. Its 17 CLI methods use authored toy
 CASC and existing build-bearing Linux artifact inventories. The interruption
@@ -205,3 +205,85 @@ Retained evidence is under the external
 Native Windows disk-world execution remains pending. These results do not
 transfer the earlier Linux bundle acceptance to this binary, close native
 Windows distribution or establish real geometry/runtime/full extraction.
+
+## First native attempt — checkout-byte guard failure
+
+Functional `664ecbd04b7618dc67080818ca1046add97e2bb6` is published in draft
+[PR #27](https://github.com/alseif0x/rustycore-extractors/pull/27).
+[Rust run 38360542371](https://github.com/alseif0x/rustycore-extractors/actions/runs/38360542371)
+uses PR checkout `a0e079e14955cbec5c0117faa3cf246dbbec692f`, identical tree
+`5e4550abaf2101592236f3dba52b5368d3c1b6c2`. Both hosted Linux profiles pass.
+The dedicated disk debug/release jobs (115173427982 / 115173427339) and resident
+job (115173427455) pass MSVC-v2 preflight/lint, then fail the new source-contract
+check before their native helper/CLI starts. Their 14 methods have two failing
+subtests: the Linux spool and archive files are checked against LF bytes, while
+Windows Git has checked out their exact uniform CRLF projection. The computed
+CRLF SHA256 values reproduce both logged differences; neither Rust file changed.
+The separate Windows workspace job was still running at this observation and
+is not classified terminal by these failed jobs.
+
+The correction admits exactly the pinned LF source or its uniform CRLF checkout
+projection, under `pinned-lf-or-uniform-crlf-checkout-v1`. Mixed endings, lone CR,
+content, whitespace, BOM and final-LF changes still reject. Three added
+regressions bring local source checks to 310 passing methods. This changes only
+source QA/profile documentation, not Rust, geometry, source acquisition, output
+hashing or the native producer. Actual native execution remains pending.
+Retained three raw job logs and the failure record are in the external lab;
+`native-first-source-check-failure.json` has SHA256
+`7d68dac408ea3202b4033344dcf4a808c6d90447e9a3778736ac0c3f2e841829`.
+
+A separate Git-filtered CRLF reproduction uses an external index/object store
+and leaves the main index untouched. Its first two stages reproduce both native
+Rust hashes and pass the new disk contract, while the full source-only suite
+finds three historical LF-byte gates outside the current Windows CI subsets.
+Their literal document/import hashes remain unchanged: `.gitattributes` now
+keeps the two pinned route/framing documents and the twelve historical navigation
+imports in LF. No old byte pin or navigation source test is normalized away.
+A fourth new regression checks all fourteen exact attribute rules and bytes.
+
+The final reproduction projects `664ecbd` with exactly three overlays (attributes,
+disk contract and its test). It passes all 311 contracts, all 18 focused disk
+contracts and 162 distribution methods / one Linux-host Win32 skip. All 1,099
+copied files remain unchanged; the fourteen literal pins are exact LF and the
+two Linux Rust files retain the exact CRLF hashes observed in native CI. This
+is source QA on Linux, without native execution, Wine or a binary build.
+Its retained report `lab/platform/crlf-stage3-664-20261013T072238145453Z/report.json`
+has SHA256 `1c7c6c4450b0da7b16b9faab66ae64313ab8c6e53453a32e7194006f58578ee3`.
+The preceding two source-only stages remain failed, with their outcomes in
+`lab/platform/crlf-checkout-664-20261013T071523083283Z/report.json`, SHA256
+`ca26afeb31042b41252c30a32e6134b681e7d68bcf1eed215b415c05a3ee2794`.
+
+The final first-run observation records the separate Windows workspace job
+115173427223 as cancelled at its 20-minute job ceiling. GitHub's check annotation
+explicitly reports `The job has exceeded the maximum execution time of 20m0s`.
+Its log completes all 17 spool cases, five resource cases, the fixture case and
+23 of the 24 pipeline cases. The complete 4,100-model case has no final result;
+its 60-second warning is not a pass or proof of deadlock. The 4,097-record spool
+and above-256-MiB streaming cases both finish successfully. Later workspace
+steps are skipped, and the three dedicated jobs execute zero CLI cases after
+their source-check failures. Both hosted Linux profiles and the separate C++
+workflow succeed; this does not accept the incomplete Windows run.
+The complete job/API/log/annotation guards and per-case observations are retained
+in `native-first-terminal.json`, SHA256
+`088c411c878aeba7efa3682e5da3c6f9527f7283803f004aa5f3a23f845902a2`.
+
+The next revision raises only the Windows workspace and disk-world matrix job
+ceilings to 60 minutes. Linux and resident-product jobs retain 20 minutes; the
+source contract rejects larger, nonpositive and noninteger budgets per role.
+No test is removed, ignored or reduced. The supplied-world case retains all
+4,100 source acquisitions and RAW/VMO records, repeated identity/inventory/hash
+guards and over 8,200 flushes, plus later complete artifact visits. This gives
+the unchanged implementation a longer bounded observation; it is not a
+throughput result, proof of termination or native acceptance. A second timeout
+would require more specific phase/cost diagnosis rather than a pass claim.
+
+Local correction validation passes 315 source contracts and 162 distribution
+methods / one Windows-only skip. A fresh Git-filtered Windows checkout with all
+seven changed paths also passes both complete suites, preserving all 1,099
+copied files and the principal index/source. Its source-only report
+`lab/root/crlf-second-candidate-20261013T073725411750Z/report.json` has SHA256
+`8b25c92daa36450e9de71c5807f7144dc5e61bd3a9bfeca864d8f25c5f7d26b0`.
+The final documentation records that snapshot; it does not rebuild native
+binaries. All 449 frozen Rust/Cargo inputs remain identical. The preceding local
+315-case attempt retains its one stale timeout assertion failure, corrected in
+the successful repeat; no earlier failed result is overwritten.

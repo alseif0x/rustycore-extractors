@@ -2024,3 +2024,35 @@ include 4,100 complete supplied models, actual large archive streaming, 17 CLI
 methods, termination during a RAW append extent and distinct-volume scratch.
 No native disk-world result is yet accepted. Exact local source/attempt/report
 hashes and observation limits are in docs/forever-windows-disk-world.md.
+
+The first disk-world native run 38360542371 at functional `664ecbd` passes both
+hosted Linux profiles and native MSVC-v2 preflight/lint, then its three dedicated
+Windows jobs fail the LF-only source guard before their helper/CLI starts.
+Observed hashes equal the exact uniform CRLF projections of the two unchanged
+Linux Rust files. The correction admits only pinned LF or uniform CRLF checkout
+bytes; mixed/lone-CR/content/whitespace/BOM/final-LF changes reject. Three new
+regressions bring local contracts to 310. The independent Windows workspace was
+still live at the retained observation; no terminal/CLI acceptance is inferred.
+See the retained failure and scope in docs/forever-windows-disk-world.md.
+
+External Git-filtered CRLF source QA also exposes three historical literal-byte
+gates outside current Windows CI subsets. Fourteen exact attribute rules now
+retain LF for the two route/framing documents and twelve navigation imports,
+without changing their byte pins. The final three-overlay source reproduction
+passes 311 contracts / 18 focal methods and 162 distribution methods / one
+Linux-host Windows-only skip, with 1,099 copied files and the main Git index
+unchanged. It is source-only Linux QA; earlier failed stages stay retained and
+no native product result is inferred. Exact report hashes are in the disk doc.
+
+The final first-run Windows workspace observation is cancelled by the explicit
+20-minute job ceiling. All 17 spool cases, five resource cases, the fixture and
+23 of 24 pipeline cases finish; the 4,100-model path has no result. No later
+workspace step or dedicated CLI acceptance follows. The terminal record keeps
+all logs, API steps and the timeout annotation; hosted Linux/C++ success does
+not accept that incomplete Windows run. See the disk-world document.
+
+The next source revision gives only Windows workspace and disk-world matrix
+jobs a 60-minute ceiling, retaining all scale cases and the Linux/resident
+20-minute ceilings. The closed per-role validator rejects larger or invalid
+budgets. This is a bounded diagnostic rerun, not native acceptance or a measured
+full-world throughput claim; no Rust/Cargo source changes in this correction.
