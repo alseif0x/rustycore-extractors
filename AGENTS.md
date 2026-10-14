@@ -33,6 +33,14 @@ and pending implementations; retain the `3.4.3` version line.
 
 ### Current Linux product scope — 2026-10-14
 
+Issue #60 separately adds explicit Linux v11 for build 70374, DB2/GT/raw cameras
+(mask 7), the 1,161-schema `wowdbdefs-70374-v1` catalog and sealed-source camera
+proof. The 56-outcome synthetic campaign and fresh native whole-selection
+comparison pass independent QA. The real26 lifecycle is independently accepted
+within its bounded scope, with six complete 31-file / 165,507-byte views. Full
+catalog, Map/GameObject, real geometry/world resources, runtime and a new Linux
+bundle remain unaccepted.
+
 Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
 resident publication and the separately pinned 1,161-schema `wowdbdefs-70374-v1`
 catalog. Debug/release each pass 2,951 tests; 82 authored CLI outcomes include
@@ -2450,3 +2458,45 @@ The launcher separately announces 70374 through `.build.info` metadata; no
 the frozen bundle remain unchanged. Full catalog, Map/GameObject, real geometry
 and runtime remain gates; Windows stays deferred. Detailed limits and receipts
 are in the v7/v8 sections of `docs/forever-completion.md`.
+
+### Explicit Linux 70374 DB2/GT/raw-camera product v11 — 2026-10-14
+
+Issue #60 adds canonical v11, explicit 70374/Linux Rust-local acquisition, `wowdbdefs-70374-v1`
+and exactly DB2/GT/cameras (mask 7). The sealed validated CinematicCamera source is proved
+before discovery, including skipped-DB2 resume. Complete metadata preflight retains GT 80 MiB
+and camera 256 MiB including source once; no raw format or
+older/default/native/standalone/Windows admission widens. Functional
+`34d9e9c74e7973b5d6e1e0fd5f019aa0feb706ad` matches 717 selected files / 18,625,984 bytes, 465
+Rust/Cargo files / 9,871,316 bytes. Compilation precedes the commit; source equality is proved
+without claiming recompilation there. Debug/release each pass 2,987 tests / 26 historical
+ignores, plus Clippy/format, 363 contracts, 162 distribution checks / one platform skip, catalog
+check and builds.
+
+Fresh native/Python/Rust/original-memory discovery agrees on ten direct cameras, zero copies and
+a 674-byte source; all four Phase A children pass. Complete native GT20 / camera10 acquisition
+and byte/CKey comparison plus 14 source-style C++ numeric oracles and two Rust projections pass
+46 children: 31 artifacts / 165,507 bytes, 5,086 numeric data rows / 22,082 exact f32 values,
+six opaque GT entries, zero typed GT loaders. The first wrapper failure before acquisition and
+first failed whole helper qualification remain preserved. Its 15-command compiled prefix is not
+a whole pass; corrected runtime qualification passes 23 authored calls without new compiler
+commands. The first product probe plus two offline checks is separate.
+
+Both producer profiles and both key policies pass 56 synthetic outcomes (44 exit0/eight
+cuts/four pre-I/O rejections), 12 complete views; fresh GT ordinal 27 / camera ordinal 170 cuts
+retain the DB2 seal and the appropriate completed GT stage. Independent synthetic QA SHA256:
+`31f055335310384dd8fc217d03b1fd74890fd25100544740f0ca5cbe9bca3e64`. Native terminal QA SHA256:
+`d94d2be86c56b2c774421c2153f3f1c6fba794d19740cc005fa9cc608eb4dc0c`. Child traces show zero
+network calls and closed groups; parents remain untraced.
+
+The real 26-call campaign closes with 22 exit0/four calibrated cuts, six complete views each
+with 31 files / 165,507 bytes and 186 complete byte comparisons; all groups are absent, zero
+child network calls, parent untraced. Acceptance SHA256:
+`323677ea23da96edb82a72c475ee189a7809c3e9e8064f085fa0efeee4553ffa`. Final independent QA is
+`passed-bounded-real26-lifecycle`, findings empty; receipt SHA256:
+`968d047b2a48ba10f75a3cfb1e3c54d90c7651ff721f59601d0c5be7ee5e53ba`. No prefix is accepted.
+Documentation changes two selected documents; 715 of 717 selected source files and all 465
+Rust/Cargo files / 9,871,316 bytes remain unchanged. AGENTS.md is outside that freeze. This
+documentation update does not recompile the producers. Raw-camera/selected-GT evidence is not
+playback, full catalog, Map/GameObject, real geometry/full-world, runtime or a newly accepted
+reproducible Linux bundle. Windows remains deferred; private keys/asset identities/correlations
+stay private. Detailed scope and receipt identities are in `docs/forever-product.md`.

@@ -1,4 +1,4 @@
-# Forever product interface: v1–v6 and Linux v8–v10
+# Forever product interface: v1–v6 and Linux v8–v11
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -23,7 +23,11 @@ below. V5 remains DB2-only, and 70338 geometry remains unaccepted.
 The separate Linux [v10 contract](../contracts/forever-product-contract-v10.json)
 admits explicit build 70374 DB2-only plans with `wowdbdefs-70374-v1`.
 Its bounded TACT acceptance and negative startup diagnostic are recorded below;
-other 70374 components and a new bundle remain unaccepted.
+70374 geometry and a new bundle remain unaccepted.
+The separate Linux [v11 contract](../contracts/forever-product-contract-v11.json)
+admits explicit 70374 DB2/GT/raw cameras with sealed-source proof. Its fresh
+synthetic/native evidence and independently accepted bounded real26 lifecycle
+are recorded below. A new Linux bundle and release remain unaccepted.
 
 ## Build and inspect
 
@@ -1091,3 +1095,128 @@ Evidence root is the same 70374 DB2-product lab recorded above.
 | `next-cache-tactkey-v1/actual-attempt1/acceptance.json` | `1cb0aee02daaf1e2b9a6243d071acf07475c69a4283d3cccf2a75e7ec7ae6ed9` |
 | `next-key-coverage-v2/actual-attempt1/acceptance.json` | `a5c7fa8eb4d8a092df59015c6db990c0743459a62a54ef499c89589f4db5a924` |
 | `qa/review/key-coverage-cache-terminal-independent-review-v1.json` | `ccf115f8f97deb0d4a234c8dfde428fb31a6009591f246144c9e4c76696f19c0` |
+
+## Explicit Linux 70374 DB2/GT/raw-camera product v11 — 2026-10-14
+
+Issue #60 adds canonical plan/contract v11 and `PublicationProfile::Build70374Db2GtCamerasV1`:
+explicit Linux Rust-local build 70374, `wowdbdefs-70374-v1` and exactly
+`components=db2,gt,cameras` (mask 7). The independent catalog contains 1,161 schemas. V10
+remains DB2-only, v9 remains the explicit 70338 integration, and their evidence retains its
+dated scope. Session, global native, standalone component and Windows build gates do not widen.
+
+Execution remains serial DB2 → GT → cameras. CinematicCamera is mandatory in the explicit DB2
+selection. The published sealed source must match the admitted source bytes before camera
+discovery, including when resume skips completed DB2. Discovery validates the complete
+direct-row source and returns the whole sorted camera set; it does not replay copies or parse
+camera M2/playback data. Package verification preflights every artifact's metadata before
+allocating payload buffers, including the source-inclusive camera total independently of
+ordering. The limits remain DB2 16 MiB/file / 16 GiB total, GT 4 MiB/file / 80 MiB total, at
+most 4,096 cameras / 16 MiB each / 256 MiB including source exactly once. The canonical plan,
+package format, state format and supplied-key policies retain their existing bounded semantics.
+No geometry or navigation component is selected.
+
+Functional source `34d9e9c74e7973b5d6e1e0fd5f019aa0feb706ad` matches all 717 selected files /
+18,625,984 bytes, including 465 Rust/Cargo files / 9,871,316 bytes. Compilation precedes that
+Git commit; the binding proves exact source equality, not recompilation at the commit. This
+documentation-only update changes the two selected product/completion documents: 715 of 717
+selected source files remain unchanged, including all 465 Rust/Cargo files / 9,871,316 bytes.
+AGENTS.md is outside that selected freeze. No new compilation is claimed for the documentation
+commit; its exact binding is recorded separately. Debug/release each pass 2,987 workspace tests
+with 26 historical ignores. Clippy, formatting, 363 source-contract checks, 162 distribution
+checks with one platform skip, catalog regeneration and both product builds pass. Six
+implementation-head hosted checks pass; final-head CI remains a separate publication gate. These
+distribution checks do not build or accept a new reproducible bundle.
+
+The first bounded real release probe, with supplemental keys disabled, produces 31 files /
+165,507 bytes: one 674-byte source, twenty GT files / 138,537 bytes and ten opaque cameras /
+26,296 bytes. Separate offline verification and verify-links pass. This one extraction and two
+offline commands are outside the later 26-call lifecycle campaign and by themselves prove
+neither native parity nor resume.
+
+Fresh Phase A strict native source acquisition validates complete EOF and content-key MD5. Rust
+debug/release, full-frame Python validation and original C++ memory discovery agree on ten
+direct records, zero copies and the entire fresh ten-camera set. Four child commands pass; their
+traces contain zero network calls and their owned groups are absent. The parent is untraced. The
+first double-ptrace wrapper attempt remains failed before native source acquisition; the
+separately reviewed direct-parent launcher fixes that tracing conflict. No historical camera set
+substitutes for the fresh discovery proof.
+
+The helper qualification preserves its first failed whole attempt: fifteen compiler/static
+commands pass, then the first authored trace-control process fails strict trace acceptance after
+denied AF_UNIX attempts. The compiled prefix remains a build-only receipt. A runtime-only
+corrected qualification passes all 23 new authored child calls with zero new compiler commands:
+one Python child / four trace methods, one native plan child / six checks, one two-policy
+fixture child, fourteen C++ numeric children, two Rust projections and four pre-I/O native
+rejections (1 + 1 + 1 + 14 + 2 + 4 = 23). Actual environment correction is recorded without
+claiming a proven NSS cause. Original CascLib implementation units are reused, not rebuilt; no
+client acquisition occurs in those authored qualifications. The accepted whole report does not
+relabel the preceding failure or claim that both binaries were freshly compiled in the retry.
+
+The complete synthetic campaign passes 56 outcomes: 44 exit0, eight calibrated SIGKILL cuts and
+four expected pre-I/O key-policy rejections. Both producer profiles and both key policies yield
+twelve complete 24-file / 1,632-byte views. Provided-key fixtures require the authored key
+through DB2, GT and camera routes. Independent QA checks all child outcomes, raw traces,
+immediate cut snapshots and the exact 1,104-file / 113-directory evidence freeze. Fresh cuts are
+GT ordinal 27 and camera ordinal 170 for both producers and policies. DB2 remains sealed and
+unchanged across each resume; camera cuts also retain the GT seal. These synthetic ordinals are
+the only calibrated cuts admitted for the subsequent real phase.
+
+Fresh native component acquisition completes all twenty GT files and all ten fresh cameras.
+Together with Phase A's credited source, 31 artifacts / 165,507 bytes match complete Rust
+publication bytes and content-key MD5. Source bytes are credited once rather than acquired
+again. Fourteen authored source-style C++ numeric oracles and both Rust projections match 22,082
+f32 values in 5,086 data rows. Six GT entries remain opaque. Neither original GameTables.cpp nor
+either typed GT loader executes; this is not a new typed-loader acceptance claim. All 46 child
+commands pass with zero observed child network calls and absent owned groups. The parent is
+untraced, so no parent network-observation claim is made. Independent native QA accepts the
+recorded metadata and trace scope.
+
+The real disabled-key campaign closes all 26 outcomes: 22 exit0 and four synthetic-calibrated
+SIGKILL cuts. Debug/release each produce clean, GT-resumed and camera-resumed packages: six
+complete views, each 31 files / 165,507 bytes. All 186 complete output-to-oracle byte
+comparisons pass, with exact inventories, same-profile manifests and unchanged sealed source.
+All child groups are absent, child traces show zero network calls and the parent remains
+untraced. Outer elapsed time is 241.235 seconds. The 602-file / 49-directory evidence freeze
+excludes itself. No new compiler, original consumer or real calibration runs. Acceptance SHA256:
+`323677ea23da96edb82a72c475ee189a7809c3e9e8064f085fa0efeee4553ffa`.
+
+Final independent real QA accepts the bounded whole lifecycle, with no findings. Status:
+`passed-bounded-real26-lifecycle`; receipt SHA256:
+`968d047b2a48ba10f75a3cfb1e3c54d90c7651ff721f59601d0c5be7ee5e53ba`. No successful prefix
+substitutes for the whole selection.
+
+### Bounded v11 receipt identities
+
+Only public aggregate results and complete receipt hashes are listed here. Private camera
+identities, key material, CKeys, per-file hashes and correlations remain outside Git, CI and
+model context.
+
+| Receipt | SHA-256 |
+| --- | --- |
+| Compiled source freeze | `8bf8aef01e06ca21524164f1151d45f36e6fd9e2d3aa2123a081be210d2a5926` |
+| Full validation | `12a4747d5dc56c5f83b507d91bd96c6fd64bf3173276eb78d7b6cc844d90dbf2` |
+| Frozen producers | `5a12dc8d9ec2c7c5aee0ff656b756b7ed8c1cb061dcb942a38786755b6fada6f` |
+| Independent producer QA | `179cb63ddd51fe38b1421806362327ddacede7dec4ddd32370087ec68c230bcb` |
+| First publication probe and offline checks | `fb9a41a96bb55057c8e76e0cc364db32c7c3a410e4982bb97193b445b172da06` |
+| Phase A source/discovery | `4cf9161574bb2ed62c8a1580aa059028aae76dd8da1876c57ce4136086c03212` |
+| Independent Phase A QA | `09487e410adedc0726ea078f88d06c8fb022e84a5d33ba31b36c9432965c922f` |
+| Corrected whole helper qualification | `edf5de35e67502688d0c462a34a1fa7099ae63796309478f4fe54e70ee47f7b3` |
+| Independent helper QA | `364d7d43bef9e6e15422d7c325576b0cd03a7de15d228ac4598d76332e4d25df` |
+| Synthetic56 acceptance | `09c0dae4c756c490db0ec2e522c147a3e9c3bc6976bacd42ee7131fb28b4eb9a` |
+| Independent synthetic QA | `31f055335310384dd8fc217d03b1fd74890fd25100544740f0ca5cbe9bca3e64` |
+| Native component terminal | `813697db3b556eaca86be1da091f5a34784f24b8d275f87f15805f2c63455922` |
+| Complete byte-oracle metadata | `31821dd7ed39a94a6c81f50ba8d2789e8ec7f8fd21f5b1a50ed2dda5528e5bd0` |
+| Independent native QA | `d94d2be86c56b2c774421c2153f3f1c6fba794d19740cc005fa9cc608eb4dc0c` |
+| Real26 lifecycle acceptance | `323677ea23da96edb82a72c475ee189a7809c3e9e8064f085fa0efeee4553ffa` |
+| Real26 evidence freeze | `07812f118bef0691d9615285d1e1c31999388ca5e43d476be631c13aba64a97b` |
+| Independent real26 QA | `968d047b2a48ba10f75a3cfb1e3c54d90c7651ff721f59601d0c5be7ee5e53ba` |
+
+These are bounded selected raw outputs. They establish neither a full 1,161-table catalog
+acquisition nor Map/GameObject availability, real geometry/full-world resources, camera playback
+or RustyCore runtime/server activation. Native built-in keys and Rust's disabled
+supplemental-key policy are distinct baselines; matching bytes do not establish general
+decryption parity. Counters record logical QA visits/outcomes, not all CASC requests, physical
+archive I/O, RSS or atomic snapshots. A new reproducible v11 Linux bundle and any
+release/publication remain separate gates. Prior bundles are unchanged; Windows
+development/distribution stays deferred with draft PR #27 preserved. The full Linux extractor
+remains incomplete.
