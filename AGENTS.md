@@ -31,6 +31,17 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Current Linux 70338 product scope — 2026-10-14
+
+Explicit Linux product v9 now admits exactly DB2/GT/raw cameras on build 70338,
+with a nonempty target-catalog DB2 selection including CinematicCamera. Six real
+clean/resumed packages each match 31 complete data files / 165,507 bytes against
+accepted component oracles; decryption is disabled in this real campaign.
+V5 remains DB2-only; earlier dated DB2-only statements below describe their
+historical checkpoints. No full catalog, geometry, runtime, Windows product or
+new reproducible bundle acceptance follows. See the current v9 evidence in
+`docs/forever-product.md` and `docs/forever-completion.md`.
+
 ### Forever branch scope
 
 The operator made this repository public, renamed `main` to `3.4.3`, and selected
@@ -2298,3 +2309,42 @@ receipt hashes are in `docs/forever-cameras.md`. Product 70338 remains DB2-only
 pending explicit DB2/GT/camera integration; unavailable Map/GameObject inputs,
 real full-world resources, runtime and the Linux package remain gates. Windows
 stays deferred and the extractor goal stays active.
+
+
+### Explicit Linux 70338 DB2/GT/camera product v9 accepted — 2026-10-14
+
+Issue #48 adds plan/contract v9 and typed publication selection, requiring
+build 70338, `wowdbdefs-70338-v1`, exactly `db2,gt,cameras`, explicit layouts,
+and the existing disabled/provided-key policies. Real acceptance uses disabled
+only. Serial execution validates the published sealed DB2 source before camera
+discovery, including DB2-skipping resumes; read-only seal proof cannot publish.
+Whole inventory metadata/budget preflight precedes payload verification. Existing
+caps, manifest v1, Linux state v2 and legacy identities/build gates remain.
+A complete nonempty zero-row source may yield no cameras and no camera directory.
+
+Workspace debug/release each pass 2,917 tests / 26 normally ignored / 45 targets.
+The validation also passes 347 contracts, 162 distribution checks plus one skip,
+Clippy, format and both product builds.
+The failed first validation remains retained; two Python structural assertions
+were fixed without runtime source changes and all eight commands reran.
+Local base-plus-delta binaries are source-bound to functional commit
+`2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba`, not rebuilt at that commit or after
+the subsequent three documentation changes. No new bundle is accepted.
+
+Synthetic acceptance has 78 expected outcomes, eight complete positive packages
+and 24 negative copies. Real acceptance has 26 expected outcomes, including
+four deliberate SIGKILL cuts, and six complete clean/GT-resumed/camera-resumed
+packages across profiles. Each has twenty GT / 138,537 bytes, one source DB2 /
+674 bytes and ten raw cameras / 26,296 bytes: 31 files / 165,507 bytes. Exact
+inventories and bytes match immutable accepted component oracles; previous native,
+numeric, typed-loader and discovery consumers are not rerun. Consumer traces have
+zero network calls; child-preexec denial probes are outside those traces. Counts
+do not measure CASC requests/OS I/O/RSS. Private assets/IDs/correlations stay local.
+
+Independent final QA accepts bounded real publication only, with no findings;
+receipt `qa/review/final-real-review-v1.json` SHA-256
+`54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
+The evidence root and full receipt list are in `docs/forever-product.md`.
+Full catalog, Map/GameObject inputs, real geometry, full-world operation,
+RustyCore runtime and a new reproducible Linux distribution remain gates.
+Windows remains deferred in draft PR #27. This does not complete the extractor.
