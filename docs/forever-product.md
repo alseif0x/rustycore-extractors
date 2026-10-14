@@ -1438,3 +1438,74 @@ is optional diagnostic work, not a prerequisite imposed before required world
 resources. No prerequisite projection or new native read has run in this step.
 The failed 1,161-entry product selection remains failed with no accepted prefix;
 a different explicit operation plan cannot silently omit its required inputs.
+
+## 2026-10-14: issue #68 prerequisite metadata projection (bounded QA accepted)
+
+The Linux source-derived prerequisite selection contains 80 unique bootstrap
+DB2 names and 83 names in union with terrain/collision. A separate metadata-only
+projection joins that selection to the pinned 70374 catalog plan and the closed
+availability census. It records 49 complete source reads / 31 blocked bootstrap
+inputs, and 51 complete source reads / 735,963 bytes / 32 blocked union inputs.
+These counts describe authenticated raw-byte availability in that census;
+no DB2 schema, typed loader or server/runtime compatibility is accepted here.
+
+| Operation/group | Selected | Complete byte reads | Blocked | Complete bytes |
+|---|---:|---:|---:|---:|
+| Bootstrap: Achievement | 1 | 0 | 1 | 0 |
+| Bootstrap: appearance | 7 | 7 | 0 | 363,076 |
+| Bootstrap: Birth | 5 | 4 | 1 | 33,873 |
+| Bootstrap: initialization | 7 | 6 | 1 | 31,297 |
+| Bootstrap: item specifications | 3 | 3 | 0 | 852 |
+| Bootstrap: items | 4 | 0 | 4 | 0 |
+| Bootstrap: names | 4 | 4 | 0 | 162,450 |
+| Bootstrap: spells | 49 | 25 | 24 | 153,991 |
+| Bootstrap: TACT | 1 | 1 | 0 | 1,654 |
+| Collision world DB2 sources | 4 | 2 | 2 | 15,443 |
+| Terrain DB2 sources | 4 | 3 | 1 | 26,063 |
+| Bootstrap union (deduplicated) | 80 | 49 | 31 | 725,013 |
+| All selected DB2 (deduplicated) | 83 | 51 | 32 | 735,963 |
+
+Groups overlap; their row totals must not be summed as independent files.
+The source union's 83 names are not the census's 83 unavailable names.
+`Map` blocks terrain; `Map` and `GameObjectDisplayInfo` block collision world.
+`SkillLineAbility` remains a prioritized Birth dependency. No complete blocked
+list or private key/source correlation is published.
+
+The named current RustyCore bootstrap calls also require six GT sources,
+separately derived from source: BaseMp, HpPerSta, xp, SpellScaling,
+CombatRatingsMultByILvl and StaminaMultByILvl. This DB2-only projection did not
+check their availability. The 43 public sources were recorded by hash/length;
+none of the integration checkout's recorded dirty paths intersects that set.
+The recorded integration HEAD is `544721324cf0a47553caae1ea0299a0ff2917ce7`;
+extractor HEAD `59d9c1df57776925cfdc58c0180703ea8c7df7ec` is historical source
+context, not a claim that later docs-only commits rebuilt the producer.
+
+The bootstrap readers retain build-70170 hash/schema and explicit historical
+available-prefix gates. Those alternatives do not authorize omission, fallback
+or prefix acceptance for current 70374 extraction. The selection covers named
+operations; it is not a full server callgraph or minimal all-server DB2 list.
+SQL/official/custom hotfixes, dynamic world resources, geometry and runtime
+remain independent gates. The failed full 1,161-table product selection remains
+failed; neither this projection nor the earlier census accepts its prefix.
+
+The projection checks the complete 1,161-row metadata document against the
+canonical plan before selecting names, then closes 46 inner input guards,
+including all 43 source guards. Its separate invocation uses 2,925 outer
+input guards / 45 aliases and closes in 0.491 seconds with an empty network
+trace, absent process group and no closing errors. It reopens no CASC store
+and reads no client, keys or assets. Its 92 registered metadata/source reads
+total 1,360,568 bytes; these visits are separate from the prior availability
+census. It changes no production code or binary.
+
+| Evidence | Overall SHA256 / status |
+|---|---|
+| Public selection QA | `35de4612b730823e6487501de820cdce1de26dbc108293fbd611793c435d9f00` |
+| Projection source freeze | `04df42dd134d8734fd980c011aa06556f12aba2e0e0408e4b6c95a53fa83591e` |
+| 21 authored metadata controls | `20453ec1a807d90366bfc03cb3f2d1a2e517c8e3a16158f59e6960d982b51b5e` |
+| Independent projection source QA | `da4db9013e7fa4e4658db9c7e0be12d92d09b377a63aee6de69c7e1ce0b0b96e` |
+| Actual selected projection | `3978d3c14f3cdfb8c376b1f5d2c10c05e531aba33fb5c7faddf37d28a7bfebfb` |
+| Actual admission / invocation | `eee7840a…` / `6609b282…` (abbreviated) |
+| Independent actual terminal QA (`passed-metadata-only-projection`) | `7a0397d3e1c1b50a50e17ee6f84fdcb787953719e2ae9fc24f3df2bba20c9754` |
+
+Independent terminal QA accepts only this bounded metadata projection.
+Windows remains deferred, including preserved draft PR #27.

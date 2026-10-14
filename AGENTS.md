@@ -33,6 +33,18 @@ and pending implementations; retain the `3.4.3` version line.
 
 ### Current Linux product scope — 2026-10-14
 
+Issue #68 separately derives named Linux prerequisites from 43 public sources
+and projects only metadata: 80 bootstrap DB2 names yield 49 complete source
+reads / 31 blocked; the deduplicated terrain/collision/bootstrap union has
+83 names, 51 complete reads / 735,963 bytes and 32 blocked. Map blocks terrain;
+Map/GameObjectDisplayInfo block collision. Six GT prerequisites are separate
+and untested by this DB2 projection. Historical 70170 reader/prefix gates do
+not admit 70374 loaders; full catalog, world resources and runtime remain open.
+Independent terminal QA passes only this metadata projection
+(`7a0397d3e1c1b50a50e17ee6f84fdcb787953719e2ae9fc24f3df2bba20c9754`).
+There are no new client/key/asset reads, CASC reopens or production changes in
+this metadata-only phase. See docs/forever-product.md; Windows remains deferred.
+
 Issue #60 separately adds explicit Linux v11 for build 70374, DB2/GT/raw cameras
 (mask 7), the 1,161-schema `wowdbdefs-70374-v1` catalog and sealed-source camera
 proof. The 56-outcome synthetic campaign and fresh native whole-selection
