@@ -4175,3 +4175,30 @@ product selection still fails as recorded. Future private metadata intersection
 and any new causal reads require their own reviewed scope. Historical typed
 loaders do not establish build-70374 runtime support. See the product evidence
 for source pins and the retained plan; no new acquisition occurs here.
+
+## 2026-10-14: issue #68 source-derived prerequisite readiness (bounded QA accepted)
+
+The metadata-only projection of named Linux prerequisites records:
+
+| Operation | Selected DB2 | Complete byte reads | Blocked |
+|---|---:|---:|---:|
+| Terrain | 4 | 3 | 1 |
+| Collision world | 4 | 2 | 2 |
+| Current named bootstrap union | 80 | 49 | 31 |
+| Deduplicated operation union | 83 | 51 | 32 |
+
+The union's complete sources total 735,963 bytes. Map blocks terrain;
+Map/GameObjectDisplayInfo block collision, and SkillLineAbility remains a
+prioritized Birth dependency. Six source-derived GT prerequisites are separate
+and their availability was not checked by this DB2 projection. Historical
+70170 schema/prefix gates are not 70374 loader permission. The full-catalog
+selection remains failed; schema validation, complete world resources and
+runtime acceptance remain gates. No production code/binary changed and no
+new client/key/asset or CASC read occurred in this metadata-only phase.
+
+Projection receipt is
+`3978d3c14f3cdfb8c376b1f5d2c10c05e531aba33fb5c7faddf37d28a7bfebfb`;
+independent terminal QA passes this metadata-only scope:
+`7a0397d3e1c1b50a50e17ee6f84fdcb787953719e2ae9fc24f3df2bba20c9754`.
+See the detailed operation counts and source/control receipts in
+[forever-product.md](forever-product.md). Windows/draft PR #27 remain deferred.
