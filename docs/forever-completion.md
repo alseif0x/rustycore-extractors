@@ -3808,3 +3808,62 @@ The historical 83-file acquisition gap and Map/GameObject dependencies retain
 their recorded scopes; no full catalog, geometry or runtime gate is lifted.
 Positive Gate B is not admitted; there is no client retry/full survey.
 Windows development/distribution stays deferred; no keys enter Git or CI.
+
+## Bounded 70338 static v7 method — 2026-10-14
+
+Issue #54 records a separate, limited manual Ghidra method. The issue #42 v6
+failure at `initialized_bytes_cap` remains failed; its missing initial ranges
+hash and all earlier limitations remain historical. V7 uses the retained
+101,907,152-byte 70338 snapshot, SHA-256
+`cfe26cc200fda36407736c7e6b5575a1f2ca2b774c8176529814e32d51312185`.
+It opens no REA session, executes no game and reads no live game memory.
+
+V7 explicitly raises loaded/initialized admission from 128 to 256 MiB.
+The separate total planned scan-visit limit remains 256 MiB; input remains
+128 MiB and SizeOfImage remains limited to 512 MiB. Metadata admission occurs
+after Ghidra import, before block-buffer allocation and seed scanning; it does
+not prevent import allocations. The 8 GiB JVM heap, 600-second engine wait
+measured from controller start including setup, 600 CPU seconds per process
+and `-max-cpu 2` remain. Cleanup, final guards and receipt writing follow the
+engine wait; these limits are not an RSS or whole-controller wall-time bound.
+The six-interval / 64 KiB-per-interval, 64 seed-match / lexical-candidate,
+16 Pcode-operations-per-instruction and 30-second decompilation limits remain.
+
+Ten pure metadata controls pass. The separate authored preflight confirms
+one Pcode address constant labelled `NOT_xref`, one decompilation and one
+misaligned-candidate rejection, with no ReferenceManager edge. The closed real
+run reports 139,145,697 initialized bytes across eight block objects and
+75,236,864 executable bytes, totaling 214,382,561 planned/actual scan visits.
+These are logical block/scan counters, not distinct physical bytes or RSS;
+SizeOfImage is not the initialized-byte sum. The real run finds 27 seed
+matches, zero lexical candidates, zero candidate intervals, zero verified
+Pcode constants and zero decompilations. It recovers no keys. This bounded
+pattern result cannot establish absence of references, keys, functions or
+hotfix causality, and the authored positive does not supply a real positive.
+
+The controller and engine close successfully. Independent QA accepts only
+this limited static method (`passed-limited-static-method`, no errors),
+rehashing 5,688 guards and 35 evidence files. Nineteen network calls are denied,
+zero succeed and the owned process group is absent. The review's 11,453 hash
+visits / 3,192,471,778 bytes are separate reviewer traffic, not engine scan
+counts, new acquisition or physical I/O.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-runtime-readiness-20261014-248gdbh6`.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `source-plan/static-v7/revision2/source-freeze.json` | `a985576e7ed193f1a0364915a3ee7b0b9911eea206c1db095e86436bd2467956` |
+| `static-review/static-v7-revision2-source-review.json` | `2d75afcb224eea575d318728e88aa423987f3062b9e4c234223b72f9ea54605f` |
+| `source-plan/static-v7/revision2/preflight-attempt1/receipt.json` | `e675ecbaaed90fd143c90beca00758b3ad0dd708661eba34cb17ef0b4967d710` |
+| `static-review/terminal-v1/preflight-review.json` | `e311051d503cc5c0f3793f254f623d3b1e94f473431a2555c311a0f48982cc62` |
+| `source-plan/static-v7/revision2/real-attempt1/receipt.json` | `0232c85089309bf88a00e5ffab68271f6795a6f218a2fc6d01ca287a9f90a609` |
+| `static-review/terminal-v1/real-review.json` | `31d0fb9bba0ff0486b5aec512c2243091b098457eeee42513b99977166733695` |
+
+Launcher `.build.info` separately reports installed build 70374 through
+metadata only. That does not authenticate 70374 game execution or establish
+70374 static/product acceptance; v7 reads only the retained 70338 snapshot.
+Production source and product admission are unchanged. These documentation
+additions do not rebuild the frozen bundle. Full catalog, Map/GameObject,
+real geometry/world resources and RustyCore runtime remain Linux gates;
+Windows development/distribution stays deferred.

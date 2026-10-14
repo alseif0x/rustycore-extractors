@@ -2410,3 +2410,26 @@ Final independent QA: `passed-negative`, SHA-256 `93bd2a54aea752ec8d14abb6f7b30e
 This adds no recovery evidence for the 83 recorded failures and lifts no
 Map/GameObject, catalog, geometry or runtime gate. This comparison admits no positive Gate B or CASC retry; Windows stays
 deferred and keys/correlations stay private.
+
+### Bounded 70338 static v7 method — 2026-10-14
+
+Issue #54 separately accepts a limited manual Ghidra v7 method on the retained,
+hash-pinned 70338 executable snapshot. The earlier issue #42 v6 attempt remains
+failed before seed scanning; it is not reclassified. V7 explicitly changes
+loaded/initialized admission from 128 to 256 MiB while retaining the separate
+256 MiB scan-visit cap, 128 MiB input cap and 512 MiB image cap.
+The closed run admits 139,145,697 initialized bytes across eight block objects
+plus 75,236,864 executable scan bytes: 214,382,561 scan visits. It finds 27 seed
+matches and zero lexical candidates, candidate intervals, verified Pcode
+constants or decompilations. These zeros establish no absence of references,
+keys or hotfix behavior. Nineteen network calls are denied, none succeeds,
+and the owned process group closes. Independent QA status is
+`passed-limited-static-method`, SHA-256
+`31d0fb9bba0ff0486b5aec512c2243091b098457eeee42513b99977166733695`.
+This custom manual run opens no REA session and executes no game. Launcher
+`.build.info` metadata now reports 70374; that is not verified 70374 game,
+static-analysis or product acceptance, and this run does not read its binary.
+Production source and the frozen bundle are unchanged. Full catalog,
+Map/GameObject, geometry and runtime gates remain; Windows stays deferred.
+Limits, provenance and receipts are in
+`docs/forever-completion.md#bounded-70338-static-v7-method--2026-10-14`.
