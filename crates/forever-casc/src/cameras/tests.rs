@@ -433,6 +433,7 @@ fn manifest_inventory_rejects_total_budget_before_any_usize_overflow() {
     let descriptor = |count: u32, camera_bytes: usize| {
         let ids: std::collections::BTreeSet<_> = (1..=count).collect();
         Manifest {
+            contract: CameraContract::Legacy,
             acquisition: None,
             build: 70205,
             locale: Locale::EnUs,
@@ -703,3 +704,6 @@ fn cli_has_no_arbitrary_ids_source_paths_or_network_options() {
 }
 
 mod acquisition;
+
+#[cfg(unix)]
+mod build70338;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Injected complete-file pipeline; native code supplies a strict offline reader.
 use super::{
-    CameraPlan, MAX_FILE_BYTES, MAX_SOURCE_BYTES, MAX_TOTAL_BYTES, SOURCE_FILE_ID, SOURCE_NAME,
-    discover, file_name,
+    CameraContract, CameraPlan, MAX_FILE_BYTES, MAX_SOURCE_BYTES, MAX_TOTAL_BYTES, SOURCE_FILE_ID,
+    SOURCE_NAME, discover_with_contract, file_name,
     manifest::{self, Camera, FileOutcome, Manifest, Source},
     output,
 };
@@ -10,6 +10,7 @@ use crate::{Error, Locale};
 use std::{io::Read, path::Path};
 
 pub struct Report {
+    pub contract: CameraContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub complete: bool,
     pub manifest: String,
@@ -30,6 +31,19 @@ impl Report {
                 .map_or_else(|| "null".to_owned(), |n| n.to_string()),
             self.files_published
         );
+        if self.contract == CameraContract::Build70338V1 {
+            return text.replacen(
+                "\"report_version\":1",
+                &format!(
+                    "\"report_version\":3,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CameraContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            );
+        }
         match self.acquisition {
             Some(profile) => text.replacen(
                 "\"report_version\":1",
@@ -62,15 +76,54 @@ pub fn extract_with_profile(
     build: u32,
     locale: Locale,
     acquisition: Option<crate::acquisition::Profile>,
+    load: impl FnMut(u32, u32) -> Result<(u32, Vec<u8>), Error>,
+) -> Result<Report, &'static str> {
+    extract_selected(
+        CameraContract::Legacy,
+        client,
+        destination,
+        build,
+        locale,
+        acquisition,
+        load,
+    )
+}
+
+/// Explicit versioned contract with required Rust-local acquisition provenance.
+/// The injected reader must implement the declared acquisition profile.
+pub fn extract_with_contract(
+    contract: CameraContract,
+    client: &Path,
+    destination: &Path,
+    build: u32,
+    locale: Locale,
+    acquisition: crate::acquisition::Profile,
+    load: impl FnMut(u32, u32) -> Result<(u32, Vec<u8>), Error>,
+) -> Result<Report, &'static str> {
+    extract_selected(
+        contract,
+        client,
+        destination,
+        build,
+        locale,
+        Some(acquisition),
+        load,
+    )
+}
+fn extract_selected(
+    contract: CameraContract,
+    client: &Path,
+    destination: &Path,
+    build: u32,
+    locale: Locale,
+    acquisition: Option<crate::acquisition::Profile>,
     mut load: impl FnMut(u32, u32) -> Result<(u32, Vec<u8>), Error>,
 ) -> Result<Report, &'static str> {
     let file_cap = acquisition.map_or(MAX_FILE_BYTES, |profile| profile.max_file_bytes() as usize);
     if file_cap == 0 || file_cap > MAX_FILE_BYTES {
         return Err("camera_policy_limit");
     }
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err("unsupported_client");
-    }
+    contract.admit_build(build)?;
     same_build(client, build)?;
     let before = metadata_snapshot(client)?;
     let directory = output::create(client, destination, locale)?;
@@ -91,7 +144,7 @@ pub fn extract_with_profile(
             return Err("camera_policy_limit");
         }
         total = bytes.len();
-        let plan = discover(&bytes)?;
+        let plan = discover_with_contract(contract, &bytes)?;
         output::publish(
             &directory.join("dbc").join(locale.name()),
             SOURCE_NAME,
@@ -163,6 +216,7 @@ pub fn extract_with_profile(
     }
     same_build(client, build)?;
     let manifest = Manifest {
+        contract,
         acquisition,
         build,
         locale,
@@ -180,6 +234,7 @@ pub fn extract_with_profile(
         output::complete(&directory)?;
     }
     Ok(Report {
+        contract,
         acquisition,
         complete,
         manifest: text,

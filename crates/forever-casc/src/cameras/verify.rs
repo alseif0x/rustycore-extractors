@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Offline output verification, including rediscovery from the preserved DB2.
 use super::{
-    MAX_FILE_BYTES, MAX_FILES, MAX_SOURCE_BYTES, SOURCE_NAME, discover, file_name, manifest,
-    source_path,
+    CameraContract, MAX_FILE_BYTES, MAX_FILES, MAX_SOURCE_BYTES, SOURCE_NAME,
+    discover_with_contract, file_name, manifest, source_path,
 };
 use crate::sha256;
 use std::{
@@ -47,6 +47,7 @@ impl Code {
     }
 }
 pub struct Report {
+    pub contract: CameraContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub code: Code,
     pub build: Option<u32>,
@@ -55,6 +56,7 @@ pub struct Report {
 impl Report {
     pub const fn failure(code: Code) -> Self {
         Self {
+            contract: CameraContract::Legacy,
             acquisition: None,
             code,
             build: None,
@@ -75,6 +77,19 @@ impl Report {
                 .map_or_else(|| "null".to_owned(), |n| n.to_string()),
             self.cameras_verified
         );
+        if self.contract == CameraContract::Build70338V1 {
+            return text.replacen(
+                "\"report_version\":1",
+                &format!(
+                    "\"report_version\":3,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CameraContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            );
+        }
         match self.acquisition {
             Some(profile) => text.replacen(
                 "\"report_version\":1",
@@ -138,7 +153,7 @@ fn run(root: &Path) -> Result<Report, Code> {
     }
     let source = read(&root.join(source_path(decoded.locale)), MAX_SOURCE_BYTES)?;
     matching(&source, &decoded.source.file)?;
-    let plan = discover(&source).map_err(|_| Code::Discovery)?;
+    let plan = discover_with_contract(decoded.contract, &source).map_err(|_| Code::Discovery)?;
     if decoded.source.discovery.as_ref() != Some(plan.facts()) {
         return Err(Code::Discovery);
     }
@@ -161,6 +176,7 @@ fn run(root: &Path) -> Result<Report, Code> {
         )?;
     }
     Ok(Report {
+        contract: decoded.contract,
         acquisition: decoded.acquisition,
         code: Code::Verified,
         build: Some(decoded.build),

@@ -22,8 +22,10 @@ Completed, validated implementations merge into `forever`; their feature branche
 are deleted while pending source and the legacy version line remain preserved.
 The installed authentic source currently retains build 70338 (and Classic 70003)
 configurations, not the earlier 70205 configuration. Historical 70205 evidence
-remains valid for its recorded source; it cannot reopen that source now. Build
-70338 remains DB2-only pending separate real geometry acceptance.
+remains valid for its recorded source; it cannot reopen that source now.
+The unified product's 70338 profile remains DB2-only. Standalone GT and camera
+acceptance have separate explicit profiles and still need versioned product
+integration; real geometry remains a separate gate.
 
 ## Required components
 
@@ -33,7 +35,7 @@ remains valid for its recorded source; it cannot reopen that source now. Build
 | DB2 catalog | 56 reviewed schemas retain their v2 policy; pinned catalog accounts for all 1,126 declarations; separate `wowdbdefs-70205-v1` and `wowdbdefs-70338-v1` catalogs each pin 1,161 build-specific declarations; 70205 matches all 1,023 surveyed complete headers, while the 70338 survey acquired 1,078 complete files and left 83 encrypted candidates; the earlier 70205 survey matches 1,023 artifacts / 719,466 rows against Python, with 103 explicit failures; separate closed terrain sources have synthetic and two-table 70205 local acceptance plus three-table real 70338 liquid startup-reader acceptance | All required extraction tables and physical variants accounted for; unsupported/incomplete inputs reported without success claims; complete required reader acceptance |
 | DB2 reader acceptance | Separate names, appearance and item specialization loaders accepted; Birth and initialization have synthetic complete-loader evidence; all 49 spell tables now have complete public typed-load projection acceptance on five populated synthetic worlds; the older four-table generic-reader comparison remains separate; the build-70205 target catalog matches Rust's standalone diagnostic on three complete local esES DB2s (ChrClasses 9 rows, ChrRaces 58, CinematicCamera 10); explicit Rust-local v4 batches verify those three files and a 1,024-table package with exact per-file bytes matching legacy-profile output; product v4/v5 code routes multi-section target-catalog DB2s through the bounded catalog reader, but no real multi-section file has passed that route; the immutable v10 Linux binary extracts/verifies an explicit 70338/esES selection of 1,078 files / 29,213,383 bytes against the fresh complete-read census, without a new row-oracle comparison | Complete public Forever loaders, including Birth, initialization and all 49 spell tables, on complete local inputs; real product acceptance of multi-section files, encrypted/sparse variants and output TACT metadata |
 | Game tables | Historical 70205 native v2/Rust-local v3 catalog evidence remains; fresh standalone 70338 Rust-local v4 accepts twenty sources / 138,537 bytes, strict native whole-byte/CKey parity, 14 numeric tables / 22,082 exact f32 cells and both public loaders on six files; six entries remain raw-only | Versioned unified-product 70338 integration and a new package must retain this fresh component evidence and numeric versus raw-only scope |
-| Cameras | Native v1 and Rust-local v2 acquisition/output verification; ten camera files plus source DB2 match C++ bytes, independent discovery and filenames | Preserve component evidence in the unified interface; M2/waypoint/runtime acceptance needs a separate reader contract |
+| Cameras | Historical 70205 native v1/Rust-local v2 evidence remains; fresh standalone 70338 Rust-local v3 accepts ten cameras / 26,296 bytes plus the 674-byte source, eleven artifacts / 26,970 bytes; strict native whole-byte/CKey parity, original/Python/direct discovery, both CLIs and offline verification pass | Versioned unified-product 70338 integration and a new package must retain this fresh opaque-byte evidence; M2/waypoint/runtime acceptance needs a separate reader contract |
 | Terrain maps | Local startup/WDT/root-ADT/MAPS/tile-list runner has 20 synthetic CLI cases per debug/release profile, with 48 MAPS / 24 lists and 6,864 exact GridMap queries per profile; real probe fails at the first complete Map read; integrated supplied-ADT conversion matches 248 complete synthetic files from the original pinned C++ parser/converter across two runs, with strict verification and 35,464 actual GridMap queries; 154 synthetic tests; preceding assembly acceptance covers another 380 files / 54,340 queries | Complete real local terrain acquisition; versioned real MAPS semantics, including liquids and bounds, compared against Forever C++ output and appropriate RustyCore readers |
 | Collision | Static map/tile/model store and world LOS/height/object-hit match 75 synthetic cases/3,298 operations against original VMapManager in debug/release, including 2,654 queries; Linux rooted source and 465 VMap tests (66 focused store tests); bounded VMO model/instance ray queries match 79 synthetic cases / 14,416 queries against original readers/queries in debug and release; 54 focused query tests and 374 pure VMap tests; shared-world final-package assembly matches 53 synthetic cases / 650 files / 87 selected VMOs against original startup/world/convertWorld2 in dev/release, with strict ancestor binding; 49 complete synthetic shared-world cases match original startup/Map/liquid/WDT/ADT output in dev/release, including 82 RAW and 79 per-map dir_bin files / 176 placements; 36 integrated synthetic GameObject startups / 469 direct rows / 127 listed rows match the original producer in dev/release, following 276 supplied-list and 50 direct-DB2 comparisons; 274 transformed-bound cases and 136 complete supplied-map outputs match original C++ in dev/release, including 62,006 map/tile/index files and strict associations; 251 synthetic VMO models match original assembly/read/write; local WDT/Obj0ADT/model/placement runner has 20 integration tests; 11,144 cached records match original replay; bounded BIH matches 420 outputs; M2/WMO raw comparisons cover 53/155 synthetic outputs; real M2 sample matches 31 acquired files and 28 raws; direct/doodad placements match 205/573 outputs; 96,576 serial ID requests match C++ | Real object and WMO acquisition acceptance; complete real Map/GameObject sources; accepted real inventory/ancestor associations and versioned product publication; complete real assembled-output and collision/height/liquid reader acceptance |
 | Navigation | Supplied geometry, Recast, Detour 7 and MMap 16 stages have bounded native/reader acceptance; complete supplied TileBuilder matches 107 configurations and 23 builds; pure Rust final save state matches 747 payloads, including all 22 original saved TileBuilder files; numeric Map projection and parent inventory planning match 82 synthetic packages and 140 globals, with 3,500 exact RustyCore coordinate queries; active VMap model selection/loading matches 154 packages / 1,507 operations against original VMapManager/TerrainBuilder; rooted terrain/ancestor/neighborhood loading matches 110 complete cases / 217,721,658 bytes; joined single-tile pipeline matches nine scenarios and seven final files / 452,012 bytes per profile, with complete/partial/absent-nearest RustyCore Detour query acceptance; 319 focused tests; canonical Linux discovery matches 82 inventories / 140 globals and binds all nine single-tile scenarios to observed filesystem identities; sequential all/map/tile execution matches 12 synthetic packages / 15 global files / 22 selected tiles, with 20 final files / 1,176,088 bytes, provisional sinks and per-read original-identity binding; continuous-plane packages add 14 exact files / 1,433,000 bytes and 33 multi-tile lifecycle scenarios / 1,248 query records per profile, including 187 complete cross-tile paths in fully loaded states through original Detour and unchanged public RustyCore APIs | Complete real inventory/source acquisition and real model/source tables; original DB2 startup and scalable full-map/product orchestration; versioned product/runtime integration and high-level real pathfinding acceptance |
@@ -3634,3 +3636,46 @@ The later three-file Markdown update is not rebuilt into the accepted binaries.
 Product 70338 stays DB2-only. Cameras, unavailable Map/GameObject inputs, full
 real geometry/world resources, runtime and a new reproducible package remain
 Linux gates; the extractor is incomplete and Windows remains deferred.
+
+## Fresh standalone build-70338 raw cameras accepted — 2026-10-14
+
+Issue #46 adds `camera-raw-70338-v1`, Rust-local-only manifest/contract/schema
+v3 and explicit target-catalog discovery. Functional commit `bea89ce` passes
+2,880 ordinary Linux tests / 26 ignored across 44 targets per profile, 37
+focused camera/four metadata CLI cases, six formal JSON/339 source contracts,
+162 distribution checks/one skip, Clippy and format. The source binding maps
+the reviewed baseline-plus-delta production binaries to that commit; later
+three-file Markdown is not rebuilt. Legacy v1/v2 build-gated batches, CLI
+routes and manifest decoders retain 70170/70205 scope and reject 70338.
+
+The authored campaign passes 58 runtime commands and two late-inventory
+controls, with original DB2 execution limited to three complete admitted
+positives. Fresh real 70338/esES source discovery passes seven commands:
+674 bytes, ten direct rows/no copies, strict Rust/native whole bytes/CKey
+before original DB2 getters/ReadCinematicCameraDBC and independent Python
+projection. Under separate admission the complete ten-camera phase passes
+sixteen commands: 26,296 camera bytes, maximum 3,820, eleven data artifacts /
+26,970 bytes with the source, in both production profiles. Both offline
+verifiers, formal v3 validation, filename rules and inventories pass. This
+current total is not the historical 70205 total of 26,962 bytes.
+
+Independent review checks 202 current and 76 inherited evidence files, 2,062
+guards/35 aliases/six current and eight inherited stages. All 23 real consumer
+traces are empty and owned groups absent; separate denied policy probes are
+outside those traces. Fifty-five complete acquisitions / 134,850 returned bytes
+cover eleven measured identities; these are not archive-I/O or metadata-read
+counters. Outer bounded metadata/per-read authentication/native comparisons do
+not constitute an atomic whole-client snapshot. Original DB2/discovery runs
+through an immutable memory adapter; the full original camera export loop is
+not executed.
+
+Final independent review SHA-256:
+`d43f6584cdf92797b94e4b36bb059bbd6ef1dfb96decac6f77a3a6a188d89713`.
+Full receipts, definition provenance and retained control revisions are in
+[the camera evidence](forever-cameras.md#explicit-build-70338-raw-cameras-manifest-v3).
+The next Linux product step can integrate the accepted DB2/GT/camera contracts
+under a new explicit version; current 70338 product v5 stays DB2-only. Map and
+GameObject inputs, complete real geometry/world resources, runtime, a fresh
+reproducible package and full Linux extraction remain gates. No M2 parsing,
+waypoints or playback is accepted here. Windows stays deferred; the goal remains
+active.
