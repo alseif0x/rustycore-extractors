@@ -34,7 +34,7 @@ class WindowsVMapContract(unittest.TestCase):
         d = json.loads((ROOT / 'contracts/forever-distribution-contract-v1.json').read_text())
         self.assertEqual(self.c['distribution_source_profile'], 'forever-seven-crate-windows-vmap-diagnostics-source-v5')
         self.assertIn(self.c['distribution_source_profile'], d['source']['prior_profiles'])
-        self.assertEqual(literal('SOURCE_PROFILE'), 'forever-seven-crate-linux-product-db2-catalog-source-v10')
+        self.assertEqual(literal('SOURCE_PROFILE'), 'forever-seven-crate-linux-product-db2-gt-cameras-source-v11')
         self.assertEqual(d['source']['profile'], literal('SOURCE_PROFILE'))
         self.assertIn('forever-seven-crate-windows-producer-source-v4', d['source']['prior_profiles'])
         required = set(literal('WINDOWS_VMAP_SOURCE')) | set(literal('WINDOWS_INPUT_SOURCE'))

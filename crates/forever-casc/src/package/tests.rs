@@ -627,7 +627,7 @@ fn receipt_hash_uses_lowercase_path_identity() {
 }
 
 #[test]
-fn target70374_context_is_linux_db2_only_without_changing_wire() {
+fn target70374_context_is_linux_explicit_db2_or_triple_without_changing_wire() {
     for components in 0..=255 {
         let context = Context {
             build: 70374,
@@ -639,7 +639,7 @@ fn target70374_context_is_linux_db2_only_without_changing_wire() {
         };
         assert_eq!(
             context.validate().is_ok(),
-            cfg!(target_os = "linux") && components == Component::Db2.bit()
+            cfg!(target_os = "linux") && [1, 7].contains(&components)
         );
     }
 }

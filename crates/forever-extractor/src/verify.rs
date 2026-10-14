@@ -107,7 +107,7 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if plan.is_v9() || plan.is_v10() {
+    let verified = if plan.is_gt_cameras() || plan.is_v10() {
         package::verify_with_preflight(
             output,
             expected,
@@ -268,7 +268,9 @@ impl Facts {
                 }
                 if name == "CinematicCamera" && plan.contains(Component::Cameras) {
                     self.camera_source = Some(
-                        if plan.is_v9() {
+                        if plan.is_v11() {
+                            cameras::discover_70374(bytes)?
+                        } else if plan.is_v9() {
                             cameras::discover_with_contract(
                                 cameras::CameraContract::Build70338V1,
                                 bytes,

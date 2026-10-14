@@ -266,7 +266,7 @@ impl LocalStore {
         Self::open_inner(client, options, Some(keys), false)
     }
 
-    /// Narrow Linux product-v10 bootstrap admission for exact build70374.
+    /// Narrow Linux product-v10/v11 bootstrap admission for exact build70374.
     /// Raw FDID reads remain generic authenticated bytes, not a DB2/component
     /// acceptance claim. The product caller must enforce its target catalog.
     #[cfg(target_os = "linux")]

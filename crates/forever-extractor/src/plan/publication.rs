@@ -8,6 +8,7 @@ pub enum PublicationProfile {
     Legacy,
     Build70338Db2GtCamerasV1,
     Build70374Db2OnlyV1,
+    Build70374Db2GtCamerasV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -19,6 +20,11 @@ impl PublicationProfile {
             Self::Build70338Db2GtCamerasV1 => (
                 70338,
                 SchemaCatalog::WowDbDefs70338V1,
+                Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+            ),
+            Self::Build70374Db2GtCamerasV1 => (
+                70374,
+                SchemaCatalog::WowDbDefs70374V1,
                 Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
             ),
             Self::Build70374Db2OnlyV1 => {

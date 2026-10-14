@@ -63,7 +63,7 @@ fn v10_inspect_without_client_has_new_contract_and_target_catalog() {
     assert!(help.status.success());
     let help = String::from_utf8(help.stdout).unwrap();
     assert!(help.contains("Linux v10 is explicit Rust-local build-70374 DB2-only"));
-    assert!(help.contains("v2-v6/v8/v9 client commands require --keys"));
+    assert!(help.contains("v2-v6/v8-v11 client commands require --keys"));
     assert!(help.contains("Windows v10 execution reject"));
     let lab = Lab::new();
     let plan = lab.0.join("plan.tsv");

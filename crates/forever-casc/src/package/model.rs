@@ -62,7 +62,12 @@ impl Context {
             return Err(Error::Context);
         }
         if self.build == 70374
-            && (self.components != Component::Db2.bit() || !cfg!(target_os = "linux"))
+            && (![
+                Component::Db2.bit(),
+                Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+            ]
+            .contains(&self.components)
+                || !cfg!(target_os = "linux"))
         {
             return Err(Error::Context);
         }

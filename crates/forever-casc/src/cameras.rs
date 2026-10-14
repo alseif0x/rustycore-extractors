@@ -75,13 +75,40 @@ pub fn discover_with_contract(
     if metadata.header.layout_hash != SOURCE_LAYOUT {
         return Err("camera_source_schema");
     }
+    discover_table(bytes, table, metadata.header.record_count)
+}
+
+/// Product-v11 supplied-byte discovery only; the caller separately admits build70374.
+/// Standalone camera contracts, options and manifests retain their old admissions.
+pub fn discover_70374(bytes: &[u8]) -> Result<CameraPlan, &'static str> {
+    if bytes.len() > MAX_SOURCE_BYTES {
+        return Err("camera_policy_limit");
+    }
+    let metadata = Metadata::read(&mut Cursor::new(bytes)).map_err(|error| error.code())?;
+    let table = CharacterTable::from_catalog_id(
+        forever_db2::catalog::WOWDBDEFS_70374_CATALOG_ID,
+        "CinematicCamera",
+    )
+    .map_err(|_| "camera_source_schema")?
+    .ok_or("camera_source_schema")?;
+    if metadata.header.layout_hash != SOURCE_LAYOUT {
+        return Err("camera_source_schema");
+    }
+    discover_table(bytes, table, metadata.header.record_count)
+}
+
+fn discover_table(
+    bytes: &[u8],
+    table: CharacterTable,
+    direct_records: u32,
+) -> Result<CameraPlan, &'static str> {
     let (_, file_ids) = DecodedTable::read_with_direct_u32_values(bytes, table, FILE_ID_FIELD)
         .map_err(|error| error.code())?;
     if file_ids.len() > MAX_FILES {
         return Err("camera_policy_limit");
     }
     let facts = DiscoveryFacts {
-        direct_records: metadata.header.record_count,
+        direct_records,
         unique_file_ids: file_ids.len(),
         file_id_set_sha256: file_id_set_hash(&file_ids),
     };

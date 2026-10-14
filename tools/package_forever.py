@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-catalog-source-v10"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-source-v11"
 CONTRACT_MARKDOWN = "contracts/WOWDBDEFS-LICENSE.md"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
@@ -128,7 +128,20 @@ PRODUCT_DB2_CATALOG_SOURCE = (
     "docs/forever-product.md",
     "docs/forever-completion.md",
 )
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE
+PRODUCT_70374_GT_CAMERAS_SOURCE = (
+    "contracts/forever-product-contract-v11.json",
+    "tests/contracts/test_forever_product_v11_contract.py",
+    "tests/contracts/fixtures/forever-product-v11/disabled.tsv",
+    "tests/contracts/fixtures/forever-product-v11/provided.tsv",
+    'contracts/wowdbdefs-70374-v1.json',
+    'crates/forever-db2/src/records/wowdbdefs_70374_generated.rs',
+    'crates/forever-extractor/src/plan/v11_tests.rs',
+    'crates/forever-extractor/src/driver/v11_tests.rs',
+    'crates/forever-extractor/src/verify/tests/v11.rs',
+    'crates/forever-extractor/tests/product_v11_cli.rs',
+    'crates/forever-casc/src/cameras/tests/build70374.rs',
+)
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024

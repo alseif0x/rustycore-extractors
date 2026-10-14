@@ -64,7 +64,7 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v10() {
+    let mut store = if plan.is_v10() || plan.is_v11() {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70374(client).map_err(|e| Error::from(e.code()))?
@@ -106,7 +106,7 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.map_domain.is_some() || plan.is_v9() || plan.is_v10() {
+    if plan.map_domain.is_some() || plan.is_gt_cameras() || plan.is_v10() {
         return Err("product_platform".into());
     }
     #[cfg(windows)]
@@ -418,7 +418,7 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let cap = if plan.is_v9() || plan.is_v10() {
+        let cap = if plan.is_gt_cameras() || plan.is_v10() {
             db2_remaining(total)?
         } else {
             DB2_FILE_BYTES
@@ -466,23 +466,10 @@ fn cameras(product: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), 
         cameras::SOURCE_FILE_ID,
         cameras::MAX_SOURCE_BYTES as u64,
     )?;
-    #[cfg(target_os = "linux")]
-    if product.is_v9() {
-        run.verify_sealed_artifact(&package::Artifact {
-            component: Component::Db2,
-            path: cameras::source_path(product.locale),
-            bytes: source.len() as u64,
-            sha256: integrity::digest(&source),
-        })?;
-    }
-    let plan = if product.is_v9() {
-        cameras::discover_with_contract(cameras::CameraContract::Build70338V1, &source)?
-    } else {
-        cameras::discover(&source)?
-    };
+    let plan = camera_plan(product, run, &source)?;
     let mut total = source.len();
     for &id in plan.file_ids() {
-        let limit = if product.is_v9() {
+        let limit = if product.is_gt_cameras() {
             camera_remaining(total)?
         } else {
             cameras::MAX_FILE_BYTES as u64
@@ -495,6 +482,30 @@ fn cameras(product: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), 
         run.put(Component::Cameras, &cameras::relative_path(id), &bytes)?;
     }
     Ok(())
+}
+
+fn camera_plan(
+    product: &Plan,
+    _run: &mut Run,
+    source: &[u8],
+) -> Result<cameras::CameraPlan, Error> {
+    #[cfg(target_os = "linux")]
+    if product.is_gt_cameras() {
+        _run.verify_sealed_artifact(&package::Artifact {
+            component: Component::Db2,
+            path: cameras::source_path(product.locale),
+            bytes: source.len() as u64,
+            sha256: integrity::digest(source),
+        })?;
+    }
+    let discovered = if product.is_v11() {
+        cameras::discover_70374(source)?
+    } else if product.is_v9() {
+        cameras::discover_with_contract(cameras::CameraContract::Build70338V1, source)?
+    } else {
+        cameras::discover(source)?
+    };
+    Ok(discovered)
 }
 
 fn db2_remaining(total: u64) -> Result<u64, Error> {
@@ -890,3 +901,6 @@ mod disk_admission_tests {
 }
 #[cfg(test)]
 mod v9_tests;
+
+#[cfg(test)]
+mod v11_tests;
