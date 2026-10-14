@@ -1,0 +1,314 @@
+{
+  "contract": "forever-product-v9",
+  "version": 9,
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "builds": [
+    70338
+  ],
+  "locales": [
+    "enUS",
+    "esES"
+  ],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "linux",
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify"
+  ],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "max_db2_entries": 1161,
+    "ordered_keys": [
+      "forever-product",
+      "build",
+      "locale",
+      "index",
+      "root",
+      "schema-catalog",
+      "decryption",
+      "components",
+      "terrain",
+      "pack",
+      "navigation",
+      "big-base-unit",
+      "skip-liquids",
+      "maximum-slope",
+      "non-steep-slope"
+    ],
+    "repeatable_tail": "db2 TAB exact-catalog-name TAB exact-FDID LF; alphabetical names, unique IDs",
+    "components": [
+      "db2",
+      "gt",
+      "cameras"
+    ],
+    "index_layouts": [
+      "contiguous",
+      "paged"
+    ],
+    "root_layouts": [
+      "headerless-18125",
+      "header-30080",
+      "header-50893-v1",
+      "header-50893-v2"
+    ],
+    "selections": [
+      "none"
+    ],
+    "coordinates": "X=column,Y=row; 0..63; canonical unsigned decimal",
+    "slopes": "integer 0..90; non-steep <= maximum; unselected navigation requires 55/55 and false flags",
+    "dependencies": {
+      "cameras": [
+        "db2",
+        "CinematicCamera"
+      ]
+    },
+    "offmesh_connections": "unsupported, including explicit empty capability",
+    "decryption": "required after schema-catalog; disabled or provided-salsa20-v1",
+    "schema_catalog": {
+      "id": "wowdbdefs-70338-v1",
+      "required_build": 70338,
+      "table_count": 1161,
+      "provenance": "contracts/wowdbdefs-70338-v1.json and crates/forever-db2/src/records/wowdbdefs_70338_generated.rs",
+      "source_commit": "d6f50d4f351193e84226aa62a36faa0f58528afa",
+      "source_blob": "8a5d8122f312ae6a9564e8286fdc491831fecc22",
+      "source_sha256": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265",
+      "facts_sha256": "9fb8852f7ec15a5721ff17da4708970eacb54c5e79c4e78703891a2468905405"
+    },
+    "component_scope": "Exactly DB2+all20 GT+complete target direct-row raw camera discovery on build70338; geometry/disk/map-domain/offmesh excluded",
+    "component_mask": 7
+  },
+  "identities": {
+    "plan": "SHA-256 of the complete canonical TSV bytes",
+    "producer": "SHA-256 of loaded /proc/self/exe, max 256 MiB",
+    "source": "SHA-256(forever-logical-collection-v1 NUL + build little-endian u32 + build key + CDN key + locale ASCII + ENCODING content key + ROOT content key)",
+    "source_scope": "authenticated logical collection; not physical archive availability, encryption-key discovery or a complete archive snapshot; every read still requires complete content MD5; provided keys do not change logical content identity; MD5 integrity is not a MAC or trusted provenance",
+    "keys": "Key names, values, counts, hashes and input paths are excluded from CLI JSON, plans, package context and manifests. Capability is bound by the canonical v9 plan SHA-256; actual keyset is physical availability, not logical collection identity.",
+    "schema_catalog": "v9 binds exact target catalog and fixed standalone component identities through explicit typed publication profile/canonical plan SHA; legacy inference and v5 DB2-only remain unchanged"
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2
+  },
+  "limits": {
+    "db2_file_bytes": 16777216,
+    "db2_total_bytes": 17179869184,
+    "db2_target_high_volume": {
+      "profile": "wowdbdefs-70338-high-volume-regular-v1",
+      "catalog": "wowdbdefs-70338-v1",
+      "tables": [
+        "ManifestInterfaceData",
+        "ModelFileData",
+        "WMOMinimapTexture"
+      ],
+      "section_count": 1,
+      "direct_records": 160000,
+      "copy_pairs": 100000,
+      "parent_entries": 160000,
+      "retained_scalar_values": 1250000,
+      "cumulative_utf8_bytes": 67108864
+    },
+    "db2_raw_text_validation": {
+      "catalogs": [
+        "wowdbdefs-70338-v1"
+      ],
+      "sections": "zero or one supported regular section; sparse and multi-section files excluded",
+      "trigger": "strict row decoding reports invalid_record_string, then complete framing validation is repeated",
+      "strings": "field pointers and NUL terminators must be valid; cumulative source bytes stay within the 64 MiB policy; no UTF-8 conversion or decoded rows are returned",
+      "output": "the complete acquired source DB2 bytes are preserved unchanged"
+    },
+    "db2_sparse_parent_raw_validation": {
+      "catalogs": [
+        "wowdbdefs-70338-v1"
+      ],
+      "tables": [
+        "CollectableSourceEncounterSparse",
+        "CollectableSourceQuestSparse",
+        "CollectableSourceVendorSparse"
+      ],
+      "sections": "zero-section empty input or one unencrypted sparse section",
+      "schema": "external catalog IDs, no inline ID, appended parent immediately after physical fields",
+      "parent_block": "bounded count and exact byte length checked; parent ID and record-index associations are not interpreted",
+      "strings": "NUL framing and cumulative source-byte budget checked; no UTF-8 conversion or decoded rows returned",
+      "limits": {
+        "file_bytes": 16777216,
+        "direct_records": 100000,
+        "copy_pairs": 100000,
+        "parent_entries": 100000,
+        "retained_scalar_values": 1000000,
+        "cumulative_string_bytes": 67108864
+      },
+      "output": "complete acquired source DB2 bytes preserved unchanged",
+      "not_claimed": [
+        "strict sparse row materialization",
+        "pinned native C++ sparse parent materialization",
+        "parent association parity"
+      ]
+    },
+    "db2_sparse": {
+      "profile": "bounded production reader subset",
+      "sections": "zero or one unencrypted section",
+      "schema": "external catalog IDs, no inline ID or parent",
+      "fields": "U8/U16/U32/I8/I16/I32/F32 and inline UTF-8 string/string arrays",
+      "direct_records": 100000,
+      "copy_pairs": 100000,
+      "retained_values": 1000000,
+      "cumulative_utf8_bytes": 67108864,
+      "strings": "NUL-terminated within each variable-size sparse record; strict UTF-8",
+      "excluded": [
+        "TACT-encrypted sections",
+        "physical catalog data",
+        "parent data",
+        "inline IDs",
+        "multiple sections"
+      ]
+    },
+    "gt": {
+      "file_bytes": 4194304,
+      "total_bytes": 83886080,
+      "files": 20,
+      "numeric_data_rows": 100000,
+      "numeric_scalar_values_including_zero": 1000000
+    },
+    "cameras": {
+      "source_bytes": 16777216,
+      "file_bytes": 16777216,
+      "unique_ids": 4096,
+      "total_bytes_including_source_once": 268435456,
+      "direct_records": 100000,
+      "copy_pairs": 100000,
+      "scalar_values": 1000000,
+      "before_each_read": "min(file_bytes,total_bytes_including_source_once-source_bytes-actual_camera_bytes); checked subtraction; zero rejects before read/allocation",
+      "verification": "all canonical inventory metadata checked before any artifact payload allocation/hash/read; sum every camera plus preserved source once independent of path order"
+    },
+    "db2_before_read": "v9 min(16MiB,16GiB-actual_selected_bytes); checked subtraction, zero rejects before read/allocation"
+  },
+  "resume": "explicit same-context only; verified sealed components skipped; entire unfinished producer reruns and replays retained artifacts; complete output refuses writes; explicit keys are required and syntax/file admission is repeated on each invocation; a different supplied set is allowed, but every unfinished acquired object must still match the same selected complete CKey; sealed producers are verified and skipped",
+  "verification": {
+    "scope": "artifact_integrity_and_intrinsic_formats",
+    "db2": "exact selected targetcatalog rows and existing v5 complete DB2 validation profiles; no wholecatalog completion claim",
+    "not_claimed": [
+      "complete geometry inventory",
+      "placement or ancestor association proof",
+      "Detour topology",
+      "original C++ byte parity for newly produced worlds",
+      "runtime acceptance",
+      "full real-client extraction",
+      "Windows distribution",
+      "complete DB2 table/section variant coverage",
+      "M2 parsing or waypoint/playback",
+      "rerun original numeric/typed/camera consumers",
+      "new reproducible bundle"
+    ],
+    "gt": "exact all20 catalog names and file caps,14 numeric parsed with fixed accepted policy, six opaque preserved",
+    "cameras": "complete all-inventory preflight including source+camera256MiB then target rediscovery/exact camera ID-name set; opaque bytes, not M2"
+  },
+  "failure": "stable path-free code and component; incomplete outputs retained; no hidden available-prefix, native, network or missing-file fallback",
+  "full_extractor_complete": false,
+  "provided_keys": {
+    "option": "--keys PATH",
+    "required_for": [
+      "extract/resume when decryption=provided-salsa20-v1",
+      "inspect --client when decryption=provided-salsa20-v1"
+    ],
+    "forbidden_for": [
+      "plans with decryption=disabled",
+      "verify",
+      "inspect without --client"
+    ],
+    "input": "explicit regular file, final symlink and special file rejected; read once with metadata identity and extra-byte EOF check",
+    "max_file_bytes": 262144,
+    "max_entries": 4096,
+    "record_format": "forever-tact-keys TAB 1 LF; sorted unique lowercase hex16 u64 name TAB hex32 key LF",
+    "cipher": "Salsa20/20 with 16-byte keys, nonce4/8 padded to8, frame-index little-endian XOR, initial block counter zero",
+    "frames": "one E wrapper around N or strict Z only; mandatory complete content MD5 and encoded frame MD5 where framed",
+    "discovery": false,
+    "built_in_keys": false,
+    "network": false,
+    "source_protection": "canonical key-file source included in protected roots before output writes",
+    "secure_erasure_guaranteed": false
+  },
+  "failure_codes": {
+    "missing_option": "product_keys_required",
+    "v1_option": "product_keys_forbidden",
+    "key_input_prefix": "product_keys_input_",
+    "key_allocation": "product_keys_allocation",
+    "parser_prefix": "tact_keys_",
+    "no_verified_encoding": "local_store_no_verified_encoding",
+    "key_source_output_overlap": "package_path"
+  },
+  "failure_envelope": "forever-product-v9 after valid plan admission; generic CLI/plan failures retain forever-product-v1; all errors path-free",
+  "scope": "Explicit Linux build70338 bounded DB2+GT+raw-camera publication/recovery; not full catalog, geometry/world, playback/server or full Linux completion.",
+  "publication_profile": "Build70338Db2GtCamerasV1",
+  "fixed_components": {
+    "gt": {
+      "profile": "gt-catalog-70338-v1",
+      "contract": "contracts/forever-gt-contract-v4.json",
+      "contract_sha256": "9da344ce4df5674342a44bf41cf5852dd25e6a115f0b17ed089531d6545fdf6d",
+      "catalog": "contracts/forever-gt-catalog-v1.json",
+      "catalog_sha256": "45fbc37f023eb54d71e1e47ab2fe252fabb139a5c923e25b1f9244399c29fec4",
+      "files": 20,
+      "numeric_files": 14,
+      "raw_only_files": 6,
+      "numeric_policy": "finite_decimal_f64_to_f32_v1"
+    },
+    "cameras": {
+      "profile": "camera-raw-70338-v1",
+      "contract": "contracts/forever-camera-contract-v3.json",
+      "contract_sha256": "75d0b0b8b80c5adee11d7c11612c3e6adc5494959a08cbc78b9d126e18be4351",
+      "schema_catalog": {
+        "id": "wowdbdefs-70338-v1",
+        "source_commit": "d6f50d4f351193e84226aa62a36faa0f58528afa",
+        "source_manifest_blob": "8a5d8122f312ae6a9564e8286fdc491831fecc22",
+        "source_manifest_sha256": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265",
+        "facts_sha256": "9fb8852f7ec15a5721ff17da4708970eacb54c5e79c4e78703891a2468905405",
+        "table_hash": 3268345337,
+        "layout_hash": 2348643627,
+        "file_data_id": 1294214,
+        "physical_field": 3,
+        "field_name": "FileDataID",
+        "field_type": "u32",
+        "file_field_count": 5,
+        "decoded_scalar_count": 7,
+        "external_id": true,
+        "definition_path": "definitions/CinematicCamera.dbd",
+        "definition_blob": "3676f4e583d5c53c4eda065db9c322f9d45921f0",
+        "definition_sha256": "21f07cf5a2cdba30bec06895cb68e7467b58ab20cbee474f256473d2f70ca9d6"
+      }
+    }
+  },
+  "nonempty_artifacts": {
+    "required": true,
+    "producer_error": "product_file_limit",
+    "verifier_error": "product_empty_artifact",
+    "valid_zero_camera_set": "nonempty complete zero-row DB2 succeeds, seals camera component with no camera artifacts/directory required",
+    "standalone_opaque_empty_admission_transferred": false
+  },
+  "published_camera_source": {
+    "path": "dbc/<locale>/CinematicCamera.db2",
+    "fdid": 1294214,
+    "comparison": "bounded complete reread length+SHA256 compared to existing sealed Db2 Artifact/receipt/payload via comparison-only Run::verify_sealed_artifact; no publish/lookup/replay acknowledgement",
+    "order": "after DB2 publication/seal or resume skip, before target discovery and any camera dependency",
+    "missing_or_mismatch": "fatal existing package proof code; Run poisoned; no camera seal/later reads",
+    "offline_discovery": "CameraContract::Build70338V1 over the same preserved source; direct field3 before copies/zeros retained/dedup unsignedorder"
+  },
+  "admission": "typed profile only; plan/platform/keyoption admission before client/output; bounded clientbuild gate before LocalStore bootstrap; observed openedbuild must still match",
+  "legacy_preservation": {
+    "canonical_versions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8
+    ],
+    "v5": "70338 DB2-only unchanged",
+    "v7": "reserved deferred Windows draft",
+    "schema_catalog_does_not_select_v9": true
+  }
+}

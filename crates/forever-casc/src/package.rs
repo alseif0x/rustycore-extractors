@@ -21,7 +21,7 @@ use std::{
 mod disk;
 mod model;
 #[cfg(target_os = "linux")]
-pub use disk::{Put, Run, verify, verify_with};
+pub use disk::{Put, Run, verify, verify_with, verify_with_preflight};
 #[cfg(windows)]
 pub mod windows;
 pub use model::{Artifact, Component, Context, Limits, Summary};

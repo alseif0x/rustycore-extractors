@@ -20,6 +20,7 @@ fn build_70338_entry(name: &str) -> Entry {
 }
 fn subset() -> Plan {
     Plan {
+        publication_profile: crate::plan::PublicationProfile::Legacy,
         build: 70205,
         schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
         locale: Locale::EsEs,

@@ -66,6 +66,7 @@ fn entry(name: &str) -> Entry {
 }
 pub(super) fn db2_plan() -> Plan {
     Plan {
+        publication_profile: crate::plan::PublicationProfile::Legacy,
         build: 70205,
         schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
         decryption: crate::plan::Decryption::Disabled,
@@ -814,3 +815,5 @@ fn v6_empty_connections_and_legacy_accept_the_existing_complete_empty_world() {
         assert_eq!(verify(&plan, &lab.output(), None).unwrap(), summary);
     }
 }
+#[cfg(target_os = "linux")]
+mod v9;

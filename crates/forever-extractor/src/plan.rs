@@ -4,6 +4,8 @@ use forever_casc::{Locale, local_index, package::Component, root};
 use forever_db2::catalog;
 use std::{collections::BTreeSet, fmt::Write};
 
+mod publication;
+pub use publication::PublicationProfile;
 mod disk;
 pub use disk::{CollisionStorage, DiskBudget};
 mod offmesh;
@@ -110,6 +112,8 @@ impl Selection {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Plan {
+    /// Explicit component publication contract; old plans retain capability inference.
+    pub publication_profile: PublicationProfile,
     pub build: u32,
     pub schema_catalog: SchemaCatalog,
     pub locale: Locale,
@@ -156,6 +160,7 @@ impl Plan {
             "5" => 5,
             "6" => 6,
             "8" => 8,
+            "9" => 9,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -181,7 +186,7 @@ impl Plan {
                 "wowdbdefs-70205-v1" => SchemaCatalog::WowDbDefs70205V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            5 => match field(&mut lines, "schema-catalog")? {
+            5 | 9 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -193,7 +198,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8 => match field(&mut lines, "decryption")? {
+            3..=6 | 8 | 9 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -270,6 +275,11 @@ impl Plan {
             });
         }
         let plan = Self {
+            publication_profile: if version == 9 {
+                PublicationProfile::Build70338Db2GtCamerasV1
+            } else {
+                PublicationProfile::Legacy
+            },
             build,
             schema_catalog,
             locale,
@@ -298,6 +308,7 @@ impl Plan {
 
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
+        self.publication_profile.validate(self)?;
         map_domain::validate(self)?;
         if let Some(connections) = &self.offmesh {
             if self.schema_catalog != SchemaCatalog::PinnedMetadataV1
@@ -324,7 +335,10 @@ impl Plan {
         {
             return Err("product_plan_schema_catalog");
         }
-        if self.build == 70338 && self.components != Component::Db2.bit() {
+        if self.publication_profile == PublicationProfile::Legacy
+            && self.build == 70338
+            && self.components != Component::Db2.bit()
+        {
             return Err("product_plan_component_scope");
         }
         if self.components == 0 || self.components & !63 != 0 {
@@ -414,6 +428,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v9() {
+            return 9;
+        }
         if self.map_domain.is_some() {
             return 8;
         }
@@ -435,6 +452,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v9() {
+            return "forever-product-v9";
+        }
         if self.map_domain.is_some() {
             return "forever-product-v8";
         }
@@ -453,6 +473,13 @@ impl Plan {
             Decryption::Disabled => "forever-product-v1",
             Decryption::ProvidedSalsa20V1 => "forever-product-v2",
         }
+    }
+
+    pub const fn is_v9(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70338Db2GtCamerasV1
+        )
     }
 
     pub const fn requires_keys(&self) -> bool {
@@ -484,7 +511,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8 | 9, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -557,3 +584,5 @@ mod disk_tests;
 mod map_domain_tests;
 #[cfg(test)]
 pub(crate) mod offmesh_tests;
+#[cfg(test)]
+mod v9_tests;

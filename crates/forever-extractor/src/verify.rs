@@ -22,9 +22,16 @@ use std::{
 
 #[cfg(test)]
 mod tests;
+#[cfg(target_os = "linux")]
+mod v9;
 
 #[cfg(target_os = "linux")]
 pub mod links;
+
+#[cfg(target_os = "linux")]
+type ArtifactReader<'a> = &'a mut std::fs::File;
+#[cfg(not(target_os = "linux"))]
+type ArtifactReader<'a> = &'a mut (dyn Read + 'a);
 
 #[derive(Clone, Copy)]
 enum Scope {
@@ -70,7 +77,7 @@ fn verify_inner(
     #[cfg(not(target_os = "linux"))]
     let _ = scope;
     let mut failure = None;
-    let summary = package::verify_with(output, expected, limits, |artifact, file| {
+    let inspect = |artifact: &Artifact, file: ArtifactReader<'_>| {
         let mut bytes = Vec::new();
         let result = (|| {
             bytes
@@ -94,8 +101,32 @@ fn verify_inner(
             failure = Some(error);
             package::Error::Schema
         })
-    })
-    .map_err(|e| failure.unwrap_or_else(|| e.into()))?;
+    };
+    #[cfg(target_os = "linux")]
+    let mut metadata_failure = None;
+    #[cfg(target_os = "linux")]
+    let verified = if plan.is_v9() {
+        package::verify_with_preflight(
+            output,
+            expected,
+            limits,
+            |artifacts| {
+                v9::admit_metadata(plan, artifacts).map_err(|error| {
+                    metadata_failure = Some(error);
+                    package::Error::Schema
+                })
+            },
+            inspect,
+        )
+    } else {
+        package::verify_with(output, expected, limits, inspect)
+    };
+    #[cfg(not(target_os = "linux"))]
+    let verified = package::verify_with(output, expected, limits, inspect);
+    #[cfg(target_os = "linux")]
+    let summary = verified.map_err(|e| metadata_failure.or(failure).unwrap_or_else(|| e.into()))?;
+    #[cfg(not(target_os = "linux"))]
+    let summary = verified.map_err(|e| failure.unwrap_or_else(|| e.into()))?;
     let context = summary.context;
     if context.build != plan.build
         || context.locale != plan.locale
@@ -229,7 +260,18 @@ impl Facts {
                     }
                 }
                 if name == "CinematicCamera" && plan.contains(Component::Cameras) {
-                    self.camera_source = Some(cameras::discover(bytes)?.file_ids().clone());
+                    self.camera_source = Some(
+                        if plan.is_v9() {
+                            cameras::discover_with_contract(
+                                cameras::CameraContract::Build70338V1,
+                                bytes,
+                            )?
+                        } else {
+                            cameras::discover(bytes)?
+                        }
+                        .file_ids()
+                        .clone(),
+                    );
                 }
                 self.db2.insert(name.into());
             }

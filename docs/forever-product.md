@@ -1,4 +1,4 @@
-# Forever product interface: v1–v6 and Linux v8
+# Forever product interface: v1–v6 and Linux v8–v9
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -16,7 +16,10 @@ The separate [v2 contract](../contracts/forever-product-contract-v2.json) admits
 explicitly supplied Salsa20 keys under the bounded profile described below.
 The [v6 contract](../contracts/forever-product-contract-v6.json) adds explicit
 inline off-mesh navigation connections to the legacy pinned metadata profile
-for builds 70170/70205. It does not extend build 70338 beyond v5's DB2 scope.
+for builds 70170/70205. V6 does not extend build 70338. The separate Linux
+[v9 contract](../contracts/forever-product-contract-v9.json) admits exactly
+DB2, GT and raw cameras on build 70338; its bounded real acceptance is recorded
+below. V5 remains DB2-only, and 70338 geometry remains unaccepted.
 
 ## Build and inspect
 
@@ -63,7 +66,8 @@ Existing component CLIs, schemas and acquisition defaults remain separate.
 ## Select components and dependencies
 
 Component order is `db2,gt,cameras,maps,vmaps,mmaps`. Select a comma-separated
-subsequence explicitly. GT selects all 20 files (14 numeric and six raw-only).
+subsequence explicitly for legacy v1–v6/v8 plans. Linux v9 requires exactly
+`db2,gt,cameras`. GT selects all 20 files (14 numeric and six raw-only).
 Cameras requires selected DB2 and its `CinematicCamera` entry. Its source remains
 in `dbc/<locale>/`; the discovered complete opaque camera files go in `cameras/`.
 No M2/waypoint parsing is added.
@@ -688,7 +692,8 @@ adds product plan v8 for Linux, builds 70170/70205 and the pinned metadata
 catalog. It requires the existing leased disk collision profile, DB2/terrain/
 collision components and a complete published `Map` DB2. V1–v6 canonical bytes,
 hashes and execution semantics remain unchanged; v7 is reserved by the deferred
-Windows draft. Build 70338 remains DB2-only under v5.
+Windows draft. This v8 checkpoint leaves build 70338 DB2-only under v5;
+the subsequent v9 profile below separately admits DB2/GT/cameras.
 
 After the existing disk-budget fields, v8 declares these canonical fields:
 
@@ -758,3 +763,152 @@ explicit v6 closure references, recovery equality and retained legacy golden
 artifacts. Its guarded reports and unsuccessful earlier attempts are recorded
 in [the completion evidence](forever-completion.md). No new distribution bundle
 or real-client/full-world/runtime completion is established by this step.
+
+
+## Linux build-70338 DB2/GT/camera product v9 — 2026-10-14
+
+Issue #48 adds `PublicationProfile::Build70338Db2GtCamerasV1`, with explicit
+plan/contract v9, build 70338, `wowdbdefs-70338-v1` and exactly
+`components=db2,gt,cameras`. The canonical
+[disabled-key example](../tests/contracts/fixtures/forever-product-v9/disabled.tsv)
+selects public `CinematicCamera` FDID 1294214. The DB2 selection must be nonempty,
+canonical, at most 1,161 entries, and include that source. GT selects the fixed
+`gt-catalog-70338-v1` twenty-file catalog; cameras use `camera-raw-70338-v1`.
+Locale, ROOT/index layouts and decryption policy remain explicit. Both existing
+`disabled` and `provided-salsa20-v1` policies are admitted by source/tests;
+the new real campaign uses **disabled only**. No automatic selection, geometry,
+disk-world/map-domain/off-mesh profile, fallback or increased cap is admitted.
+
+Execution is serial DB2 → GT → cameras. Before discovery or camera dependencies,
+a bounded reread must match the already published, sealed DB2 source, including
+when resume skips completed DB2. `Run::verify_sealed_artifact` checks the rooted
+seal, receipt, hash, EOF, state and name identity without publishing or changing
+transaction/counter state; failures poison the run. Publication through `put`
+is not a read-only source proof. Package verification preflights the complete
+canonical manifest/receipt/seal metadata and inventory budgets before the first
+artifact payload read/hash/buffer, independent of path order.
+
+DB2 admits at most 16 MiB per file and the existing 16 GiB total; GT at most
+4 MiB per file / 80 MiB total. Camera discovery admits a 16 MiB source,
+4,096 IDs, 16 MiB per camera and 256 MiB total including the source exactly once.
+These are admission/work limits, not RSS or physical-I/O measurements.
+Artifacts remain complete and nonempty. A complete nonempty DB2 with zero rows
+can yield zero cameras without creating a camera directory; the standalone
+empty-directory rule is not transferred. Final package manifest v1 and Linux
+recovery state v2 are unchanged. Legacy v1–v6/v8 identities, canonical bytes,
+errors and build gates remain; v5 is still 70338 DB2-only and v7 remains reserved
+for its separate Windows work.
+
+### Corrected producer and executed acceptance
+
+The initial implementation `2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba` passed
+its own synthetic and real campaigns; those immutable receipts remain historical.
+The corrected functional commit is `6f39cc0f10c0b3c35cd824bb7d2035ebe7157343`,
+tree `49d53dff59fe5bef0cd30561c74f00a602fb6fcd`. Its local binaries compiled base
+`a4ad23af04b9d297f4da6d99ab5fb441169387bb` plus two reviewed source/test changes
+before the corrected commit. Exact Git-blob binding matches **665 files /
+15,532,624 bytes**, including the 453-file Rust/Cargo subset. This is source
+equality, not recompilation at that commit. Metadata-only checkout commit
+`2119a23024607c590ccd266a140d5a1571d24414` preserves all 665 Git entries/current
+bytes and both binaries; subsequent three-file documentation changes do not
+rebuild them. Fresh campaigns below bind the corrected binaries independently.
+
+The first hosted head failed Windows compilation because the shared inspector
+selected `File` while the Windows callback requires bounded `dyn Read`.
+The correction selects the exact borrowed type/lifetime per platform; Linux
+still uses `File`, with unchanged inspector body, calls, limits and format scope.
+The next Windows read-consumer job failed nine canonical TSV fixture tests.
+Local Git filtering with `core.autocrlf=true` reproduced 318 bytes / 16 CRLFs
+instead of the canonical 302-byte LF fixture. Hosted fixture bytes were not
+directly measured. Pinning `*.tsv text eol=lf` preserves parser strictness;
+all six existing hosted checks pass at `2119a23`. Final documentation has its
+own exact-head CI gate. This repairs inherited checks without extending Windows
+product development.
+
+The final complete eight-command validation passes debug and release workspace
+runs, each **2,917 tests / 26 normally ignored / 45 targets**, all-target Clippy,
+format, 347 source contracts, distribution checks (162 pass / one skip), and
+both product builds. The focused package filter passes 127 tests per profile, with three historical
+ignored tests, including 12 new passing cases; product tests number 281 library
+plus five CLI, including 20 new library cases. Eight new formal contract methods are included. No new bundle was built
+and normally ignored corpora were not rerun. The retained first workspace attempt
+is globally failed: two old structural assertions failed after five commands;
+distribution/final builds did not run. Two Python-test-only fixes preserve all
+453 runtime files byte-for-byte at that repair; all eight commands then ran anew.
+After the callback correction, the complete eight-command validation runs again
+as `workspace-attempt3`, with new debug/release binaries and independent QA.
+
+The corrected-binary synthetic campaign runs 78 commands: 30 successful, 44 expected
+exit-9 negatives and four deliberate SIGKILL cuts. Its 32 owned output views
+contain **eight positive complete packages and 24 negative copies**. Six positive
+clean/resumed views contain 31 authored data files / 2,022 bytes each; two valid
+empty-camera views contain 21 files. Both profiles cover clean extraction,
+verification, GT/camera interrupted resume, sealed-source mismatches, wrong
+plan/producer, complete/existing outputs and malformed/budget/inventory rejection.
+All 2,463 frozen files / 269 directories and exact path sets pass the terminal
+audit. The outer controller was captured only by the tool console, without
+persisted raw outer stdout/stderr; no separate outer-stderr-zero claim is made.
+All 78 child outputs/results/traces are retained. The terminal auditor has its
+own private output capture; that is a separate invocation.
+
+The corrected-binary real 70338/esES campaign runs **26 commands: 22 successful and four
+intentional SIGKILL cuts**, without retry or recalibration. Debug and release each
+produce a clean package, a GT-interrupted/resumed package and a camera-interrupted/
+resumed package: **six complete packages, each 31 data files / 165,507 bytes**.
+Each contains twenty GT files / 138,537 bytes, one CinematicCamera DB2 / 674 bytes
+and ten opaque cameras / 26,296 bytes. All payload bytes and complete inventories
+match the immutable previously accepted 70338 component oracles. Within each
+profile final manifest bytes and DB2 seals are identical; across profiles the
+manifest differs only in producer SHA. All 628 frozen files / 49 directories,
+980 source/tool/evidence guards and 38 declared aliases pass independent terminal
+review. Both raw outer streams were captured from process start: stdout 3,542
+bytes, stderr zero. The final review accepts only this bounded real publication
+scope. Source-only dependency admission has 962 guards / 38 aliases; the real
+admission preserves them and adds 18 metadata guards, including bounded
+`.build.info`. Root, prelaunch QA and terminal-auditor metadata reads have
+separate scopes and are not all CLI/store reads.
+
+The historical native whole-byte/CKey, numeric GT, public GT-loader and original
+camera-discovery acceptance supplies the immutable oracles; those consumers were
+**not rerun** by this product campaign. No client keys were read. IPv4/IPv6 denial
+probes execute in child preexec before tracing; consumer traces show zero network
+calls (synthetic: 72 empty plus six fsync/cut/calibration traces; real: 22 empty
+plus four fsync/cut traces). This is not a global zero-socket claim. All owned
+process groups are absent after completion. Metadata admission/audit reads and
+published-artifact counts do not measure CASC requests, acquisitions or OS I/O.
+
+Private evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-product-20261014-21a1dvjx/`.
+Only aggregate results and receipt identities are public; client artifacts,
+private camera identifiers, per-file content hashes and correlations stay local.
+
+| Receipt (relative to evidence root) | SHA-256 |
+| --- | --- |
+| `impl/source-v4/freeze.json` | `e76378921f3183d72e68ac7f58c6fdf1cff3c0c0133a897eb1c3e1ff7d6967c4` |
+| `impl/workspace-attempt1/validation-report.json` (failed) | `af352a6e19562f9720ccde83b63ef97d5edf99028fe9a3810094c4f0a1794ac5` |
+| `impl/workspace-attempt3/validation-report.json` | `9b99c951f5decf55191ca5409e297e1a0ce1f1fd08c929c7be9d0730dc351a0d` |
+| `impl/workspace-attempt3/producer.json` | `02b7dd360655d62ce76deaffdbf92cecee11dae6d35e7535a7ce108824b9f5c3` |
+| `root/functional-binding-corrected-v1.json` | `7671830e85d5bb46da6c647fa380e4566cfc607b0b7fbb64dec77a393c60beb7` |
+| `qa/review/workspace-validation-review-v2.json` | `88c615cab5e7dc91eca5f3a3809d214dc2549df72d80d1f6d424a41093942249` |
+| `qa/review/functional-binding-review-v2.json` | `6c4a8fc60f50ca8c229cec31dc5b0585c80885e7d48dfe9c7d4acd6432c0c12a` |
+| `root/checkout-policy-commit-binding-v1.json` | `f189173b613ad6ecd4acf44f412eca633a0a6fd0f714c8d1bfda50ce9d52dd63` |
+| `synthetic-attempt2/acceptance.json` | `97cc91b21e80f71ed774566948390a8c2c1d932651b142ebffca8ebf4d9d3282` |
+| `synthetic-attempt2/evidence-freeze.json` | `6f68154fe6c16f3a525797db3969d117bfbaa3c6bf7304c86f3b7137b4526c9a` |
+| `qa/synthetic-terminal-audit-v2.json` | `dea41d7a9263a754e84184773057c29b21c1bdcd17eacbb082f32938314979a5` |
+| `qa/review/synthetic-terminal-review-v2.json` | `2121bce370874e959ff0720ee833e1814c9d1f335440991f733bb212aab2e38e` |
+| `real-attempt2/acceptance.json` | `a98f4e6912399bfaa11ca0b361f5d80564759cc95068478236577804d1ff2ab4` |
+| `real-attempt2/evidence-freeze.json` | `5592709e6ef3a2b1547238b23f83ba8e643a07296e95d08c45c28b0c09908b06` |
+| `qa/real-terminal-audit-v2.json` | `070921412b7b31081cb4255093ebe81655e286eb4b5e3446f404bea52ef0894d` |
+| `qa/review/final-real-review-v2.json` | `7a9573cea434ef1fe61bd32d6359eed4023158c020e2118a321efd83745d22a2` |
+
+This closes explicit Linux 70338 DB2/GT/raw-camera publication and recovery for
+the bounded real selection. It does not accept the full catalog, geometry,
+full-world resources, M2/waypoints/playback, server runtime, Windows product or
+a new reproducible distribution. The historical 83 unavailable catalog entries
+and Map/GameObject dependencies remain recorded gaps, without a new survey here.
+
+The initial producer's accepted real review remains at
+`qa/review/final-real-review-v1.json`, SHA-256
+`54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
+Its earlier campaigns and failed local/hosted attempts remain immutable; their
+acceptance is not substituted for the corrected-producer evidence above.
