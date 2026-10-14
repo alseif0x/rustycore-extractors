@@ -2,9 +2,9 @@
 
 This is the completion checklist for the operator's goal, **complete the Rust
 extractor for WoW Forever**. Passing a bounded DB2 batch does not complete this
-goal. The first full local acceptance target is the authorized `1.60.1.70205`
-client. Build `70170` requires its own evidence; admission of either build is
-not a compatibility result.
+goal. The initial full local acceptance target was the authorized `1.60.1.70205`
+client. Build `70170` and subsequent explicit build profiles require their own
+evidence; admission of a build is not a compatibility result.
 
 The reference is TrinityCore commit
 `02245dcd245e7433e524577656177723d3e4992e`. The legacy programme in issue #13
@@ -20,10 +20,14 @@ a later delivery, preserved in deferred draft PR #27. Historical cross-platform
 requirements below do not make Windows a prerequisite for the Linux milestone.
 Completed, validated implementations merge into `forever`; their feature branches
 are deleted while pending source and the legacy version line remain preserved.
-The installed authentic source currently retains build 70338 (and Classic 70003)
-configurations, not the earlier 70205 configuration. Historical 70205 evidence
-remains valid for its recorded source; it cannot reopen that source now.
-Linux product v9 explicitly integrates 70338 DB2/GT/raw cameras. Its current
+Bounded current `.build.info` reads declare build 70374 and Classic 70003;
+this does not authenticate a game PE or complete installed assets. Historical
+70205 and 70338 evidence remains tied to its recorded sources.
+Linux product v10 separately admits 70374 DB2 only. Four real esES TACT views
+each contain two files / 4,292 bytes, with 266 exact Python/Rust rows per profile.
+Its startup selection fails at GameObjectDisplayInfo; Map is not reached.
+Full catalog, geometry/runtime and a new v10 package remain gates.
+Linux product v9 explicitly integrates 70338 DB2/GT/raw cameras. Its prior
 local bundle passes reproducible packaging and 260 shipped/moved-rebuilt
 synthetic methods; the subsequent 26-call real campaign closed with six exact
 31-file views, with final independent REAL QA `passed`.
@@ -3931,3 +3935,37 @@ launcher build observation remains metadata only. Production source,
 product admission and the frozen bundle are unchanged; these two documentation
 appendices are not rebuilt. Full catalog, Map/GameObject, geometry/world and
 RustyCore runtime gates remain; Windows stays deferred.
+
+## Explicit Linux 70374 DB2 product acceptance — 2026-10-14
+
+Issue #56 adds plan/contract v10, explicit Linux Rust-local 70374 acquisition,
+DB2-only resident mask 1 and the independently pinned 1,161-schema
+`wowdbdefs-70374-v1` catalog. Existing key policies and legacy build gates remain.
+Compiled source `52db8418587d6db2994bb91137aee11a67d5d6e8` binds 708 selected
+files / 18,552,341 bytes. Debug/release each pass 2,951 tests / 26 normally ignored
+/ 46 targets; Clippy, format, 355 contracts, 162 distribution checks plus one skip,
+catalog regeneration and both builds pass. Eighty-two authored CLI outcomes
+include four cuts, both toy key policies and exact clean/resumed bytes.
+
+Real 70374/esES acceptance passes 25 outcomes, including two calibrated cuts.
+Four complete TACT views each retain two files / 4,292 bytes; four private
+Rust/Python comparisons match 69+197 rows, 266 per profile. The separate startup
+diagnostic has three failed acquisitions: native reports a complete-read failure,
+and Rust debug/release report `local_store_no_verified_encoding`.
+GameObjectDisplayInfo is first and fails; Map is not reached. No complete startup
+manifest or native output exists. This accepts no available prefix.
+
+The first whole real campaign remains failed at its trace-auditor marker rule.
+V5 fixes that audit and records wrapper argv without changing producers; four
+authored audit controls pass. The explicit fresh repeat and startup diagnostic
+bound native calls to three / 96 MiB required source bytes including the failed
+call, preserving 16 MiB/file and 32 MiB/selection; these are not physical I/O/RSS.
+Its historical external launcher source transition is documented separately.
+Final independent real QA is `passed-bounded-tact-positive-and-startup-negative`,
+with no findings, receipt SHA-256
+`fb1008dd5cc6c697b787c5f3d466ec07ee46cdfeabb45ff45017015e457d0b0c`.
+
+See [product evidence](forever-product.md#explicit-linux-70374-db2-product-v10--2026-10-14).
+Full catalog, real geometry/world resources, game/PE authentication, RustyCore
+runtime and a new reproducible v10 Linux bundle remain open. Windows stays
+deferred in draft PR #27. This does not complete the extractor goal.
