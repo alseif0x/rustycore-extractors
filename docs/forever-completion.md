@@ -4124,3 +4124,25 @@ diagnostic and matching-only coverage are the proposed next bounded gates;
 historical 70338 and Map/GameObject observations do not transfer. Full catalog,
 real geometry/world extraction, runtime and publication remain open; Windows
 stays deferred. See [product evidence](forever-product.md#complete-70374-db2-catalog-first-attempt-rejected--2026-10-14).
+
+The subsequent singleton observer passes seven source/build qualification commands
+and 29 authored controls, then performs one actual Achievement/esES request.
+The read reports error 1005 and one causal last missing name, with zero complete
+files/bytes; matching coverage remains pending. Native built-in keys are separate
+from the disabled-key product baseline. The first root handoff fails before any
+native launch because of historical checkout guards; corrected immutable-source
+binding preserves that failure without rebasing hashes. The actual call closes
+guards/group/empty trace and unchanged bounded metadata. This does not recover
+the file or establish full-frame key coverage, error-category parity or full
+extraction. Receipt hashes and scope are in the product evidence above.
+
+Matching-only coverage subsequently passes its 28 authored methods and the one
+actual private comparison: the observed needed name is absent from the retained
+116-entry local and 19,685-entry public sets; 116 identical pairs collapse and
+zero exports follow. Source proofs, closing checks, empty trace and group close; independent terminal
+review passes without findings (`9e5824483ae38dff337cadb55b4ed69e8253d2a971210da60eba45c53145b740`).
+No native/CASC/product calls, cache/Lookup rereads, supplied-key retry or
+full-catalog acceptance follow. The next proposed diagnostic is a finite
+all-catalog availability census with one admitted Rust-local store, whose exact
+source/resource plan still requires review. It cannot publish an available
+prefix or repair the first blocker. The extractor goal stays active.

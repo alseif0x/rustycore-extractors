@@ -60,9 +60,18 @@ fails at Achievement acquisition (`local_store_no_verified_encoding`). Both
 offline verifiers reject the incomplete output: two provisional files / 512
 bytes, no DB2 seal or manifest, no accepted prefix or retry. Independent negative
 terminal QA passes (`e30de1a7399629055316b0e1d95ea9e545d750cb29da61e4fa221556fff03d17`).
-Public plan order/metadata identifies the input; encryption/key causality is
-not established. A source-bound singleton diagnostic and matching-only coverage
-remain separate proposed gates. Full catalog and the extractor goal stay open.
+Public plan order/metadata identifies the input; the generic product error alone
+does not establish encryption. A subsequent source-bound singleton native read
+reports error 1005 and one causal last missing name, with zero complete files.
+Seven qualification commands/29 controls and independent source/build QA pass.
+The initial root handoff fails before launch; corrected immutable-source binding
+preserves that failure. Matching-only coverage then finds no match for the
+observed name in the retained 116 local/19,685 public entries, with 116
+identical pairs collapsed and zero exports; 28 authored controls pass. No
+supplied-key/full-catalog retry follows. The native built-in-key baseline does
+not establish product/category parity or all-frame coverage. A bounded
+diagnostic-only catalog availability census is the next proposed readiness step,
+subject to source/resource review. Full catalog and the extractor goal stay open.
 See `docs/forever-product.md`; Windows remains deferred.
 
 Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
