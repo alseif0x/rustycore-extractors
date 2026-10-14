@@ -1,3 +1,4 @@
-# Pinned JSON facts and authored fixtures are hashed as exact UTF-8 bytes.
+# Pinned JSON facts and canonical TSV fixtures use exact UTF-8 bytes.
 # Keep checkout bytes stable across Linux and Windows (core.autocrlf included).
 *.json text eol=lf
+*.tsv text eol=lf
