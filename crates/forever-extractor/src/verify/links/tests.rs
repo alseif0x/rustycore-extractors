@@ -10,6 +10,7 @@ use std::{
 
 fn plan(selection: Selection) -> Plan {
     Plan {
+        publication_profile: crate::plan::PublicationProfile::Legacy,
         build: 70205,
         schema_catalog: crate::plan::SchemaCatalog::PinnedMetadataV1,
         decryption: crate::plan::Decryption::Disabled,

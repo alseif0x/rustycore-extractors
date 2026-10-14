@@ -54,6 +54,10 @@ fn open_inner(
 ) -> Result<LocalStore, Error> {
     admit(plan)?;
     validate_keys(plan, keys.is_some())?;
+    if plan.is_v9() && forever_casc::admit(client).map_err(|e| Error::from(e.code()))? != plan.build
+    {
+        return Err("product_build_mismatch".into());
+    }
     let options = OpenOptions {
         locale: plan.locale,
         index_layouts: [plan.index_layout; 16],
@@ -83,7 +87,7 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.map_domain.is_some() {
+    if plan.map_domain.is_some() || plan.is_v9() {
         return Err("product_platform".into());
     }
     #[cfg(windows)]
@@ -393,7 +397,12 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let bytes = read(store, entry.id, DB2_FILE_BYTES)?;
+        let cap = if plan.is_v9() {
+            db2_remaining(total)?
+        } else {
+            DB2_FILE_BYTES
+        };
+        let bytes = read(store, entry.id, cap)?;
         total = total
             .checked_add(bytes.len() as u64)
             .filter(|n| *n <= DB2_TOTAL_BYTES)
@@ -412,7 +421,11 @@ fn db2(
     }
     Ok(())
 }
-fn game_tables(store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+fn game_tables(plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+    if plan.is_v9() {
+        forever_casc::gametables::contract::CatalogContract::Build70338V1
+            .admit_build(plan.build)?;
+    }
     for table in gt::Table::ALL {
         let bytes = read(
             store,
@@ -426,16 +439,34 @@ fn game_tables(store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
     }
     Ok(())
 }
-fn cameras(store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+fn cameras(product: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
     let source = read(
         store,
         cameras::SOURCE_FILE_ID,
         cameras::MAX_SOURCE_BYTES as u64,
     )?;
-    let plan = cameras::discover(&source)?;
+    #[cfg(target_os = "linux")]
+    if product.is_v9() {
+        run.verify_sealed_artifact(&package::Artifact {
+            component: Component::Db2,
+            path: cameras::source_path(product.locale),
+            bytes: source.len() as u64,
+            sha256: integrity::digest(&source),
+        })?;
+    }
+    let plan = if product.is_v9() {
+        cameras::discover_with_contract(cameras::CameraContract::Build70338V1, &source)?
+    } else {
+        cameras::discover(&source)?
+    };
     let mut total = source.len();
     for &id in plan.file_ids() {
-        let bytes = read(store, id, cameras::MAX_FILE_BYTES as u64)?;
+        let limit = if product.is_v9() {
+            camera_remaining(total)?
+        } else {
+            cameras::MAX_FILE_BYTES as u64
+        };
+        let bytes = read(store, id, limit)?;
         total = total
             .checked_add(bytes.len())
             .filter(|n| *n <= cameras::MAX_TOTAL_BYTES)
@@ -443,6 +474,23 @@ fn cameras(store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
         run.put(Component::Cameras, &cameras::relative_path(id), &bytes)?;
     }
     Ok(())
+}
+
+fn db2_remaining(total: u64) -> Result<u64, Error> {
+    DB2_TOTAL_BYTES
+        .checked_sub(total)
+        .map(|n| n.min(DB2_FILE_BYTES))
+        .filter(|n| *n != 0)
+        .ok_or_else(|| Error::from("product_db2_total_limit"))
+}
+
+fn camera_remaining(total: usize) -> Result<u64, Error> {
+    cameras::MAX_TOTAL_BYTES
+        .checked_sub(total)
+        .map(|remaining| remaining.min(cameras::MAX_FILE_BYTES))
+        .filter(|remaining| *remaining != 0)
+        .map(|remaining| remaining as u64)
+        .ok_or_else(|| Error::from("camera_policy_limit"))
 }
 
 struct TerrainSink<'a> {
@@ -819,3 +867,5 @@ mod disk_admission_tests {
         );
     }
 }
+#[cfg(test)]
+mod v9_tests;

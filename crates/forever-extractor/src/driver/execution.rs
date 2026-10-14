@@ -80,10 +80,10 @@ impl<A: Adapter> Work for Production<'_, A> {
         )
     }
     fn game_tables(&mut self) -> Result<(), Error> {
-        super::game_tables(self.store, &mut self.run)
+        super::game_tables(self.plan, self.store, &mut self.run)
     }
     fn cameras(&mut self) -> Result<(), Error> {
-        super::cameras(self.store, &mut self.run)
+        super::cameras(self.plan, self.store, &mut self.run)
     }
     fn terrain(&mut self) -> Result<(), Error> {
         super::maps(

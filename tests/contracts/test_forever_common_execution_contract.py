@@ -54,8 +54,8 @@ class CommonExecutionContract(unittest.TestCase):
     def test_six_concrete_producers_keep_the_existing_implementations(self):
         s = self.s['execution']
         for call in ('super::db2(self.plan, self.store, &mut self.run, self.adapter.map_domain())',
-                     'super::game_tables(self.store, &mut self.run)',
-                     'super::cameras(self.store, &mut self.run)',
+                     'super::game_tables(self.plan, self.store, &mut self.run)',
+                     'super::cameras(self.plan, self.store, &mut self.run)',
                      'super::maps(self.plan, self.store, &mut self.run, self.adapter.map_domain())',
                      'self.adapter.extract_collision(self.store, &mut self.run)',
                      'super::mmaps(self.plan, self.store, self.output, &mut self.run, self.adapter.map_domain())'):

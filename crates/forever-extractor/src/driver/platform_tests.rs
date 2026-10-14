@@ -6,6 +6,7 @@ use forever_casc::Locale;
 
 fn resident() -> Plan {
     Plan {
+        publication_profile: crate::plan::PublicationProfile::Legacy,
         build: 70205,
         locale: Locale::EnUs,
         index_layout: forever_casc::local_index::Layout::Contiguous,

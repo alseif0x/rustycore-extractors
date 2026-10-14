@@ -12,6 +12,8 @@ use std::{
     },
     path::{Component as Part, PathBuf},
 };
+#[cfg(test)]
+mod admission_tests;
 mod recover;
 const NOFOLLOW: i32 = 0x20000;
 const DIRECTORY: i32 = 0x10000;
@@ -554,6 +556,42 @@ impl Run {
         let inventory = collect(&self.root, self.context, self.inventory_limits())?;
         seals(&self.root, self.context, &inventory, self.limits)
     }
+    /// Compare a caller-supplied identity with an already published, sealed
+    /// artifact. This never publishes, acknowledges replay or changes counters.
+    /// Reads use the retained root and exact receipt, size, digest and EOF checks;
+    /// successful comparison is guarded observation, not an atomic snapshot.
+    /// Any failure permanently poisons this writer, as with `put`.
+    pub fn verify_sealed_artifact(&mut self, expected: &Artifact) -> Result<(), Error> {
+        let result = (|| {
+            if self.failed {
+                return Err(Error::Incomplete);
+            }
+            self.state()?;
+            expected.validate(self.context, self.limits)?;
+            if self.completed_components()? & expected.component.bit() == 0 {
+                return Err(Error::Incomplete);
+            }
+            let seal_name = format!(".state/sealed/{}", expected.component.name());
+            let sealed = self.root.small(&seal_name, self.limits)?;
+            let receipt_name = receipt(expected);
+            let canonical = expected.json();
+            if self.root.small(&receipt_name, self.limits)? != canonical.as_bytes() {
+                return Err(Error::Inventory);
+            }
+            self.root.hash(expected, self.limits)?;
+            if self.root.small(&receipt_name, self.limits)? != canonical.as_bytes()
+                || self.root.small(&seal_name, self.limits)? != sealed
+                || self.completed_components()? & expected.component.bit() == 0
+            {
+                return Err(Error::Inventory);
+            }
+            self.state()
+        })();
+        if result.is_err() {
+            self.failed = true;
+        }
+        result
+    }
     pub fn put(&mut self, component: Component, path: &str, bytes: &[u8]) -> Result<Put, Error> {
         let result = (|| {
             if self.failed {
@@ -906,7 +944,7 @@ fn scan(
 /// Offline integrity only. No client/CASC reads; refuses active writers and all
 /// incomplete markers, malformed manifests, missing/extra/changed payloads.
 pub fn verify(output: &Path, expected: Option<Context>, limits: Limits) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, None)
+    verify_inner(output, expected, limits, None, None)
 }
 
 /// Inspect read-only rooted artifacts while holding the shared package lock.
@@ -919,13 +957,36 @@ pub fn verify_with(
     limits: Limits,
     mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
 ) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, Some(&mut inspect))
+    verify_inner(output, expected, limits, None, Some(&mut inspect))
 }
+/// Admit the complete canonical artifact metadata before any artifact payload
+/// hashing, reading or inspection. Manifest, receipt and seal metadata are
+/// validated first. The admission callback runs once over the whole inventory,
+/// allowing order-independent declared-length and cumulative component limits.
+/// As with `verify_with`, all callback results remain provisional until success;
+/// caller allocations and semantic limits are separate from package accounting.
+pub fn verify_with_preflight(
+    output: &Path,
+    expected: Option<Context>,
+    limits: Limits,
+    mut admit: impl FnMut(&[Artifact]) -> Result<(), Error>,
+    mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
+) -> Result<Summary, Error> {
+    verify_inner(
+        output,
+        expected,
+        limits,
+        Some(&mut admit),
+        Some(&mut inspect),
+    )
+}
+type Admitter<'a> = &'a mut dyn FnMut(&[Artifact]) -> Result<(), Error>;
 type Inspector<'a> = &'a mut dyn FnMut(&Artifact, &mut File) -> Result<(), Error>;
 fn verify_inner(
     output: &Path,
     expected: Option<Context>,
     limits: Limits,
+    admit: Option<Admitter<'_>>,
     inspect: Option<Inspector<'_>>,
 ) -> Result<Summary, Error> {
     limits.validate()?;
@@ -1019,6 +1080,9 @@ fn verify_inner(
         }
     }
     check_seals(&root, context, &inventory, limits)?;
+    if let Some(admit) = admit {
+        admit(&inventory.facts)?;
+    }
     for a in &inventory.facts {
         root.hash(a, limits)?;
     }

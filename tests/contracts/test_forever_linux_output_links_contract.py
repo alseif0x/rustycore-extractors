@@ -44,7 +44,16 @@ class LinuxOutputLinksContract(unittest.TestCase):
         verify = self.s['verify']
         self.assertIn('verify_inner(plan, output, expected, Scope::Intrinsic)', verify)
         self.assertIn('verify_inner(plan, output, expected, Scope::Links)', verify)
-        self.assertEqual(verify.count('package::verify_with('), 1)
+        # One shared payload inspector is dispatched through exactly one call
+        # per platform. Only Linux's explicit v9 branch adds metadata preflight.
+        self.assertEqual(verify.count('package::verify_with('), 2)
+        self.assertEqual(verify.count('package::verify_with_preflight('), 1)
+        compact = re.sub(r'\s+', '', verify).replace(',)', ')')
+        self.assertEqual(compact.count('letinspect=|artifact:&Artifact,file:&mutstd::fs::File|'), 1)
+        self.assertIn('#[cfg(target_os="linux")]letverified=ifplan.is_v9(){package::verify_with_preflight(', compact)
+        self.assertIn('v9::admit_metadata(plan,artifacts)', compact)
+        self.assertIn('},inspect)}else{package::verify_with(output,expected,limits,inspect)};', compact)
+        self.assertIn('#[cfg(not(target_os="linux"))]letverified=package::verify_with(output,expected,limits,inspect);', compact)
         self.assertIn('artifact_integrity_and_intrinsic_formats', self.s['main'])
         self.assertIn('verification_profile', self.s['main'])
         self.assertIn(self.c['verification_profile'], self.s['links'])

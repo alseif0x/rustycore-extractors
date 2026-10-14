@@ -17,6 +17,7 @@ pub(crate) fn connection() -> OffMeshConnection {
 
 pub(crate) fn plan() -> Plan {
     Plan {
+        publication_profile: crate::plan::PublicationProfile::Legacy,
         build: 70205,
         schema_catalog: SchemaCatalog::PinnedMetadataV1,
         locale: Locale::EnUs,
