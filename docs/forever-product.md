@@ -912,3 +912,33 @@ The initial producer's accepted real review remains at
 `54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
 Its earlier campaigns and failed local/hosted attempts remain immutable; their
 acceptance is not substituted for the corrected-producer evidence above.
+
+## Public key refresh: negative historical coverage — 2026-10-14
+
+Issue #52 authenticates two complete `wowdev/TACTKeys` `WoW.txt` snapshots
+with exact length, SHA-256 and Git-framed blob SHA-1 before whole-file parsing.
+Old commit: `f800811762b2e9ea638bf6dfdb4707382c497943`; new commit:
+`a3da648c120465b01c6c65a2e33ebf515a8a342a`, tree
+`a7281f1d14546d00fde1858ff8daa90376e18dcc`.
+
+| Snapshot | Bytes | Git blob SHA-1 | SHA-256 |
+| --- | ---: | --- | --- |
+| Old | 983,950 | `11373e67eed8c487c175b2d53bb6acc3765608cd` | `52bdbe5f369a854a460056628d956708ffcf51cf1e1ef300f1713e25adab1cc2` |
+| New | 984,250 | `6471af43e6c6eae4dfaf62601550f4060200bdbd` | `f6384c5b8d9dcd61bf8db37de691b68908915709df21f11650df292b7d44c8d4` |
+
+The single actual comparison records 19,679→19,685 entries: six added, zero
+removed and zero changed values. Against 83 historical associations / six
+missing names, both snapshots match zero names and zero associations. No
+subset is written; client/CASC reads and native/product/compiler executions are zero.
+Twenty-four fake controls pass; source QA SHA-256: `e6b0996583ab12f7004a14639067a5e9874990e335380996ff3539d0ff290e98`.
+Actual comparison receipt SHA-256: `c44c89681c4974551fac358d61908e639c351d44848366547f813a326a7563e0`.
+Final independent QA: `passed-negative`, receipt SHA-256
+`93bd2a54aea752ec8d14abb6f7b30ea07ba94c755990c9d3b5d5092264b81993`. Earlier `f800811` observations
+retain their dated scope; this comparison reads no current client/ciphertext
+and proves no decoded recovery. The 83 recorded failures, Map/GameObject,
+full catalog, geometry and runtime gates remain unresolved. Gate B, another
+client retry or full survey is not admitted. Key values, individual names and
+per-file correlations stay outside model/Git/CI; Windows remains deferred.
+
+Retained evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-key-refresh-20261014-oazqtiee/`.

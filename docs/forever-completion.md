@@ -3789,3 +3789,22 @@ the 83 remaining catalog entries, Map/GameObject and real geometry inputs, scala
 full-world extraction/resources and RustyCore runtime acceptance remain
 Linux gates. This local package does not complete extraction or authorize a
 release/publication. Windows development and distribution remain deferred.
+
+## Public key refresh: negative historical coverage — 2026-10-14
+
+The single issue #52 Stage A comparison passed integrity/grammar checks with
+a negative intersection: 19,679→19,685 public entries, six added, no removed
+names or changed values; zero old/new matches against six historical missing
+names / 83 associations. No key subset, client read, CASC acquisition or
+native/product execution occurs. The 24 fake controls and source QA precede
+this comparison; older dated public-pin observations remain historical.
+Final independent QA status: `passed-negative`;
+receipt SHA-256: `93bd2a54aea752ec8d14abb6f7b30ea07ba94c755990c9d3b5d5092264b81993`.
+Comparison receipt SHA-256: `c44c89681c4974551fac358d61908e639c351d44848366547f813a326a7563e0`.
+The [public source pins](forever-product.md#public-key-refresh-negative-historical-coverage--2026-10-14)
+record exact Git blobs, SHA-256 and lengths. No ciphertext is inspected or
+recovered, and this is not proof that keys are the only missing requirement.
+The historical 83-file acquisition gap and Map/GameObject dependencies retain
+their recorded scopes; no full catalog, geometry or runtime gate is lifted.
+Positive Gate B is not admitted; there is no client retry/full survey.
+Windows development/distribution stays deferred; no keys enter Git or CI.

@@ -2396,3 +2396,17 @@ real geometry/world resources and RustyCore runtime remain Linux gates.
 Windows delivery stays deferred; no distribution is released or published. Later
 documentation does not rebuild or replace the frozen package. The concise
 artifact and receipt identities are in `docs/forever-distribution.md`.
+
+### Public key refresh: negative historical coverage — 2026-10-14
+
+Issue #52 compares authenticated public TACTKeys snapshots `f800811` and
+`a3da648` against 83 historical associations / six missing key names.
+Entries increase 19,679→19,685: six added, zero removed or changed; old/new
+coverage is zero/zero names and zero matching associations. No subset is
+exported; client/CASC reads and native/product executions are zero.
+Twenty-four fake controls and source QA precede the single comparison.
+Final independent QA: `passed-negative`, SHA-256 `93bd2a54aea752ec8d14abb6f7b30ea07ba94c755990c9d3b5d5092264b81993`. Pins are in
+`docs/forever-product.md`. Earlier dated `f800811` observations stay historical.
+This adds no recovery evidence for the 83 recorded failures and lifts no
+Map/GameObject, catalog, geometry or runtime gate. This comparison admits no positive Gate B or CASC retry; Windows stays
+deferred and keys/correlations stay private.
