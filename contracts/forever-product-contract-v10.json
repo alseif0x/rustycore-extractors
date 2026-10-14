@@ -16,7 +16,8 @@
     "inspect",
     "extract",
     "resume",
-    "verify"
+    "verify",
+    "verify-links"
   ],
   "plan": {
     "encoding": "ASCII canonical TSV with final LF",
@@ -54,15 +55,12 @@
       "header-50893-v2"
     ],
     "selections": [
-      "none",
-      "all",
-      "map:ID",
-      "tile:ID:X:Y"
+      "none"
     ],
     "coordinates": "X=column,Y=row; 0..63; canonical unsigned decimal",
     "slopes": "integer 0..90; non-steep <= maximum; unselected navigation requires 55/55 and false flags",
     "dependencies": {},
-    "offmesh_connections": "explicitly unsupported; empty only",
+    "offmesh_connections": "Field must be absent; even an empty offmesh selection is unsupported.",
     "decryption": "required after schema-catalog; disabled or provided-salsa20-v1",
     "schema_catalog": {
       "id": "wowdbdefs-70374-v1",
@@ -179,7 +177,7 @@
       "complete DB2 table/section variant coverage",
       "GameTables, cameras, terrain, VMap, or MMap extraction on build 70374"
     ],
-    "metadata_preflight": "Complete exact selected DB2 names, nonempty files<=16MiB, sum<=16GiB before first artifact payload hash/read/allocation; verify-links same complete DB2-only package traversal"
+    "metadata_preflight": "Complete exact selected DB2 names, nonempty files<=16MiB, sum<=16GiB before first artifact payload hash/read/allocation; verify-links same complete DB2-only package traversal; --keys is forbidden for verify and verify-links"
   },
   "failure": "stable path-free code and component; incomplete outputs retained; no hidden available-prefix, native, network or missing-file fallback",
   "full_extractor_complete": false,
