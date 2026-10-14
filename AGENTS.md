@@ -2272,3 +2272,29 @@ attempts remain retained. Exact scope and receipt hashes are in
 `docs/forever-game-tables.md`. Later three-file Markdown is not rebuilt. Product
 70338 stays DB2-only; camera, Map/GameObject inputs, real geometry/full-world,
 runtime, a new bundle and full Linux extraction remain gates. Windows is deferred.
+
+### Explicit real 70338 raw cameras accepted — 2026-10-14
+
+Issue #46 adds standalone `camera-raw-70338-v1`, Rust-local-only manifest/
+contract/schema v3, using explicit target-catalog discovery. Legacy batch/CLI/
+manifest build gates retain 70170/70205 scope and reject 70338; bare supplied
+bytes do not authenticate build. Functional source `bea89ce` passes 2,880 Linux
+tests / 26 ignored across 44 targets per profile, 37 focused camera/four CLI
+cases, six JSON/339 contracts/162 distribution checks plus one skip, Clippy and
+format. Production binaries were compiled from the frozen baseline plus delta;
+later source equality binds the commit, and three-file Markdown is not rebuilt.
+The 58-command authored campaign passes, with two additional late-inventory
+controls and three original DB2 positives only. Fresh 70338/esES source discovery
+accepts 674 bytes/ten direct rows/no copies, strict native bytes/CKey before
+Rust/Python/original discovery; separate complete acquisition accepts ten opaque
+cameras/26,296 bytes, eleven data artifacts/26,970 bytes per profile. Both CLIs,
+offline verification, formal v3 schemas and exact inventories pass. The 23 real
+commands/traces/cleanup and 2,062 guards/35 aliases pass independent final review.
+Fifty-five complete acquisitions/134,850 bytes cover eleven measured identities;
+metadata audits and physical I/O are separate. Original DB2/discovery uses an
+immutable memory adapter, without executing the full original camera exporter.
+No M2/waypoint/playback/runtime/full extraction or new bundle follows. Scope and
+receipt hashes are in `docs/forever-cameras.md`. Product 70338 remains DB2-only
+pending explicit DB2/GT/camera integration; unavailable Map/GameObject inputs,
+real full-world resources, runtime and the Linux package remain gates. Windows
+stays deferred and the extractor goal stays active.
