@@ -23,6 +23,11 @@ are deleted while pending source and the legacy version line remain preserved.
 Bounded current `.build.info` reads declare build 70374 and Classic 70003;
 this does not authenticate a game PE or complete installed assets. Historical
 70205 and 70338 evidence remains tied to its recorded sources.
+Linux v11 separately admits explicit 70374 DB2/GT/raw cameras, sealed source and
+the 1,161-schema catalog. Its synthetic56, fresh native whole-selection comparison
+and real26 lifecycle pass independent QA; six complete real views each contain
+31 files / 165,507 bytes. A new Linux bundle, full catalog, Map/GameObject,
+geometry/world and runtime remain gates.
 Linux product v10 separately admits 70374 DB2 only. Four real esES TACT views
 each contain two files / 4,292 bytes, with 266 exact Python/Rust rows per profile.
 Its startup selection fails at GameObjectDisplayInfo; Map is not reached.
@@ -3990,3 +3995,54 @@ traces and owned groups; receipt SHA-256
 See [diagnostic evidence](forever-product.md#bounded-70374-key-coverage-closes-negatively--2026-10-14).
 Official client refresh is ongoing; full catalog, geometry/runtime and new
 product-bundle acceptance remain open. Windows/draft PR #27 stays deferred.
+
+## Explicit Linux 70374 DB2/GT/raw-camera product v11 — 2026-10-14
+
+Issue #60 adds the separate canonical 70374/Linux v11 mask 7 profile with the 1,161-schema
+`wowdbdefs-70374-v1` catalog, exact GT20 and whole raw-camera selection. It preserves v10
+DB2-only / v9 older-build identity and all previous admission gates. Sealed-source proof
+precedes camera discovery on extract and resume; full metadata preflight and the existing
+source-inclusive 256 MiB camera ceiling remain mandatory.
+
+Functional `34d9e9c74e7973b5d6e1e0fd5f019aa0feb706ad` binds 717 source files / 18,625,984 bytes,
+including 465 Rust/Cargo files / 9,871,316 bytes, with truthful precommit compilation
+chronology. Debug/release each pass 2,987 workspace tests with 26 historical ignores; Clippy,
+formatting, 363 contracts, 162 distribution checks plus one skip, catalog check and both product
+builds pass. This is not a new reproducible-bundle acceptance or a final-head publication
+result.
+
+The first release probe plus separate offline verify/verify-links produces 31 files / 165,507
+bytes and stays outside the later 26-call matrix. Fresh Phase A accepts the complete 674-byte
+source and independently agrees on ten direct cameras / zero copies through
+Rust/Python/original-memory discovery, four successful children. The first wrapper attempt
+failed before acquisition and stays failed. The helper qualification's first whole attempt also
+stays failed after its 15-command compiled prefix; the corrected runtime qualification passes 23
+authored calls without new compiler commands or original implementation-unit rebuilds.
+
+The complete 56 synthetic outcomes include 44 successful calls, eight cuts and four pre-I/O key
+rejections, both producer profiles and both key policies. Twelve complete views and fresh GT
+ordinal 27 / camera ordinal 170 cuts pass independent QA, SHA256
+`31f055335310384dd8fc217d03b1fd74890fd25100544740f0ca5cbe9bca3e64`. Fresh native comparison
+passes 46 children, exact GT20 + camera10 / source 31 artifacts / 165,507 bytes and content-key
+MD5; 14 source-style C++ numeric oracles plus both Rust projections match 22,082 values / 5,086
+data rows. Six GT files remain opaque; no typed GT loader executes. Independent native
+metadata/trace QA SHA256: `d94d2be86c56b2c774421c2153f3f1c6fba794d19740cc005fa9cc608eb4dc0c`.
+
+The real disabled-key campaign closes 26 outcomes (22 exit0/four calibrated cuts) and six
+complete clean/resumed views, each 31 files / 165,507 bytes. All 186 complete output-to-oracle
+byte comparisons and same-profile manifests pass; no real calibration, original consumer or
+compiler reruns. Child traces have zero network calls and groups are absent; the parent is
+untraced. Acceptance SHA256: `323677ea23da96edb82a72c475ee189a7809c3e9e8064f085fa0efeee4553ffa`.
+Final independent QA is `passed-bounded-real26-lifecycle`, findings empty, SHA256:
+`968d047b2a48ba10f75a3cfb1e3c54d90c7651ff721f59601d0c5be7ee5e53ba`. No accepted prefix is used.
+Documentation changes two selected documents: 715 of 717 selected source files, including all
+465 Rust/Cargo files / 9,871,316 bytes, remain unchanged. AGENTS.md is outside the compiled
+selected freeze. No documentation-commit recompilation is claimed; root records its exact source
+binding separately.
+
+See [product
+scope](forever-product.md#explicit-linux-70374-db2gtraw-camera-product-v11--2026-10-14). No
+camera playback, new geometry/world/runtime acceptance or full catalog follows. Map/GameObject,
+full-world resources, RustyCore runtime and a new reproducible Linux bundle remain gates. Older
+bundles are unchanged; a new Linux bundle and release remain unaccepted and Windows/draft PR #27
+stays deferred. Linux completion remains open.

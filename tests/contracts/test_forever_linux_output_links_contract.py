@@ -45,14 +45,14 @@ class LinuxOutputLinksContract(unittest.TestCase):
         self.assertIn('verify_inner(plan, output, expected, Scope::Intrinsic)', verify)
         self.assertIn('verify_inner(plan, output, expected, Scope::Links)', verify)
         # One shared payload inspector is dispatched through exactly one call
-        # per platform. Only Linux's explicit v9/v10 branch adds metadata preflight.
+        # per platform. Only Linux's explicit v9/v10/v11 branch adds metadata preflight.
         self.assertEqual(verify.count('package::verify_with('), 2)
         self.assertEqual(verify.count('package::verify_with_preflight('), 1)
         compact = re.sub(r'\s+', '', verify).replace(',)', ')')
         self.assertEqual(compact.count("letinspect=|artifact:&Artifact,file:ArtifactReader<'_>|"), 1)
         self.assertIn('#[cfg(target_os="linux")]typeArtifactReader<\'a>=&\'amutstd::fs::File;', compact)
         self.assertIn('#[cfg(not(target_os="linux"))]typeArtifactReader<\'a>=&\'amut(dynRead+\'a);', compact)
-        self.assertIn('#[cfg(target_os="linux")]letverified=ifplan.is_v9()||plan.is_v10(){package::verify_with_preflight(', compact)
+        self.assertIn('#[cfg(target_os="linux")]letverified=ifplan.is_gt_cameras()||plan.is_v10(){package::verify_with_preflight(', compact)
         self.assertIn('letadmitted=ifplan.is_v10(){v10::admit_metadata(plan,artifacts)}else{v9::admit_metadata(plan,artifacts)};', compact)
         self.assertIn('},inspect)}else{package::verify_with(output,expected,limits,inspect)};', compact)
         self.assertIn('#[cfg(not(target_os="linux"))]letverified=package::verify_with(output,expected,limits,inspect);', compact)

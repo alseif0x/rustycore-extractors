@@ -43,7 +43,7 @@ class WindowsProducerContract(unittest.TestCase):
         distribution = json.loads(read('contracts/forever-distribution-contract-v1.json'))
         expected = 'forever-seven-crate-windows-producer-source-v4'
         self.assertEqual(self.c['distribution_source_profile'], expected)
-        current = 'forever-seven-crate-linux-product-db2-catalog-source-v10'
+        current = 'forever-seven-crate-linux-product-db2-gt-cameras-source-v11'
         self.assertEqual(literal_assignment(packager, 'SOURCE_PROFILE'), current)
         self.assertEqual(distribution['source']['profile'], current)
         self.assertIn(expected, distribution['source']['prior_profiles'])

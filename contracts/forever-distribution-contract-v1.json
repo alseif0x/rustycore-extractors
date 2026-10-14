@@ -173,7 +173,18 @@
       "tests/forever/test_product_catalog_cli.py",
       "docs/forever-db2-regular-sections.md",
       "docs/forever-product.md",
-      "docs/forever-completion.md"
+      "docs/forever-completion.md",
+      "contracts/forever-product-contract-v11.json",
+      "tests/contracts/test_forever_product_v11_contract.py",
+      "tests/contracts/fixtures/forever-product-v11/disabled.tsv",
+      "tests/contracts/fixtures/forever-product-v11/provided.tsv",
+      "contracts/wowdbdefs-70374-v1.json",
+      "crates/forever-db2/src/records/wowdbdefs_70374_generated.rs",
+      "crates/forever-extractor/src/plan/v11_tests.rs",
+      "crates/forever-extractor/src/driver/v11_tests.rs",
+      "crates/forever-extractor/src/verify/tests/v11.rs",
+      "crates/forever-extractor/tests/product_v11_cli.rs",
+      "crates/forever-casc/src/cameras/tests/build70374.rs"
     ],
     "forbidden": [
       "client assets",
@@ -190,7 +201,7 @@
     "mutation": "reject a changed selected source snapshot",
     "scope": "production pure Rust build, synthetic checks, exact registry sources and retained notices; native oracle reference trees are external and excluded",
     "legacy_provenance": "retain existing legacy license/reference inventories as documentation; the actual pure Rust binary dependency closure is its versioned distribution manifest, not a claim native C++ dependencies are linked",
-    "profile": "forever-seven-crate-linux-product-db2-catalog-source-v10",
+    "profile": "forever-seven-crate-linux-product-db2-gt-cameras-source-v11",
     "workspace_crates": 7,
     "windows_dependency_edges": {
       "forever-casc": [
@@ -206,7 +217,7 @@
         "forever-platform"
       ]
     },
-    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph; forever-seven-crate-linux-collision-leased-archive-source-v8 remains historical with its bundled frozen verifier and its library-only acceptance; v9 mandates explicit product plan v3, physical-space observation, guarded disk driver and product CLI checks without relabeling earlier archives; forever-seven-crate-linux-product-collision-disk-source-v9 remains historical with its bundled frozen verifier and accepted b692ed3 Linux bundle; v10 requires both separately pinned target catalogs and product v4/v5 source without replacing any historical archive bytes",
+    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph; forever-seven-crate-linux-collision-leased-archive-source-v8 remains historical with its bundled frozen verifier and its library-only acceptance; v9 mandates explicit product plan v3, physical-space observation, guarded disk driver and product CLI checks without relabeling earlier archives; forever-seven-crate-linux-product-collision-disk-source-v9 remains historical with its bundled frozen verifier and accepted b692ed3 Linux bundle; v10 requires both separately pinned target catalogs and product v4/v5 source without replacing any historical archive bytes; forever-seven-crate-linux-product-db2-catalog-source-v10 archives remain historical with their bundled frozen verifiers; v11 additionally requires the explicit70374 DB2+GT+raw-camera product contract and canonical synthetic fixtures, without new bundle or runtime acceptance",
     "windows_producer_scope": "original loaded-main-module seal acquisition and pure PE verifier/sealer source, synthetic checks and scope documentation are mandatory corresponding source; this Linux recipe does not seal or enable a Windows product",
     "windows_vmap_scope": "original guarded Windows RootedSource and safe EOF source/tests; preliminary synthetic Wine evidence does not accept actual Windows/NTFS or enable the product",
     "input_diagnostics_scope": "metadata-only fixed routes and pure whole-span BLTE inspector remain distinct APIs; v6 additionally mandates the key-free fixed-three-input complete-span framing adapter with static contract and qualified executed Linux observations; no full EKey/CKey/plaintext or key sufficiency claim",

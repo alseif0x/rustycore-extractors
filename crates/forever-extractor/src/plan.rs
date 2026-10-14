@@ -166,6 +166,7 @@ impl Plan {
             "8" => 8,
             "9" => 9,
             "10" => 10,
+            "11" => 11,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -195,7 +196,7 @@ impl Plan {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            10 => match field(&mut lines, "schema-catalog")? {
+            10 | 11 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70374-v1" => SchemaCatalog::WowDbDefs70374V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -207,7 +208,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=10 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=11 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -286,6 +287,8 @@ impl Plan {
         let plan = Self {
             publication_profile: if version == 9 {
                 PublicationProfile::Build70338Db2GtCamerasV1
+            } else if version == 11 {
+                PublicationProfile::Build70374Db2GtCamerasV1
             } else if version == 10 {
                 PublicationProfile::Build70374Db2OnlyV1
             } else {
@@ -335,7 +338,7 @@ impl Plan {
                 connection.validate()?;
             }
         }
-        if ![70170, 70205, 70338].contains(&self.build) && !self.is_v10() {
+        if ![70170, 70205, 70338].contains(&self.build) && !self.is_v10() && !self.is_v11() {
             return Err("product_plan_build");
         }
         if self.schema_catalog == SchemaCatalog::WowDbDefs70205V1 && self.build != 70205 {
@@ -348,6 +351,7 @@ impl Plan {
         }
         if (self.schema_catalog == SchemaCatalog::WowDbDefs70374V1 || self.build == 70374)
             && !self.is_v10()
+            && !self.is_v11()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -444,6 +448,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v11() {
+            return 11;
+        }
         if self.is_v10() {
             return 10;
         }
@@ -472,6 +479,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v11() {
+            return "forever-product-v11";
+        }
         if self.is_v10() {
             return "forever-product-v10";
         }
@@ -513,6 +523,17 @@ impl Plan {
         )
     }
 
+    pub const fn is_v11(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70374Db2GtCamerasV1
+        )
+    }
+
+    pub const fn is_gt_cameras(&self) -> bool {
+        self.is_v9() || self.is_v11()
+    }
+
     pub const fn requires_keys(&self) -> bool {
         matches!(self.decryption, Decryption::ProvidedSalsa20V1)
     }
@@ -543,7 +564,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70374V1 => "schema-catalog\twowdbdefs-70374-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=10, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=11, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -620,3 +641,6 @@ pub(crate) mod offmesh_tests;
 mod v10_tests;
 #[cfg(test)]
 mod v9_tests;
+
+#[cfg(test)]
+mod v11_tests;

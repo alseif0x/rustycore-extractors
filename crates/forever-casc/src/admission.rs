@@ -15,7 +15,7 @@ pub fn admit(client: &Path) -> Result<u32, Error> {
     admit_selected(client, parse)
 }
 
-/// Explicit Linux product-v10 metadata admission; generic/native admission stays legacy.
+/// Explicit Linux product-v10/v11 metadata admission; generic/native admission stays legacy.
 #[cfg(target_os = "linux")]
 pub fn admit_db2_70374(client: &Path) -> Result<u32, Error> {
     admit_selected(client, |info| parse_supported(info, DB2_70374_CLIENTS))

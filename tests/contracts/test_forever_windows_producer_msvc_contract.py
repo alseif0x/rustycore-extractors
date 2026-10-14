@@ -183,7 +183,7 @@ class WindowsMsvcProducerContract(unittest.TestCase):
         self.assertIn(self.c['sources']['documentation'], packager)
         profile = next(ast.literal_eval(n.value) for n in ast.parse(packager).body
                        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'SOURCE_PROFILE' for t in n.targets))
-        self.assertEqual(profile, 'forever-seven-crate-linux-product-db2-catalog-source-v10')
+        self.assertEqual(profile, 'forever-seven-crate-linux-product-db2-gt-cameras-source-v11')
 
     def test_failed_compiler_observation_is_not_native_v2_acceptance(self):
         observation = self.c['validation']['compiler_observation']

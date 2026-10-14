@@ -63,8 +63,8 @@ fn v9_inspect_without_client_has_new_contract_and_target_catalog() {
     assert!(help.status.success());
     let help = String::from_utf8(help.stdout).unwrap();
     assert!(help.contains("Linux v9 build-70338 exact DB2+GT+cameras"));
-    assert!(help.contains("v2-v6/v8/v9 client commands require --keys"));
-    assert!(help.contains("v9 requires Linux"));
+    assert!(help.contains("v2-v6/v8-v11 client commands require --keys"));
+    assert!(help.contains("v9-v11 require Linux"));
     let lab = Lab::new();
     let plan = lab.0.join("plan.tsv");
     fs::write(&plan, PLAN).unwrap();

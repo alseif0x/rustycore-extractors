@@ -116,7 +116,7 @@ class DistributionTests(unittest.TestCase):
         archive = self.root / "a/forever-extractor-linux.tar.gz"
         manifest = m.verify_archive(archive)
         self.assertFalse(manifest["full_extractor_complete"])
-        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-product-db2-catalog-source-v10")
+        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-product-db2-gt-cameras-source-v11")
         unpacked = self.root / "moved"
         unpacked.mkdir()
         # Test archive has already been checked; manually write regular members.
@@ -463,7 +463,7 @@ class DistributionTests(unittest.TestCase):
         root = self.unpack("legacy-v10")
         manifest, _ = m.verify_bundle(root)
         self.assertEqual(manifest["source_snapshot"]["profile"],
-                         "forever-seven-crate-linux-product-db2-catalog-source-v10")
+                         "forever-seven-crate-linux-product-db2-gt-cameras-source-v11")
         self.assertTrue(all("source/" + name not in manifest["inventory"]
                             for name in m.OPTIONAL_WINDOWS_QA_SOURCE))
         with patch.object(m, "compile_source", self.compiler):
