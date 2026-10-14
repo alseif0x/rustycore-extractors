@@ -4046,3 +4046,21 @@ camera playback, new geometry/world/runtime acceptance or full catalog follows. 
 full-world resources, RustyCore runtime and a new reproducible Linux bundle remain gates. Older
 bundles are unchanged; a new Linux bundle and release remain unaccepted and Windows/draft PR #27
 stays deferred. Linux completion remains open.
+
+
+## Current Linux v11 packaging checkpoint — 2026-10-14
+
+Issue #62 accepts fresh reproducible packaging of merged `fdba4b2`: 717 selected
+committed files / 18,639,856 bytes, two identical archives/manifests/executables
+and an exact moved-source offline rebuild. Six packaging operations / three
+Cargo builds pass independent review. The local archive is 4,103,587 bytes;
+the executable is 3,418,192 bytes. No production source/dependency/admission
+change or publication follows. Packaging QA SHA-256:
+`593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf`.
+
+Current shipped/moved-rebuilt synthetic regression and v11 lifecycle acceptance
+remain pending at this checkpoint. Historical 70338 and issue #60 producer
+acceptance is not transferred to the packaged executable. See
+[distribution evidence](forever-distribution.md#current-linux-product-v11-local-packaging--2026-10-14).
+Full catalog, Map/GameObject sources, real geometry/world resources, RustyCore
+runtime and release remain gates; Windows stays deferred and the goal is open.

@@ -38,8 +38,15 @@ Issue #60 separately adds explicit Linux v11 for build 70374, DB2/GT/raw cameras
 proof. The 56-outcome synthetic campaign and fresh native whole-selection
 comparison pass independent QA. The real26 lifecycle is independently accepted
 within its bounded scope, with six complete 31-file / 165,507-byte views. Full
-catalog, Map/GameObject, real geometry/world resources, runtime and a new Linux
-bundle remain unaccepted.
+catalog, Map/GameObject, real geometry/world resources and runtime remain
+unaccepted. Issue #62 separately closes current local Linux packaging
+reproducibility from merged `fdba4b2`: 717 selected committed files / 18,639,856
+bytes, six packaging operations / three offline Cargo builds, identical archives
+and binaries and an exact moved-source rebuild. Independent packaging QA passes
+(`593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf`).
+Current packaged regressions and v11 lifecycle acceptance remain pending at this
+checkpoint; historical producer acceptance is not transferred. See
+`docs/forever-distribution.md`; no release/publication or Windows delivery follows.
 
 Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
 resident publication and the separately pinned 1,161-schema `wowdbdefs-70374-v1`

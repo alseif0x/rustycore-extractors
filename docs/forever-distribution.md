@@ -921,3 +921,49 @@ into the immutable archive. Full catalog acquisition, complete Map/GameObject
 and real geometry inputs, full-world operation and RustyCore/server runtime
 remain separate Linux gates. Windows development/distribution stays deferred.
 No release or publication is made, and the extractor is not complete.
+
+
+### Current Linux product v11 local packaging — 2026-10-14
+
+Issue #62 follows merged product #60 using the existing `forever-distribution-v1`
+wire format and `forever-seven-crate-linux-product-db2-gt-cameras-source-v11`
+recipe. Baseline `fdba4b2a64d1a72ae4f24fd86649cf5449de88be`, tree
+`2d2a7cd865b0f85c9b6519ebf9b40887ee84bb98`, selects 717 committed files /
+18,639,856 bytes. The complete packaged source contains 758 files, including
+41 existing vendor/configuration/archive additions. All four copied source
+trees preserve the selected baseline; the protected unrelated backup is neither
+opened nor packaged.
+
+Six packaging operations complete three isolated offline Cargo builds. Two fresh
+builds, including a path with spaces, produce identical archives, manifests and
+binaries. Verified extraction to a moved directory and reconstruction with fresh
+Cargo home/target directories reproduce the binary using bundled corresponding
+source/dependencies and the installed pinned toolchain/system linker. The archive
+contains 774 payloads / 775 members. No client assets, keys, extraction outputs or
+native reference sources are packaged; no dependency or output format changes.
+
+| Artifact or receipt | SHA-256 |
+| --- | --- |
+| Archive, 4,103,587 bytes | `cdea14babeca67b92513acf48c90bceeff0306d35042124348029c432500f2da` |
+| Shipped/rebuilt executable, 3,418,192 bytes | `cc4b171521ecff81b634873530ac0a51259baa7653cea4fb895f519a5d83571f` |
+| Selected-source freeze | `315567cb37c5de32f5d8deb291e4f7b9b3ee9a5d99434dc87590fa80f2d366e9` |
+| Packaging acceptance | `6bc48cff13fc9e25b9d5dfee3f0abc7dd6740ee579fbd00f8a3e4bc40e2c4e89` |
+| Independent packaging review | `593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf` |
+| Actual packaged producer freeze | `8506695ea5e18cf9b190b20b5c741bb34c500d847eb4a0bbba35bacd6f57602e` |
+
+Static ELF inspection records `/lib64/ld-linux-x86-64.so.2`, needed
+`libgcc_s.so.1`, `libm.so.6`, `libc.so.6`, `ld-linux-x86-64.so.2`, and maximum
+GLIBC symbol version 2.34. This remains a dynamically linked local Linux
+candidate, without universal Linux ABI acceptance. Each compiler trace contains
+fourteen matched local Unix socket exchanges; the two archive-verifier traces
+are empty. Unpacked verification API and outer orchestration are untraced.
+Compiler IPC is separate from subsequent consumer network observations.
+
+Packaging is independently accepted. Current packaged synthetic regressions and
+v11 clean/resume/verification campaigns are pending at this packaging checkpoint;
+historical binaries retain their own acceptance. The later documentation update
+does not rebuild or substitute bytes into this immutable archive. Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-v11-distribution-20261014-l3ak9p_u/`.
+Full catalog, Map/GameObject inputs, real geometry/world resources, RustyCore
+runtime and publication remain separate gates. Windows stays deferred in draft
+PR #27; this does not complete the extractor.
