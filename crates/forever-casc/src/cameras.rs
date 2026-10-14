@@ -3,6 +3,8 @@
 //! Independently authored from metadata/traversal facts at the pinned C++
 //! commit. No M2 parsing, waypoint generation or runtime acceptance is claimed.
 pub mod batch;
+pub mod contract;
+pub use contract::CameraContract;
 pub mod manifest;
 pub mod options;
 mod output;
@@ -49,13 +51,27 @@ impl CameraPlan {
 /// Keep zero and deduplicate/order exactly as its std::set<uint32> does.
 /// Return only after the decoder validates the entire file and copy table.
 pub fn discover(bytes: &[u8]) -> Result<CameraPlan, &'static str> {
+    discover_with_contract(CameraContract::Legacy, bytes)
+}
+
+/// Explicit metadata contract. Supplied bytes alone do not authenticate build.
+pub fn discover_with_contract(
+    contract: CameraContract,
+    bytes: &[u8],
+) -> Result<CameraPlan, &'static str> {
     if bytes.len() > MAX_SOURCE_BYTES {
         return Err("camera_policy_limit");
     }
     let metadata = Metadata::read(&mut Cursor::new(bytes)).map_err(|error| error.code())?;
-    let table = CharacterTable::from_catalog("CinematicCamera")
-        .map_err(|_| "camera_source_schema")?
-        .ok_or("camera_source_schema")?;
+    let table = match contract {
+        CameraContract::Legacy => CharacterTable::from_catalog("CinematicCamera"),
+        CameraContract::Build70338V1 => CharacterTable::from_catalog_id(
+            forever_db2::catalog::WOWDBDEFS_70338_CATALOG_ID,
+            "CinematicCamera",
+        ),
+    }
+    .map_err(|_| "camera_source_schema")?
+    .ok_or("camera_source_schema")?;
     if metadata.header.layout_hash != SOURCE_LAYOUT {
         return Err("camera_source_schema");
     }

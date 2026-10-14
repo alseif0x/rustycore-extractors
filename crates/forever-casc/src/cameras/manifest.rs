@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Private camera manifest: complete source and exact discovered file set.
 use super::{
-    DISCOVERY_POLICY, DiscoveryFacts, MAX_FILE_BYTES, MAX_FILES, MAX_SOURCE_BYTES, MAX_TOTAL_BYTES,
-    ORACLE, SOURCE_FILE_ID, SOURCE_LAYOUT, SOURCE_NAME, file_id_set_hash, relative_path,
-    source_path,
+    CameraContract, DISCOVERY_POLICY, DiscoveryFacts, MAX_FILE_BYTES, MAX_FILES, MAX_SOURCE_BYTES,
+    MAX_TOTAL_BYTES, ORACLE, SOURCE_FILE_ID, SOURCE_LAYOUT, SOURCE_NAME, contract,
+    file_id_set_hash, relative_path, source_path,
 };
 use crate::{
     Locale, sha256,
@@ -57,6 +57,7 @@ pub(super) struct Camera {
     pub file: FileOutcome,
 }
 pub(super) struct Manifest {
+    pub contract: CameraContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub build: u32,
     pub locale: Locale,
@@ -152,6 +153,27 @@ impl Manifest {
             total,
             hash
         );
+        if self.contract == CameraContract::Build70338V1 {
+            let text = text.replacen(
+                &format!(
+                    "\"db2_metadata_sha256\":\"{}\"",
+                    forever_db2::catalog::SOURCE_SHA256
+                ),
+                &format!("\"schema_catalog\":{}", contract::catalog_json()),
+                1,
+            );
+            return Ok(text.replacen(
+                "\"manifest_version\":1",
+                &format!(
+                    "\"manifest_version\":3,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CameraContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            ));
+        }
         Ok(match self.acquisition {
             Some(profile) => text.replacen(
                 "\"manifest_version\":1",
@@ -176,9 +198,20 @@ fn add_inventory_bytes(total: usize, bytes: usize) -> Result<usize, &'static str
 pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
     depth_guard(text)?;
     let mut value = json::parse(text)?;
+    let contract = if number(field(&value, "manifest_version")?)? == 3 {
+        equal_string(&value, "component_profile", CameraContract::PROFILE)?;
+        contract::validate_catalog(field(&value, "schema_catalog")?)?;
+        let Json::Object(entries) = &mut value else {
+            return Err(());
+        };
+        entries.retain(|(key, _)| key != "component_profile");
+        CameraContract::Build70338V1
+    } else {
+        CameraContract::Legacy
+    };
     let acquisition = match number(field(&value, "manifest_version")?)? {
         1 => None,
-        2 => {
+        2 | 3 => {
             let profile = crate::acquisition::Profile::decode(
                 field(&value, "acquisition")?,
                 MAX_FILE_BYTES as u32,
@@ -209,7 +242,11 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
             "extractor",
             "extractor_version",
             "oracle_commit",
-            "db2_metadata_sha256",
+            if contract == CameraContract::Legacy {
+                "db2_metadata_sha256"
+            } else {
+                "schema_catalog"
+            },
             "discovery_policy",
             "max_source_bytes",
             "max_file_bytes",
@@ -242,10 +279,16 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         ("product", "wow_classic_beta"),
         ("extractor", "forever-camera-extract"),
         ("oracle_commit", ORACLE),
-        ("db2_metadata_sha256", forever_db2::catalog::SOURCE_SHA256),
         ("discovery_policy", DISCOVERY_POLICY),
     ] {
         equal_string(&value, key, s)?;
+    }
+    if contract == CameraContract::Legacy {
+        equal_string(
+            &value,
+            "db2_metadata_sha256",
+            forever_db2::catalog::SOURCE_SHA256,
+        )?;
     }
     for (key, b) in [
         ("offline", true),
@@ -269,9 +312,7 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         return Err(());
     }
     let build = u32::try_from(number(field(&value, "build")?)?).map_err(|_| ())?;
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err(());
-    }
+    contract.admit_build(build).map_err(|_| ())?;
     let locale = Locale::parse(string(field(&value, "locale")?)?).map_err(|_| ())?;
     let src = field(&value, "source")?;
     object(
@@ -356,6 +397,7 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         return Err(());
     }
     let manifest = Manifest {
+        contract,
         acquisition,
         build,
         locale,
