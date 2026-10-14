@@ -44,6 +44,16 @@ runtime and a new v10 bundle remain gates. Legacy admissions and dated 70338
 evidence retain their scope; Windows and draft PR #27 remain deferred. See
 `docs/forever-product.md` and `docs/forever-completion.md`.
 
+Issue #58 closes a bounded negative 70374 key diagnostic: four independent
+Rust requests yield three encrypted and one missing result, with zero bytes.
+The corrected native observer records three causal error-1005 observations /
+two unique missing names and one error-1007 size failure, with zero complete
+files; this is not error-category parity. Fresh TACT/public/cache coverage
+matches zero of the two needed names and exports nothing. Prior failed native
+and unexecuted coverage evidence remain preserved. Official client refresh is
+ongoing; no supplied-key retry, new product binary/bundle or full acceptance
+follows. Details and receipt identities are in `docs/forever-product.md`.
+
 Explicit Linux product v9 admits DB2/GT/raw cameras on build 70338, including
 an explicit nonempty target-catalog selection containing CinematicCamera.
 The current local v10-recipe bundle passes fresh reproducible packaging and

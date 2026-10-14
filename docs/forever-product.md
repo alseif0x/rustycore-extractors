@@ -1040,3 +1040,54 @@ acquisition, real geometry/world resources, game/PE authentication, RustyCore
 runtime and a new reproducible Linux bundle remain gates. Existing 70338
 evidence keeps its dated scope. Windows development/distribution remains
 deferred, with draft PR #27 preserved. The full extractor goal remains active.
+
+## Bounded 70374 key coverage closes negatively — 2026-10-14
+
+Issue #58 follows merged PR #57 (`5aba789`) using the same frozen product
+producers compiled from `52db8418587d6db2994bb91137aee11a67d5d6e8`.
+Four independent Rust-local requests cover GameObjectDisplayInfo and Map in
+esES and enUS: three encrypted results, one missing result and zero bytes.
+This is a new finite diagnostic, not a full-catalog survey.
+
+The corrected strict native observer also makes four independent requests.
+It captures a TRUE-but-short read's error before another CascLib operation:
+three read failures report error 1005 with causal missing-name observations,
+representing two unique names; one size query fails with error 1007.
+Zero files complete. These outcomes do not establish Rust/native error-category
+parity. A causal getter exposes the last missing name in that fresh storage,
+not every encrypted frame. Native built-in keys remain a separate baseline.
+The earlier native actual attempt remains failed. Coverage V1 remains
+unexecuted after a source-review metadata mismatch; V2 fixes that seam.
+
+The fresh accepted TACT inputs have 69 direct rows and 197 Lookup rows.
+Joining by ID and supplementing from the authenticated `a3da648` public snapshot
+yields 116 names; all 69 direct pairs agree exactly with the public source.
+The old header-declared 70338 cache supplies three direct TactKey candidates
+joined to the fresh Lookup, all already public. Its separate BroadcastText-tail
+profile yields zero candidates. Neither operation applies a hotfix overlay or
+establishes 70374 cache compatibility.
+
+Coverage V2 compares the base 116, public 19,685 and cache three entries with
+only the two causally observed needed names. It covers zero of two, counts
+119 identical source pairs collapsed and exports zero files. No supplied-key
+retry is justified by this result. Key values, names and correlations stay
+private; no positive decryption/availability acceptance or accepted prefix follows.
+
+Final independent QA closes 2,097 software guards, two empty helper network
+traces and absent owned groups. These helper traces are separate from native
+and product traffic; counts are not OS I/O, RSS or an atomic-snapshot claim.
+The retained failed and unexecuted evidence is preserved. At this checkpoint
+official client refresh is ongoing; refreshed-client acceptance requires new
+evidence. Production source/producers remain unchanged, with no new product
+binary or bundle. Full catalog, geometry and runtime gates remain open;
+Windows development/distribution stays deferred in draft PR #27.
+
+Evidence root is the same 70374 DB2-product lab recorded above.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `root/next-availability-v1/actual-attempt1/receipt.json` | `81eb0fb79c104cced2e8bbbc932a4617c77f77ed0f436f31c316c1d912d1dfaa` |
+| `root/next-availability-v1/native-key-actual-invocation-v2/receipt.json` | `6658a6701eafb37ec8288fc920c16030038c2a476045a21dd586ac1049264aa2` |
+| `next-cache-tactkey-v1/actual-attempt1/acceptance.json` | `1cb0aee02daaf1e2b9a6243d071acf07475c69a4283d3cccf2a75e7ec7ae6ed9` |
+| `next-key-coverage-v2/actual-attempt1/acceptance.json` | `a5c7fa8eb4d8a092df59015c6db990c0743459a62a54ef499c89589f4db5a924` |
+| `qa/review/key-coverage-cache-terminal-independent-review-v1.json` | `ccf115f8f97deb0d4a234c8dfde428fb31a6009591f246144c9e4c76696f19c0` |

@@ -3969,3 +3969,24 @@ See [product evidence](forever-product.md#explicit-linux-70374-db2-product-v10--
 Full catalog, real geometry/world resources, game/PE authentication, RustyCore
 runtime and a new reproducible v10 Linux bundle remain open. Windows stays
 deferred in draft PR #27. This does not complete the extractor goal.
+
+## Bounded 70374 key diagnostic remains negative — 2026-10-14
+
+Issue #58 uses the unchanged product producers compiled from `52db841` after
+PR #57 merged (`5aba789`). Four independent Rust GODI/Map × esES/enUS requests
+produce three encrypted and one missing result, with zero bytes. Corrected
+native observation yields three read-error-1005 causal observations / two
+unique needed names and one error-1007 size failure, with no complete files;
+this is not Rust/native error-category parity or all-frame coverage.
+Fresh TACT 69/197 rows yield 116 names, with all 69 direct/public pairs exact.
+Three old70338 direct-cache candidates are already public; BroadcastText yields
+zero candidates. Coverage V2 matches zero of two needed names against the base,
+public 19,685 and cache three entries: 119 identical pairs collapse, no exports
+and no justified supplied-key retry. No cache overlay/build transfer is accepted.
+The failed native attempt and unexecuted coverage-V1 metadata blocker remain
+preserved. Final independent QA closes 2,097 software guards, two empty helper
+traces and owned groups; receipt SHA-256
+`ccf115f8f97deb0d4a234c8dfde428fb31a6009591f246144c9e4c76696f19c0`.
+See [diagnostic evidence](forever-product.md#bounded-70374-key-coverage-closes-negatively--2026-10-14).
+Official client refresh is ongoing; full catalog, geometry/runtime and new
+product-bundle acceptance remain open. Windows/draft PR #27 stays deferred.
