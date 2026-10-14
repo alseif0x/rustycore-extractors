@@ -4104,3 +4104,23 @@ Together with reproducible packaging and the independently accepted v11
 campaigns, this closes bounded current local package
 acceptance. Final source/documentation checks precede issue #62 merge.
 The full Linux extractor and release gates remain open.
+
+
+## Complete 70374 DB2 catalog remains blocked — 2026-10-14
+
+Issue #64 executes the complete 1,161-entry esES/disabled-key v10 plan with the
+accepted current Linux package, through a persistent user service. Extraction
+exits 9 (`local_store_no_verified_encoding`); offline output and link verification
+both exit 8 (`package_incomplete`). Two provisional files / 512 bytes remain
+without a DB2 seal or final manifest. No available prefix is accepted, no retry
+runs, all three owned groups close and all three consumer traces are empty.
+Independent review passes the negative closure, SHA-256
+`e30de1a7399629055316b0e1d95ea9e545d750cb29da61e4fa221556fff03d17`.
+
+Public plan order and provisional metadata identify Achievement (FDID 1260179)
+as the first failed acquisition, before schema validation. This error alone
+does not establish encryption or missing-key causality. A new singleton causal
+diagnostic and matching-only coverage are the proposed next bounded gates;
+historical 70338 and Map/GameObject observations do not transfer. Full catalog,
+real geometry/world extraction, runtime and publication remain open; Windows
+stays deferred. See [product evidence](forever-product.md#complete-70374-db2-catalog-first-attempt-rejected--2026-10-14).
