@@ -28,6 +28,11 @@ mod v9;
 #[cfg(target_os = "linux")]
 pub mod links;
 
+#[cfg(target_os = "linux")]
+type ArtifactReader<'a> = &'a mut std::fs::File;
+#[cfg(not(target_os = "linux"))]
+type ArtifactReader<'a> = &'a mut (dyn Read + 'a);
+
 #[derive(Clone, Copy)]
 enum Scope {
     Intrinsic,
@@ -72,7 +77,7 @@ fn verify_inner(
     #[cfg(not(target_os = "linux"))]
     let _ = scope;
     let mut failure = None;
-    let inspect = |artifact: &Artifact, file: &mut std::fs::File| {
+    let inspect = |artifact: &Artifact, file: ArtifactReader<'_>| {
         let mut bytes = Vec::new();
         let result = (|| {
             bytes
