@@ -625,3 +625,21 @@ fn receipt_hash_uses_lowercase_path_identity() {
         })
     );
 }
+
+#[test]
+fn target70374_context_is_linux_db2_only_without_changing_wire() {
+    for components in 0..=255 {
+        let context = Context {
+            build: 70374,
+            components,
+            locale: crate::Locale::EsEs,
+            source_sha256: [1; 32],
+            plan_sha256: [2; 32],
+            producer_sha256: [3; 32],
+        };
+        assert_eq!(
+            context.validate().is_ok(),
+            cfg!(target_os = "linux") && components == Component::Db2.bit()
+        );
+    }
+}

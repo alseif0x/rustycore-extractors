@@ -20,6 +20,7 @@ pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
 pub const MAX_70205_DB2_ENTRIES: usize = 1161;
 pub const MAX_70338_DB2_ENTRIES: usize = 1161;
+pub const MAX_70374_DB2_ENTRIES: usize = 1161;
 
 /// Explicit DB2 schema source. Existing product plans retain their legacy
 /// pinned schema; builds 70205 and 70338 plans opt into separately pinned
@@ -30,6 +31,7 @@ pub enum SchemaCatalog {
     PinnedMetadataV1,
     WowDbDefs70205V1,
     WowDbDefs70338V1,
+    WowDbDefs70374V1,
 }
 
 impl SchemaCatalog {
@@ -38,6 +40,7 @@ impl SchemaCatalog {
             Self::PinnedMetadataV1 => catalog::CATALOG_ID,
             Self::WowDbDefs70205V1 => catalog::WOWDBDEFS_70205_CATALOG_ID,
             Self::WowDbDefs70338V1 => catalog::WOWDBDEFS_70338_CATALOG_ID,
+            Self::WowDbDefs70374V1 => catalog::WOWDBDEFS_70374_CATALOG_ID,
         }
     }
 
@@ -46,6 +49,7 @@ impl SchemaCatalog {
             Self::PinnedMetadataV1 => MAX_DB2_ENTRIES,
             Self::WowDbDefs70205V1 => MAX_70205_DB2_ENTRIES,
             Self::WowDbDefs70338V1 => MAX_70338_DB2_ENTRIES,
+            Self::WowDbDefs70374V1 => MAX_70374_DB2_ENTRIES,
         }
     }
 }
@@ -161,6 +165,7 @@ impl Plan {
             "6" => 6,
             "8" => 8,
             "9" => 9,
+            "10" => 10,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -190,6 +195,10 @@ impl Plan {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
+            10 => match field(&mut lines, "schema-catalog")? {
+                "wowdbdefs-70374-v1" => SchemaCatalog::WowDbDefs70374V1,
+                _ => return Err("product_plan_schema_catalog"),
+            },
             _ => SchemaCatalog::PinnedMetadataV1,
         };
         let decryption = match version {
@@ -198,7 +207,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8 | 9 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=10 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -277,6 +286,8 @@ impl Plan {
         let plan = Self {
             publication_profile: if version == 9 {
                 PublicationProfile::Build70338Db2GtCamerasV1
+            } else if version == 10 {
+                PublicationProfile::Build70374Db2OnlyV1
             } else {
                 PublicationProfile::Legacy
             },
@@ -324,7 +335,7 @@ impl Plan {
                 connection.validate()?;
             }
         }
-        if ![70170, 70205, 70338].contains(&self.build) {
+        if ![70170, 70205, 70338].contains(&self.build) && !self.is_v10() {
             return Err("product_plan_build");
         }
         if self.schema_catalog == SchemaCatalog::WowDbDefs70205V1 && self.build != 70205 {
@@ -332,6 +343,11 @@ impl Plan {
         }
         if (self.schema_catalog == SchemaCatalog::WowDbDefs70338V1 && self.build != 70338)
             || (self.build == 70338 && self.schema_catalog != SchemaCatalog::WowDbDefs70338V1)
+        {
+            return Err("product_plan_schema_catalog");
+        }
+        if (self.schema_catalog == SchemaCatalog::WowDbDefs70374V1 || self.build == 70374)
+            && !self.is_v10()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -366,7 +382,7 @@ impl Plan {
                         .ok_or("product_plan_schema")?
                         .metadata()
                 }
-                SchemaCatalog::WowDbDefs70338V1 => {
+                SchemaCatalog::WowDbDefs70338V1 | SchemaCatalog::WowDbDefs70374V1 => {
                     catalog::resolve_for(self.schema_catalog.id(), &entry.name)
                         .map_err(|_| "product_plan_schema")?
                         .ok_or("product_plan_schema")?
@@ -428,6 +444,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v10() {
+            return 10;
+        }
         if self.is_v9() {
             return 9;
         }
@@ -440,6 +459,7 @@ impl Plan {
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return 4,
             SchemaCatalog::WowDbDefs70338V1 => return 5,
+            SchemaCatalog::WowDbDefs70374V1 => {}
             SchemaCatalog::PinnedMetadataV1 => {}
         }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
@@ -452,6 +472,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v10() {
+            return "forever-product-v10";
+        }
         if self.is_v9() {
             return "forever-product-v9";
         }
@@ -464,6 +487,7 @@ impl Plan {
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return "forever-product-v4",
             SchemaCatalog::WowDbDefs70338V1 => return "forever-product-v5",
+            SchemaCatalog::WowDbDefs70374V1 => {}
             SchemaCatalog::PinnedMetadataV1 => {}
         }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
@@ -479,6 +503,13 @@ impl Plan {
         matches!(
             self.publication_profile,
             PublicationProfile::Build70338Db2GtCamerasV1
+        )
+    }
+
+    pub const fn is_v10(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70374Db2OnlyV1
         )
     }
 
@@ -509,9 +540,10 @@ impl Plan {
             SchemaCatalog::PinnedMetadataV1 => "",
             SchemaCatalog::WowDbDefs70205V1 => "schema-catalog\twowdbdefs-70205-v1\n",
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
+            SchemaCatalog::WowDbDefs70374V1 => "schema-catalog\twowdbdefs-70374-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8 | 9, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=10, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -584,5 +616,7 @@ mod disk_tests;
 mod map_domain_tests;
 #[cfg(test)]
 pub(crate) mod offmesh_tests;
+#[cfg(test)]
+mod v10_tests;
 #[cfg(test)]
 mod v9_tests;

@@ -169,3 +169,48 @@ fn windows_disk_plan_rejects_all_execution_entries_before_io() {
         "product_disk_unsupported"
     );
 }
+
+#[test]
+fn v10_platform_gate_is_before_all_source_or_output_paths() {
+    let p = Plan::parse(include_str!(
+        "../../../../tests/contracts/fixtures/forever-product-v10/disabled.tsv"
+    ))
+    .unwrap();
+    if cfg!(target_os = "linux") {
+        assert_eq!(admit(&p), Ok(()));
+    } else {
+        let path = Path::new("nonexistent-authored-v10-platform");
+        assert_eq!(admit(&p).unwrap_err().code, "product_platform");
+        assert_eq!(open(&p, path).err().unwrap().code, "product_platform");
+        assert_eq!(
+            inspect(&p, path, [1; 32], None).unwrap_err().code,
+            "product_platform"
+        );
+        assert_eq!(
+            extract(&p, path, path, [1; 32], false).unwrap_err().code,
+            "product_platform"
+        );
+        assert_eq!(
+            crate::verify::verify(&p, path, None).unwrap_err().code,
+            "product_platform"
+        );
+    }
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn v10_invalid_manual_profile_rejects_before_client_or_keys() {
+    let mut p = Plan::parse(include_str!(
+        "../../../../tests/contracts/fixtures/forever-product-v10/disabled.tsv"
+    ))
+    .unwrap();
+    p.components = 7;
+    let path = Path::new("nonexistent-authored-v10-invalid");
+    assert_eq!(
+        open(&p, path).err().unwrap().code,
+        "product_plan_component_scope"
+    );
+    assert_eq!(
+        extract(&p, path, path, [1; 32], false).unwrap_err().code,
+        "product_plan_component_scope"
+    );
+}

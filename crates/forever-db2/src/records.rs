@@ -162,7 +162,7 @@ impl DecodedTable {
     /// parents and physical WDC catalog sections.
     pub const REGULAR_SECTIONS_METADATA_PROFILE: &'static str =
         "forever-db2-regular-sections-metadata-v1";
-    /// Three explicit build-70205/70338 catalog tables may use bounded ceilings of
+    /// Three explicit build-70205/70338/70374 catalog tables may use bounded ceilings of
     /// 160k direct records, 160k parent entries, and 1.25M retained scalar
     /// values. The general reader and older product profiles retain their
     /// existing 100k / 1M ceilings.
@@ -171,6 +171,10 @@ impl DecodedTable {
     /// build-70338 schema catalog.
     pub const TARGET_HIGH_VOLUME_70338_PROFILE: &'static str =
         "wowdbdefs-70338-high-volume-regular-v1";
+    /// Same bounded table allowlist and limits under the independently pinned
+    /// build-70374 schema catalog; no older-build acceptance is transferred.
+    pub const TARGET_HIGH_VOLUME_70374_PROFILE: &'static str =
+        "wowdbdefs-70374-high-volume-regular-v1";
     /// Policy ceiling, not a WDC5 format limit.
     pub const MAX_REGULAR_SECTIONS: u32 = 16;
 
@@ -231,7 +235,7 @@ impl DecodedTable {
     }
 
     /// Decode a narrow allowlist of high-volume tables from the pinned
-    /// build-70205 or build-70338 metadata catalog. Only one-section regular records for
+    /// build-70205, build-70338 or build-70374 metadata catalog. Only one-section regular records for
     /// ManifestInterfaceData, ModelFileData, and WMOMinimapTexture are admitted.
     /// Every other table/catalog returns `Ok(None)` so callers retain the
     /// ordinary decoder profile. Sparse, multi-section, and TACT/catalog
@@ -245,7 +249,9 @@ impl DecodedTable {
     ) -> Result<Option<Self>, RecordError> {
         if !matches!(
             catalog_id,
-            catalog::WOWDBDEFS_70205_CATALOG_ID | catalog::WOWDBDEFS_70338_CATALOG_ID
+            catalog::WOWDBDEFS_70205_CATALOG_ID
+                | catalog::WOWDBDEFS_70338_CATALOG_ID
+                | catalog::WOWDBDEFS_70374_CATALOG_ID
         ) || !matches!(
             table_name,
             "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
@@ -325,6 +331,9 @@ impl DecodedTable {
             ) | (
                 catalog::WOWDBDEFS_70338_CATALOG_ID,
                 "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
+            ) | (
+                catalog::WOWDBDEFS_70374_CATALOG_ID,
+                "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
             )
         ) {
             DecodeLimits::TARGET_HIGH_VOLUME
@@ -334,7 +343,9 @@ impl DecodedTable {
         let sparse_parent_raw = matches!(
             (catalog_id, table_name),
             (
-                catalog::WOWDBDEFS_70205_CATALOG_ID | catalog::WOWDBDEFS_70338_CATALOG_ID,
+                catalog::WOWDBDEFS_70205_CATALOG_ID
+                    | catalog::WOWDBDEFS_70338_CATALOG_ID
+                    | catalog::WOWDBDEFS_70374_CATALOG_ID,
                 "CollectableSourceEncounterSparse"
                     | "CollectableSourceQuestSparse"
                     | "CollectableSourceVendorSparse"

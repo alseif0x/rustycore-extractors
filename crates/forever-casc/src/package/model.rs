@@ -54,10 +54,15 @@ pub struct Context {
 }
 impl Context {
     pub fn validate(self) -> Result<(), Error> {
-        if ![70170, 70205, 70338].contains(&self.build)
+        if ![70170, 70205, 70338, 70374].contains(&self.build)
             || self.components == 0
             || self.components & !63 != 0
             || [self.source_sha256, self.plan_sha256, self.producer_sha256].contains(&[0; 32])
+        {
+            return Err(Error::Context);
+        }
+        if self.build == 70374
+            && (self.components != Component::Db2.bit() || !cfg!(target_os = "linux"))
         {
             return Err(Error::Context);
         }

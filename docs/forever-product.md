@@ -1,4 +1,4 @@
-# Forever product interface: v1–v6 and Linux v8–v9
+# Forever product interface: v1–v6 and Linux v8–v10
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -20,6 +20,10 @@ for builds 70170/70205. V6 does not extend build 70338. The separate Linux
 [v9 contract](../contracts/forever-product-contract-v9.json) admits exactly
 DB2, GT and raw cameras on build 70338; its bounded real acceptance is recorded
 below. V5 remains DB2-only, and 70338 geometry remains unaccepted.
+The separate Linux [v10 contract](../contracts/forever-product-contract-v10.json)
+admits explicit build 70374 DB2-only plans with `wowdbdefs-70374-v1`.
+Its bounded TACT acceptance and negative startup diagnostic are recorded below;
+other 70374 components and a new bundle remain unaccepted.
 
 ## Build and inspect
 
@@ -32,7 +36,7 @@ cargo build --offline --locked --release -p forever-extractor
 No selected file is read by `inspect --plan`. Adding `--client` admits the client
 and explicitly specified ROOT/index layouts, builds the local metadata store
 and returns its context. This is not an availability survey. `--help` documents
-the four commands; every ordinary result/error is path-free JSON.
+the available commands; every ordinary result/error is path-free JSON.
 
 A bounded DB2/GT/camera example for build 70205/esES follows. Separators are
 literal tabs; the file must end with LF. Names and IDs are public pinned metadata.
@@ -942,3 +946,97 @@ per-file correlations stay outside model/Git/CI; Windows remains deferred.
 
 Retained evidence root:
 `/mnt/nvme2/datos/forever-product-runs/linux-70338-key-refresh-20261014-oazqtiee/`.
+
+## Explicit Linux 70374 DB2 product v10 — 2026-10-14
+
+Issue #56 adds canonical product plan/contract v10 and
+`Build70374Db2OnlyV1`: explicit Linux Rust-local acquisition, build 70374,
+`wowdbdefs-70374-v1`, DB2-only component mask 1 and resident publication.
+The commands are inspect, extract, resume, verify and verify-links. Both existing
+key policies remain explicit; no new `--backend` option or default build
+admission is introduced. Legacy Session/native/standalone profiles retain their
+gates. Other components and Windows v10 execution reject.
+
+The independent 1,161-table catalog pins WoWDBDefs commit
+`464a25b3a7c02b0c74726be7a53a0b0ccf1a2d10`, with facts SHA-256
+`cf9a5a549136090c3aba1dddccc76c4aec45eb8a30162f053860f2bed44d2faf`.
+Its normalized metadata equals the older 70338 catalog; real acceptance is
+established separately below. Product verification preflights the complete
+selected DB2 inventory and its unchanged 16 MiB/file and 16 GiB aggregate
+limits before payload processing. Off-mesh fields and geometry selections are
+outside v10; its only terrain/navigation selection is `none`.
+
+Final compiled source commit `52db8418587d6db2994bb91137aee11a67d5d6e8`
+binds 708 selected files / 18,552,341 bytes; the separate Cargo/crate inventory
+has 458 files / 9,881,390 bytes. Debug and release each pass 2,951 tests,
+with 26 normally ignored tests across 46 targets. The nine-command validation
+also passes Clippy, formatting, 355 contracts, 162 distribution checks plus
+one skip, catalog regeneration and both product builds. Ignored tests are not
+real acceptance. Independent review binds the logs and frozen producer copies.
+Subsequent documentation does not rebuild those producers.
+
+The authored CLI campaign passes 82 expected outcomes: 32 exit-0, 16 exit-2,
+four exit-8, 26 exit-9 and four deliberate SIGKILLs. Both disabled and supplied
+toy-key policies preserve two DB2 files / 922 bytes per complete view, with
+exact same-profile clean/resumed manifests and bytes. Wrong contexts, existing
+outputs, metadata limits, tampering, malformed second sources and pre-I/O gates
+are covered. Incomplete selections remain failed. All 941 guards close and
+82 owned groups are absent. Consumer traces have zero network calls: 74 empty
+traces and eight classified fsync/cut traces; child-preexec denial probes are
+separate.
+
+The external four-table row adapters use the new catalog. Their qualification
+passes 16 commands, ten authored Python methods, eight exact Rust/Python row
+comparisons and four CLI negatives. The strict native oracle pins CascLib
+`02245dcd245e7433e524577656177723d3e4992e`, complete EOF/CKey-MD5 checks
+and 16 MiB/file / 32 MiB/selection. Native built-in keys differ from Rust's
+disabled policy; matching bytes do not establish equal decryption capabilities.
+
+The first whole real campaign remains failed at a trace-auditor defect: a
+signal-only cut produced no INJECTED marker. V5 records the exact wrapper argv
+and validates the calibrated fsync count plus SIGKILL; four authored audit
+controls pass. One explicitly authorized fresh TACT campaign and one separate
+startup diagnostic bound the native campaign to three invocations, including
+the failed one, and at most 96 MiB of required source bytes. This changes no
+producer/file/selection cap and does not measure total hashing, CASC or OS I/O.
+The failed evidence remains unchanged; its historical external launcher guard
+has a documented later source transition.
+
+The fresh 70374/esES TACT campaign passes 25 expected outcomes, including two
+calibrated cuts. Four complete clean/resumed views across debug/release each
+contain `TactKey` and `TactKeyLookup`: two files / 4,292 bytes. All four private
+Rust/Python row comparisons match exactly: 69 and 197 rows, 266 per profile.
+Native source bytes, CKeys, published bytes, same-profile manifests, separate
+verification and verify-links agree. Private keys, rows and per-file
+correlations remain outside Git, CI and model context.
+
+The separate startup diagnostic closes three failures: native reports
+`native_complete_read_failed`; debug and release report
+`local_store_no_verified_encoding`. The diagnostic stops at the first requested
+table, `GameObjectDisplayInfo`; `Map` is not reached. Native creates no output,
+and neither Rust output has a complete manifest. This accepts no prefix and
+establishes no individual 70374 Map availability result.
+
+Final independent real review: `passed-bounded-tact-positive-and-startup-negative`, with no findings.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70374-db2-product-20261014-s1erfa6i/`.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `impl/source-v3/source-freeze-v3.json` | `23f202c3a96198ee03c5e8b0594fdb895fee198da2f777acfe686adc1c48b510` |
+| `root/full-validation-attempt1/report.json` | `1d11e9dcc53827010e7d8bc4043c84ef4cdb6030355aed084bfc60889bf48e9c` |
+| `root/producers-v1/producer-freeze-v1.json` | `235f4fd3177fa8b7e83775cb58af3287f5351fe8d884cea01ee58068aa0ce913` |
+| `qa/review/root-validation-review-v1.json` | `9632af49d03944ec717378933a9ae7bb9068b08c9568b74c8700dce243ad9d3e` |
+| `synthetic-attempt1/acceptance.json` | `42791ab9fd1a7dafc296e7471113fb80db5ef8d236eb68f391f8e738d8ca7c66` |
+| `qa/review/synthetic-terminal-independent-review-v1.json` | `b312a0083875e1402b801e92772fdf25e1875d86fa232a2ed754b1b5775fb213` |
+| `real/qualification-attempt3/report.json` | `96ab0374ea5c8df0b94911457f6c3ca85a0b8bf3e5a280bab1811044b98ac133` |
+| `real/revision5/real-tact-attempt2/acceptance.json` | `03033d55368573073fe2324797dae1da1c1aef940370eac5510dc8b1ea57f6a7` |
+| `real/revision5/real-startup-diagnostic-attempt1/acceptance.json` | `8542c2acf52cdab4895d40cba138b2ccc062e424d8d2141a5ef72e3ff7569ca4` |
+| `qa/review/real-terminal-independent-review-v1.json` | `fb1008dd5cc6c697b787c5f3d466ec07ee46cdfeabb45ff45017015e457d0b0c` |
+
+This accepts the bounded Linux DB2 profile and TACT selection. Full catalog
+acquisition, real geometry/world resources, game/PE authentication, RustyCore
+runtime and a new reproducible Linux bundle remain gates. Existing 70338
+evidence keeps its dated scope. Windows development/distribution remains
+deferred, with draft PR #27 preserved. The full extractor goal remains active.

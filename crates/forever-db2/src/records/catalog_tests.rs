@@ -48,7 +48,16 @@ fn fixture_for(
     table: CharacterTable,
     lookup: bool,
 ) -> (Vec<u8>, Vec<Vec<Value>>, bool) {
-    let fields = &metadata.fields[..metadata.file_field_count];
+    fixture_for_fields(metadata, metadata.fields, table, lookup)
+}
+
+fn fixture_for_fields(
+    metadata: &TableMetadata,
+    wire_fields: &[FieldMetadata],
+    table: CharacterTable,
+    lookup: bool,
+) -> (Vec<u8>, Vec<Vec<Value>>, bool) {
+    let fields = &wire_fields[..metadata.file_field_count];
     let record_size: usize = fields
         .iter()
         .map(|field| width(*field) * usize::from(field.array_size))
@@ -756,4 +765,406 @@ fn build_70338_catalog_is_separately_pinned_and_schema_equivalent() {
     let source = provenance(WOWDBDEFS_70338_CATALOG_ID).unwrap();
     assert_eq!(source.source_commit, WOWDBDEFS_70338_SOURCE_COMMIT);
     assert_eq!(source.facts_sha256, WOWDBDEFS_70338_FACTS_SHA256);
+}
+
+// The WoWDBDefs physical type keeps the DBD column category (Int), while
+// decode_kinds retains <8>/<16>/<64>. Author wire widths from the independently
+// pinned prior target, after the complete shape-equality test above. This is
+// supplied synthetic decoder evidence, not a native or client-file oracle.
+fn fixture_70374(
+    metadata: &TableMetadata,
+    table: CharacterTable,
+    lookup: bool,
+) -> (Vec<u8>, Vec<Vec<Value>>, bool) {
+    let prior = resolve_for(WOWDBDEFS_70338_CATALOG_ID, metadata.name)
+        .unwrap()
+        .unwrap()
+        .metadata();
+    let mut fields = prior.fields.to_vec();
+    for (field, kind) in fields.iter_mut().zip(prior.decode_fields.unwrap()) {
+        field.kind = match kind {
+            Kind::Unsigned(8, _) | Kind::Signed(8, _) => FieldType::Byte,
+            Kind::Unsigned(16, _) | Kind::Signed(16, _) => FieldType::Short,
+            Kind::Unsigned(64, _) | Kind::Signed(64, _) => FieldType::Long,
+            _ => field.kind,
+        };
+    }
+    fixture_for_fields(metadata, &fields, table, lookup)
+}
+
+// Added 2026-10-14: new target evidence is synthetic, not inherited client acceptance.
+#[test]
+fn build_70374_catalog_has_independent_provenance_and_all_1161_shapes() {
+    let old = tables_for(WOWDBDEFS_70338_CATALOG_ID).unwrap();
+    let new = tables_for(WOWDBDEFS_70374_CATALOG_ID).unwrap();
+    assert_eq!(old.len(), 1161);
+    assert_eq!(new.len(), 1161);
+    assert!(new.windows(2).all(|pair| pair[0].name < pair[1].name));
+    let mut ids = BTreeSet::new();
+    for (old, new) in old.iter().zip(new) {
+        assert!(ids.insert(new.file_data_id));
+        assert_eq!(old.name, new.name);
+        assert_eq!(old.file_data_id, new.file_data_id);
+        assert_eq!(old.table_hash, new.table_hash);
+        assert_eq!(old.other_layout_hashes, new.other_layout_hashes);
+        assert_eq!(old.layout_hash, new.layout_hash);
+        assert_eq!(old.index, new.index);
+        assert_eq!(old.parent_index, new.parent_index);
+        assert_eq!(old.field_count, new.field_count);
+        assert_eq!(old.file_field_count, new.file_field_count);
+        assert_eq!(old.fields, new.fields);
+        assert_eq!(old.blockers, new.blockers);
+        assert_eq!(old.decode_fields, new.decode_fields);
+        assert!(new.shape_compatible());
+        let previous = resolve_for(WOWDBDEFS_70338_CATALOG_ID, new.name)
+            .unwrap()
+            .unwrap();
+        let current = resolve_for(WOWDBDEFS_70374_CATALOG_ID, new.name)
+            .unwrap()
+            .unwrap();
+        assert_ne!(previous, current);
+        assert_eq!(current.catalog_id(), WOWDBDEFS_70374_CATALOG_ID);
+    }
+    let source = provenance(WOWDBDEFS_70374_CATALOG_ID).unwrap();
+    assert_eq!(source.id, "wowdbdefs-70374-v1");
+    assert_eq!(
+        source.source_commit,
+        "464a25b3a7c02b0c74726be7a53a0b0ccf1a2d10"
+    );
+    assert_eq!(
+        source.source_blob,
+        "8a5d8122f312ae6a9564e8286fdc491831fecc22"
+    );
+    assert_eq!(
+        source.source_sha256,
+        "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265"
+    );
+    assert_eq!(
+        source.facts_sha256,
+        "cf9a5a549136090c3aba1dddccc76c4aec45eb8a30162f053860f2bed44d2faf"
+    );
+    assert_ne!(source, provenance(WOWDBDEFS_70338_CATALOG_ID).unwrap());
+    assert!(supports(WOWDBDEFS_70374_CATALOG_ID));
+    assert_eq!(
+        resolve_for(WOWDBDEFS_70374_CATALOG_ID, "UnknownSyntheticTable"),
+        Ok(None)
+    );
+    assert!(!supports("wowdbdefs-70374-v2"));
+    assert_eq!(tables().len(), 1126);
+}
+
+#[test]
+fn build_70374_all_shapes_decode_direct_copies_and_exact_empty_inputs() {
+    for metadata in tables_for(WOWDBDEFS_70374_CATALOG_ID).unwrap() {
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, metadata.name)
+            .unwrap()
+            .unwrap();
+        for lookup in [false, true] {
+            let (data, expected, copies) = fixture_70374(metadata, table, lookup);
+            let decoded = DecodedTable::read(&data, table)
+                .unwrap_or_else(|e| panic!("{} lookup={lookup}: {e:?}", metadata.name));
+            assert_eq!(decoded.rows()[&7], expected, "{}", metadata.name);
+            assert_eq!(
+                decoded.rows().len(),
+                if copies { 3 } else { 1 },
+                "{}",
+                metadata.name
+            );
+            if copies {
+                for id in [70000, 70001] {
+                    let mut expected = expected.clone();
+                    if metadata.index >= 0 {
+                        expected[metadata.index as usize][0] = Value::Unsigned(id);
+                    }
+                    assert_eq!(decoded.rows()[&id], expected, "{}", metadata.name);
+                }
+            }
+        }
+        let mut empty = header(table, metadata.file_field_count);
+        empty.resize(empty.len() + 4 * metadata.file_field_count, 0);
+        assert!(DecodedTable::read(&empty, table).unwrap().rows().is_empty());
+        empty.pop();
+        assert_eq!(
+            DecodedTable::read(&empty, table).err(),
+            Some(RecordError::Bounds),
+            "{}",
+            metadata.name
+        );
+    }
+}
+
+#[test]
+fn build_70374_target_table_layout_and_field_gates_remain_strict() {
+    for name in ["Map", "GameObjectDisplayInfo", "TactKey", "TactKeyLookup"] {
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        let metadata = resolve_for(WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap()
+            .metadata();
+        let (data, _, _) = fixture_70374(metadata, table, false);
+        for offset in [140, 152, 156, 176] {
+            let mut bad = data.clone();
+            let old = u32::from_le_bytes(bad[offset..offset + 4].try_into().unwrap());
+            put32(&mut bad, offset, old ^ 1);
+            assert_eq!(
+                DecodedTable::read(&bad, table).err(),
+                Some(RecordError::Schema),
+                "{name}@{offset}"
+            );
+        }
+        let mut bad = data.clone();
+        bad.push(0);
+        assert_eq!(
+            DecodedTable::read(&bad, table).err(),
+            Some(RecordError::Bounds)
+        );
+        let mut encrypted = data.clone();
+        put32(&mut encrypted, 204, 1);
+        assert_eq!(
+            DecodedTable::read(&encrypted, table).err(),
+            Some(RecordError::Unsupported)
+        );
+    }
+}
+
+#[test]
+fn build_70374_raw_text_keeps_opaque_bytes_but_checks_identity_and_eof() {
+    let name = "SpellMissileMotion";
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    let metadata = resolve_for(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap()
+        .metadata();
+    let (mut data, _, _) = fixture_70374(metadata, table, false);
+    let offset = data.windows(2).position(|b| b == [0xC3, 0xA1]).unwrap();
+    data[offset] = 0x97;
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::String)
+    );
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&data, WOWDBDEFS_70374_CATALOG_ID, name),
+        Ok(())
+    );
+    let mut bad = data.clone();
+    put32(&mut bad, 152, 0);
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&bad, WOWDBDEFS_70374_CATALOG_ID, name),
+        Err(RecordError::Schema)
+    );
+    data.pop();
+    assert!(
+        DecodedTable::validate_catalog_raw_source_bytes(&data, WOWDBDEFS_70374_CATALOG_ID, name)
+            .is_err()
+    );
+}
+
+#[test]
+fn build_70374_exact_sparse_parent_allowlist_is_raw_only() {
+    for name in [
+        "CollectableSourceEncounterSparse",
+        "CollectableSourceQuestSparse",
+        "CollectableSourceVendorSparse",
+    ] {
+        let data = if name == "CollectableSourceVendorSparse" {
+            vendor_sparse_parent_fixture()
+        } else {
+            empty_sparse_parent_fixture(name)
+        };
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            DecodedTable::read(&data, table).err(),
+            Some(RecordError::Unsupported)
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data,
+                WOWDBDEFS_70374_CATALOG_ID,
+                name
+            ),
+            Ok(())
+        );
+        assert!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data[..data.len() - 1],
+                WOWDBDEFS_70374_CATALOG_ID,
+                name
+            )
+            .is_err()
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data,
+                WOWDBDEFS_70374_CATALOG_ID,
+                "UnknownSyntheticTable"
+            ),
+            Err(RecordError::Schema)
+        );
+    }
+}
+
+#[test]
+fn build_70374_empty_appended_parent_retains_count_gates() {
+    let name = "ExteriorComponentGroup";
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    let metadata = resolve_for(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap()
+        .metadata();
+    assert_eq!(
+        (
+            metadata.file_field_count,
+            metadata.field_count,
+            metadata.parent_index
+        ),
+        (2, 3, 2)
+    );
+    let mut data = header(table, metadata.field_count);
+    data.resize(data.len() + 4 * metadata.field_count, 0);
+    assert!(DecodedTable::read(&data, table).unwrap().rows().is_empty());
+    put32(&mut data, 136, 1);
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::Schema)
+    );
+}
+
+fn target_high_volume_numeric_fixture(count: u32) -> Vec<u8> {
+    let name = "WMOMinimapTexture";
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    let fields = 4;
+    let record_size = 16;
+    let mut data = header(table, fields);
+    put32(&mut data, 136, count);
+    put32(&mut data, 144, record_size as u32);
+    put32(&mut data, 160, 1);
+    put32(&mut data, 164, count);
+    put32(&mut data, 188, (fields * 24) as u32);
+    put32(&mut data, 200, 1);
+    data.resize(244 + 4 * fields + 24 * fields, 0);
+    for index in 0..fields {
+        let at = 244 + 4 * fields + 24 * index;
+        put16(&mut data, at, (index * 32) as u16);
+        put32(&mut data, at + 16, 32);
+        put32(&mut data, at + 20, 1);
+    }
+    let offset = data.len() as u32;
+    put32(&mut data, 212, offset);
+    put32(&mut data, 216, count);
+    put32(&mut data, 228, count * 4);
+    data.resize(data.len() + record_size * count as usize, 0);
+    for id in 1..=count {
+        data.extend(id.to_le_bytes());
+    }
+    data
+}
+
+#[test]
+fn build_70374_high_volume_exact_limit_remains_explicit_and_bounded() {
+    let name = "WMOMinimapTexture";
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    let data = target_high_volume_numeric_fixture(160_000);
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::Limit)
+    );
+    let decoded =
+        DecodedTable::read_target_high_volume_from_catalog(&data, WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+    assert_eq!(decoded.rows().len(), 160_000);
+    assert_eq!(decoded.rows()[&160_000].len(), 5);
+    drop(decoded);
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&data, WOWDBDEFS_70374_CATALOG_ID, name),
+        Ok(())
+    );
+    let over = target_high_volume_numeric_fixture(160_001);
+    assert_eq!(
+        DecodedTable::read_target_high_volume_from_catalog(&over, WOWDBDEFS_70374_CATALOG_ID, name)
+            .err(),
+        Some(RecordError::Limit)
+    );
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&over, WOWDBDEFS_70374_CATALOG_ID, name),
+        Err(RecordError::Limit)
+    );
+}
+
+#[test]
+fn build_70374_high_volume_profile_selection_does_not_widen_other_tables() {
+    assert_eq!(
+        DecodedTable::TARGET_HIGH_VOLUME_70374_PROFILE,
+        "wowdbdefs-70374-high-volume-regular-v1"
+    );
+    for name in [
+        "ManifestInterfaceData",
+        "ModelFileData",
+        "WMOMinimapTexture",
+    ] {
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        let metadata = resolve_for(WOWDBDEFS_70374_CATALOG_ID, name)
+            .unwrap()
+            .unwrap()
+            .metadata();
+        let (data, expected, _) = fixture_70374(metadata, table, false);
+        let decoded = DecodedTable::read_target_high_volume_from_catalog(
+            &data,
+            WOWDBDEFS_70374_CATALOG_ID,
+            name,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(decoded.rows()[&7], expected);
+        let mut bad = data.clone();
+        put32(&mut bad, 200, 2);
+        assert_eq!(
+            DecodedTable::read_target_high_volume_from_catalog(
+                &bad,
+                WOWDBDEFS_70374_CATALOG_ID,
+                name
+            )
+            .err(),
+            Some(RecordError::Unsupported)
+        );
+        put32(&mut bad, 200, 1);
+        put16(&mut bad, 172, 1);
+        assert_eq!(
+            DecodedTable::read_target_high_volume_from_catalog(
+                &bad,
+                WOWDBDEFS_70374_CATALOG_ID,
+                name
+            )
+            .err(),
+            Some(RecordError::Unsupported)
+        );
+    }
+    assert!(
+        DecodedTable::read_target_high_volume_from_catalog(&[], WOWDBDEFS_70374_CATALOG_ID, "Map")
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        DecodedTable::read_target_high_volume_from_catalog(
+            &[],
+            "wowdbdefs-70374-v2",
+            "WMOMinimapTexture"
+        )
+        .unwrap()
+        .is_none()
+    );
 }

@@ -64,9 +64,28 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = match keys {
-        Some(keys) => LocalStore::open_with_keys(client, options, keys),
-        None => LocalStore::open(client, options),
+    let mut store = if plan.is_v10() {
+        #[cfg(target_os = "linux")]
+        {
+            if forever_casc::admit_db2_70374(client).map_err(|e| Error::from(e.code()))?
+                != plan.build
+            {
+                return Err("product_build_mismatch".into());
+            }
+            match keys {
+                Some(keys) => LocalStore::open_db2_70374_with_keys(client, options, keys),
+                None => LocalStore::open_db2_70374(client, options),
+            }
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err("product_platform".into());
+        }
+    } else {
+        match keys {
+            Some(keys) => LocalStore::open_with_keys(client, options, keys),
+            None => LocalStore::open(client, options),
+        }
     }
     .map_err(|e| Error::from(e.code()))?;
     if store.build().build != plan.build {
@@ -87,7 +106,7 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.map_domain.is_some() || plan.is_v9() {
+    if plan.map_domain.is_some() || plan.is_v9() || plan.is_v10() {
         return Err("product_platform".into());
     }
     #[cfg(windows)]
@@ -339,7 +358,9 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
     // preserve the original source bytes; this fallback returns no text values.
     let target_catalog = matches!(
         plan.schema_catalog,
-        crate::plan::SchemaCatalog::WowDbDefs70205V1 | crate::plan::SchemaCatalog::WowDbDefs70338V1
+        crate::plan::SchemaCatalog::WowDbDefs70205V1
+            | crate::plan::SchemaCatalog::WowDbDefs70338V1
+            | crate::plan::SchemaCatalog::WowDbDefs70374V1
     );
     let validation = (|| {
         if target_catalog && bytes.len() >= HEADER_SIZE {
@@ -397,7 +418,7 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let cap = if plan.is_v9() {
+        let cap = if plan.is_v9() || plan.is_v10() {
             db2_remaining(total)?
         } else {
             DB2_FILE_BYTES

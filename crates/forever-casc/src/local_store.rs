@@ -249,7 +249,7 @@ impl LocalStore {
     }
 
     pub fn open(client: &Path, options: OpenOptions) -> Result<Self, Error> {
-        Self::open_inner(client, options, None)
+        Self::open_inner(client, options, None, false)
     }
 
     /// Explicit opt-in Salsa20/128-bit keys. Keys are consumed and kept private;
@@ -263,13 +263,32 @@ impl LocalStore {
         options: OpenOptions,
         keys: crate::keys::Keyring,
     ) -> Result<Self, Error> {
-        Self::open_inner(client, options, Some(keys))
+        Self::open_inner(client, options, Some(keys), false)
+    }
+
+    /// Narrow Linux product-v10 bootstrap admission for exact build70374.
+    /// Raw FDID reads remain generic authenticated bytes, not a DB2/component
+    /// acceptance claim. The product caller must enforce its target catalog.
+    #[cfg(target_os = "linux")]
+    pub fn open_db2_70374(client: &Path, options: OpenOptions) -> Result<Self, Error> {
+        Self::open_inner(client, options, None, true)
+    }
+
+    /// Explicit supplied keys with the same narrow70374 bootstrap admission.
+    #[cfg(target_os = "linux")]
+    pub fn open_db2_70374_with_keys(
+        client: &Path,
+        options: OpenOptions,
+        keys: crate::keys::Keyring,
+    ) -> Result<Self, Error> {
+        Self::open_inner(client, options, Some(keys), true)
     }
 
     fn open_inner(
         client: &Path,
         options: OpenOptions,
         keys: Option<crate::keys::Keyring>,
+        db2_70374: bool,
     ) -> Result<Self, Error> {
         let limits = options.limits;
         if add(client.as_os_str().len(), 48)? > limits.max_path_bytes {
@@ -296,7 +315,18 @@ impl LocalStore {
             &budget,
         )?;
         budget.phase(add(build_bytes.len(), build_bytes.len())?)?;
-        let mut build = build_info::parse(&build_bytes, limits.max_build_info_rows)?;
+        let mut build = if db2_70374 {
+            #[cfg(target_os = "linux")]
+            {
+                build_info::parse_db2_70374(&build_bytes, limits.max_build_info_rows)?
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                return Err(Error::UnsupportedClient);
+            }
+        } else {
+            build_info::parse(&build_bytes, limits.max_build_info_rows)?
+        };
         budget.retain(build.tags.capacity())?;
         budget.retain(build_bytes.capacity())?;
         let build_guard = build_guard.with_bytes(build_bytes);

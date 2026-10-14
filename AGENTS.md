@@ -31,7 +31,18 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
-### Current Linux 70338 product scope — 2026-10-14
+### Current Linux product scope — 2026-10-14
+
+Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
+resident publication and the separately pinned 1,161-schema `wowdbdefs-70374-v1`
+catalog. Debug/release each pass 2,951 tests; 82 authored CLI outcomes include
+four cuts. Real esES acceptance has four clean/resumed TACT views, each with
+two files / 4,292 bytes, and 266 exact Rust/Python rows per profile. Independent real QA
+passes that bounded selection and the separate negative startup diagnostic:
+GameObjectDisplayInfo fails first; Map is not reached. Full catalog, geometry,
+runtime and a new v10 bundle remain gates. Legacy admissions and dated 70338
+evidence retain their scope; Windows and draft PR #27 remain deferred. See
+`docs/forever-product.md` and `docs/forever-completion.md`.
 
 Explicit Linux product v9 admits DB2/GT/raw cameras on build 70338, including
 an explicit nonempty target-catalog selection containing CinematicCamera.
