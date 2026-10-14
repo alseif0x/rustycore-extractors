@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! GT output verification: offline, read-only, bounded, no client/CASC access.
-use super::{MAX_FILE_BYTES, catalog, catalog_manifest, manifest, parse};
+use super::{
+    MAX_FILE_BYTES, catalog, catalog_manifest, contract::CatalogContract, manifest, parse,
+};
 use crate::sha256;
 use std::{
     collections::BTreeSet,
@@ -45,6 +47,7 @@ impl Code {
 }
 
 pub struct Report {
+    pub contract: CatalogContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub code: Code,
     pub build: Option<u32>,
@@ -53,6 +56,7 @@ pub struct Report {
 impl Report {
     pub const fn failure(code: Code) -> Self {
         Self {
+            contract: CatalogContract::Legacy,
             acquisition: None,
             code,
             build: None,
@@ -73,6 +77,19 @@ impl Report {
                 .map_or_else(|| "null".to_owned(), |value| value.to_string()),
             self.artifacts_verified
         );
+        if self.contract == CatalogContract::Build70338V1 {
+            return text.replacen(
+                "\"report_version\":1",
+                &format!(
+                    "\"report_version\":4,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CatalogContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            );
+        }
         match self.acquisition {
             Some(profile) => text.replacen(
                 "\"report_version\":1",
@@ -110,7 +127,7 @@ fn run(root: &Path) -> Result<Report, Code> {
     let text = std::str::from_utf8(&text).map_err(|_| Code::Manifest)?;
     let decoded = match manifest::version(text).map_err(|_| Code::Manifest)? {
         1 => Decoded::Batch(manifest::decode(text).map_err(|_| Code::Manifest)?),
-        2 => Decoded::Catalog(catalog_manifest::decode(text).map_err(|_| Code::Manifest)?),
+        2 | 4 => Decoded::Catalog(catalog_manifest::decode(text).map_err(|_| Code::Manifest)?),
         3 => match manifest::decode(text) {
             Ok(value) => Decoded::Batch(value),
             Err(()) => {
@@ -140,6 +157,7 @@ fn run(root: &Path) -> Result<Report, Code> {
     }
     decoded.verify_files(&gt)?;
     Ok(Report {
+        contract: decoded.contract(),
         acquisition: decoded.acquisition(),
         code: Code::Verified,
         build: Some(decoded.build()),
@@ -153,6 +171,12 @@ enum Decoded {
     Catalog(catalog_manifest::Manifest),
 }
 impl Decoded {
+    fn contract(&self) -> CatalogContract {
+        match self {
+            Self::Batch(_) => CatalogContract::Legacy,
+            Self::Catalog(value) => value.contract,
+        }
+    }
     fn acquisition(&self) -> Option<crate::acquisition::Profile> {
         match self {
             Self::Batch(value) => value.acquisition,

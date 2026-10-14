@@ -219,9 +219,9 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         return Err(());
     }
     let build = u32::try_from(number(field(&value, "build")?)?).map_err(|_| ())?;
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err(());
-    }
+    super::contract::CatalogContract::Legacy
+        .admit_build(build)
+        .map_err(|_| ())?;
     let locale = Locale::parse(string(field(&value, "locale")?)?).map_err(|_| ())?;
     let plan = Plan::named(string(field(&value, "plan")?)?).ok_or(())?;
     let Json::Array(values) = field(&value, "artifacts")? else {

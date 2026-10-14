@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Opt-in pinned catalog acquisition. All twenty files must complete; raw-only
 //! entries cannot create numeric facts or optional-success omissions.
+pub use super::contract::CatalogContract;
 use super::{
     MAX_FILE_BYTES,
     batch::metadata_snapshot,
@@ -12,6 +13,7 @@ use crate::{Error, Locale};
 use std::path::Path;
 
 pub struct Report {
+    pub contract: CatalogContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub complete: bool,
     pub manifest: String,
@@ -30,6 +32,19 @@ impl Report {
             MAX_FILES,
             self.files_published
         );
+        if self.contract == CatalogContract::Build70338V1 {
+            return text.replacen(
+                "\"report_version\":2",
+                &format!(
+                    "\"report_version\":4,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CatalogContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            );
+        }
         match self.acquisition {
             Some(profile) => text.replacen(
                 "\"report_version\":2",
@@ -59,15 +74,55 @@ pub fn extract_with_profile(
     build: u32,
     locale: Locale,
     acquisition: Option<crate::acquisition::Profile>,
+    load: impl FnMut(Table, u32) -> Result<(u32, Vec<u8>), Error>,
+) -> Result<Report, &'static str> {
+    extract_selected(
+        CatalogContract::Legacy,
+        client,
+        destination,
+        build,
+        locale,
+        acquisition,
+        load,
+    )
+}
+
+/// Explicit versioned catalog contract with required Rust-local acquisition.
+/// As with the legacy injection seam, backend provenance is caller-supplied.
+pub fn extract_with_contract(
+    contract: CatalogContract,
+    client: &Path,
+    destination: &Path,
+    build: u32,
+    locale: Locale,
+    acquisition: crate::acquisition::Profile,
+    load: impl FnMut(Table, u32) -> Result<(u32, Vec<u8>), Error>,
+) -> Result<Report, &'static str> {
+    extract_selected(
+        contract,
+        client,
+        destination,
+        build,
+        locale,
+        Some(acquisition),
+        load,
+    )
+}
+
+fn extract_selected(
+    contract: CatalogContract,
+    client: &Path,
+    destination: &Path,
+    build: u32,
+    locale: Locale,
+    acquisition: Option<crate::acquisition::Profile>,
     mut load: impl FnMut(Table, u32) -> Result<(u32, Vec<u8>), Error>,
 ) -> Result<Report, &'static str> {
     let file_cap = acquisition.map_or(MAX_FILE_BYTES, |profile| profile.max_file_bytes() as usize);
     if file_cap == 0 || file_cap > MAX_FILE_BYTES {
         return Err("gt_policy_limit");
     }
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err("unsupported_client");
-    }
+    contract.admit_build(build)?;
     if crate::admit(client).map_err(|error| error.code())? != build {
         return Err("client_build_changed");
     }
@@ -131,6 +186,7 @@ pub fn extract_with_profile(
         return Err("client_build_changed");
     }
     let manifest = Manifest {
+        contract,
         acquisition,
         build,
         locale,
@@ -143,6 +199,7 @@ pub fn extract_with_profile(
         output::complete(&directory)?;
     }
     Ok(Report {
+        contract,
         acquisition,
         complete,
         manifest: text,

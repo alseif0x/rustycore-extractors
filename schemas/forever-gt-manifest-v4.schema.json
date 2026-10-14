@@ -1,0 +1,1260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alseif0x/rustycore-extractors/schemas/forever-gt-manifest-v4.schema.json",
+  "title": "Forever explicit build-70338 GT catalog v4",
+  "$comment": "Embedded acquisition v1 schema SHA256 08f843c4a38ef2ec2f61aad85b5abba2082243260fee2b5e4fa97e626408ec41. No remote resolution. Profile limits are checked exactly by the offline verifier, including each artifact byte count versus the chosen file_bytes.",
+  "$ref": "#/$defs/catalog",
+  "$defs": {
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_version",
+        "scope",
+        "status",
+        "product",
+        "build",
+        "locale",
+        "extractor",
+        "extractor_version",
+        "oracle_commit",
+        "plan",
+        "numeric_policy",
+        "max_file_bytes",
+        "max_batch_bytes",
+        "offline",
+        "downloaded_bytes",
+        "paths_redacted",
+        "full_client_extraction",
+        "typed_loaders_executed",
+        "artifacts",
+        "integrity",
+        "catalog_sha256",
+        "max_files",
+        "acquisition",
+        "component_profile"
+      ],
+      "properties": {
+        "manifest_version": {
+          "const": 4
+        },
+        "scope": {
+          "const": "pinned_gt_catalog"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial"
+          ]
+        },
+        "product": {
+          "const": "wow_classic_beta"
+        },
+        "build": {
+          "const": 70338
+        },
+        "locale": {
+          "enum": [
+            "enUS",
+            "esES"
+          ]
+        },
+        "extractor": {
+          "const": "forever-gt-extract"
+        },
+        "extractor_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9.+-]+$"
+        },
+        "oracle_commit": {
+          "const": "02245dcd245e7433e524577656177723d3e4992e"
+        },
+        "plan": {
+          "const": "catalog"
+        },
+        "numeric_policy": {
+          "const": "finite_decimal_f64_to_f32_v1"
+        },
+        "max_file_bytes": {
+          "const": 4194304
+        },
+        "max_batch_bytes": {
+          "const": 83886080
+        },
+        "offline": {
+          "const": true
+        },
+        "downloaded_bytes": {
+          "const": 0
+        },
+        "paths_redacted": {
+          "const": true
+        },
+        "full_client_extraction": {
+          "const": false
+        },
+        "typed_loaders_executed": {
+          "const": false
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "prefixItems": [
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ArtifactKnowledgeMultiplier"
+                    },
+                    "file_id": {
+                      "const": 1582086
+                    },
+                    "relative_path": {
+                      "const": "gt/ArtifactKnowledgeMultiplier.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ArtifactLevelXP"
+                    },
+                    "file_id": {
+                      "const": 1391662
+                    },
+                    "relative_path": {
+                      "const": "gt/ArtifactLevelXP.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 2
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "BarberShopCostBase"
+                    },
+                    "file_id": {
+                      "const": 1391663
+                    },
+                    "relative_path": {
+                      "const": "gt/BarberShopCostBase.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "BaseMp"
+                    },
+                    "file_id": {
+                      "const": 1391664
+                    },
+                    "relative_path": {
+                      "const": "gt/BaseMp.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 15
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 66666
+                    },
+                    "data_rows": {
+                      "maximum": 66665
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "BaseProfessionRatings"
+                    },
+                    "file_id": {
+                      "const": 4494528
+                    },
+                    "relative_path": {
+                      "const": "gt/BaseProfessionRatings.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "BattlePetTypeDamageMod"
+                    },
+                    "file_id": {
+                      "const": 1391665
+                    },
+                    "relative_path": {
+                      "const": "gt/BattlePetTypeDamageMod.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "BattlePetXP"
+                    },
+                    "file_id": {
+                      "const": 1391666
+                    },
+                    "relative_path": {
+                      "const": "gt/BattlePetXP.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 2
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "CombatRatings"
+                    },
+                    "file_id": {
+                      "const": 1391669
+                    },
+                    "relative_path": {
+                      "const": "gt/CombatRatings.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 32
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 31250
+                    },
+                    "data_rows": {
+                      "maximum": 31249
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "CombatRatingsMultByILvl"
+                    },
+                    "file_id": {
+                      "const": 1391670
+                    },
+                    "relative_path": {
+                      "const": "gt/CombatRatingsMultByILvl.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 4
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "HonorLevel"
+                    },
+                    "file_id": {
+                      "const": 1391671
+                    },
+                    "relative_path": {
+                      "const": "gt/HonorLevel.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "HpPerSta"
+                    },
+                    "file_id": {
+                      "const": 1391642
+                    },
+                    "relative_path": {
+                      "const": "gt/HpPerSta.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ItemLevelByLevel"
+                    },
+                    "file_id": {
+                      "const": 2012881
+                    },
+                    "relative_path": {
+                      "const": "gt/ItemLevelByLevel.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ItemLevelSquish"
+                    },
+                    "file_id": {
+                      "const": 1726830
+                    },
+                    "relative_path": {
+                      "const": "gt/ItemLevelSquish.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ItemSocketCostPerLevel"
+                    },
+                    "file_id": {
+                      "const": 1391643
+                    },
+                    "relative_path": {
+                      "const": "gt/ItemSocketCostPerLevel.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "NPCManaCostScaler"
+                    },
+                    "file_id": {
+                      "const": 1391651
+                    },
+                    "relative_path": {
+                      "const": "gt/NPCManaCostScaler.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 1
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "ProfessionRatings"
+                    },
+                    "file_id": {
+                      "const": 4492239
+                    },
+                    "relative_path": {
+                      "const": "gt/ProfessionRatings.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "SandboxScaling"
+                    },
+                    "file_id": {
+                      "const": 1391659
+                    },
+                    "relative_path": {
+                      "const": "gt/SandboxScaling.txt"
+                    },
+                    "validation_mode": {
+                      "const": "raw"
+                    },
+                    "value_columns": {
+                      "const": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "SpellScaling"
+                    },
+                    "file_id": {
+                      "const": 1391660
+                    },
+                    "relative_path": {
+                      "const": "gt/SpellScaling.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 24
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 41666
+                    },
+                    "data_rows": {
+                      "maximum": 41665
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "StaminaMultByILvl"
+                    },
+                    "file_id": {
+                      "const": 1980632
+                    },
+                    "relative_path": {
+                      "const": "gt/StaminaMultByILvl.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 4
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/artifact"
+                },
+                {
+                  "properties": {
+                    "name": {
+                      "const": "xp"
+                    },
+                    "file_id": {
+                      "const": 1391661
+                    },
+                    "relative_path": {
+                      "const": "gt/xp.txt"
+                    },
+                    "validation_mode": {
+                      "const": "f32"
+                    },
+                    "value_columns": {
+                      "const": 5
+                    },
+                    "consumer_rows_including_zero": {
+                      "maximum": 100001
+                    },
+                    "data_rows": {
+                      "maximum": 100000
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file_count",
+            "total_bytes",
+            "inventory_sha256"
+          ],
+          "properties": {
+            "file_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "total_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 83886080
+            },
+            "inventory_sha256": {
+              "$ref": "#/$defs/catalog/$defs/hash"
+            }
+          }
+        },
+        "catalog_sha256": {
+          "const": "45fbc37f023eb54d71e1e47ab2fe252fabb139a5c923e25b1f9244399c29fec4"
+        },
+        "max_files": {
+          "const": 20
+        },
+        "acquisition": {
+          "$comment": "Original contract 2026-10-11. Logical payload budgets are not RSS bounds. Current CLI selects one explicit layout uniformly for all sixteen index buckets. Parent component schema must further constrain file_bytes to its own ceiling. No source paths, keys, raw assets or network requests.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "backend",
+            "profile",
+            "index_layouts",
+            "root_layout",
+            "offline",
+            "complete_ckey_md5",
+            "ekey_validation",
+            "limits"
+          ],
+          "properties": {
+            "backend": {
+              "const": "rust-local"
+            },
+            "profile": {
+              "const": "local-v7-ckey-root-nz-v1"
+            },
+            "index_layouts": {
+              "enum": [
+                [
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous",
+                  "contiguous"
+                ],
+                [
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged",
+                  "paged"
+                ]
+              ]
+            },
+            "root_layout": {
+              "enum": [
+                "headerless-18125",
+                "header-30080",
+                "header-50893-v1",
+                "header-50893-v2"
+              ]
+            },
+            "offline": {
+              "const": true
+            },
+            "complete_ckey_md5": {
+              "const": true
+            },
+            "ekey_validation": {
+              "const": "prefix9"
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "resident_bytes",
+                "scratch_bytes",
+                "combined_bytes",
+                "build_info_bytes",
+                "build_info_rows",
+                "path_bytes",
+                "config_bytes",
+                "config_lines",
+                "config_keys",
+                "directory_entries",
+                "index_files",
+                "index_bytes",
+                "index_entries",
+                "index_pages",
+                "encoding_bytes",
+                "encoding_pages",
+                "encoding_page_bytes",
+                "encoding_espec_bytes",
+                "encoding_tail_bytes",
+                "encoding_entries",
+                "encoding_keys",
+                "root_bytes",
+                "root_header_bytes",
+                "root_blocks",
+                "root_entries",
+                "archive_span_bytes",
+                "file_bytes",
+                "candidate_attempts",
+                "blte_frames"
+              ],
+              "properties": {
+                "resident_bytes": {
+                  "const": 805306368
+                },
+                "scratch_bytes": {
+                  "const": 536870912
+                },
+                "combined_bytes": {
+                  "const": 1073741824
+                },
+                "build_info_bytes": {
+                  "const": 262144
+                },
+                "build_info_rows": {
+                  "const": 4096
+                },
+                "path_bytes": {
+                  "const": 4096
+                },
+                "config_bytes": {
+                  "const": 262144
+                },
+                "config_lines": {
+                  "const": 8192
+                },
+                "config_keys": {
+                  "const": 4096
+                },
+                "directory_entries": {
+                  "const": 65536
+                },
+                "index_files": {
+                  "const": 4096
+                },
+                "index_bytes": {
+                  "const": 67108864
+                },
+                "index_entries": {
+                  "const": 2000000
+                },
+                "index_pages": {
+                  "const": 131072
+                },
+                "encoding_bytes": {
+                  "const": 268435456
+                },
+                "encoding_pages": {
+                  "const": 65536
+                },
+                "encoding_page_bytes": {
+                  "const": 65536
+                },
+                "encoding_espec_bytes": {
+                  "const": 16777216
+                },
+                "encoding_tail_bytes": {
+                  "const": 134217728
+                },
+                "encoding_entries": {
+                  "const": 4000000
+                },
+                "encoding_keys": {
+                  "const": 8000000
+                },
+                "root_bytes": {
+                  "const": 268435456
+                },
+                "root_header_bytes": {
+                  "const": 4096
+                },
+                "root_blocks": {
+                  "const": 65536
+                },
+                "root_entries": {
+                  "const": 4000000
+                },
+                "archive_span_bytes": {
+                  "const": 268435456
+                },
+                "file_bytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4194304
+                },
+                "candidate_attempts": {
+                  "const": 64
+                },
+                "blte_frames": {
+                  "const": 65536
+                }
+              }
+            }
+          }
+        },
+        "component_profile": {
+          "const": "gt-catalog-70338-v1"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifacts": {
+                "items": {
+                  "properties": {
+                    "status": {
+                      "const": "complete"
+                    }
+                  }
+                }
+              },
+              "integrity": {
+                "properties": {
+                  "file_count": {
+                    "const": 20
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "artifacts": {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "const": "error"
+                    }
+                  }
+                }
+              },
+              "integrity": {
+                "properties": {
+                  "file_count": {
+                    "maximum": 19
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "file_id",
+            "relative_path",
+            "value_columns",
+            "status",
+            "bytes",
+            "sha256",
+            "data_rows",
+            "consumer_rows_including_zero",
+            "terminated_early",
+            "error_code",
+            "validation_mode"
+          ],
+          "properties": {
+            "name": {
+              "enum": [
+                "ArtifactKnowledgeMultiplier",
+                "ArtifactLevelXP",
+                "BarberShopCostBase",
+                "BaseMp",
+                "BaseProfessionRatings",
+                "BattlePetTypeDamageMod",
+                "BattlePetXP",
+                "CombatRatings",
+                "CombatRatingsMultByILvl",
+                "HonorLevel",
+                "HpPerSta",
+                "ItemLevelByLevel",
+                "ItemLevelSquish",
+                "ItemSocketCostPerLevel",
+                "NPCManaCostScaler",
+                "ProfessionRatings",
+                "SandboxScaling",
+                "SpellScaling",
+                "StaminaMultByILvl",
+                "xp"
+              ]
+            },
+            "file_id": {
+              "enum": [
+                1582086,
+                1391662,
+                1391663,
+                1391664,
+                4494528,
+                1391665,
+                1391666,
+                1391669,
+                1391670,
+                1391671,
+                1391642,
+                2012881,
+                1726830,
+                1391643,
+                1391651,
+                4492239,
+                1391659,
+                1391660,
+                1980632,
+                1391661
+              ]
+            },
+            "relative_path": {
+              "enum": [
+                "gt/ArtifactKnowledgeMultiplier.txt",
+                "gt/ArtifactLevelXP.txt",
+                "gt/BarberShopCostBase.txt",
+                "gt/BaseMp.txt",
+                "gt/BaseProfessionRatings.txt",
+                "gt/BattlePetTypeDamageMod.txt",
+                "gt/BattlePetXP.txt",
+                "gt/CombatRatings.txt",
+                "gt/CombatRatingsMultByILvl.txt",
+                "gt/HonorLevel.txt",
+                "gt/HpPerSta.txt",
+                "gt/ItemLevelByLevel.txt",
+                "gt/ItemLevelSquish.txt",
+                "gt/ItemSocketCostPerLevel.txt",
+                "gt/NPCManaCostScaler.txt",
+                "gt/ProfessionRatings.txt",
+                "gt/SandboxScaling.txt",
+                "gt/SpellScaling.txt",
+                "gt/StaminaMultByILvl.txt",
+                "gt/xp.txt"
+              ]
+            },
+            "value_columns": {
+              "enum": [
+                null,
+                1,
+                2,
+                4,
+                5,
+                15,
+                24,
+                32
+              ]
+            },
+            "status": {
+              "enum": [
+                "complete",
+                "error"
+              ]
+            },
+            "bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4194304
+            },
+            "sha256": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/catalog/$defs/hash"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data_rows": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "consumer_rows_including_zero": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100001
+            },
+            "terminated_early": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 80,
+              "pattern": "^[a-z0-9_]+$"
+            },
+            "validation_mode": {
+              "enum": [
+                "f32",
+                "raw"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "complete"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "bytes": {
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/catalog/$defs/hash"
+                  },
+                  "error_code": {
+                    "type": "null"
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "validation_mode": {
+                          "const": "f32"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "data_rows": {
+                          "type": "integer"
+                        },
+                        "consumer_rows_including_zero": {
+                          "type": "integer"
+                        },
+                        "terminated_early": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "else": {
+                      "properties": {
+                        "data_rows": {
+                          "type": "null"
+                        },
+                        "consumer_rows_including_zero": {
+                          "type": "null"
+                        },
+                        "terminated_early": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "else": {
+                "properties": {
+                  "bytes": {
+                    "type": "null"
+                  },
+                  "sha256": {
+                    "type": "null"
+                  },
+                  "data_rows": {
+                    "type": "null"
+                  },
+                  "consumer_rows_including_zero": {
+                    "type": "null"
+                  },
+                  "terminated_early": {
+                    "type": "null"
+                  },
+                  "error_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

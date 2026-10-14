@@ -2250,3 +2250,25 @@ stays DB2-only; Map/GameObjectDisplayInfo remain unavailable and full Linux
 delivery is incomplete, with Windows deferred. Next proposed: versioned real
 GT20 acceptance, with two loaders for six files; camera discovery/catalog
 provenance remains separate.
+
+
+### Explicit real 70338 GT catalog accepted — 2026-10-14
+
+Issue #44 adds standalone `gt-catalog-70338-v1`, Rust-local catalog-only
+manifest/contract/schema v4. Legacy GT APIs/decoders now reject 70338; admitted
+70170/70205 golden bytes and six-file/native defaults retain their contracts.
+Functional source `70f4b03` passes 2,865 ordinary Linux tests / 26 ignored across
+43 targets per profile, 62 GT/four CLI cases, four JSON/333 contracts/162
+distribution methods plus one skip, Clippy and format. Fresh 70338/esES evidence
+accepts twenty sources / 138,537 bytes, strict native complete-byte/CKey parity
+before numeric consumers, 22,082 exact f32 cells in fourteen schemas, six
+raw-only files and both actual public RustyCore loaders on six files per profile.
+The 45 synthetic and 43 real commands pass; their consumer network traces are
+empty, separate from untraced denied policy probes. Eighty real source visits
+cover twenty identities, not physical archive-I/O accounting. Four copied
+loader/test files have provenance; only production modules compile in the
+minimal helper crate, and copied tests are not executed. Failed predecessor
+attempts remain retained. Exact scope and receipt hashes are in
+`docs/forever-game-tables.md`. Later three-file Markdown is not rebuilt. Product
+70338 stays DB2-only; camera, Map/GameObject inputs, real geometry/full-world,
+runtime, a new bundle and full Linux extraction remain gates. Windows is deferred.

@@ -104,9 +104,7 @@ pub fn extract_with_profile(
     if file_cap == 0 || file_cap > MAX_FILE_BYTES {
         return Err("gt_policy_limit");
     }
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err("unsupported_client");
-    }
+    super::contract::CatalogContract::Legacy.admit_build(build)?;
     if crate::admit(client).map_err(|error| error.code())? != build {
         return Err("client_build_changed");
     }

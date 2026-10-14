@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Catalog v2 manifest, separate from the unchanged six-table v1 format.
+use super::contract::CatalogContract;
 use super::{
     Facts, MAX_DATA_ROWS, MAX_FILE_BYTES, MAX_VALUES,
     catalog::{self, MAX_BATCH_BYTES, MAX_FILES, Table},
@@ -42,6 +43,7 @@ impl Artifact {
 }
 
 pub(super) struct Manifest {
+    pub contract: CatalogContract,
     pub acquisition: Option<crate::acquisition::Profile>,
     pub build: u32,
     pub locale: Locale,
@@ -117,6 +119,19 @@ impl Manifest {
             total,
             hash
         );
+        if self.contract == CatalogContract::Build70338V1 {
+            return text.replacen(
+                "\"manifest_version\":2",
+                &format!(
+                    "\"manifest_version\":4,\"component_profile\":\"{}\",\"acquisition\":{}",
+                    CatalogContract::PROFILE,
+                    self.acquisition
+                        .expect("70338 requires Rust local")
+                        .render()
+                ),
+                1,
+            );
+        }
         match self.acquisition {
             Some(profile) => text.replacen(
                 "\"manifest_version\":2",
@@ -134,9 +149,19 @@ impl Manifest {
 pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
     manifest::depth_guard(text)?;
     let mut value = json::parse(text)?;
+    let contract = if number(field(&value, "manifest_version")?)? == 4 {
+        equal_string(&value, "component_profile", CatalogContract::PROFILE)?;
+        let Json::Object(entries) = &mut value else {
+            return Err(());
+        };
+        entries.retain(|(key, _)| key != "component_profile");
+        CatalogContract::Build70338V1
+    } else {
+        CatalogContract::Legacy
+    };
     let acquisition = match number(field(&value, "manifest_version")?)? {
         2 => None,
-        3 => {
+        3 | 4 => {
             let profile = crate::acquisition::Profile::decode(
                 field(&value, "acquisition")?,
                 MAX_FILE_BYTES as u32,
@@ -222,9 +247,7 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         return Err(());
     }
     let build = u32::try_from(number(field(&value, "build")?)?).map_err(|_| ())?;
-    if !crate::SUPPORTED_CLIENTS.iter().any(|(_, id)| *id == build) {
-        return Err(());
-    }
+    contract.admit_build(build).map_err(|_| ())?;
     let locale = Locale::parse(string(field(&value, "locale")?)?).map_err(|_| ())?;
     let Json::Array(items) = field(&value, "artifacts")? else {
         return Err(());
@@ -345,6 +368,7 @@ pub(super) fn decode(text: &str) -> Result<Manifest, ()> {
         artifacts.push(artifact);
     }
     let manifest = Manifest {
+        contract,
         acquisition,
         build,
         locale,
