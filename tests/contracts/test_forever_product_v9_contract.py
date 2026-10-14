@@ -23,6 +23,6 @@ class ProductV9Contract(unittest.TestCase):
         flow=json.loads((ROOT/'.github/workflows/forever-rust.yml').read_text());step=next(s for s in flow['jobs']['linux']['steps']if s.get('name')=='Check source contracts and synthetic Python oracle');self.assertIn('python -m unittest discover -s tests/contracts -p test_forever_product_v9_contract.py -v',step['run'].splitlines())
     def test_source_recipe_includes_new_production_contract_tests_and_fixture(self):
         spec=importlib.util.spec_from_file_location('product9_packager',ROOT/'tools/package_forever.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);selected=set(m.selected_paths(ROOT))
-        for path in ['contracts/forever-product-contract-v9.json','crates/forever-extractor/src/plan/publication.rs','crates/forever-extractor/src/plan/v9_tests.rs','crates/forever-extractor/src/verify/v9.rs','crates/forever-extractor/src/verify/tests/v9.rs','crates/forever-extractor/tests/product_v9_cli.rs','tests/contracts/fixtures/forever-product-v9/disabled.tsv']:
+        for path in ['contracts/forever-product-contract-v9.json','crates/forever-extractor/src/plan/publication.rs','crates/forever-extractor/src/plan/v9_tests.rs','crates/forever-extractor/src/verify/v9.rs','crates/forever-extractor/src/verify/tests/v9.rs','crates/forever-extractor/tests/product_v9_cli.rs','tests/contracts/fixtures/forever-product-v9/disabled.tsv','tests/forever/product_v9_fixture.py','tests/forever/test_product_v9_cli.py']:
             self.assertIn(path,selected)
 if __name__=='__main__':unittest.main()

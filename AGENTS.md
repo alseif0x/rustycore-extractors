@@ -33,14 +33,16 @@ and pending implementations; retain the `3.4.3` version line.
 
 ### Current Linux 70338 product scope — 2026-10-14
 
-Explicit Linux product v9 now admits exactly DB2/GT/raw cameras on build 70338,
-with a nonempty target-catalog DB2 selection including CinematicCamera. Six real
-clean/resumed packages each match 31 complete data files / 165,507 bytes against
-accepted component oracles; decryption is disabled in this real campaign.
-V5 remains DB2-only; earlier dated DB2-only statements below describe their
-historical checkpoints. No full catalog, geometry, runtime, Windows product or
-new reproducible bundle acceptance follows. See the current v9 evidence in
-`docs/forever-product.md` and `docs/forever-completion.md`.
+Explicit Linux product v9 admits DB2/GT/raw cameras on build 70338, including
+an explicit nonempty target-catalog selection containing CinematicCamera.
+The current local v10-recipe bundle passes fresh reproducible packaging and
+260 shipped/moved-rebuilt synthetic methods. Its subsequent real campaign
+closed with six complete views of 31 files / 165,507 bytes and disabled keys;
+final independent REAL QA is `passed`.
+V5 remains DB2-only; earlier dated statements retain their historical scopes.
+Full catalog, real geometry/world resources, runtime and Windows delivery
+remain gates; no distribution is released or published. See
+`docs/forever-distribution.md` and `docs/forever-completion.md`.
 
 ### Forever branch scope
 
@@ -2360,3 +2362,37 @@ New synthetic evidence has 2,463 files / 269 directories, all 78 child records,
 and console-only outer capture. New real evidence has 628 files / 49 directories,
 980 guards / 38 aliases and raw outer stdout 3,542 bytes / stderr zero. Keep
 those capture scopes distinct. Earlier accepted producer proofs remain historical.
+
+
+### Current local Linux v9 bundle — 2026-10-14
+
+Issue #50 validates the current local v9 candidate with the unchanged v10
+source recipe. Functional `0ad65fe5fe0eeccc17e7b896572212299ac53b8e` selects
+698 committed source files / 16,238,802 bytes; the packaged source contains
+739 files including its 41 vendor/configuration/archive additions. Two fresh
+offline builds produce identical archives and binaries; a moved-source rebuild
+reproduces that binary.
+Six packaging commands / three isolated Cargo builds pass independent QA.
+The archive contains 755 payloads / 756 members; no client assets or keys ship.
+
+Both shipped and moved-rebuilt roles pass the existing 129 methods plus one
+new v9 method: 260 methods / 18 stages / 892 actual calls, zero skips. The
+78 new v9 outcomes comprise 39 per role, with four complete positive packages
+and twelve negative copies per role. All 858 empty and 34 classified nonempty
+consumer traces show no network calls; compiler IPC has a separate scope.
+The two preceding runtime attempts remain failed without accepted prefixes.
+Owned evidence uses an explicit reviewed limit of 65,536 nodes per root and
+262,144 retained nodes globally, with at most one comparison tree / 327,680
+node records; these are not RSS bounds. Strict source limits remain 8,192
+nodes per root and product/file/byte limits are unchanged.
+
+The subsequent packaged real campaign completed 26 expected outcomes,
+including four deliberate SIGKILLs, and six complete views of the same
+31 files / 165,507 bytes against frozen component oracles. Final independent
+REAL review status: `passed`; receipt SHA-256: `6e5d0cad73c14ac6749d972626bd20795497157a507259da2b5c60638751484c`.
+Real decryption is disabled. No native/original consumer, compiler or real
+calibration reruns in that real phase. Full catalog, Map/GameObject inputs,
+real geometry/world resources and RustyCore runtime remain Linux gates.
+Windows delivery stays deferred; no distribution is released or published. Later
+documentation does not rebuild or replace the frozen package. The concise
+artifact and receipt identities are in `docs/forever-distribution.md`.
