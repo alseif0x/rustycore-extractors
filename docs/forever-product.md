@@ -1047,7 +1047,7 @@ Issue #58 follows merged PR #57 (`5aba789`) using the same frozen product
 producers compiled from `52db8418587d6db2994bb91137aee11a67d5d6e8`.
 Four independent Rust-local requests cover GameObjectDisplayInfo and Map in
 esES and enUS: three encrypted results, one missing result and zero bytes.
-This is a new finite diagnostic, not a full-catalog survey.
+This finite diagnostic does not survey the full catalog.
 
 The corrected strict native observer also makes four independent requests.
 It captures a TRUE-but-short read's error before another CascLib operation:
@@ -1057,7 +1057,7 @@ Zero files complete. These outcomes do not establish Rust/native error-category
 parity. A causal getter exposes the last missing name in that fresh storage,
 not every encrypted frame. Native built-in keys remain a separate baseline.
 The earlier native actual attempt remains failed. Coverage V1 remains
-unexecuted after a source-review metadata mismatch; V2 fixes that seam.
+unexecuted after a metadata mismatch in source review; V2 fixes that seam.
 
 The fresh accepted TACT inputs have 69 direct rows and 197 Lookup rows.
 Joining by ID and supplementing from the authenticated `a3da648` public snapshot

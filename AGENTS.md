@@ -46,8 +46,8 @@ evidence retain their scope; Windows and draft PR #27 remain deferred. See
 
 Issue #58 closes a bounded negative 70374 key diagnostic: four independent
 Rust requests yield three encrypted and one missing result, with zero bytes.
-The corrected native observer records three causal error-1005 observations /
-two unique missing names and one error-1007 size failure, with zero complete
+The corrected native observer records three causal error 1005 observations /
+two unique missing names and one error 1007 size failure, with zero complete
 files; this is not error-category parity. Fresh TACT/public/cache coverage
 matches zero of the two needed names and exports nothing. Prior failed native
 and unexecuted coverage evidence remain preserved. Official client refresh is

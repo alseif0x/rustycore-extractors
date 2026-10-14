@@ -3972,12 +3972,12 @@ deferred in draft PR #27. This does not complete the extractor goal.
 
 ## Bounded 70374 key diagnostic remains negative — 2026-10-14
 
-Issue #58 uses the unchanged product producers compiled from `52db841` after
-PR #57 merged (`5aba789`). Four independent Rust GODI/Map × esES/enUS requests
+After PR #57 merged (`5aba789`), issue #58 uses the unchanged product producers
+compiled from `52db841`. Four independent Rust GODI/Map × esES/enUS requests
 produce three encrypted and one missing result, with zero bytes. Corrected
-native observation yields three read-error-1005 causal observations / two
-unique needed names and one error-1007 size failure, with no complete files;
-this is not Rust/native error-category parity or all-frame coverage.
+native observation yields three causal error 1005 observations during reads /
+two unique needed names and one error 1007 size failure, with no complete files;
+this establishes neither error-category parity nor coverage of every encrypted frame.
 Fresh TACT 69/197 rows yield 116 names, with all 69 direct/public pairs exact.
 Three old70338 direct-cache candidates are already public; BroadcastText yields
 zero candidates. Coverage V2 matches zero of two needed names against the base,
