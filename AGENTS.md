@@ -33,6 +33,20 @@ and pending implementations; retain the `3.4.3` version line.
 
 ### Current Linux product scope — 2026-10-14
 
+Issue #70 separately exercises the three liquid startup sources on real
+70374/esES inputs through the shipped v10 disabled-key producer. Extraction,
+verify and verify-links pass for three files / 26,063 bytes. Current immutable
+packaged source is built offline in debug/release; both diagnostics and Python
+match the original C++ getters, copy accessors and all three ReadLiquid*
+consumers: 118 direct records, 1,214 copies and 1,332 materialized entries.
+The twelve runtime children close successfully with empty network traces;
+the original native source/runtime qualification is static, with no original
+TU rebuild. Independent terminal QA passes
+(`cd9dc3727ddc15afc8e1fe62ad361c2633695f91002c6c3ac23c76d57a27b4b8`).
+This is selected source-reader evidence, not native CASC routing,
+complete terrain, full catalog or runtime acceptance. Map remains required and
+unavailable. See docs/forever-product.md; Windows remains deferred.
+
 Issue #68 separately derives named Linux prerequisites from 43 public sources
 and projects only metadata: 80 bootstrap DB2 names yield 49 complete source
 reads / 31 blocked; the deduplicated terrain/collision/bootstrap union has
