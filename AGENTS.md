@@ -44,8 +44,15 @@ reproducibility from merged `fdba4b2`: 717 selected committed files / 18,639,856
 bytes, six packaging operations / three offline Cargo builds, identical archives
 and binaries and an exact moved-source rebuild. Independent packaging QA passes
 (`593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf`).
-Current packaged regressions and v11 lifecycle acceptance remain pending at this
-checkpoint; historical producer acceptance is not transferred. See
+Current packaged v11 lifecycle acceptance now independently passes 56 synthetic
+outcomes and 26 real disabled-key 70374/esES outcomes, with six complete views of
+31 files / 165,507 bytes. Synthetic QA is `81b274b4bac481ff4451e321b23ed5d8c00a7dc50534d19b009a50e48aaacc23`;
+real QA is `5b2ba77568e420b7ae3645928504ba601cac4d8a298a293720a3df0764f6af72`.
+Retained packaged regressions also close all 260 methods / eighteen stages /
+892 measured consumer calls, zero skips, with independent terminal QA passing
+(`819efeff700a5e03f361e52b75f7ee490b891d6305f9eae2dad1d87f1411280e`).
+This accepts the bounded current local Linux package; full extractor/release
+gates remain open. No historical producer acceptance is transferred. See
 `docs/forever-distribution.md`; no release/publication or Windows delivery follows.
 
 Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
