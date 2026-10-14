@@ -842,3 +842,82 @@ Build 70338 stays DB2-only; v8 geometry stays restricted to 70170/70205. Real
 complete geometry, full-world resources, RustyCore/server runtime and complete
 extraction remain open. Windows development/distribution stays deferred. No
 client assets or keys are packaged and nothing is published.
+
+
+### Current Linux product v9 local bundle — 2026-10-14
+
+Issue #50 uses the unchanged
+`forever-seven-crate-linux-product-db2-catalog-source-v10` recipe for functional
+commit `0ad65fe5fe0eeccc17e7b896572212299ac53b8e`, tree
+`6825f32ff1b21048390547a32f5661f54606f84d`. The corresponding selected
+source is 698 files / 16,238,802 bytes; the complete packaged source is
+739 files, including 41 vendor/configuration/archive additions. This source
+selection is distinct from the preceding product's 665 compiled-source guard
+map. Historical source proofs remain bound to their Git snapshots and are
+not merged into the changed live checkout.
+
+Six packaging commands perform two isolated fresh offline builds (one under
+a path with spaces), verify both archives, verify the moved extraction and
+rebuild it offline with fresh Cargo home/target paths. All three Cargo builds
+produce the same 3,409,472-byte binary; the two archives/manifests are exact,
+and the moved-source reconstruction reproduces that binary. Each archive
+is 3,959,339 bytes with 755 payloads / 756 total members. The existing pinned
+registry, toolchain/license/notices and dynamic Linux linkage requirements
+retain their scopes; no client files, keys or native reference sources are
+added to the distribution. This is a local candidate, not publication.
+
+Static inspection of this binary records interpreter `/lib64/ld-linux-x86-64.so.2`,
+needed `libgcc_s.so.1`, `libm.so.6`, `libc.so.6` and `ld-linux-x86-64.so.2`,
+and maximum GLIBC symbol version 2.34. This remains dynamic Linux linkage,
+without universal Linux ABI or atomic loader-binding acceptance.
+
+| Artifact or report | SHA-256 |
+| --- | --- |
+| Archive | `275d90cf04ceab2a27e2f63e709b51063672903446a79e8a7c6c7d58221599da` |
+| Shipped and moved-rebuilt binary | `3e9c98e37d3ea98a246b225d6cde6a831464254523a4fa04308c93419f867aea` |
+| Independent packaging review | `72a9f95487a5bf0303c5e0aec6fefd581cfebd1ddc19549c76adfdfb6e2122a5` |
+| Independent shipped-runtime review | `697fa300db20a4d1a966576d0b2eedd7d57d59bdac52b354fd21679a17633065` |
+| Packaged real acceptance | `b13c8ef6d58cef3e6110a7c37e2836aeaef29b94f349147d470c8a5c0fb06daf` |
+| Independent final REAL review | `6e5d0cad73c14ac6749d972626bd20795497157a507259da2b5c60638751484c` |
+
+Both actual roles, **shipped** and **moved-rebuilt**, execute all 129 existing
+methods and the new v9 method: 130 per role, 260 across eighteen stages,
+zero skips. The 892 measured consumer calls comprise 814 legacy calls and
+78 new v9 calls. Each new method has 39 outcomes: fifteen exit0, twenty-two
+expected exit9 and two intentional kills; four complete positive packages
+and twelve negative copies are retained per role. These roles identify shipped and
+moved/rebuilt package locations and bind the current frozen binary. Historical
+binary acceptance retains its recorded scope.
+
+The complete consumer trace inventory contains 858 empty and 34 fully
+classified nonempty traces, including thirty expected kills, with zero
+network calls. Compiler local IPC and outer orchestration are separate scopes.
+Sixteen deliberate special nodes remain in owned evidence: regular files are
+hashed, special-node metadata and bounded symlink target text are retained
+without following links or opening FIFO/device/socket payloads. A reviewed
+evidence-only profile admits 65,536 nodes per root and 262,144 retained nodes
+globally; 66,546 were retained. Rechecks reuse each original quota without
+double charging. One comparison tree can overlap retention, giving a declared
+maximum of 327,680 node records, not a heap/RSS or cumulative-visit bound.
+The per-root allowance increases eightfold from 8,192; the global retained bound reduces
+from the prior theoretical 294,912. Strict source admission remains 8,192
+nodes per root; all source/product byte caps remain unchanged. Both earlier
+failed runtime attempts are preserved, without accepted prefixes.
+
+The subsequent real campaign completed 26 expected outcomes (22 exit0 and
+four intentional SIGKILLs) across both roles. Six clean/GT-resumed/camera-resumed
+views each contain the same 31 files / 165,507 bytes: twenty GT, CinematicCamera
+DB2 and ten opaque cameras. Their complete bytes match the frozen accepted
+component oracles. Disabled-key build-70338/esES explicit selection remains
+the real scope; original/native consumers, compilers and real calibration
+are not rerun. Final independent REAL review status: `passed`.
+The independent real audit checks twenty-two empty and four classified kill
+traces, with no consumer network calls. These output counts are not measured CASC acquisitions, physical I/O or RSS.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-bundle-20261014-djny1lvy/`.
+The later documentation-only update is not rebuilt and substitutes no bytes
+into the immutable archive. Full catalog acquisition, complete Map/GameObject
+and real geometry inputs, full-world operation and RustyCore/server runtime
+remain separate Linux gates. Windows development/distribution stays deferred.
+No release or publication is made, and the extractor is not complete.
