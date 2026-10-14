@@ -4146,3 +4146,32 @@ full-catalog acceptance follow. The next proposed diagnostic is a finite
 all-catalog availability census with one admitted Rust-local store, whose exact
 source/resource plan still requires review. It cannot publish an available
 prefix or repair the first blocker. The extractor goal stays active.
+
+
+## Fresh complete 70374 availability census — 2026-10-14
+
+Issue #66 uses one admitted Rust-local store for all 1,161 pinned catalog entries,
+with disabled keys and transient buffers. The sole persistent-service run records
+1,078 complete CKey-checked BLTE outputs / 29,213,195 bytes and 83 unavailable
+entries, each with one encrypted candidate; all other candidate failure counts
+and unvisited entries are zero. Only a 231,269-byte private diagnostic JSON is
+written. No DB2 row/schema validation, plaintext export, product/prefix or full
+extraction acceptance follows. Historical 70338 acceptance does not transfer.
+
+The first import compile failure stays failed. Corrected source passes seven
+offline commands, fifteen authored tests per profile, Clippy/format and independent
+source/build review, with explicit reused-target chronology. The actual call
+closes software guards, an empty trace, its owned group and unchanged bounded
+metadata. Independent actual terminal review passes without findings
+(`5711dbe25026f984dcc6883a78f3493e6f336ba74770c79f435faf3e0fad64b1`).
+Source/receipt identities and limits are in [product evidence](forever-product.md#complete-70374-availability-census--2026-10-14).
+The encrypted prerequisites, real geometry/world extraction, runtime and
+publication remain open; Windows stays deferred and the extractor goal stays active.
+
+The next source-only plan prioritizes explicit terrain/collision/server
+prerequisites. Original broad-copy continuation and named server loads do not
+prove that all 1,161 entries are a minimum server requirement; the full requested
+product selection still fails as recorded. Future private metadata intersection
+and any new causal reads require their own reviewed scope. Historical typed
+loaders do not establish build-70374 runtime support. See the product evidence
+for source pins and the retained plan; no new acquisition occurs here.

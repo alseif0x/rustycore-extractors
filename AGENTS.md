@@ -55,6 +55,27 @@ This accepts the bounded current local Linux package; full extractor/release
 gates remain open. No historical producer acceptance is transferred. See
 `docs/forever-distribution.md`; no release/publication or Windows delivery follows.
 
+Issue #66 subsequently runs one diagnostic-only 70374/esES availability census
+using one Rust-local store and the exact 1,161-entry catalog. All entries are
+visited: 1,078 complete CKey-checked BLTE outputs / 29,213,195 bytes, discarded
+after counting; 83 unavailable entries each have one encrypted candidate and
+zero other candidate failure categories. Only a private 231,269-byte JSON
+report is written. No DB2 schema/row, plaintext artifact, product/prefix or full
+extraction acceptance follows; historical 70338 evidence does not transfer.
+The minimal external caller preserves the library caps, adds an explicit
+16 GiB decoded-success ledger and passes seven qualification commands with
+15 authored tests per profile, Clippy/format and independent source/build QA.
+The initial private-module import compile failure remains failed; revision2
+uses the public catalog reexport and records its reused target cache. The sole
+persistent-service run closes guards/group/empty trace and unchanged bounded
+metadata. Independent actual terminal review passes without findings
+(`5711dbe25026f984dcc6883a78f3493e6f336ba74770c79f435faf3e0fad64b1`).
+Full extraction and runtime remain open, with Windows deferred. The next
+source-only plan derives explicit operation/server prerequisite sets before
+private census intersection and any newly needed causal read. No minimum
+1,161-table server requirement or 70374 runtime compatibility is inferred; the
+failed whole-product plan remains failed. See `docs/forever-product.md`.
+
 Issue #64's first complete 1,161-table 70374/esES disabled-key v10 attempt
 fails at Achievement acquisition (`local_store_no_verified_encoding`). Both
 offline verifiers reject the incomplete output: two provisional files / 512
