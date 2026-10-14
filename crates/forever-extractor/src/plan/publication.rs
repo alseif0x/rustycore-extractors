@@ -7,20 +7,31 @@ pub enum PublicationProfile {
     #[default]
     Legacy,
     Build70338Db2GtCamerasV1,
+    Build70374Db2OnlyV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
         if self == Self::Legacy {
             return Ok(());
         }
-        if plan.build != 70338 {
+        let (build, catalog, components) = match self {
+            Self::Legacy => unreachable!("legacy returned above"),
+            Self::Build70338Db2GtCamerasV1 => (
+                70338,
+                SchemaCatalog::WowDbDefs70338V1,
+                Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+            ),
+            Self::Build70374Db2OnlyV1 => {
+                (70374, SchemaCatalog::WowDbDefs70374V1, Component::Db2.bit())
+            }
+        };
+        if plan.build != build {
             return Err("product_plan_build");
         }
-        if plan.schema_catalog != SchemaCatalog::WowDbDefs70338V1 {
+        if plan.schema_catalog != catalog {
             return Err("product_plan_schema_catalog");
         }
-        if plan.components
-            != Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit()
+        if plan.components != components
             || !matches!(plan.collision_storage, CollisionStorage::Resident)
             || plan.map_domain.is_some()
             || plan.offmesh.is_some()

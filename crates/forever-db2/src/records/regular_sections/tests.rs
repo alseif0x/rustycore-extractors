@@ -328,11 +328,12 @@ fn text_profile_validates_string_compression_even_without_records() {
     }
 }
 
-fn catalog_ids() -> [&'static str; 3] {
+fn catalog_ids() -> [&'static str; 4] {
     [
         crate::catalog::CATALOG_ID,
         "wowdbdefs-70205-v1",
         "wowdbdefs-70338-v1",
+        "wowdbdefs-70374-v1",
     ]
 }
 
@@ -434,7 +435,11 @@ fn catalog_profile_rejects_compressed_text_in_empty_tables_for_each_catalog() {
 
 #[test]
 fn catalog_profile_preserves_target_table_hash_layout_and_field_count_gates() {
-    for catalog in ["wowdbdefs-70205-v1", "wowdbdefs-70338-v1"] {
+    for catalog in [
+        "wowdbdefs-70205-v1",
+        "wowdbdefs-70338-v1",
+        "wowdbdefs-70374-v1",
+    ] {
         let name = "GameObjectDisplayInfo";
         let table = CharacterTable::from_catalog_id(catalog, name)
             .unwrap()
@@ -463,6 +468,7 @@ fn catalog_profile_rejects_unknown_selection_inline_ids_and_parents() {
     for (catalog, name) in [
         ("unknown-catalog", "SpellDuration"),
         ("wowdbdefs-70338-v1", "UnknownTable"),
+        ("wowdbdefs-70374-v1", "UnknownTable"),
     ] {
         assert!(matches!(
             DecodedTable::read_regular_sections_from_catalog(&data, catalog, name, 2),

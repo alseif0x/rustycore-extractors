@@ -67,6 +67,7 @@ fn v9_requires_exact_build_and_catalog() {
     for schema_catalog in [
         SchemaCatalog::PinnedMetadataV1,
         SchemaCatalog::WowDbDefs70205V1,
+        SchemaCatalog::WowDbDefs70374V1,
     ] {
         assert_eq!(
             Plan {

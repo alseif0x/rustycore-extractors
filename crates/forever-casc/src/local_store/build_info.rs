@@ -14,6 +14,19 @@ const COLUMNS: [&str; 6] = [
 ];
 
 pub(super) fn parse(bytes: &[u8], max_rows: usize) -> Result<AdmittedBuild, Error> {
+    parse_supported(bytes, max_rows, SUPPORTED_CLIENTS)
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn parse_db2_70374(bytes: &[u8], max_rows: usize) -> Result<AdmittedBuild, Error> {
+    parse_supported(bytes, max_rows, crate::admission::DB2_70374_CLIENTS)
+}
+
+fn parse_supported(
+    bytes: &[u8],
+    max_rows: usize,
+    supported: &'static [(&'static str, u32)],
+) -> Result<AdmittedBuild, Error> {
     let text = std::str::from_utf8(bytes).map_err(|_| Error::BuildMetadata)?;
     if text
         .bytes()
@@ -65,7 +78,7 @@ pub(super) fn parse(bytes: &[u8], max_rows: usize) -> Result<AdmittedBuild, Erro
         }
     }
     let (version, build_key, cdn_key, tags) = selected.ok_or(Error::UnsupportedClient)?;
-    let (version, build) = SUPPORTED_CLIENTS
+    let (version, build) = supported
         .iter()
         .find(|(candidate, _)| *candidate == version)
         .ok_or(Error::UnsupportedClient)?;

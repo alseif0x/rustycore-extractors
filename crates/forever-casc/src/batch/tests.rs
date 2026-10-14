@@ -1022,3 +1022,18 @@ fn acquired_build_change_is_fatal_and_never_reads_next_entry() {
     assert!(!output.join("ChrClasses.db2").exists());
     assert!(!output.join("forever-manifest.json").exists());
 }
+
+#[test]
+fn new70374_catalog_does_not_widen_legacy_or_standalone_batch() {
+    let client = std::path::Path::new("nonexistent-authored70374-batch-client");
+    let destination = std::path::Path::new("nonexistent-authored70374-batch-output");
+    let plan = Plan::character_tables();
+    let mut calls = 0;
+    let result = extract(&plan, client, destination, 70374, "esES", |_, _| {
+        calls += 1;
+        panic!("rejected legacy batch invoked callback")
+    });
+    assert_eq!(result.err(), Some("unsupported_client"));
+    assert_eq!(calls, 0);
+    assert!(!destination.exists());
+}

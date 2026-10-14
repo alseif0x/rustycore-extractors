@@ -1,0 +1,16 @@
+forever-product	10
+build	70374
+locale	esES
+index	contiguous
+root	header-50893-v2
+schema-catalog	wowdbdefs-70374-v1
+decryption	disabled
+components	db2
+terrain	none
+pack	true
+navigation	none
+big-base-unit	false
+skip-liquids	false
+maximum-slope	55
+non-steep-slope	55
+db2	CinematicCamera	1294214

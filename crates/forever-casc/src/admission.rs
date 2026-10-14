@@ -12,6 +12,19 @@ pub const SUPPORTED_CLIENTS: &[(&str, u32)] = &[
 const MAX_BUILD_INFO: u64 = 256 * 1024;
 
 pub fn admit(client: &Path) -> Result<u32, Error> {
+    admit_selected(client, parse)
+}
+
+/// Explicit Linux product-v10 metadata admission; generic/native admission stays legacy.
+#[cfg(target_os = "linux")]
+pub fn admit_db2_70374(client: &Path) -> Result<u32, Error> {
+    admit_selected(client, |info| parse_supported(info, DB2_70374_CLIENTS))
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) const DB2_70374_CLIENTS: &[(&str, u32)] = &[("1.60.1.70374", 70374)];
+
+fn admit_selected(client: &Path, select: fn(&str) -> Result<u32, Error>) -> Result<u32, Error> {
     #[cfg(windows)]
     let bytes = {
         use forever_platform::{
@@ -46,7 +59,7 @@ pub fn admit(client: &Path) -> Result<u32, Error> {
         bytes
     };
     let info = std::str::from_utf8(&bytes).map_err(|_| Error::Metadata)?;
-    let build = parse(info)?;
+    let build = select(info)?;
     native_shape(info)?;
     Ok(build)
 }
@@ -103,6 +116,10 @@ fn native_shape(info: &str) -> Result<(), Error> {
 }
 
 fn parse(info: &str) -> Result<u32, Error> {
+    parse_supported(info, SUPPORTED_CLIENTS)
+}
+
+fn parse_supported(info: &str, supported: &[(&str, u32)]) -> Result<u32, Error> {
     let mut lines = info.lines();
     let fields: Vec<_> = lines
         .next()
@@ -135,7 +152,7 @@ fn parse(info: &str) -> Result<u32, Error> {
             return Err(Error::AmbiguousClient);
         }
     }
-    SUPPORTED_CLIENTS
+    supported
         .iter()
         .find(|(version, _)| Some(*version) == selected)
         .map(|(_, build)| *build)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
+# Modified 2026-10-14: add separately pinned build-70374 catalog generation.
 """Generate pinned WoWDBDefs schema catalogs for supported Forever builds.
 
 The parser is deliberately strict and dependency-free. It reads only the
@@ -36,6 +37,12 @@ TARGETS = {
         "catalog_id": "wowdbdefs-70338-v1",
         "facts_path": ROOT / "contracts/wowdbdefs-70338-v1.json",
         "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70338_generated.rs",
+    },
+    70374: {
+        "pin": "464a25b3a7c02b0c74726be7a53a0b0ccf1a2d10",
+        "catalog_id": "wowdbdefs-70374-v1",
+        "facts_path": ROOT / "contracts/wowdbdefs-70374-v1.json",
+        "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70374_generated.rs",
     },
 }
 

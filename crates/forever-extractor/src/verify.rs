@@ -23,6 +23,8 @@ use std::{
 #[cfg(test)]
 mod tests;
 #[cfg(target_os = "linux")]
+mod v10;
+#[cfg(target_os = "linux")]
 mod v9;
 
 #[cfg(target_os = "linux")]
@@ -105,13 +107,18 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if plan.is_v9() {
+    let verified = if plan.is_v9() || plan.is_v10() {
         package::verify_with_preflight(
             output,
             expected,
             limits,
             |artifacts| {
-                v9::admit_metadata(plan, artifacts).map_err(|error| {
+                let admitted = if plan.is_v10() {
+                    v10::admit_metadata(plan, artifacts)
+                } else {
+                    v9::admit_metadata(plan, artifacts)
+                };
+                admitted.map_err(|error| {
                     metadata_failure = Some(error);
                     package::Error::Schema
                 })

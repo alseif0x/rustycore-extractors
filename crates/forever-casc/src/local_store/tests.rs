@@ -867,3 +867,83 @@ mod names;
 
 #[path = "framing_tests.rs"]
 mod framing_tests;
+
+#[cfg(target_os = "linux")]
+#[test]
+fn scoped70374_bootstrap_keeps_legacy_admission_closed() {
+    let fixture = Builder {
+        version: "1.60.1.70374",
+        ..Builder::new(CONTENT)
+    }
+    .write();
+    assert_eq!(fixture.open_error(options()), Error::UnsupportedClient);
+    assert_eq!(
+        crate::admit(&fixture.path),
+        Err(crate::Error::UnsupportedClient)
+    );
+    assert_eq!(crate::admit_db2_70374(&fixture.path), Ok(70374));
+    let mut store = LocalStore::open_db2_70374(&fixture.path, options()).unwrap();
+    assert_eq!(store.build().build, 70374);
+    assert_eq!(
+        store
+            .read_file_data_id_with_limit(FILE_ID, 1000)
+            .unwrap()
+            .bytes,
+        CONTENT
+    );
+    let keys = crate::keys::Keyring::parse(
+        b"forever-tact-keys\t1\n0000000000000001\t00000000000000000000000000000000\n",
+    )
+    .unwrap();
+    let store = LocalStore::open_db2_70374_with_keys(&fixture.path, options(), keys).unwrap();
+    assert_eq!(store.build().build, 70374);
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn scoped70374_rejects_old_builds_before_config_io() {
+    for version in [
+        "1.60.1.70170",
+        "1.60.1.70205",
+        "1.60.1.70338",
+        "1.60.1.70375",
+    ] {
+        let fixture = Builder {
+            version,
+            ..Builder::new(CONTENT)
+        }
+        .write();
+        fs::write(&fixture.config_path, b"poison config not to read").unwrap();
+        assert_eq!(
+            LocalStore::open_db2_70374(&fixture.path, options())
+                .err()
+                .unwrap(),
+            Error::UnsupportedClient
+        );
+        assert_eq!(
+            crate::admit_db2_70374(&fixture.path),
+            Err(crate::Error::UnsupportedClient)
+        );
+    }
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn scoped70374_keeps_bootstrap_source_identity_guards() {
+    let fixture = Builder {
+        version: "1.60.1.70374",
+        ..Builder::new(CONTENT)
+    }
+    .write();
+    let mut store = LocalStore::open_db2_70374(&fixture.path, options()).unwrap();
+    fs::write(
+        fixture.path.join(".build.info"),
+        b"authored metadata changed",
+    )
+    .unwrap();
+    assert_eq!(
+        store
+            .read_file_data_id_with_limit(FILE_ID, 1000)
+            .err()
+            .unwrap(),
+        Error::InputChanged
+    );
+}

@@ -1,0 +1,246 @@
+{
+  "contract": "forever-product-v10",
+  "version": 10,
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "builds": [
+    70374
+  ],
+  "locales": [
+    "enUS",
+    "esES"
+  ],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "linux",
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify"
+  ],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "max_db2_entries": 1161,
+    "ordered_keys": [
+      "forever-product",
+      "build",
+      "locale",
+      "index",
+      "root",
+      "schema-catalog",
+      "decryption",
+      "components",
+      "terrain",
+      "pack",
+      "navigation",
+      "big-base-unit",
+      "skip-liquids",
+      "maximum-slope",
+      "non-steep-slope"
+    ],
+    "repeatable_tail": "db2 TAB exact-catalog-name TAB exact-FDID LF; alphabetical names, unique IDs",
+    "components": [
+      "db2"
+    ],
+    "index_layouts": [
+      "contiguous",
+      "paged"
+    ],
+    "root_layouts": [
+      "headerless-18125",
+      "header-30080",
+      "header-50893-v1",
+      "header-50893-v2"
+    ],
+    "selections": [
+      "none",
+      "all",
+      "map:ID",
+      "tile:ID:X:Y"
+    ],
+    "coordinates": "X=column,Y=row; 0..63; canonical unsigned decimal",
+    "slopes": "integer 0..90; non-steep <= maximum; unselected navigation requires 55/55 and false flags",
+    "dependencies": {},
+    "offmesh_connections": "explicitly unsupported; empty only",
+    "decryption": "required after schema-catalog; disabled or provided-salsa20-v1",
+    "schema_catalog": {
+      "id": "wowdbdefs-70374-v1",
+      "required_build": 70374,
+      "table_count": 1161,
+      "provenance": "contracts/wowdbdefs-70374-v1.json and crates/forever-db2/src/records/wowdbdefs_70374_generated.rs",
+      "source_commit": "464a25b3a7c02b0c74726be7a53a0b0ccf1a2d10",
+      "source_blob": "8a5d8122f312ae6a9564e8286fdc491831fecc22",
+      "source_sha256": "4314266fe055e30207e1c39498a7a31058a1aa2ab6cd674726491b313d135265",
+      "facts_sha256": "cf9a5a549136090c3aba1dddccc76c4aec45eb8a30162f053860f2bed44d2faf"
+    },
+    "component_scope": "Exactly DB2, resident, no map-domain/offmesh/terrain/navigation/GT/cameras; explicit typed product10 only",
+    "component_mask": 1
+  },
+  "identities": {
+    "plan": "SHA-256 of the complete canonical TSV bytes",
+    "producer": "SHA-256 of loaded /proc/self/exe, max 256 MiB",
+    "source": "SHA-256(forever-logical-collection-v1 NUL + build little-endian u32 + build key + CDN key + locale ASCII + ENCODING content key + ROOT content key)",
+    "source_scope": "authenticated logical collection; not physical archive availability, encryption-key discovery or a complete archive snapshot; every read still requires complete content MD5; provided keys do not change logical content identity; MD5 integrity is not a MAC or trusted provenance",
+    "keys": "Key names, values, counts, hashes and input paths are excluded from CLI JSON, plans, package context and manifests. Capability is bound by the complete canonical plan SHA-256; actual keyset is physical availability, not logical collection identity.",
+    "schema_catalog": "This profile binds its exact schema-catalog id in the complete canonical plan SHA-256; older profiles retain their own catalog identities and canonical plan bytes."
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2
+  },
+  "limits": {
+    "db2_file_bytes": 16777216,
+    "db2_total_bytes": 17179869184,
+    "db2_target_high_volume": {
+      "profile": "wowdbdefs-70374-high-volume-regular-v1",
+      "catalog": "wowdbdefs-70374-v1",
+      "tables": [
+        "ManifestInterfaceData",
+        "ModelFileData",
+        "WMOMinimapTexture"
+      ],
+      "section_count": 1,
+      "direct_records": 160000,
+      "copy_pairs": 100000,
+      "parent_entries": 160000,
+      "retained_scalar_values": 1250000,
+      "cumulative_utf8_bytes": 67108864
+    },
+    "db2_raw_text_validation": {
+      "catalogs": [
+        "wowdbdefs-70374-v1"
+      ],
+      "sections": "zero or one supported regular section; sparse and multi-section files excluded",
+      "trigger": "strict row decoding reports invalid_record_string, then complete framing validation is repeated",
+      "strings": "field pointers and NUL terminators must be valid; cumulative source bytes stay within the 64 MiB policy; no UTF-8 conversion or decoded rows are returned",
+      "output": "the complete acquired source DB2 bytes are preserved unchanged"
+    },
+    "db2_sparse_parent_raw_validation": {
+      "catalogs": [
+        "wowdbdefs-70374-v1"
+      ],
+      "tables": [
+        "CollectableSourceEncounterSparse",
+        "CollectableSourceQuestSparse",
+        "CollectableSourceVendorSparse"
+      ],
+      "sections": "zero-section empty input or one unencrypted sparse section",
+      "schema": "external catalog IDs, no inline ID, appended parent immediately after physical fields",
+      "parent_block": "bounded count and exact byte length checked; parent ID and record-index associations are not interpreted",
+      "strings": "NUL framing and cumulative source-byte budget checked; no UTF-8 conversion or decoded rows returned",
+      "limits": {
+        "file_bytes": 16777216,
+        "direct_records": 100000,
+        "copy_pairs": 100000,
+        "parent_entries": 100000,
+        "retained_scalar_values": 1000000,
+        "cumulative_string_bytes": 67108864
+      },
+      "output": "complete acquired source DB2 bytes preserved unchanged",
+      "not_claimed": [
+        "strict sparse row materialization",
+        "pinned native C++ sparse parent materialization",
+        "parent association parity"
+      ]
+    },
+    "db2_sparse": {
+      "profile": "bounded production reader subset",
+      "sections": "zero or one unencrypted section",
+      "schema": "external catalog IDs, no inline ID or parent",
+      "fields": "U8/U16/U32/I8/I16/I32/F32 and inline UTF-8 string/string arrays",
+      "direct_records": 100000,
+      "copy_pairs": 100000,
+      "retained_values": 1000000,
+      "cumulative_utf8_bytes": 67108864,
+      "strings": "NUL-terminated within each variable-size sparse record; strict UTF-8",
+      "excluded": [
+        "TACT-encrypted sections",
+        "physical catalog data",
+        "parent data",
+        "inline IDs",
+        "multiple sections"
+      ]
+    }
+  },
+  "resume": "explicit same-context only; verified sealed components skipped; entire unfinished producer reruns and replays retained artifacts; complete output refuses writes; explicit keys are required and syntax/file admission is repeated on each invocation; a different supplied set is allowed, but every unfinished acquired object must still match the same selected complete CKey; sealed producers are verified and skipped",
+  "verification": {
+    "scope": "artifact_integrity_and_intrinsic_formats",
+    "db2": "complete bounded validation against the plan-bound catalog; target profile uses the high-volume reader only for the exact three-table allowlist at one section with schema-declared parent fields and bounded parent entries, the regular-section reader only for admitted 2..16 unencrypted regular sections with external IDs and no parent/TACT/catalog data, and the bounded production sparse subset; strict regular row decoding errors for strings may use the catalog raw-text validator for zero or one regular section, which checks pointers, terminators and byte budgets without UTF-8 conversion or row projection; strict sparse decoding errors for the exact three parent-table allowlist may use the catalog sparse-parent raw validator, which checks bounded record framing and parent-block byte length without projecting rows or parent associations; sectionless zero-row files may carry validated complete column metadata without string/common/pallet payload; exact selected name set",
+    "not_claimed": [
+      "complete geometry inventory",
+      "placement or ancestor association proof",
+      "Detour topology",
+      "original C++ byte parity for newly produced worlds",
+      "runtime acceptance",
+      "full real-client extraction",
+      "Windows distribution",
+      "complete DB2 table/section variant coverage",
+      "GameTables, cameras, terrain, VMap, or MMap extraction on build 70374"
+    ],
+    "metadata_preflight": "Complete exact selected DB2 names, nonempty files<=16MiB, sum<=16GiB before first artifact payload hash/read/allocation; verify-links same complete DB2-only package traversal"
+  },
+  "failure": "stable path-free code and component; incomplete outputs retained; no hidden available-prefix, native, network or missing-file fallback",
+  "full_extractor_complete": false,
+  "provided_keys": {
+    "option": "--keys PATH",
+    "required_for": [
+      "extract/resume when decryption=provided-salsa20-v1",
+      "inspect --client when decryption=provided-salsa20-v1"
+    ],
+    "forbidden_for": [
+      "plans with decryption=disabled",
+      "verify",
+      "inspect without --client"
+    ],
+    "input": "explicit regular file, final symlink and special file rejected; read once with metadata identity and extra-byte EOF check",
+    "max_file_bytes": 262144,
+    "max_entries": 4096,
+    "record_format": "forever-tact-keys TAB 1 LF; sorted unique lowercase hex16 u64 name TAB hex32 key LF",
+    "cipher": "Salsa20/20 with 16-byte keys, nonce4/8 padded to8, frame-index little-endian XOR, initial block counter zero",
+    "frames": "one E wrapper around N or strict Z only; mandatory complete content MD5 and encoded frame MD5 where framed",
+    "discovery": false,
+    "built_in_keys": false,
+    "network": false,
+    "source_protection": "canonical key-file source included in protected roots before output writes",
+    "secure_erasure_guaranteed": false
+  },
+  "failure_codes": {
+    "missing_option": "product_keys_required",
+    "v1_option": "product_keys_forbidden",
+    "key_input_prefix": "product_keys_input_",
+    "key_allocation": "product_keys_allocation",
+    "parser_prefix": "tact_keys_",
+    "no_verified_encoding": "local_store_no_verified_encoding",
+    "key_source_output_overlap": "package_path"
+  },
+  "failure_envelope": "forever-product-v10 after valid plan admission; generic CLI/plan failures before admission retain forever-product-v1; all errors path-free",
+  "scope": "Explicit Linux build70374 DB2-only target-catalog publication/recovery. No other components, standalone70374, native product, Windows, full-client/runtime or geometry acceptance.",
+  "publication_profile": "Build70374Db2OnlyV1",
+  "legacy_preservation": {
+    "canonical_versions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9
+    ],
+    "v5": "70338 DB2-only unchanged",
+    "v9": "70338 exact DB2+GT+cameras unchanged",
+    "global_SUPPORTED_CLIENTS": "70170,70205,70338 unchanged;70374 only narrow Linux metadata/LocalStore entrypoint",
+    "catalog_does_not_select_v10": true,
+    "default_backend_unchanged": true
+  },
+  "admission": {
+    "metadata": "admit_db2_70374: exact70374 typed bounded build metadata before bootstrap",
+    "store": "LocalStore::open_db2_70374 or open_db2_70374_with_keys; observed build equality fatal on change",
+    "raw_store_scope": "authenticated generic FDID bytes, not component acceptance; product driver enforces exact target DB2 catalog",
+    "platform": "Linux only before key/client/output IO",
+    "standalone": "70374 absent from global/native/legacy/default admission",
+    "package_context": "70374 only Linux components1; existing encoding unchanged"
+  }
+}
