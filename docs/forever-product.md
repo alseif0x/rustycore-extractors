@@ -1354,3 +1354,87 @@ remains open.
 | `impl/first-blocker-v1/coverage-v1/actual-attempt1/acceptance.json` | `dc4db70c3feaf4aa64b16f24c44700a1ce67e0ae3782392a2a2aaf67f493723b` |
 | `qa/review/first-blocker-coverage-terminal-review-v1.json` | `9e5824483ae38dff337cadb55b4ed69e8253d2a971210da60eba45c53145b740` |
 | `impl/first-blocker-v1/next-readiness-plan-v1.md` | `d496c4cb0288efbacbccb977c518f0b1a0712e0e93af641f43bd5945ea3748b1` |
+
+
+## Complete 70374 availability census — 2026-10-14
+
+Issue #66 follows merged PR #65 (`f014ceb`) with a minimal external diagnostic
+caller, using the unchanged immutable corresponding source from the accepted
+`fdba4b2` Linux package. The compiled public catalog is compared with the exact
+1,161-entry v10 plan before opening one 70374/esES Rust-local store. Disabled
+keys, explicit Contiguous/Header50893V2 layouts and library caps remain. The
+new caller adds a checked decoded-success ledger up to the existing 16 GiB
+product ceiling, reduces each request to the remaining budget / 16 MiB and
+drops every complete buffer before the next read. It records at most 1,161
+rows / 1 MiB, with explicit policy outcomes, unvisited entries and fatal source
+changes. This ledger does not measure candidate/archive/OS I/O, heap or RSS.
+
+The first qualification fails to compile a private module import; its evidence
+is preserved without accepted prefixes. Revision2 changes only that import to
+the public `forever_db2::catalog` reexport. Seven offline commands pass: lock,
+debug/release build and fifteen authored methods per profile, Clippy and format.
+The owned target cache is reused explicitly, without claiming fresh builds.
+Independent source/build and concrete handoff review passes. The actual release
+copy is 1,135,408 bytes, mode 0500 and single-link; Cargo's original target
+hardlinks have a separate recorded scope. No production code, product binary,
+package, dependency or admission changes follow.
+
+One persistent user service completes the census in 5.781 seconds. All 1,161
+entries are attempted and recorded, with zero unvisited: 1,078 complete
+CKey-checked BLTE outputs / 29,213,195 bytes and 83 `local_store_no_verified_encoding`
+results. Each unavailable entry has one encrypted candidate; missing, incomplete,
+corrupt and unsupported candidate counts are zero. Candidate counts are not
+encrypted-frame or missing-key-name counts. The single private JSON report is
+231,269 bytes; no plaintext payload files, stage/seals/manifest or available
+prefix are published. Guard failures remain fatal even after an availability
+outcome; all 3,158 software guards / 48 aliases close, the child trace is empty
+and its owned group is absent. Fresh bounded target metadata matches before/after.
+Parents are untraced; compiler IPC has separate strictly classified traces.
+Independent actual terminal review passes without findings
+(`5711dbe25026f984dcc6883a78f3493e6f336ba74770c79f435faf3e0fad64b1`).
+
+This is fresh build-70374 availability evidence. It does not transfer historical
+70338 row decoding, Python/native parity or typed-loader acceptance, validate
+DB2 schemas/rows, recover the 83 encrypted candidates, or justify a supplied-key
+retry. Complete catalog/product extraction, Map/GameObject prerequisites, real
+geometry/world resources, RustyCore runtime and publication remain open. Windows
+stays deferred in draft PR #27. Private per-table outcomes, keys/names and client
+correlations stay outside Git/CI; only aggregates and overall receipts appear here.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70374-catalog-census-20261014-riavyi83/`.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `impl/census-v1/qualification-attempt1/report.json` | `d94558e4d64215432ab66e40d156ba4e0da2be3a25abcba05635e691e37569f8` |
+| `impl/census-v1/revision2/source-freeze-v2.json` | `9a19381f3bc021b94bee1f91ac55531acbc849bfd0615c3467c9ea3836051ebb` |
+| `impl/census-v1/revision2/qualification-attempt1/report.json` | `654c86462733b6840495cdf7b895da71d85ce9aa0ef8a65b2580fe35e0b4c9b4` |
+| `qa/review/census-source-review-v2.json` | `a0bea08d69b19276315953849a51b3b465bcbb9bde01623d393e531ac3e80a3b` |
+| `qa/review/census-build-review-v1.json` | `4624afa3fcf5c5678509734bf7e113f5be9fa63e848e9709a4d00c241e047036` |
+| `attempt1-invocation/receipt.json` | `e9b7f22c35c5e3ce3720ed83deb00fa60d7bae3780363f4f4deebfa683a63055` |
+| `root/census-terminal-v1.json` | `e9ff0bd12d6c37235af85ea591b6b363461de0672da081b71e49c76ea3b60bb0` |
+| `qa/review/census-terminal-review-v1.json` | `5711dbe25026f984dcc6883a78f3493e6f336ba74770c79f435faf3e0fad64b1` |
+| `impl/next-prerequisites-plan-v1.md` | `ab90332c1afd141b04a5892cee434b727bd59e1cfafd80248eb18a9a70bbace5` |
+
+### Next: explicit operation prerequisites
+
+The retained original C++ DB2 copy loop iterates its compiled list and continues
+after individual failures; typed Map and GameObject startup have separate fatal
+load gates. The separate [pinned server source](https://github.com/advocaite/TrinityCore/blob/8c5325b37dfa155450a9e87f213965f6e6c00afe/src/server/game/DataStores/DB2Stores.cpp#L1778)
+loads named stores, including Achievement, Map and GameObjectDisplayInfo. This
+source review does not establish a complete server closure count or prove that
+all 1,161 WoWDBDefs entries are a minimum server prerequisite. Its pin is distinct
+from the retained `02245dcd` extractor snapshots and adds no 70374 compatibility.
+Current RustyCore loaders likewise retain historical build/schema gates; no
+70374 server/runtime acceptance follows.
+
+Next derive explicit terrain, collision and intended-server dependency sets from
+those sources, then intersect the public names with the private census metadata.
+Reuse previous causal observations when their target/source identities match;
+any newly required native observation needs a bounded, source-bound handoff and
+matching-only coverage. The fresh Achievement observation is retained rather
+than repeated solely to rediscover its missing key. A later all-83 causal survey
+is optional diagnostic work, not a prerequisite imposed before required world
+resources. No prerequisite projection or new native read has run in this step.
+The failed 1,161-entry product selection remains failed with no accepted prefix;
+a different explicit operation plan cannot silently omit its required inputs.
