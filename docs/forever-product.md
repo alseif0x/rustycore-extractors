@@ -799,15 +799,31 @@ recovery state v2 are unchanged. Legacy v1–v6/v8 identities, canonical bytes,
 errors and build gates remain; v5 is still 70338 DB2-only and v7 remains reserved
 for its separate Windows work.
 
-### Executed source, synthetic and real acceptance
+### Corrected producer and executed acceptance
 
-Functional commit `2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba` has tree
-`3a680bec4942d99ba95e0cfb715bcd23af9fe7d1`. Local binaries were compiled from
-base `362f03dd2c974b9d2c8056348bcef91ad415ffee` plus the reviewed source delta
-before that commit. A later Git-blob binding matches all 665 guarded source
-files / 15,532,246 bytes to that snapshot, including the 453-file runtime subset;
-this is source equality, not a claim of recompilation at the commit. Subsequent
-three-file documentation changes do not rebuild those local binaries.
+The initial implementation `2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba` passed
+its own synthetic and real campaigns; those immutable receipts remain historical.
+The corrected functional commit is `6f39cc0f10c0b3c35cd824bb7d2035ebe7157343`,
+tree `49d53dff59fe5bef0cd30561c74f00a602fb6fcd`. Its local binaries compiled base
+`a4ad23af04b9d297f4da6d99ab5fb441169387bb` plus two reviewed source/test changes
+before the corrected commit. Exact Git-blob binding matches **665 files /
+15,532,624 bytes**, including the 453-file Rust/Cargo subset. This is source
+equality, not recompilation at that commit. Metadata-only checkout commit
+`2119a23024607c590ccd266a140d5a1571d24414` preserves all 665 Git entries/current
+bytes and both binaries; subsequent three-file documentation changes do not
+rebuild them. Fresh campaigns below bind the corrected binaries independently.
+
+The first hosted head failed Windows compilation because the shared inspector
+selected `File` while the Windows callback requires bounded `dyn Read`.
+The correction selects the exact borrowed type/lifetime per platform; Linux
+still uses `File`, with unchanged inspector body, calls, limits and format scope.
+The next Windows read-consumer job failed nine canonical TSV fixture tests.
+Local Git filtering with `core.autocrlf=true` reproduced 318 bytes / 16 CRLFs
+instead of the canonical 302-byte LF fixture. Hosted fixture bytes were not
+directly measured. Pinning `*.tsv text eol=lf` preserves parser strictness;
+all six existing hosted checks pass at `2119a23`. Final documentation has its
+own exact-head CI gate. This repairs inherited checks without extending Windows
+product development.
 
 The final complete eight-command validation passes debug and release workspace
 runs, each **2,917 tests / 26 normally ignored / 45 targets**, all-target Clippy,
@@ -818,18 +834,24 @@ plus five CLI, including 20 new library cases. Eight new formal contract methods
 and normally ignored corpora were not rerun. The retained first workspace attempt
 is globally failed: two old structural assertions failed after five commands;
 distribution/final builds did not run. Two Python-test-only fixes preserve all
-453 runtime files byte-for-byte; all eight commands then ran anew successfully.
+453 runtime files byte-for-byte at that repair; all eight commands then ran anew.
+After the callback correction, the complete eight-command validation runs again
+as `workspace-attempt3`, with new debug/release binaries and independent QA.
 
-The single synthetic campaign runs 78 commands: 30 successful, 44 expected
+The corrected-binary synthetic campaign runs 78 commands: 30 successful, 44 expected
 exit-9 negatives and four deliberate SIGKILL cuts. Its 32 owned output views
 contain **eight positive complete packages and 24 negative copies**. Six positive
 clean/resumed views contain 31 authored data files / 2,022 bytes each; two valid
 empty-camera views contain 21 files. Both profiles cover clean extraction,
 verification, GT/camera interrupted resume, sealed-source mismatches, wrong
 plan/producer, complete/existing outputs and malformed/budget/inventory rejection.
-All 2,465 frozen files and exact path sets pass the terminal audit.
+All 2,463 frozen files / 269 directories and exact path sets pass the terminal
+audit. The outer controller was captured only by the tool console, without
+persisted raw outer stdout/stderr; no separate outer-stderr-zero claim is made.
+All 78 child outputs/results/traces are retained. The terminal auditor has its
+own private output capture; that is a separate invocation.
 
-The single real 70338/esES campaign runs **26 commands: 22 successful and four
+The corrected-binary real 70338/esES campaign runs **26 commands: 22 successful and four
 intentional SIGKILL cuts**, without retry or recalibration. Debug and release each
 produce a clean package, a GT-interrupted/resumed package and a camera-interrupted/
 resumed package: **six complete packages, each 31 data files / 165,507 bytes**.
@@ -838,8 +860,13 @@ and ten opaque cameras / 26,296 bytes. All payload bytes and complete inventorie
 match the immutable previously accepted 70338 component oracles. Within each
 profile final manifest bytes and DB2 seals are identical; across profiles the
 manifest differs only in producer SHA. All 628 frozen files / 49 directories,
-969 source/tool/evidence guards and 38 declared aliases pass independent terminal
-review. The final review accepts only this bounded real publication scope.
+980 source/tool/evidence guards and 38 declared aliases pass independent terminal
+review. Both raw outer streams were captured from process start: stdout 3,542
+bytes, stderr zero. The final review accepts only this bounded real publication
+scope. Source-only dependency admission has 962 guards / 38 aliases; the real
+admission preserves them and adds 18 metadata guards, including bounded
+`.build.info`. Root, prelaunch QA and terminal-auditor metadata reads have
+separate scopes and are not all CLI/store reads.
 
 The historical native whole-byte/CKey, numeric GT, public GT-loader and original
 camera-discovery acceptance supplies the immutable oracles; those consumers were
@@ -857,22 +884,31 @@ private camera identifiers, per-file content hashes and correlations stay local.
 
 | Receipt (relative to evidence root) | SHA-256 |
 | --- | --- |
-| `impl/source-v3/freeze.json` | `3545ea4425460e2a347ea5a9c0e63599083d65fa0ff7d089562d1737edc3b346` |
+| `impl/source-v4/freeze.json` | `e76378921f3183d72e68ac7f58c6fdf1cff3c0c0133a897eb1c3e1ff7d6967c4` |
 | `impl/workspace-attempt1/validation-report.json` (failed) | `af352a6e19562f9720ccde83b63ef97d5edf99028fe9a3810094c4f0a1794ac5` |
-| `impl/workspace-attempt2/validation-report.json` | `a7c4ebb973db32360a39bdc8784627a46868f51a4796e3cd31d99146f243689c` |
-| `impl/workspace-attempt2/producer.json` | `a48a5a81a941f9cd53e6d6c9d3957276285a879c169296055dc408d88f04cdcb` |
-| `root/functional-binding.json` | `db2ada1d0c4d76c87e7f7ce8ccc595340b3c0b18144007e2b14a6745b78106b4` |
-| `synthetic-attempt1/acceptance.json` | `8d9e3f101c64d680d0b414cc0b2911a45a1011183d14051df93f54f9ad2f2d44` |
-| `synthetic-attempt1/evidence-freeze.json` | `613a4055218e716fc465b8939274eeb8e3ec0a3a836cf1601df36c1f5ec8f2f7` |
-| `qa/synthetic-terminal-audit-v1.json` | `a6c14f78291dabab85723d32e6cb3d21e1ce8bd993e28dc8714807ecd37f888b` |
-| `qa/review/synthetic-terminal-review-v1.json` | `f86bcbc4d3cdeabd1ca61f618e19b6b1d3fb557ea86d248b0ea161d15f115432` |
-| `real-attempt1/acceptance.json` | `4af069f7a4a3d0492db684045bdd10873d223eb7da441e11e1832a06b4d655c4` |
-| `real-attempt1/evidence-freeze.json` | `253b5ff7a48e8f8c9dd4dd7dd5565cd041bb8a1b0d2bf74caecb683f0000065b` |
-| `qa/real-terminal-audit-v1.json` | `d80d9fcfa2cd5d937597bb253d837161a500d2cfa3ce5a58054dd4155cabe4ab` |
-| `qa/review/final-real-review-v1.json` | `54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9` |
+| `impl/workspace-attempt3/validation-report.json` | `9b99c951f5decf55191ca5409e297e1a0ce1f1fd08c929c7be9d0730dc351a0d` |
+| `impl/workspace-attempt3/producer.json` | `02b7dd360655d62ce76deaffdbf92cecee11dae6d35e7535a7ce108824b9f5c3` |
+| `root/functional-binding-corrected-v1.json` | `7671830e85d5bb46da6c647fa380e4566cfc607b0b7fbb64dec77a393c60beb7` |
+| `qa/review/workspace-validation-review-v2.json` | `88c615cab5e7dc91eca5f3a3809d214dc2549df72d80d1f6d424a41093942249` |
+| `qa/review/functional-binding-review-v2.json` | `6c4a8fc60f50ca8c229cec31dc5b0585c80885e7d48dfe9c7d4acd6432c0c12a` |
+| `root/checkout-policy-commit-binding-v1.json` | `f189173b613ad6ecd4acf44f412eca633a0a6fd0f714c8d1bfda50ce9d52dd63` |
+| `synthetic-attempt2/acceptance.json` | `97cc91b21e80f71ed774566948390a8c2c1d932651b142ebffca8ebf4d9d3282` |
+| `synthetic-attempt2/evidence-freeze.json` | `6f68154fe6c16f3a525797db3969d117bfbaa3c6bf7304c86f3b7137b4526c9a` |
+| `qa/synthetic-terminal-audit-v2.json` | `dea41d7a9263a754e84184773057c29b21c1bdcd17eacbb082f32938314979a5` |
+| `qa/review/synthetic-terminal-review-v2.json` | `2121bce370874e959ff0720ee833e1814c9d1f335440991f733bb212aab2e38e` |
+| `real-attempt2/acceptance.json` | `a98f4e6912399bfaa11ca0b361f5d80564759cc95068478236577804d1ff2ab4` |
+| `real-attempt2/evidence-freeze.json` | `5592709e6ef3a2b1547238b23f83ba8e643a07296e95d08c45c28b0c09908b06` |
+| `qa/real-terminal-audit-v2.json` | `070921412b7b31081cb4255093ebe81655e286eb4b5e3446f404bea52ef0894d` |
+| `qa/review/final-real-review-v2.json` | `7a9573cea434ef1fe61bd32d6359eed4023158c020e2118a321efd83745d22a2` |
 
 This closes explicit Linux 70338 DB2/GT/raw-camera publication and recovery for
 the bounded real selection. It does not accept the full catalog, geometry,
 full-world resources, M2/waypoints/playback, server runtime, Windows product or
 a new reproducible distribution. The historical 83 unavailable catalog entries
 and Map/GameObject dependencies remain recorded gaps, without a new survey here.
+
+The initial producer's accepted real review remains at
+`qa/review/final-real-review-v1.json`, SHA-256
+`54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
+Its earlier campaigns and failed local/hosted attempts remain immutable; their
+acceptance is not substituted for the corrected-producer evidence above.

@@ -2328,11 +2328,13 @@ Clippy, format and both product builds.
 The failed first validation remains retained; two Python structural assertions
 were fixed without runtime source changes and all eight commands reran.
 Local base-plus-delta binaries are source-bound to functional commit
-`2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba`, not rebuilt at that commit or after
-the subsequent three documentation changes. No new bundle is accepted.
+`6f39cc0f10c0b3c35cd824bb7d2035ebe7157343`, compiled from `a4ad23a` plus
+the reviewed two-file delta before that commit. Metadata-only `2119a23` and later
+three-file documentation changes do not rebuild them; all 665 compiled source
+entries and both binaries remain unchanged at the checkout-policy correction. No new bundle is accepted.
 
-Synthetic acceptance has 78 expected outcomes, eight complete positive packages
-and 24 negative copies. Real acceptance has 26 expected outcomes, including
+Corrected-binary synthetic acceptance has 78 expected outcomes, eight complete positive packages
+and 24 negative copies. Corrected-binary real acceptance has 26 expected outcomes, including
 four deliberate SIGKILL cuts, and six complete clean/GT-resumed/camera-resumed
 packages across profiles. Each has twenty GT / 138,537 bytes, one source DB2 /
 674 bytes and ten raw cameras / 26,296 bytes: 31 files / 165,507 bytes. Exact
@@ -2342,9 +2344,19 @@ zero network calls; child-preexec denial probes are outside those traces. Counts
 do not measure CASC requests/OS I/O/RSS. Private assets/IDs/correlations stay local.
 
 Independent final QA accepts bounded real publication only, with no findings;
-receipt `qa/review/final-real-review-v1.json` SHA-256
-`54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
+receipt `qa/review/final-real-review-v2.json` SHA-256
+`7a9573cea434ef1fe61bd32d6359eed4023158c020e2118a321efd83745d22a2`.
 The evidence root and full receipt list are in `docs/forever-product.md`.
 Full catalog, Map/GameObject inputs, real geometry, full-world operation,
 RustyCore runtime and a new reproducible Linux distribution remain gates.
 Windows remains deferred in draft PR #27. This does not complete the extractor.
+
+Inherited CI exposed the shared callback's `File`/`dyn Read` compilation mismatch,
+then canonical TSV checkout CRLF rejection. Preserve per-platform borrowed
+reader types/lifetimes and `*.tsv text eol=lf`; do not relax parser bytes or drop
+platform checks. All six existing checks pass at `2119a23`; final documentation
+requires exact-head CI. Windows product development remains deferred.
+New synthetic evidence has 2,463 files / 269 directories, all 78 child records,
+and console-only outer capture. New real evidence has 628 files / 49 directories,
+980 guards / 38 aliases and raw outer stdout 3,542 bytes / stderr zero. Keep
+those capture scopes distinct. Earlier accepted producer proofs remain historical.

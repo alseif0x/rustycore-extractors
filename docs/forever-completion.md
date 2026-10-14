@@ -3696,12 +3696,14 @@ in each debug/release profile. The validation also passes 347 contracts, 162
 distribution checks plus one skip, Clippy, format and both product builds. A failed first attempt remains failed;
 two structural Python assertions were corrected and the whole validation rerun.
 The compiled base-plus-delta source is byte-bound to functional commit
-`2e6c05eeff1a115f35e9fd19e49a597c4ed2d5ba`; later documentation is not a local
-binary rebuild. No new distributable bundle is accepted by these builds.
+`6f39cc0f10c0b3c35cd824bb7d2035ebe7157343`: compilation used base `a4ad23a`
+plus the two reviewed changes before that commit. Metadata-only `2119a23` fixes
+canonical TSV checkout line endings and preserves all 665 source entries and
+both binaries. Later documentation is not a local binary rebuild. No new distributable bundle is accepted by these builds.
 
-The one synthetic campaign passes 78 expected command outcomes, including four
+The corrected-binary synthetic campaign passes 78 expected command outcomes, including four
 intentional SIGKILLs and 44 exit-9 negatives: eight positive complete packages
-and 24 negative output copies. The separate one real campaign passes 26 expected
+and 24 negative output copies. The separate corrected-binary real campaign passes 26 expected
 outcomes, including four intentional SIGKILLs. Its six clean/resumed packages
 (debug/release, GT/camera interruption) each contain **31 data files / 165,507
 bytes**: twenty GT / 138,537 bytes, CinematicCamera DB2 / 674 bytes, and ten
@@ -3711,8 +3713,8 @@ SHA differs across profiles. Real decryption is disabled; provided-key admission
 has source/test evidence, not a fresh real-key campaign.
 
 The independent final real review accepts this bounded publication scope with
-no findings: `qa/review/final-real-review-v1.json`, SHA-256
-`54f0764d5040e78994645b0d6fb9a6b3247187d5d99680277b16d1999cd343c9`.
+no findings: `qa/review/final-real-review-v2.json`, SHA-256
+`7a9573cea434ef1fe61bd32d6359eed4023158c020e2118a321efd83745d22a2`.
 The [product acceptance record](forever-product.md#linux-build-70338-db2gtcamera-product-v9--2026-10-14)
 retains the evidence root, frozen inventories, failed-attempt receipt and
 source-binding hashes. Consumer traces show zero network calls; preexec denial
@@ -3725,3 +3727,15 @@ unavailable 83 catalog entries, complete Map/GameObject and real geometry inputs
 full-world extraction/resources and RustyCore runtime acceptance. This increment
 performs no new full-catalog survey, M2/playback or runtime acceptance, release
 publication or Windows development. The extractor goal remains incomplete.
+
+The first hosted head failed the inherited Windows callback compilation; the
+corrected callback preserves Linux `File` and Windows bounded `dyn Read`.
+A subsequent nine-test fixture failure was reproduced by local Git CRLF filtering;
+the LF checkout policy fixes it without relaxing the parser or rebuilding local
+binaries. All six checks pass at `2119a23`; final documentation still requires
+its own exact-head CI. This is regression repair, with Windows delivery deferred.
+The new synthetic freeze has 2,463 files / 269 directories and retains all 78
+child records, with console-only outer capture. The new real freeze has 628 files /
+49 directories, 980 guards / 38 aliases and both raw outer streams (stdout 3,542
+bytes / stderr zero). These capture scopes are distinct. Earlier successful
+producer campaigns remain historical, without transferring their acceptance.
