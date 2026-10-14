@@ -4202,3 +4202,29 @@ independent terminal QA passes this metadata-only scope:
 `7a0397d3e1c1b50a50e17ee6f84fdcb787953719e2ae9fc24f3df2bba20c9754`.
 See the detailed operation counts and source/control receipts in
 [forever-product.md](forever-product.md). Windows/draft PR #27 remain deferred.
+
+## Real 70374 liquid source-reader comparison — 2026-10-15
+
+Issue #70 freshly extracts and separately verifies the explicit three-table
+70374/esES disabled-key v10 liquid package: three files / 26,063 bytes.
+Two current-source offline Rust builds and Python match original C++ getters,
+copy accessors and all three unchanged `ReadLiquid*` functions on 118 direct
+records, 1,214 copy pairs and 1,332 materialized entries. All Python/Rust
+admissions precede every native call. Twelve runtime children and their separate
+parent invocation close successfully, without retry or prefix acceptance.
+
+The separate current-catalog gate and product admission establish this selected
+70374 source scope; the diagnostic's default metadata profile and historical
+70338 evidence are not relabeled. Original native acquisition is an authored
+memory adapter, not native CASC routing. No malformed native inputs, complete
+terrain queries, world resources or runtime consumers are accepted. Map remains
+required and unavailable, and full extraction remains open.
+
+Measured campaign receipt is
+`b8683f8bf46e7718432e087cd2cfad0d9f8a1c9718d3f1557264e2b7bcfe48f3`.
+Independent actual terminal QA passes this selected scope:
+`cd9dc3727ddc15afc8e1fe62ad361c2633695f91002c6c3ac23c76d57a27b4b8`.
+Current source/build, static original-runtime qualification, resource bounds
+and retained preparation failures are recorded in
+[forever-product.md](forever-product.md). No production code or distributed
+binary changed; Windows/draft PR #27 remain deferred.

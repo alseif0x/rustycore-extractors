@@ -1508,4 +1508,91 @@ census. It changes no production code or binary.
 | Independent actual terminal QA (`passed-metadata-only-projection`) | `7a0397d3e1c1b50a50e17ee6f84fdcb787953719e2ae9fc24f3df2bba20c9754` |
 
 Independent terminal QA accepts only this bounded metadata projection.
+
+## Real 70374 liquid startup sources — 2026-10-15
+
+Issue #70 performs a fresh bounded Linux acceptance of `LiquidMaterial`,
+`LiquidObject` and `LiquidType` from the current 70374/esES client. The shipped
+current producer executes the exact explicit three-table v10 plan with keys
+disabled. Extraction and separate `verify` and `verify-links` calls accept a
+complete sealed package: three files / 26,063 bytes. This does not accept the
+failed full-catalog selection or omit Map from a terrain operation.
+
+All three files first pass complete Python decoding and the stricter native
+envelope, then both freshly built Rust profiles; only after all six Rust
+comparisons succeed do the three original C++ calls run. Every ID, selected
+value bit pattern, direct/copy order and materialized map agrees privately:
+118 direct records, 1,214 copy pairs and 1,332 materialized entries. Native
+execution covers the original DB2 getters, copy accessors and all three
+unchanged `ReadLiquid*` consumers through a memory-source adapter, with two
+source opens per table. It does not execute native CASC acquisition.
+
+The unchanged Rust diagnostic retains its default closed-source metadata
+profile. A separate authenticated `wowdbdefs-70374-v1` gate verifies the current
+FDIDs, table/layout hashes and complete field/decode shapes against the pinned
+70338 catalog before using that diagnostic. The product separately admits the
+70374 batch. Neither a matching byte count nor historical 70338 acceptance
+supplies current-build evidence. LiquidObject's signed16 physical field keeps
+the original u16 projection; unused fields validate in Python/Rust without
+claiming parity for native ignored-field handling or terrain queries.
+
+Two offline Cargo builds use the immutable current moved-bundle source:
+717 selected committed files within 758 complete packaged files. Source bytes,
+modes and topology remain unchanged, and retained mode0500/single-link debug
+and release copies match the compiled bytes literally. The fresh external
+target uses the explicitly recorded shared Cargo cache; no fresh dependency
+cache claim is made. Both compiler children close successfully. Their six
+AF_UNIX socket pairs pass the retained compiler IPC classifier; compiler
+traces are not described as empty runtime traces. Build preparation preserves
+two root bookkeeping assertion failures and an auditor dispatch-stream
+assumption failure without rerunning builds or extraction.
+
+The reused original native binary is authenticated against its retained build
+proof and 190 source guards. Exactly three compatibility headers move to
+byte-identical immutable packaged paths; the old mutable checkout guard map
+is not imported. One static inspection binds both new Rust binaries and the
+original native runtime: eight ELF objects, eighteen NEEDED edges and four
+interpreter edges. It executes no native help/nonpositive call and rebuilds
+no original TU. Original sources and notices remain external.
+
+The actual campaign has twelve exit-0 children: extraction, two verifiers,
+six Rust projections and three native projections. Every child retains an
+owned process generation, seccomp proof, empty network trace and absent-group
+cleanup. The controller parent is untraced. Its separate invocation closes
+3,095 guards / 46 aliases in 8.486 seconds with no closing errors or retry.
+Fresh bounded client metadata matches the admitted 70374 declaration before
+work and throughout the run; this is not game-login/world authentication.
+
+Per-file inputs and projection outputs are bounded to 16 MiB, selected input
+bytes to 48 MiB, direct records to 4,096 and copies to 100,000. Rust/native
+projection children use 1 GiB AS, 30 CPU seconds and 40 wall seconds; product
+children retain the reviewed 4 GiB / 600 CPU / 660 wall policy. Evidence visits
+have a separate 8,192-node / 512 MiB inventory cap. These limits do not measure
+RSS or establish native malformed-input safety. All client bytes, rows and
+per-file correlations remain private and outside Git/CI.
+
+| Evidence | Overall SHA256 |
+|---|---|
+| Campaign source freeze, revision2 | `7d38a5312d12fdc0bb465594bec6bb770dd697689187b542a442c3b0017c0241` |
+| Independent campaign source review | `0f4e8fd6d411c16e85340c782f7474aa2758dedb6812c4755bf9631ae3e237bf` |
+| 24 build-driver synthetic controls | `17b3016d8b4cf4c2955325365d249eaa87ab6e21aad46c740cb99defc0f3f740` |
+| Two current-source builds | `e8b432cd5d1db42dffd40ac419b8664561c14ad9c3d9f1af7b76ab818e9d060b` |
+| Independent build terminal review | `6dd9f12bfd44f17680df247046b38d6ca1b2573586fb3b5942443f474681df6c` |
+| Actual static native/Rust qualification | `5e3aac163ee3753aa73af488b8a509e7cedc532788f08348fb27af0dd0082aed` |
+| Independent static terminal review | `acaee7d51afb7262eafc433c4bcc06dcd634a158ea9d66a62a8bebbe7d41a50b` |
+| Actual twelve-child campaign | `b8683f8bf46e7718432e087cd2cfad0d9f8a1c9718d3f1557264e2b7bcfe48f3` |
+| Controller invocation | `826a6b77c360498db024cbc94953c76cf8b9b769d7b13204bb0024745e2b174b` |
+| Independent actual campaign terminal review | `cd9dc3727ddc15afc8e1fe62ad361c2633695f91002c6c3ac23c76d57a27b4b8` |
+
+Independent terminal QA passes the measured run, authenticating all four whole
+proofs and the 111-node evidence inventory. It independently compares the three
+Rust/native projections and replays copies to derive the totals. Complete
+Python field decoding is attributed to the reviewed controller; QA does not
+repeat that decode or reopen the client/CASC store, and reruns no consumer.
+
+This closes the measured three-source comparison, not complete terrain or
+runtime acceptance. Map remains required and unavailable; GameObjectDisplayInfo,
+full catalog, real world geometry/navigation, server activation and the full
+Linux extractor remain gates. Production Rust/Cargo code and the accepted
+distributed producer are unchanged. Windows/draft PR #27 remain deferred.
 Windows remains deferred, including preserved draft PR #27.
