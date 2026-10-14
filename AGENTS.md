@@ -2411,25 +2411,21 @@ This adds no recovery evidence for the 83 recorded failures and lifts no
 Map/GameObject, catalog, geometry or runtime gate. This comparison admits no positive Gate B or CASC retry; Windows stays
 deferred and keys/correlations stay private.
 
-### Bounded 70338 static v7 method — 2026-10-14
+### Bounded 70338 static v7/v8 evidence — 2026-10-14
 
-Issue #54 separately accepts a limited manual Ghidra v7 method on the retained,
-hash-pinned 70338 executable snapshot. The earlier issue #42 v6 attempt remains
-failed before seed scanning; it is not reclassified. V7 explicitly changes
-loaded/initialized admission from 128 to 256 MiB while retaining the separate
-256 MiB scan-visit cap, 128 MiB input cap and 512 MiB image cap.
-The closed run admits 139,145,697 initialized bytes across eight block objects
-plus 75,236,864 executable scan bytes: 214,382,561 scan visits. It finds 27 seed
-matches and zero lexical candidates, candidate intervals, verified Pcode
-constants or decompilations. These zeros establish no absence of references,
-keys or hotfix behavior. Nineteen network calls are denied, none succeeds,
-and the owned process group closes. Independent QA status is
-`passed-limited-static-method`, SHA-256
-`31d0fb9bba0ff0486b5aec512c2243091b098457eeee42513b99977166733695`.
-This custom manual run opens no REA session and executes no game. Launcher
-`.build.info` metadata now reports 70374; that is not verified 70374 game,
-static-analysis or product acceptance, and this run does not read its binary.
-Production source and the frozen bundle are unchanged. Full catalog,
-Map/GameObject, geometry and runtime gates remain; Windows stays deferred.
-Limits, provenance and receipts are in
-`docs/forever-completion.md#bounded-70338-static-v7-method--2026-10-14`.
+Issue #54 records two closed manual Ghidra methods on the retained, hash-pinned
+70338 snapshot; the earlier v6 cap failure stays failed. V7 raises only imported
+loaded/initialized admission to 256 MiB; total scan admission remains separately
+256 MiB. V7 finds 27 seeds with no lexical code candidate. V8 revalidates them,
+then finds six raw pointer cells and 90 caller-defined anchor relations, with no
+second-hop instruction candidate. Both have independent limited-method review,
+19 denied network calls / zero successful calls, and closed owned groups.
+Neither establishes a handler, recovered key or absence of references. V8 covers
+only exact seed-start pointers; containing-string starts remain outside scope.
+Raw relationships and Pcode corroborations remain `NOT_xref`. These are custom
+manual methods, without an REA session, game execution or live-memory reads.
+The launcher separately announces 70374 through `.build.info` metadata; no
+70374 analysis/product acceptance transfers from 70338. Production source and
+the frozen bundle remain unchanged. Full catalog, Map/GameObject, real geometry
+and runtime remain gates; Windows stays deferred. Detailed limits and receipts
+are in the v7/v8 sections of `docs/forever-completion.md`.
