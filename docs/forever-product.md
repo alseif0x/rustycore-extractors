@@ -23,11 +23,13 @@ below. V5 remains DB2-only, and 70338 geometry remains unaccepted.
 The separate Linux [v10 contract](../contracts/forever-product-contract-v10.json)
 admits explicit build 70374 DB2-only plans with `wowdbdefs-70374-v1`.
 Its bounded TACT acceptance and negative startup diagnostic are recorded below;
-70374 geometry and a new bundle remain unaccepted.
+70374 geometry remains unaccepted. The current bounded local Linux package is
+separately accepted in issue #62; see [distribution evidence](forever-distribution.md).
 The separate Linux [v11 contract](../contracts/forever-product-contract-v11.json)
 admits explicit 70374 DB2/GT/raw cameras with sealed-source proof. Its fresh
 synthetic/native evidence and independently accepted bounded real26 lifecycle
-are recorded below. A new Linux bundle and release remain unaccepted.
+are recorded below. Issue #62 separately accepts the current local Linux bundle;
+release and full extraction remain open.
 
 ## Build and inspect
 
@@ -1220,3 +1222,135 @@ archive I/O, RSS or atomic snapshots. A new reproducible v11 Linux bundle and an
 release/publication remain separate gates. Prior bundles are unchanged; Windows
 development/distribution stays deferred with draft PR #27 preserved. The full Linux extractor
 remains incomplete.
+
+
+## Complete 70374 DB2 catalog: first attempt rejected — 2026-10-14
+
+Issue #64 follows merged PR #63 (`76f4009`) with the accepted shipped Linux
+executable, without changing production source, admission, formats or dependencies.
+The explicit v10 DB2-only plan contains all 1,161 `wowdbdefs-70374-v1` entries
+(34,986 bytes), esES and disabled keys. Plan-only inspection passes without a
+client argument and is separate from the three real/output-check calls below.
+A persistent user service executes one bounded offline attempt; no retry follows.
+Fresh client metadata declares 70374 and remains unchanged before/after those
+calls. This is metadata evidence, without authenticating game execution.
+
+Extraction exits 9 with `local_store_no_verified_encoding`. Its two provisional
+DB2 files total 512 bytes; the incomplete marker remains, with no DB2 seal or
+final manifest. Independent offline `verify` and `verify-links` each exit 8 with
+`package_incomplete`. The full selection fails and no available prefix is
+accepted. All three owned groups close, the three consumer network traces are
+empty, and software guards remain unchanged. Independent terminal review passes
+this negative closure without findings; it does not accept the full catalog.
+
+The sequential public plan and exact provisional filename/length prefix identify
+`Achievement` (public FDID 1260179), entry three, as the first failed acquisition.
+No provisional DB2 contents are opened for this attribution. The failure precedes
+DB2 schema validation. This generic acquisition error alone does not establish
+encryption, a missing key or native error-category parity. The historical 70338
+all-table survey and issue #58's Map/GameObject missing-name coverage do not
+transfer to Achievement or this 70374 selection.
+
+The next bounded diagnostic is a source-bound singleton native causal observer
+for Achievement/esES, followed only by matching coverage of a causally observed
+missing name against the retained 116-entry and public 19,685-entry sets. The
+existing four-case observer cannot be relabeled or retargeted without a reviewed
+authored-wrapper build. No complete-catalog retry or supplied-key retry follows
+from this negative product result. Diagnostic source/qualification and actual
+execution remain separate gates at this checkpoint.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70374-complete-catalog-20261014-q52765nk/`.
+Only aggregate facts and overall receipt hashes are recorded here; client assets,
+keys/names and private file correlations stay local. Map/GameObject acquisition,
+real geometry/world resources, RustyCore runtime, full extraction and publication
+remain open. Windows stays deferred in draft PR #27.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `root/initial-negative-v1.json` | `17121611e6f39d07edc8095f1c670031d3137fdfa258e45888e22ec3678c24d1` |
+| `attempt1-invocation/receipt.json` | `fcf59971007b3b72e8047e5ec6d7ea4198519f5caf42427678c1490f8b63834c` |
+| `verify-attempt1-invocation/receipt.json` | `ab3bfcc48a9f8728f27c5f42ddc47b580b4ebf4d2977d1717894a485839314d7` |
+| `verify-links-attempt1-invocation/receipt.json` | `8bc2b5b027eeef21777001d3a53fe6b5186d0b2f9c9ec9e25437a3914294dc9e` |
+| `qa/review/complete-catalog-attempt1-terminal-review-v1.json` | `e30de1a7399629055316b0e1d95ea9e545d750cb29da61e4fa221556fff03d17` |
+
+### Subsequent singleton causal read
+
+The new authored wrapper reduces the reviewed four-case observer to exactly
+Achievement/esES, with a 16 MiB per-file/total decoded limit and its own report
+schema. Seven qualification commands and 29 fresh authored policy controls pass;
+one caller and one control TU compile, with zero original-library recompilations.
+Independent source/build review passes. Static loader evidence requires GLIBC
+2.38 for this diagnostic, separately from the shipped product executable.
+
+The first root handoff fails its guards before creating an output or launching
+the observer: it mistakenly inherits historical mutable-checkout guards. The
+corrected handoff binds the accepted current immutable software closure and all
+527 actual qualification guards; no hash is rebased. This preserves the failed
+prelaunch evidence and does not repeat a native acquisition.
+
+The sole actual native request closes with exit 0 as a recorded diagnostic:
+read error 1005, one causal last missing name, zero complete files and zero bytes.
+The observer uses fresh storage, native built-in keys, no supplied keys, strict
+data checking and immediate error/getter capture. Its missing-name observation
+describes this failed read, not every encrypted frame. The child trace is empty,
+its group is absent, guards close and bounded client metadata matches before/after.
+Independent terminal QA passes this negative native observation without findings
+(`db594bd5add8a6e6f1eb67bf4ed20988c3425502b896959838bd075bfb114f17`).
+The product error alone remains generic; no Rust/native error-category parity,
+decryption, schema validation or accepted prefix follows. Matching-only private
+coverage remains the next gate at this checkpoint.
+
+| Additional receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `impl/first-blocker-v1/singleton-source-freeze-v1.json` | `ade0a4ba372ac6fda25bafbb94e220ff1275507be25ab2e7f7af0f79e113c2bf` |
+| `impl/first-blocker-v1/qualification-v1/attempt1/build-report.json` | `b1d6a2b03e64f796526052c0c5dabbc99a105550af77b6799f31b42efcecdc7f` |
+| `qa/review/first-blocker-singleton-build-review-v1.json` | `f16b1fd7bf7fda01dbbf88baa0afa6553362fda892f16339316460ffc63c9d6a` |
+| `root/native-singleton-prelaunch-failure-v1.json` | `2b0d05fff73bd964931f93d16c89f493c4c4fdaf29b03a72d77fbd53b826534c` |
+| `native-singleton-attempt1-invocation/receipt.json` | `28b7aaa6a5df454178d87a895a3602c0d88471f59bcb584782bddbc58814fc4c` |
+| `root/native-singleton-terminal-v1.json` | `6bbe796680554fc7322fb256195697b224da27c5673c782040b5afeae9d5a335` |
+| `qa/review/first-blocker-singleton-terminal-review-v2.json` | `db594bd5add8a6e6f1eb67bf4ed20988c3425502b896959838bd075bfb114f17` |
+
+### Matching-only coverage closes negatively
+
+The singleton coverage adapter preserves the reviewed bounded parsers, join proof,
+whole-source conflict checks and every-attempt closing checks. Twenty-eight
+authored methods pass before actual data reads; independent source/handoff QA
+passes. The sole actual comparison validates the closed native source/build/run
+authority before reading its causal report, then admits the two complete key
+sources through their original proofs and exact pins.
+
+The 116-entry local set and retained `a3da648` public snapshot of 19,685 entries
+do not contain the observed missing name. The 116 identical cross-source
+pairs collapse; zero files export. No cache or Lookup payload is reread, no
+merged keyset is exported and no native/CASC/product call occurs in coverage.
+The helper closes all registered inputs, software guards, empty network trace
+and owned group. Independent terminal review passes without findings, using the
+accepted source and whole receipt for matching results; it does not reopen the
+raw key files or causal report. This is negative coverage for the single last observed name;
+it does not enumerate every encrypted frame or prove general key absence.
+No supplied-key or complete-catalog retry is justified by these sources.
+
+The next Linux readiness step is a bounded, diagnostic-only availability census
+of the pinned 1,161-entry catalog. Adapt the retained external four-case caller
+using `LocalStore::open_db2_70374`, `read_file_data_id_with_limit` and catalog
+`tables_for`; reuse one esES store and drop each complete buffer after counting
+it. The existing four-case executable cannot be relabeled. Library limits remain;
+the new caller needs an explicit decoded-success ledger up to the existing
+16 GiB product ceiling, with at most 1,161 diagnostic rows / 1 MiB. This is a
+new caller scope, without a physical-I/O accounting claim. Source/build/fake
+qualification, review and a fresh persistent-service handoff precede execution.
+Such a census does not publish an available prefix or repair Achievement.
+A later retry of the blocked Achievement input requires separately admitted
+changed inputs, or a key source supported by matching coverage. Full extraction
+remains open.
+
+| Additional receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `impl/first-blocker-v1/coverage-v1/source-freeze.json` | `4b48414126a25d70fc71b0a8c3775f8d26c9a7a3f50166a095ad262d30b3eed4` |
+| `impl/first-blocker-v1/coverage-v1/toy-attempt1/report.json` | `a2810648ee4e72e5831ee33f491498bc843e9728c4745485d2916c2b0c0ae903` |
+| `qa/review/first-blocker-coverage-source-review-v1.json` | `d9a686030f663c7ec17bc88de5379d440c0a61411cb103e6ff298e5720df2542` |
+| `coverage-attempt1-invocation/receipt.json` | `626f0092a6c4f1fc5e26225ee41bacc197b5163c094a3feca76c9e4733f860ca` |
+| `impl/first-blocker-v1/coverage-v1/actual-attempt1/acceptance.json` | `dc4db70c3feaf4aa64b16f24c44700a1ce67e0ae3782392a2a2aaf67f493723b` |
+| `qa/review/first-blocker-coverage-terminal-review-v1.json` | `9e5824483ae38dff337cadb55b4ed69e8253d2a971210da60eba45c53145b740` |
+| `impl/first-blocker-v1/next-readiness-plan-v1.md` | `d496c4cb0288efbacbccb977c518f0b1a0712e0e93af641f43bd5945ea3748b1` |

@@ -55,6 +55,25 @@ This accepts the bounded current local Linux package; full extractor/release
 gates remain open. No historical producer acceptance is transferred. See
 `docs/forever-distribution.md`; no release/publication or Windows delivery follows.
 
+Issue #64's first complete 1,161-table 70374/esES disabled-key v10 attempt
+fails at Achievement acquisition (`local_store_no_verified_encoding`). Both
+offline verifiers reject the incomplete output: two provisional files / 512
+bytes, no DB2 seal or manifest, no accepted prefix or retry. Independent negative
+terminal QA passes (`e30de1a7399629055316b0e1d95ea9e545d750cb29da61e4fa221556fff03d17`).
+Public plan order/metadata identifies the input; the generic product error alone
+does not establish encryption. A subsequent source-bound singleton native read
+reports error 1005 and one causal last missing name, with zero complete files.
+Seven qualification commands/29 controls and independent source/build QA pass.
+The initial root handoff fails before launch; corrected immutable-source binding
+preserves that failure. Matching-only coverage then finds no match for the
+observed name in the retained 116 local/19,685 public entries, with 116
+identical pairs collapsed and zero exports; 28 authored controls pass. No
+supplied-key/full-catalog retry follows. The native built-in-key baseline does
+not establish product/category parity or all-frame coverage. A bounded
+diagnostic-only catalog availability census is the next proposed readiness step,
+subject to source/resource review. Full catalog and the extractor goal stay open.
+See `docs/forever-product.md`; Windows remains deferred.
+
 Issue #56 adds explicit Linux product v10 for build 70374, Rust-local DB2-only
 resident publication and the separately pinned 1,161-schema `wowdbdefs-70374-v1`
 catalog. Debug/release each pass 2,951 tests; 82 authored CLI outcomes include
