@@ -921,3 +921,137 @@ into the immutable archive. Full catalog acquisition, complete Map/GameObject
 and real geometry inputs, full-world operation and RustyCore/server runtime
 remain separate Linux gates. Windows development/distribution stays deferred.
 No release or publication is made, and the extractor is not complete.
+
+
+### Current Linux product v11 local packaging — 2026-10-14
+
+Issue #62 follows merged product #60 using the existing `forever-distribution-v1`
+wire format and `forever-seven-crate-linux-product-db2-gt-cameras-source-v11`
+recipe. Baseline `fdba4b2a64d1a72ae4f24fd86649cf5449de88be`, tree
+`2d2a7cd865b0f85c9b6519ebf9b40887ee84bb98`, selects 717 committed files /
+18,639,856 bytes. The complete packaged source contains 758 files, including
+41 existing vendor/configuration/archive additions. All four copied source
+trees preserve the selected baseline; the protected unrelated backup is neither
+opened nor packaged.
+
+Six packaging operations complete three isolated offline Cargo builds. Two fresh
+builds, including a path with spaces, produce identical archives, manifests and
+binaries. Verified extraction to a moved directory and reconstruction with fresh
+Cargo home/target directories reproduce the binary using bundled corresponding
+source/dependencies and the installed pinned toolchain/system linker. The archive
+contains 774 payloads / 775 members. No client assets, keys, extraction outputs or
+native reference sources are packaged; no dependency or output format changes.
+
+| Artifact or receipt | SHA-256 |
+| --- | --- |
+| Archive, 4,103,587 bytes | `cdea14babeca67b92513acf48c90bceeff0306d35042124348029c432500f2da` |
+| Shipped/rebuilt executable, 3,418,192 bytes | `cc4b171521ecff81b634873530ac0a51259baa7653cea4fb895f519a5d83571f` |
+| Selected-source freeze | `315567cb37c5de32f5d8deb291e4f7b9b3ee9a5d99434dc87590fa80f2d366e9` |
+| Packaging acceptance | `6bc48cff13fc9e25b9d5dfee3f0abc7dd6740ee579fbd00f8a3e4bc40e2c4e89` |
+| Independent packaging review | `593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf` |
+| Actual packaged producer freeze | `8506695ea5e18cf9b190b20b5c741bb34c500d847eb4a0bbba35bacd6f57602e` |
+
+Static ELF inspection records `/lib64/ld-linux-x86-64.so.2`, needed
+`libgcc_s.so.1`, `libm.so.6`, `libc.so.6`, `ld-linux-x86-64.so.2`, and maximum
+GLIBC symbol version 2.34. This remains a dynamically linked local Linux
+candidate, without universal Linux ABI acceptance. Each compiler trace contains
+fourteen matched local Unix socket exchanges; the two archive-verifier traces
+are empty. Unpacked verification API and outer orchestration are untraced.
+Compiler IPC is separate from subsequent consumer network observations.
+
+Packaging is independently accepted. Current packaged synthetic regressions and
+v11 clean/resume/verification campaigns are pending at this packaging checkpoint;
+historical binaries retain their own acceptance. The later documentation update
+does not rebuild or substitute bytes into this immutable archive. Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-v11-distribution-20261014-l3ak9p_u/`.
+Full catalog, Map/GameObject inputs, real geometry/world resources, RustyCore
+runtime and publication remain separate gates. Windows stays deferred in draft
+PR #27; this does not complete the extractor.
+
+
+#### Subsequent packaged v11 lifecycle acceptance
+
+The unchanged package above now passes two separate current-producer campaigns
+against its actual **shipped** and **moved-rebuilt** executable paths. The
+external v11 controller is source-reviewed; five reused support/fixture modules
+remain byte-identical to issue #60. Its first unexecuted proposal had an invalid
+full-fact metadata reference; revision2 projects the strict path/SHA reference.
+No failed product run is hidden or promoted by that source correction.
+
+The synthetic campaign closes 56 outcomes: 44 exit0, eight deliberate SIGKILLs
+and four expected pre-I/O key-policy rejections. Both key policies and both
+package roles pass, with twelve complete authored views of 24 files / 1,632
+bytes. Each role/policy has fresh synthetic calibration, observed at GT ordinal
+27 and camera ordinal 170. Immediate cut snapshots retain the sealed DB2 source,
+and camera cuts also retain the sealed GT component. Clean/resumed manifests
+match within and across the two byte-identical executable roles.
+
+A separately admitted real campaign first checks fresh bounded client metadata
+against the original 70374 Phase A bytes/path; it does not rebase those facts.
+Thirty-two explicitly typed retained inputs comprise 31 artifact oracles plus
+the private ten-camera selection. Their existing per-file/selection caps stay
+separate from software guards and QA hash-visit bounds. Disabled-key
+70374/esES extraction closes 26 expected outcomes, including four calibrated
+cuts, and six complete clean/GT-resumed/camera-resumed views. Each has 31 files /
+165,507 bytes: one DB2 source, twenty GT files and ten opaque cameras. The
+controller checks 186 complete output-to-oracle byte comparisons; independent
+QA separately checks 186 hash/length comparisons. It also checks exact
+manifests, seals, traces, captures, source/producer guards and owned groups.
+No native/original consumer, compiler or real-calibration rerun occurs.
+
+Both whole campaigns pass independent terminal QA, without accepted prefixes.
+Their child traces have zero network calls; direct parent orchestration is
+untraced. Evidence freezes retain 1,104 files / 113 directories for synthetic
+and 602 files / 49 directories for real, excluding each freeze itself. Historical
+candidate text marked pending remains preserved beside the actual root approvals.
+Private IDs, per-file correlations and key material are not public evidence.
+
+| Campaign or review | SHA-256 |
+| --- | --- |
+| Packaged v11 synthetic acceptance | `ed97c2b4bca79266e50e4f7e1c91ab6b8b7e435da2afd08b2c56ef9b33c4a0a9` |
+| Independent synthetic terminal QA | `81b274b4bac481ff4451e321b23ed5d8c00a7dc50534d19b009a50e48aaacc23` |
+| Packaged v11 real acceptance | `c82510185b8a34e9002a061e631c0c9847e6fbe8ce7e8075bc739da6b5041349` |
+| Independent real terminal QA | `5b2ba77568e420b7ae3645928504ba601cac4d8a298a293720a3df0764f6af72` |
+
+The retained legacy packaged regression matrix remains a separate gate at this
+checkpoint. Neither campaign admits the complete 1,161-table catalog, real
+Map/GameObject resources, geometry/world extraction, RustyCore runtime or Windows.
+The binary/archive remain frozen at `fdba4b2`; later Markdown does not rebuild them.
+
+
+#### Retained packaged regression closeout
+
+Both current package roles subsequently close all 130 retained test methods:
+260 methods / eighteen stages, zero skips. The measured 892 consumer calls
+comprise 814 earlier-profile calls and 78 product-v9 calls. All 892 owned groups
+close; 858 traces are empty and 34 are strictly classified nonempty, including
+thirty expected kills, with zero consumer network calls. The existing six native
+synthetic consumer binaries, original-source snapshots and derived reports are
+rechecked and reused without compilation. These native calls belong to the
+retained regressions, separately from the v11 campaigns' no-native-rerun scope.
+Parent capture is console tool output only; each actual child's raw captures,
+generation, result and trace remain retained locally. The parent is untraced.
+
+Thirty-six stage/cross-volume inventories retain 66,546 nodes under the existing
+65,536-per-root / 262,144-retained evidence profile, without changing strict
+8,192-node source admission or product caps. Observed comparison peak is 85,208
+nodes, reserved peak 132,082, beneath the 327,680 comparison ceiling. These are
+node-record bounds, not heap/RSS or cumulative visits. Deliberate special nodes
+are recorded without opening payloads. The first metadata-only preparation is
+failed at its cross-volume path-depth check, before any consumer; V2 adds the
+required fresh `/runtime` subdirectory without changing admission policy. Its
+partial metadata remains failed and is not an accepted prefix.
+
+Regression acceptance SHA-256:
+`528403734db4c4df23acf44f5b08629d1d02e78049a604ef104ae75c56e48e26`.
+Independent regression terminal review passes without findings, SHA-256:
+`819efeff700a5e03f361e52b75f7ee490b891d6305f9eae2dad1d87f1411280e`.
+It checks 36 native synthetic consumer calls within the 892 total, 3,453 guarded
+files / 39 declared aliases / five strict source pathsets, and ten FIFOs / six
+symlinks recorded as metadata only.
+
+The reproducible package and both v11 campaigns retain their original closed
+producer/source bindings. Later documentation does not change any frozen
+archive, executable or accepted input. Full catalog, Map/GameObject sources,
+real geometry/world resources, RustyCore runtime and publication remain open;
+Windows and draft PR #27 stay deferred.

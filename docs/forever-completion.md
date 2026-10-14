@@ -4046,3 +4046,61 @@ camera playback, new geometry/world/runtime acceptance or full catalog follows. 
 full-world resources, RustyCore runtime and a new reproducible Linux bundle remain gates. Older
 bundles are unchanged; a new Linux bundle and release remain unaccepted and Windows/draft PR #27
 stays deferred. Linux completion remains open.
+
+
+## Current Linux v11 packaging checkpoint — 2026-10-14
+
+Issue #62 accepts fresh reproducible packaging of merged `fdba4b2`: 717 selected
+committed files / 18,639,856 bytes, two identical archives/manifests/executables
+and an exact moved-source offline rebuild. Six packaging operations / three
+Cargo builds pass independent review. The local archive is 4,103,587 bytes;
+the executable is 3,418,192 bytes. No production source/dependency/admission
+change or publication follows. Packaging QA SHA-256:
+`593c72617dab08c60540b10d5d36bb70670154aff5d0cceb6c84a00d57ac02cf`.
+
+Current shipped/moved-rebuilt synthetic regression and v11 lifecycle acceptance
+remain pending at this checkpoint. Historical 70338 and issue #60 producer
+acceptance is not transferred to the packaged executable. See
+[distribution evidence](forever-distribution.md#current-linux-product-v11-local-packaging--2026-10-14).
+Full catalog, Map/GameObject sources, real geometry/world resources, RustyCore
+runtime and release remain gates; Windows stays deferred and the goal is open.
+
+
+### Subsequent packaged v11 lifecycle evidence
+
+The current shipped and moved-rebuilt executables pass the complete 56-outcome
+synthetic campaign, including both key policies and fresh per-role interruption
+calibration. Twelve complete authored views and all expected outcomes pass
+independent QA (`81b274b4bac481ff4451e321b23ed5d8c00a7dc50534d19b009a50e48aaacc23`).
+A separate fresh-metadata 70374/esES real campaign closes 26 outcomes, including
+four cuts, and six complete clean/resumed views of 31 files / 165,507 bytes.
+The controller performs 186 full-byte comparisons against the accepted component
+oracles; independent QA performs 186 hash/length comparisons and closes traces,
+guards, inventories and groups. Real QA SHA-256:
+`5b2ba77568e420b7ae3645928504ba601cac4d8a298a293720a3df0764f6af72`.
+
+In these v11 campaigns, no original/native consumer, compiler or real calibration
+reruns. The real campaign uses disabled keys. These are actual package paths with current producer identities, not
+transferred historical binary acceptance. Retained legacy packaged regressions
+remain a separate pending gate at this checkpoint. Full catalog, Map/GameObject,
+real geometry/world resources, RustyCore runtime and publication remain open.
+
+
+### Retained packaged regressions close
+
+Both current package roles complete 130 retained methods: 260 total / eighteen
+stages, zero skips, and 892 measured consumer calls. All child groups close;
+858 empty and 34 classified nonempty traces contain zero consumer network calls.
+Existing synthetic native consumers run without rebuilding their sources, in a
+scope separate from the v11 campaigns. The 36 retained inventory trees contain
+66,546 nodes within the existing evidence-only quotas. Metadata preparation V1
+fails before consumers; the fresh V2 path-depth correction preserves every
+admission/resource policy. Regression acceptance SHA-256:
+`528403734db4c4df23acf44f5b08629d1d02e78049a604ef104ae75c56e48e26`.
+Independent regression terminal review passes without findings, SHA-256:
+`819efeff700a5e03f361e52b75f7ee490b891d6305f9eae2dad1d87f1411280e`.
+
+Together with reproducible packaging and the independently accepted v11
+campaigns, this closes bounded current local package
+acceptance. Final source/documentation checks precede issue #62 merge.
+The full Linux extractor and release gates remain open.
