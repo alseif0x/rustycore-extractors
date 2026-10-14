@@ -3808,3 +3808,126 @@ The historical 83-file acquisition gap and Map/GameObject dependencies retain
 their recorded scopes; no full catalog, geometry or runtime gate is lifted.
 Positive Gate B is not admitted; there is no client retry/full survey.
 Windows development/distribution stays deferred; no keys enter Git or CI.
+
+## Bounded 70338 static v7 method — 2026-10-14
+
+Issue #54 records a separate, limited manual Ghidra method. The issue #42 v6
+failure at `initialized_bytes_cap` remains failed; its missing initial ranges
+hash and all earlier limitations remain historical. V7 uses the retained
+101,907,152-byte 70338 snapshot, SHA-256
+`cfe26cc200fda36407736c7e6b5575a1f2ca2b774c8176529814e32d51312185`.
+It opens no REA session, executes no game and reads no live game memory.
+
+V7 explicitly raises loaded/initialized admission from 128 to 256 MiB.
+The separate total planned scan-visit limit remains 256 MiB; input remains
+128 MiB and SizeOfImage remains limited to 512 MiB. Metadata admission occurs
+after Ghidra import, before block-buffer allocation and seed scanning; it does
+not prevent import allocations. The 8 GiB JVM heap, 600-second engine wait
+measured from controller start including setup, 600 CPU seconds per process
+and `-max-cpu 2` remain. Cleanup, final guards and receipt writing follow the
+engine wait; these limits are not an RSS or whole-controller wall-time bound.
+The six-interval / 64 KiB-per-interval, 64 seed-match / lexical-candidate,
+16 Pcode-operations-per-instruction and 30-second decompilation limits remain.
+
+Ten pure metadata controls pass. The separate authored preflight confirms
+one Pcode address constant labelled `NOT_xref`, one decompilation and one
+misaligned-candidate rejection, with no ReferenceManager edge. The closed real
+run reports 139,145,697 initialized bytes across eight block objects and
+75,236,864 executable bytes, totaling 214,382,561 planned/actual scan visits.
+These are logical block/scan counters, not distinct physical bytes or RSS;
+SizeOfImage is not the initialized-byte sum. The real run finds 27 seed
+matches, zero lexical candidates, zero candidate intervals, zero verified
+Pcode constants and zero decompilations. It recovers no keys. This bounded
+pattern result cannot establish absence of references, keys, functions or
+hotfix causality, and the authored positive does not supply a real positive.
+
+The controller and engine close successfully. Independent QA accepts only
+this limited static method (`passed-limited-static-method`, no errors),
+rehashing 5,688 guards and 35 evidence files. Nineteen network calls are denied,
+zero succeed and the owned process group is absent. The review's 11,453 hash
+visits / 3,192,471,778 bytes are separate reviewer traffic, not engine scan
+counts, new acquisition or physical I/O.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-70338-runtime-readiness-20261014-248gdbh6`.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `source-plan/static-v7/revision2/source-freeze.json` | `a985576e7ed193f1a0364915a3ee7b0b9911eea206c1db095e86436bd2467956` |
+| `static-review/static-v7-revision2-source-review.json` | `2d75afcb224eea575d318728e88aa423987f3062b9e4c234223b72f9ea54605f` |
+| `source-plan/static-v7/revision2/preflight-attempt1/receipt.json` | `e675ecbaaed90fd143c90beca00758b3ad0dd708661eba34cb17ef0b4967d710` |
+| `static-review/terminal-v1/preflight-review.json` | `e311051d503cc5c0f3793f254f623d3b1e94f473431a2555c311a0f48982cc62` |
+| `source-plan/static-v7/revision2/real-attempt1/receipt.json` | `0232c85089309bf88a00e5ffab68271f6795a6f218a2fc6d01ca287a9f90a609` |
+| `static-review/terminal-v1/real-review.json` | `31d0fb9bba0ff0486b5aec512c2243091b098457eeee42513b99977166733695` |
+
+Launcher `.build.info` separately reports installed build 70374 through
+metadata only. That does not authenticate 70374 game execution or establish
+70374 static/product acceptance; v7 reads only the retained 70338 snapshot.
+Production source and product admission are unchanged. These documentation
+additions do not rebuild the frozen bundle. Full catalog, Map/GameObject,
+real geometry/world resources and RustyCore runtime remain Linux gates;
+Windows development/distribution stays deferred.
+
+## Bounded 70338 static v8 two-hop method — 2026-10-14
+
+The second issue #54 method uses the same retained 101,907,152-byte 70338
+snapshot and SHA-256 recorded for v7. V6 stays failed; v7 remains a limited
+static result. V8 is a custom manual Ghidra run, not an REA session or game
+execution. Its frozen context authenticates the v7 seed coordinates/block
+metadata, and it rechecks all 27 exact public seed occurrences / 243 bytes
+before one non-executable pointer-cell pass and one executable RIP-pattern
+pass. No additional seed sweep or recursive pointer walk is performed.
+
+First-hop LE64 absolute-address and LE32 RVA cell equality is recorded as
+`raw_data_cell_value_equal_seed_NOT_xref`. Each caller-defined 64-byte anchor
+window must contain the complete cell in the same block; this is not a typed
+descriptor or transitive reference. Only a pointer to the exact seed occurrence
+start matches: a containing string's start, other encodings and other reference
+forms are outside this finite coverage. Raw RIP-pattern links are candidates. Aligned Ghidra Pcode can corroborate
+the anchor constant, still labelled `NOT_xref`; ReferenceManager edges stay
+separate. No artificial reference is inserted.
+
+Eleven pure controls pass. The authored preflight closes successfully with
+three raw first hops, 47 anchor relations, four instruction-link records,
+two Pcode confirmations, two decompiled intervals and two misaligned-candidate
+rejections, covering both pointer encodings; scan visits total 3,092 bytes.
+The historical real run also closes successfully, reporting six raw first
+hops, ninety anchor relations and zero instruction links, candidate intervals,
+Pcode confirmations or decompilations. Its 139,145,940 scan visits include
+139,145,697 initialized bytes plus 243 seed-reverification bytes; elapsed time
+is approximately 50.716 seconds. Both runs record nineteen denied network
+calls and zero successful calls. These logical visits are not physical I/O
+or RSS. No real key, handler or runtime conclusion follows from the zeros;
+authored positive behavior does not supply a real positive.
+
+Input / image limits remain 128 / 512 MiB; loaded/initialized and scan-visit
+limits each remain separately 256 MiB. Caps are 128 first-hop records, 2,048
+anchor relations, 64 unique instruction candidates, 256 instruction-link
+records and six checked intervals of at most 64 KiB each. The 8 GiB JVM heap,
+600-second engine wait measured from controller start, 600 CPU seconds per
+process and `-max-cpu 2` remain; cleanup/final guards/receipts follow the engine
+cutoff. These are not a whole-controller wall-time or RSS guarantee.
+Final independent real QA accepts the limited method without errors. It checks
+5,696 guard-map identities, binds 5,675 tool identities to the trusted v7 review
+and the producer whole-file checks, and hashes 21 local guards plus 37 evidence
+files. Its 124 hash visits / 651,607,570 bytes are separate reviewer traffic;
+it does not independently rehash the complete toolchain again. Cleanup confirms
+the owned group absent. Status: `passed-limited-two-hop-method`.
+
+Evidence root is the same runtime-readiness lab recorded for v7.
+
+| Receipt relative to evidence root | SHA-256 |
+| --- | --- |
+| `source-plan/static-v8/revision2/source-freeze.json` | `95c2677eb35516cb62cd585b380ed3e96992d6e5d429bd1752468cc124441317` |
+| `static-review/v8-source/source-review-v2.json` | `7ec7fe9cd0cde1deb7f239bbe633b792588baeeaeaafa3c2b37d1704d026f164` |
+| `source-plan/static-v8/revision2/preflight-attempt1/receipt.json` | `ad836fd210d9c39f98b194e0b6cd3d3a30501ef2acbbb8df34bb302aa9a9c090` |
+| `static-review/v8-terminal/preflight-review.json` | `53c4cea1dc5111a9bf42991ddced22f873cc7a53e8e1497f5549c0874eaf77ae` |
+| `source-plan/static-v8/revision2/real-attempt1/receipt.json` | `d3732f318d721abfb13336a14d2045c548e486ca6e2131440801342c893f279a` |
+| `source-plan/static-v8-seed-scope-note.md` | `ae408d099625c88ec97a48831653adc086313ee78084fe4c75ab14eba380902f` |
+| `static-review/v8-terminal/real-review.json` | `283b216ef0e4989f473e8bef227ac200e26dbd07a2dc2c93e6fcbb079c076da8` |
+
+No installed 70374 executable/assets are read by this method; the separate
+launcher build observation remains metadata only. Production source,
+product admission and the frozen bundle are unchanged; these two documentation
+appendices are not rebuilt. Full catalog, Map/GameObject, geometry/world and
+RustyCore runtime gates remain; Windows stays deferred.

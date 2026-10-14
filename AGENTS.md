@@ -2410,3 +2410,22 @@ Final independent QA: `passed-negative`, SHA-256 `93bd2a54aea752ec8d14abb6f7b30e
 This adds no recovery evidence for the 83 recorded failures and lifts no
 Map/GameObject, catalog, geometry or runtime gate. This comparison admits no positive Gate B or CASC retry; Windows stays
 deferred and keys/correlations stay private.
+
+### Bounded 70338 static v7/v8 evidence — 2026-10-14
+
+Issue #54 records two closed manual Ghidra methods on the retained, hash-pinned
+70338 snapshot; the earlier v6 cap failure stays failed. V7 raises only imported
+loaded/initialized admission to 256 MiB; total scan admission remains separately
+256 MiB. V7 finds 27 seeds with no lexical code candidate. V8 revalidates them,
+then finds six raw pointer cells and 90 caller-defined anchor relations, with no
+second-hop instruction candidate. Both have independent limited-method review,
+19 denied network calls / zero successful calls, and closed owned groups.
+Neither establishes a handler, recovered key or absence of references. V8 covers
+only exact seed-start pointers; containing-string starts remain outside scope.
+Raw relationships and Pcode corroborations remain `NOT_xref`. These are custom
+manual methods, without an REA session, game execution or live-memory reads.
+The launcher separately announces 70374 through `.build.info` metadata; no
+70374 analysis/product acceptance transfers from 70338. Production source and
+the frozen bundle remain unchanged. Full catalog, Map/GameObject, real geometry
+and runtime remain gates; Windows stays deferred. Detailed limits and receipts
+are in the v7/v8 sections of `docs/forever-completion.md`.
