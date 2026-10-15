@@ -183,6 +183,112 @@ leave the qualified producer binaries unchanged; the 48-call stage executes
 once, without producer retries.
 
 The real Map0 and authored recovery gates are now closed for this terrain
-component. An actual all-available-maps run, build-70374 collision/navigation
+component. All-available-maps acceptance, build-70374 collision/navigation
 product integration, runtime acceptance and reproducible stable distribution
 remain separate work. No complete stable extraction-suite claim follows.
+
+## Failed all-available-maps attempt — 2026-10-15
+
+After PR #77 merges, the same qualified release makes one actual
+`all-available-maps` attempt with disabled keys. It fails after 54.131 seconds
+with `file_unavailable` / component `maps`, child exit 9 and parent exit 1.
+There are 1,724 provisional MAPS and two provisional tile lists, totaling
+1,726 artifacts / 128,123,861 bytes. None is accepted as a successful prefix.
+Coverage, a complete manifest and the maps seal are absent; no snapshot,
+verifier, resume or retry follows.
+
+The separately reviewed launcher declares 21,600 wall seconds and 14,400 CPU
+seconds per inherited process, preserving the other resource and network
+controls. This failure occurs before either deadline. Fifty-one pure controls
+pass for the new streaming inventory/closing helpers; they do not validate this
+failed product. Two preparation failures remain recorded: the helper directory
+needed its existing frozen files sealed under a read-only directory, and the
+preparer needed the already-pinned resolved ELF inspector guard. These fixes
+change neither the qualified producer nor the failed attempt's interpretation.
+
+Independent negative terminal QA closes all 4,010 guards / 48 aliases, the 782
+qualified source files and bounded build metadata unchanged. Child network
+trace is empty, the recorded child group and parent cgroup are empty, and there
+are zero restarts. The private incomplete inventory has 3,456 physical files /
+five directories / 128,364,056 bytes. Failure QA receipt SHA-256 is
+`f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`.
+The numeric parent proof is retained before removing only its terminal service;
+all failed outputs remain private and preserved.
+
+The generic error establishes neither the causal request nor encryption or
+native-reader failure. Source inspection shows that the original map loop
+continues after unsuccessful WDT loading and writes an empty tile list; an
+unsuccessful ADT conversion leaves that tile's bit clear. Its geometry reader
+passes `CASC_LOCALE_ALL_WOW` to the file-open API. Subsequent source review
+confirms that the pinned CascLib ignores that argument: ROOT locale selection
+occurs when opening storage. The native comparison therefore uses fresh esES
+storage for both observations; changing the ignored file-open argument cannot
+establish locale recovery. Native built-in keys also remain distinct from the
+Rust disabled-key policy. No same-request native comparison or original complete
+map-loop execution has yet established the cause. [Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78)
+tracks a bounded private diagnosis before any separately versioned policy
+change. Strict v12 behavior and the earlier accepted Map0 package remain intact.
+
+## First failed request reproduced — 2026-10-15
+
+A separately qualified, diagnostic-only Rust caller reconstructs the failed
+traversal from private retained metadata. Its one actual run reproduces
+`file_unavailable` at the first unfinished WDT, with two source-read attempts
+and zero conversions. The diagnostic closes successfully in 33.704 seconds;
+that success records the failure and accepts neither extraction nor a prefix.
+It neither repeats preceding conversions nor resumes the failed product.
+
+Independent terminal QA closes 4,102 guards / 49 aliases, the 782 qualified
+workspace files, bounded client metadata, the retained failed inventory and
+private prefix unchanged. All seven child evidence files, an empty network
+trace, absent child group and numeric parent exit zero are retained; there are
+zero retries. Closing receipt is
+`53caed424668b418fd4229106035f07aa1e5d78e10d8ea9d23be524932b6fb66`;
+independent QA passes without findings
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+Request identifiers, source correlations and per-asset hashes remain private.
+The observed Rust error alone still does not establish physical absence,
+encryption or native-reader failure. The same-request native comparison is
+the next gate. A separate compatible-mode source candidate is being prepared;
+it has no product, real-client or native-loop acceptance at this checkpoint.
+
+## Same-request native diagnosis closed — 2026-10-15
+
+The qualified native observer makes one invocation containing two predeclared
+fresh-storage observations of that exact private WDT request. Both esES stores
+open, but both file opens return error 2 / `missing`: zero opened targets,
+complete files or acquired bytes. The invocation closes in 6.982 seconds with
+child and numeric parent exit zero, empty runtime trace/groups and no retries.
+These diagnostic exits record unavailable input; they do not accept extraction.
+
+The observer links the pinned existing CascLib archives and uses their built-in
+keys, with no supplied keys. Its earlier build runner remains failed after an
+incomplete static dependency allowlist. A separate static qualification admits
+the same retained executable and the already-pinned transitive dependencies;
+there is no compiler rerun or retrospective successful-runner claim. The runtime
+keeps its empty-network requirement. Varying the ignored file-open locale
+argument is not a ROOT-locale comparison or evidence of locale recovery.
+
+Independent terminal review passes 859 checks without findings, covering all
+4,709 physical guards / 88 original alias bindings, all 645 native and 4,102
+Rust guard authorities, the 782 qualified files, exact private request and
+source correlations, retained failed inventory/prefix, bounded client metadata,
+seven child evidence files and current terminal state. Closing receipt is
+`9b87c499b8a472de8e4c0d15bc21ad468f1ad1b77193390adeaf39ef52ee5797`;
+independent QA is
+`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`.
+Two auditor assumptions were corrected without changing or replaying a producer:
+native aliases use the original runtime's lexical-path resolution rules, and an
+empty terminal ControlGroup denotes no owned cgroup rather than the root group.
+
+This closes the selected missing-request diagnosis, not general native/Rust
+routing or key-policy parity, physical absence from every locale, encryption
+classification or original full-loop execution. The demonstrated difference is
+the strict product's terminal response to an unavailable requested WDT versus
+the original map loop's continuation with an empty list.
+[Issue #80](https://github.com/alseif0x/rustycore-extractors/issues/80) tracks the
+separate compatible terrain API/product: unavailable WDT coverage is unknown,
+unavailable ADTs do not set output bits, and integrity/conversion/publication
+failures remain terminal. Its implementation and authored original-loop,
+real all-map, verifier/recovery and packaging gates remain open. Strict v12 and
+the earlier failed all-map output retain their contracts.

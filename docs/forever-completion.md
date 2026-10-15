@@ -4241,6 +4241,38 @@ debug/release, including four forced cuts, successful recovery and fourteen
 exact expected rejections. Independent QA closes all evidence without findings
 (`3f95af7b7c06b1b498e270478f1e01c520891cb111f57657a47c649a334826b2`).
 Sixteen complete MAPS comparisons use a separate original-converter oracle.
-See [v12 evidence](forever-terrain-v12.md). Actual all-available-map execution,
+See [v12 evidence](forever-terrain-v12.md). All-available-map acceptance,
 build-70374 collision/navigation product integration, runtime acceptance and
 reproducible stable distribution remain open; the extractor goal stays active.
+
+The subsequent first real all-available-map attempt fails after 54.131 seconds
+with `file_unavailable` / maps. Its 1,724 MAPS and two tile lists remain
+provisional: no complete manifest, coverage, maps seal, verifier or retry follows.
+Independent negative terminal QA closes source, metadata and all 4,010 guards /
+48 aliases unchanged (`f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`).
+[Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78) tracks the
+first private missing request and native geometry routing comparison. The
+generic failure does not establish missing client bytes or encryption, and no
+native-compatible omission policy has been implemented or accepted.
+
+The later one-shot private diagnostic reproduces the first unfinished WDT read
+as `file_unavailable`, with two source requests and zero conversions. Its
+successful diagnostic exit is not extraction or prefix acceptance. Independent
+terminal QA passes unchanged source/metadata/private inventories, empty trace
+and group, and numeric parent exit zero
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+Same-request native comparison and the separate compatible-mode implementation
+remain pending; full extraction stays open.
+
+The subsequent native same-request invocation closes the selected diagnosis:
+two predeclared fresh esES storage observations both fail at file open with
+error2/missing, yielding zero complete files or bytes. Independent terminal QA
+passes 859 checks without findings
+(`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`).
+Native built-in keys and an ignored file-open locale argument establish no
+general policy/routing parity. The original loop's missing-input continuation
+differs from strict v12's terminal policy.
+[Issue #80](https://github.com/alseif0x/rustycore-extractors/issues/80) tracks the
+new compatible terrain API/product and its authored-loop, whole-map,
+verification/recovery and packaging acceptance. That implementation and the
+remaining extraction-suite/runtime gates stay open; v12 is not relabeled.

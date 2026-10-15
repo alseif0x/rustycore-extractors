@@ -2753,6 +2753,52 @@ closing 336 leaf evidence files, fourteen output roots, 4,060 guards/48 aliases,
 child groups/traces/seccomp and the retained numeric parent terminal. There are
 zero retries. Source-only controller/auditor corrections and earlier metadata
 failures are retained; no producer rebuild follows. This closes authored process
-recovery, not power-loss or real-client recovery. Final PR integration still
-requires its exact-head CI; complete all-map, collision/navigation, runtime and
+recovery, not power-loss or real-client recovery. PR #77 merges into forever
+after all six final-head CI checks pass; complete all-map, collision/navigation, runtime and
 stable-suite/distribution gates remain. See docs/forever-terrain-v12.md.
+
+### Linux70374 first all-available terrain attempt — 2026-10-15
+
+The qualified release's first actual all-available-maps run fails after 54.131s
+with file_unavailable/maps (child 9, parent 1). Its 1,724 MAPS and two tile lists /
+128,123,861 bytes remain provisional; coverage, complete manifest and maps seal are
+absent. No verifier/resume/retry or accepted prefix follows. Negative terminal
+QA closes 4,010 guards / 48 aliases, 782 qualified source files and bounded build metadata
+unchanged, with empty child trace and empty owned groups. QA SHA is
+`f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`.
+Private failed outputs and numeric parent proof are retained; only the terminal
+service is cleaned after QA. The explicit long helper declares 21,600 wall / 14,400 CPU
+seconds; this is an input-read failure, not a timeout. Source review confirms
+the original geometry caller passes ALL_WOW, but the pinned CascLib ignores
+the file-open locale argument and selects ROOT locale at storage opening.
+Both proposed native observations use fresh esES storage; they cannot establish
+locale recovery by varying the ignored argument. The original loop continues
+unsuccessful loads. Neither native same-request parity
+nor a causal missing/encrypted request is established. Issue #78 tracks bounded
+private diagnosis before any separately versioned policy change; strict v12 and
+accepted real Map0/recovery evidence remain unchanged. See docs/forever-terrain-v12.md.
+
+The subsequent one-shot private Rust diagnostic reproduces file_unavailable at
+the first unfinished WDT: two source requests, zero conversions, no accepted
+extraction or prefix. Its successful observation closes in 33.704s with child
+and numeric parent exit zero, empty trace/group, unchanged metadata, failed
+inventory, private prefix, 782 qualified files and 4,102 guards / 49 aliases.
+Independent terminal QA passes without findings
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+The same-request native comparison remains pending; this error alone proves
+neither physical absence nor encryption. A compatible-mode source candidate
+has no executed acceptance yet; strict v12 remains unchanged.
+
+The native same-request observer subsequently makes two predeclared fresh esES
+storage observations in one invocation: both stores open, both target opens
+return error2/missing, and zero complete files/bytes result. Child/parent exit0,
+empty runtime trace/groups and unchanged 4,709 physical guards / 88 aliases,
+645 native authorities, 4,102 Rust authorities, 782 qualified files and private
+request/inventories/metadata close independently. QA passes 859 checks
+(`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`).
+Native built-in keys do not establish policy parity; the ignored open-locale
+argument establishes no locale recovery. The earlier native build runner stays
+failed; separate static qualification admits its same retained binary without
+recompiling. This closes the selected diagnosis, not physical global absence,
+encryption or full-loop/runtime acceptance. Issue #80 tracks the separately
+versioned compatible terrain implementation and its remaining acceptance gates.
