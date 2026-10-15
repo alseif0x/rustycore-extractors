@@ -2631,3 +2631,37 @@ pass 226 tests per profile with one historical ignore, selected all-target Clipp
 and format. Fresh immutable qualification, original converter comparison and
 real requested-tile availability remain pending. This is not a product CLI,
 whole-world extraction or runtime acceptance; see the compatibility document.
+
+The subsequent immutable qualification binds all 729 selected committed files
+at `ffdec1aa86fc4a266f6da323fde6ba5ca0e521c4` plus 41 vendor/config files.
+Six commands pass, including 3,061 tests / 26 historical ignores per profile,
+both example builds, all-target Clippy and formatting. Independent terminal
+QA passes without findings; its receipt is
+`46145b344ab5d013420a8ad50ef9a8e4489eea2d6736a366f749e0f3c10cf702`.
+Current-original native compilation and static symbol inspection pass separately;
+the prior overly broad symbol-rule failure remains failed. No native conversion
+or real terrain acceptance follows from these software checks.
+
+The subsequent four authored complete terrain cases pass all 15 commands and
+match 200,470 MAPS bytes with the current-original parser/converter. Terminal
+QA passes (`c5e06a553ff9774addc33df3aeb8a94017791abea3d31fa243dad129006066eb`).
+The first actual fixed Map0 two-tile 70374/esES request also succeeds with
+disabled keys: two MAPS / 142,084 bytes, complete liquid/WDT/ADT inputs and
+available Map coverage (71 rows, one admitted section, three omitted). Its
+single owned group closes with an empty child network trace. Independent
+terminal QA passes (`34ed46c7cd581f63d59cf6ba95a015b0c84167679baa5353dcbfa764636a36da`)
+without producer reruns. Eight private files include complete same-buffer
+witnesses; they are not product artifacts or committed client data. MAPS framing
+checks are not an independent complete-format verifier.
+
+The subsequent same-input comparison separately replays and strictly verifies
+both MAPS through Rust, then executes the current-original parser/converter
+once per tile. All four calls close with empty child traces and exact equality
+against the two acquired files / 142,084 bytes; no new CASC acquisition occurs.
+Independent terminal QA passes without findings
+(`e78aca423acfc6d946b914914c0fcb6091d5a4b6fdb17de1483c688e35b0d629`).
+The source-only first comparison proposal's dynamic-evidence guard finding is
+retained; only the corrected proposal executes. Native CASC, the complete original
+ExtractMaps, scalable map extraction, versioned product CLI and full extraction
+remain pending; this two-tile proof is not the requested stable functional
+release. Details remain in the compatibility document.
