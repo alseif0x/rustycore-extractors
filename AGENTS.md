@@ -2777,3 +2777,14 @@ unsuccessful loads. Neither native same-request parity
 nor a causal missing/encrypted request is established. Issue #78 tracks bounded
 private diagnosis before any separately versioned policy change; strict v12 and
 accepted real Map0/recovery evidence remain unchanged. See docs/forever-terrain-v12.md.
+
+The subsequent one-shot private Rust diagnostic reproduces file_unavailable at
+the first unfinished WDT: two source requests, zero conversions, no accepted
+extraction or prefix. Its successful observation closes in 33.704s with child
+and numeric parent exit zero, empty trace/group, unchanged metadata, failed
+inventory, private prefix, 782 qualified files and 4,102 guards / 49 aliases.
+Independent terminal QA passes without findings
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+The same-request native comparison remains pending; this error alone proves
+neither physical absence nor encryption. A compatible-mode source candidate
+has no executed acceptance yet; strict v12 remains unchanged.

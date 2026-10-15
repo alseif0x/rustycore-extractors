@@ -228,3 +228,26 @@ Rust disabled-key policy. No same-request native comparison or original complete
 map-loop execution has yet established the cause. [Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78)
 tracks a bounded private diagnosis before any separately versioned policy
 change. Strict v12 behavior and the earlier accepted Map0 package remain intact.
+
+## First failed request reproduced — 2026-10-15
+
+A separately qualified, diagnostic-only Rust caller reconstructs the failed
+traversal from private retained metadata. Its one actual run reproduces
+`file_unavailable` at the first unfinished WDT, with two source-read attempts
+and zero conversions. The diagnostic closes successfully in 33.704 seconds;
+that success records the failure and accepts neither extraction nor a prefix.
+It neither repeats preceding conversions nor resumes the failed product.
+
+Independent terminal QA closes 4,102 guards / 49 aliases, the 782 qualified
+workspace files, bounded client metadata, the retained failed inventory and
+private prefix unchanged. All seven child evidence files, an empty network
+trace, absent child group and numeric parent exit zero are retained; there are
+zero retries. Closing receipt is
+`53caed424668b418fd4229106035f07aa1e5d78e10d8ea9d23be524932b6fb66`;
+independent QA passes without findings
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+Request identifiers, source correlations and per-asset hashes remain private.
+The observed Rust error alone still does not establish physical absence,
+encryption or native-reader failure. The same-request native comparison is
+the next gate. A separate compatible-mode source candidate is being prepared;
+it has no product, real-client or native-loop acceptance at this checkpoint.

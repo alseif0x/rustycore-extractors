@@ -4254,3 +4254,12 @@ Independent negative terminal QA closes source, metadata and all 4,010 guards /
 first private missing request and native geometry routing comparison. The
 generic failure does not establish missing client bytes or encryption, and no
 native-compatible omission policy has been implemented or accepted.
+
+The later one-shot private diagnostic reproduces the first unfinished WDT read
+as `file_unavailable`, with two source requests and zero conversions. Its
+successful diagnostic exit is not extraction or prefix acceptance. Independent
+terminal QA passes unchanged source/metadata/private inventories, empty trace
+and group, and numeric parent exit zero
+(`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
+Same-request native comparison and the separate compatible-mode implementation
+remain pending; full extraction stays open.
