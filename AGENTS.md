@@ -2700,3 +2700,37 @@ immutable CI results are 388 methods / three failures / three errors / one skip;
 the metadata module never executes. All five groups and the failed service
 close, but no producer qualification transfers. Add those exact committed
 inputs to the next qualification snapshot; live421 success remains separate.
+
+### Linux70374 Map0 product checkpoint — 2026-10-15
+
+The corrected immutable v12 source at `b40bacf35f5a30b7c3cd0e5a0156ef4714d83680`
+contains 741 committed inputs plus 41 offline vendor/config files. Its second
+whole eight-command qualification passes: 3,100 tests / 26 historical ignores
+per profile, both product builds, 421 source checks / two expected skips,
+163 distribution checks / one platform skip, Clippy and formatting. Independent
+qualification QA passes without findings
+(`706835989b069897c7e26a0084b42b02b7eeab678a53b03ea633ca148b0fedea`).
+All six exact-head GitHub checks pass. Later documentation does not recompile
+these retained producers or transfer acceptance to a different binary.
+
+The first actual qualified v12 Map0 extraction succeeds in 28.568 seconds:
+736 present MAPS, one whole-map tilelist and coverage yield 738 artifacts /
+57,334,413 bytes. Both offline verifiers succeed; all three child groups close
+with empty traces and zero retries, and all three persistent parents record
+numeric exit status zero. The private closing validator preserves the complete
+captured inventory and compares both earlier native-compared MAPS in full:
+two exact matches / 142,084 bytes. Closing receipt is
+`8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`;
+independent actual terminal review remains pending. No new native execution
+occurs in this comparison. Map coverage retains 71 rows, one admitted and three
+omitted encrypted sections, with encoded authentication but no full decoded
+CKey. Requested Map0 completion is not all-map/world or runtime acceptance.
+
+The first post-extract preparation attempt fails before private preparation
+because the already-pinned static inspector target is absent from its guard
+map; it writes no input directory or receipt. A fresh configuration adds only
+that expected tool guard and a new receipt destination, and the unchanged
+helper succeeds. No extractor rerun occurs. Actual synthetic CLI acquisition,
+cut/resume lifecycle, independent terminal closure, full suite and reproducible
+stable distribution remain gates; PR #77 stays draft. Windows remains deferred.
+See docs/forever-terrain-v12.md for the scoped executed evidence.

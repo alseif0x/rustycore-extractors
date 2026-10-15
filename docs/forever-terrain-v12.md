@@ -3,8 +3,9 @@
 [Issue #76](https://github.com/alseif0x/rustycore-extractors/issues/76)
 adds explicit `forever-product-v12` for build 70374 on Linux. This candidate
 connects available Map rows to complete terrain acquisition and ordinary
-product publication. Whole qualification and real full-map acceptance are
-pending. The preceding two-tile proof is recorded in
+product publication. Whole software qualification and the first real Map0
+extraction with both verifiers pass. Independent terminal review and CLI
+recovery acceptance remain pending. The preceding two-tile proof is recorded in
 [the compatibility report](forever-linux-compatibility.md).
 
 ## Plans and commands
@@ -95,3 +96,45 @@ parity is claimed. This component does not deliver DB2, GT, cameras, collision,
 navigation, real full-world/runtime acceptance or a reproducible release.
 Windows remains deferred. Earlier accepted bundles keep their own frozen
 source/producer identities; this candidate has not replaced them.
+
+## Executed Map0 checkpoint — 2026-10-15
+
+The second whole immutable qualification passes all eight commands. Debug and
+release each pass 3,100 tests with 26 historical ignores; both product builds,
+421 selected source checks with two expected skips, 163 distribution checks with
+one platform skip, all-target Clippy and formatting pass. Independent terminal
+QA has no findings; its receipt SHA-256 is
+`706835989b069897c7e26a0084b42b02b7eeab678a53b03ea633ca148b0fedea`.
+All six GitHub checks pass at compiled source commit
+`b40bacf35f5a30b7c3cd0e5a0156ef4714d83680`. The immutable source contains 741
+committed public inputs and 41 offline vendor/config files. Later documentation
+does not rebuild or replace the qualified producers.
+
+The actual qualified release extracts the requested Map0 with disabled keys
+in 28.568 seconds. All 736 present tiles convert; 3,360 MAIN positions are absent.
+The completed package has 738 artifacts / 57,334,413 bytes: 736 MAPS, one
+whole-map tilelist and canonical coverage. Separate offline `verify` and
+`verify-links` calls pass in 5.211 and 5.229 seconds. All three children and
+persistent parents exit successfully; child traces are empty, owned groups
+are absent and there are zero automatic retries. Parents are untraced.
+
+The private closing validator matches the entire captured output inventory,
+source identity and bounded build metadata. It also compares both previously
+native-compared MAPS in full: two matches / 142,084 bytes. No original converter
+or new CASC acquisition runs during those offline comparisons. Closing receipt
+SHA-256 is `8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`.
+Independent review of this actual terminal result remains pending.
+
+Coverage retains 71 direct/materialized Map rows, one admitted section and
+three omitted encrypted sections. The encoded source authenticates; its full
+decoded CKey does not. Completion applies to the requested Map0 outputs. It
+does not imply extraction of omitted maps, an all-available-maps run, recovery,
+runtime acceptance or the complete stable suite.
+
+The first post-extract preparation helper fails before private preparation:
+its configuration omits the already-pinned static ELF inspector target from
+the guard map. It creates neither inputs nor a receipt. The corrected
+configuration adds that exact expected guard and a fresh receipt destination;
+the unchanged helper then succeeds. The failure is retained, and the actual
+extractor is not rerun. The earlier failed qualification and source-only
+closing proposals retain their recorded scopes.
