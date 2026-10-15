@@ -11,7 +11,7 @@ use crate::collision::{Extractor, SourceFacts};
 use forever_vmap::wmo::liquid::LiquidLookup;
 use std::mem::size_of;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Failure<E> {
+pub(in crate::collision) enum Failure<E> {
     World(Error),
     Collector(E),
 }
@@ -20,7 +20,7 @@ impl<E> From<Error> for Failure<E> {
         Self::World(e)
     }
 }
-pub(super) trait Access {
+pub(in crate::collision) trait Access {
     type Error: Copy;
     fn read_source(&mut self, id: u32, cap: usize) -> Result<(Vec<u8>, SourceFacts), Self::Error>;
     fn reserve_external(&mut self, bytes: usize) -> Result<(), Self::Error>;
@@ -147,6 +147,22 @@ pub(super) fn prepare<A: Access>(
     map_facts.materialized_rows = rows.len();
     map_facts.retained_bytes = retained;
 
+    let (lookup, liquid_tables, retained) = prepare_liquids(access, limits, retained)?;
+    let [material_facts, type_facts] = liquid_tables;
+    Ok(Prepared {
+        rows,
+        direct_count,
+        lookup,
+        tables: [map_facts, material_facts, type_facts],
+        retained,
+    })
+}
+
+pub(in crate::collision) fn prepare_liquids<A: Access>(
+    access: &mut A,
+    limits: Limits,
+    mut retained: usize,
+) -> Result<(super::Lookups, [TableFacts; 2], usize), Failure<A::Error>> {
     let (snapshot, mut material_facts) = decode(
         access,
         MATERIAL_FILE_DATA_ID,
@@ -178,14 +194,13 @@ pub(super) fn prepare<A: Access>(
     access
         .release_external(type_facts.decode_allowance_bytes)
         .map_err(Failure::Collector)?;
-    Ok(Prepared {
-        rows,
-        direct_count,
-        lookup: Lookups { materials, types },
-        tables: [map_facts, material_facts, type_facts],
+    Ok((
+        Lookups { materials, types },
+        [material_facts, type_facts],
         retained,
-    })
+    ))
 }
+
 fn decode<T, A: Access>(
     access: &mut A,
     id: u32,

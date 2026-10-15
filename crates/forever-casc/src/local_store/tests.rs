@@ -27,6 +27,9 @@ impl CollisionFixture {
         Self::for_build(files, 70205)
     }
     pub(crate) fn for_build(files: &[CollisionFile<'_>], build: u32) -> Self {
+        Self(Self::builder(files, build).write())
+    }
+    fn builder(files: &[CollisionFile<'_>], build: u32) -> Builder {
         let mut builder = Builder::new(b"unused");
         builder.version = match build {
             70170 => "1.60.1.70170",
@@ -60,6 +63,58 @@ impl CollisionFixture {
             }
         }
         builder.root_override = Some(root);
+        builder
+    }
+    /// Test-only framed N/E/N sources with real descriptor MD5 and full header
+    /// EKey. Omitted plaintext exists only in the authored fixture declaration;
+    /// no decoder decrypts or exposes the encrypted hole.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn with_available_holes(
+        files: &[CollisionFile<'_>],
+        holes: &[(u32, std::ops::Range<usize>)],
+    ) -> Self {
+        let mut builder = Self::builder(files, 70205);
+        let mut seen = std::collections::BTreeSet::new();
+        for (id, range) in holes {
+            assert!(seen.insert(*id));
+            let at = files.iter().position(|f| f.0 == *id).unwrap();
+            let bytes = &files[at].2;
+            assert!(range.start < range.end && range.end <= bytes.len());
+            let mut blocks = Vec::new();
+            if range.start != 0 {
+                let mut block = vec![b'N'];
+                block.extend(&bytes[..range.start]);
+                blocks.push((block, range.start));
+            }
+            let mut encrypted = vec![b'E', 8];
+            encrypted.extend([0x11; 8]);
+            encrypted.push(4);
+            encrypted.extend([0; 4]);
+            encrypted.extend([b'S', 0x22]);
+            blocks.push((encrypted, range.end - range.start));
+            if range.end < bytes.len() {
+                let mut block = vec![b'N'];
+                block.extend(&bytes[range.end..]);
+                blocks.push((block, bytes.len() - range.end));
+            }
+            let header_size = 12 + blocks.len() * 24;
+            let mut encoded = b"BLTE".to_vec();
+            encoded.extend((header_size as u32).to_be_bytes());
+            encoded.push(15);
+            encoded.extend(&(blocks.len() as u32).to_be_bytes()[1..]);
+            for (block, decoded) in &blocks {
+                encoded.extend((block.len() as u32).to_be_bytes());
+                encoded.extend((*decoded as u32).to_be_bytes());
+                encoded.extend(md5::digest(block));
+            }
+            let ekey = md5::digest(&encoded);
+            for (block, _) in blocks {
+                encoded.extend(block);
+            }
+            builder.routes[at].2 = vec![ekey];
+            builder.records[at] = (ekey, b'N', Vec::new());
+            builder.framed_records.insert(ekey, encoded);
+        }
         Self(builder.write())
     }
     pub(crate) fn open(&self, names: bool) -> LocalStore {
@@ -99,6 +154,7 @@ struct Builder {
     root_override: Option<Vec<u8>>,
     routes: Vec<Route>,
     records: Vec<Record>,
+    framed_records: std::collections::BTreeMap<[u8; 16], Vec<u8>>,
     auxiliary: String,
     version: &'static str,
 }
@@ -110,6 +166,7 @@ impl Builder {
             root_override: None,
             routes: vec![(key, content.len() as u32, vec![EKEY])],
             records: vec![(EKEY, b'N', content.to_vec())],
+            framed_records: std::collections::BTreeMap::new(),
             auxiliary: String::new(),
             version: "1.60.1.70205",
         }
@@ -145,9 +202,15 @@ impl Builder {
         for (key, mode, payload) in records {
             let offset = archive.len() as u64;
             archive.extend_from_slice(&[0xa5; 30]);
-            archive.extend_from_slice(b"BLTE\0\0\0\0");
-            archive.push(mode);
-            archive.extend_from_slice(&payload);
+            if let Some(encoded) = self.framed_records.get(&key) {
+                // Explicit test-only override: existing F/unsupported modes
+                // retain their original headerless fixture behavior.
+                archive.extend_from_slice(encoded);
+            } else {
+                archive.extend_from_slice(b"BLTE\0\0\0\0");
+                archive.push(mode);
+                archive.extend_from_slice(&payload);
+            }
             rows.push(index_entry(
                 key,
                 offset,

@@ -28,13 +28,13 @@ use forever_db2::{RecordError, terrain_sources as source};
 use forever_vmap::wmo::liquid::LiquidLookup;
 use std::mem::size_of;
 
-mod input;
+pub(super) mod input;
 #[cfg(target_os = "linux")]
 pub mod inventory;
 #[cfg(target_os = "linux")]
 pub mod spooled;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 
 pub const MAP_FILE_DATA_ID: u32 = 1_349_477;
 pub const MATERIAL_FILE_DATA_ID: u32 = 1_132_538;
@@ -89,7 +89,7 @@ impl Limits {
             .min(super::placements::MAX_MODELS);
         bounded.validate()
     }
-    fn validate(self) -> Result<(), Error> {
+    pub(super) fn validate(self) -> Result<(), Error> {
         if self.max_db2_bytes > MAX_DB2_BYTES
             || self.max_direct_rows > MAX_DIRECT_ROWS
             || self.max_copy_records > MAX_COPY_RECORDS
@@ -242,7 +242,7 @@ impl Topology {
     pub const fn resident_bytes(&self) -> usize {
         self.resident_bytes
     }
-    fn snapshot<L: LiquidLookup + ?Sized>(
+    pub(super) fn snapshot<L: LiquidLookup + ?Sized>(
         maps: &plan::Maps<'_>,
         collector: &mut super::Extractor<'_, '_, L>,
         max_bytes: usize,
@@ -419,9 +419,9 @@ struct Prepared {
     tables: [TableFacts; 3],
     retained: usize,
 }
-struct Lookups {
-    materials: Vec<(u32, source::LiquidMaterialFields)>,
-    types: Vec<(u32, source::LiquidTypeFields)>,
+pub(super) struct Lookups {
+    pub(super) materials: Vec<(u32, source::LiquidMaterialFields)>,
+    pub(super) types: Vec<(u32, source::LiquidTypeFields)>,
 }
 impl LiquidLookup for Lookups {
     fn material_id(&self, type_id: u32) -> Option<u8> {

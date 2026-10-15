@@ -26,6 +26,8 @@ use super::{Class, Model, Status, gameobjects, run, world};
 use forever_vmap::{RawM2, assembly, gameobject_models, placement, vmo, wmo::raw};
 use std::{fmt, mem::size_of};
 #[cfg(target_os = "linux")]
+pub mod available_70374;
+#[cfg(target_os = "linux")]
 pub mod staged;
 #[cfg(test)]
 mod tests;
@@ -198,55 +200,72 @@ impl Completed {
         self.stats
     }
     pub fn models(&self) -> impl Iterator<Item = (&[u8], &vmo::Model)> {
-        self.models.iter().map(|m| {
-            (
-                self.world.startup().extraction().models()[m.source].output_basename(),
-                &m.model,
-            )
-        })
+        models_for(self.world.startup().extraction().models(), &self.models)
     }
     /// Stable inventory: dtree, byte-sorted model names, numeric map IDs, then
     /// each tree and tile payload/index in the accepted builder's tile order.
     pub fn artifacts(&self) -> impl Iterator<Item = Artifact<'_>> {
-        let dtree = std::iter::once(Artifact {
-            name: ArtifactName::Dtree,
-            bytes: self.world.startup().data().lists().dtree_bytes(),
-        });
-        let models = self.models().map(|(name, m)| Artifact {
-            name: ArtifactName::Model(name),
-            bytes: m.bytes(),
-        });
-        let maps = self.maps.iter().flat_map(|map| {
-            std::iter::once(Artifact {
-                name: ArtifactName::Tree(map.map_id()),
-                bytes: map.tree_bytes(),
-            })
-            .chain(map.tiles().iter().flat_map(move |tile| {
-                tile.payload()
-                    .map(|bytes| Artifact {
-                        name: ArtifactName::Tile {
-                            map: map.map_id(),
-                            x: tile.x(),
-                            y: tile.y(),
-                            index: false,
-                        },
-                        bytes,
-                    })
-                    .into_iter()
-                    .chain(std::iter::once(Artifact {
-                        name: ArtifactName::Tile {
-                            map: map.map_id(),
-                            x: tile.x(),
-                            y: tile.y(),
-                            index: true,
-                        },
-                        bytes: tile.index_bytes(),
-                    }))
-            }))
-        });
-        dtree.chain(models).chain(maps)
+        artifacts_for(
+            self.world.startup().extraction().models(),
+            self.world.startup().data().lists(),
+            &self.maps,
+            &self.models,
+        )
     }
 }
+fn models_for<'a>(
+    source: &'a [Model],
+    models: &'a [NamedModel],
+) -> impl Iterator<Item = (&'a [u8], &'a vmo::Model)> {
+    models
+        .iter()
+        .map(|m| (source[m.source].output_basename(), &m.model))
+}
+fn artifacts_for<'a>(
+    source: &'a [Model],
+    lists: &'a gameobject_models::Lists,
+    maps: &'a [assembly::AssembledMap],
+    models: &'a [NamedModel],
+) -> impl Iterator<Item = Artifact<'a>> {
+    let dtree = std::iter::once(Artifact {
+        name: ArtifactName::Dtree,
+        bytes: lists.dtree_bytes(),
+    });
+    let models = models_for(source, models).map(|(name, m)| Artifact {
+        name: ArtifactName::Model(name),
+        bytes: m.bytes(),
+    });
+    let maps = maps.iter().flat_map(|map| {
+        std::iter::once(Artifact {
+            name: ArtifactName::Tree(map.map_id()),
+            bytes: map.tree_bytes(),
+        })
+        .chain(map.tiles().iter().flat_map(move |tile| {
+            tile.payload()
+                .map(|bytes| Artifact {
+                    name: ArtifactName::Tile {
+                        map: map.map_id(),
+                        x: tile.x(),
+                        y: tile.y(),
+                        index: false,
+                    },
+                    bytes,
+                })
+                .into_iter()
+                .chain(std::iter::once(Artifact {
+                    name: ArtifactName::Tile {
+                        map: map.map_id(),
+                        x: tile.x(),
+                        y: tile.y(),
+                        index: true,
+                    },
+                    bytes: tile.index_bytes(),
+                }))
+        }))
+    });
+    dtree.chain(models).chain(maps)
+}
+
 #[derive(Clone, Copy)]
 pub enum ArtifactName<'a> {
     Dtree,
@@ -485,7 +504,57 @@ fn visit(stats: &mut Stats, bytes: usize, limits: Limits) -> Result<(), Error> {
     )
 }
 
+// Private borrowed graph/model view; source-completion owners never convert.
+// Only the strict and available startup-consuming constructors create this view
+// together with their own private Stage. All borrowed names/lists remain owned
+// by the corresponding returned world.
+#[derive(Clone, Copy)]
+struct WorldView<'a> {
+    source: &'a [Model],
+    lists: &'a gameobject_models::Lists,
+    topology: &'a world::Topology,
+    resident_bytes: usize,
+    store_resident_bytes: usize,
+}
+impl<'a> WorldView<'a> {
+    fn complete(world: &'a world::Completed) -> Self {
+        Self {
+            source: world.startup().extraction().models(),
+            lists: world.startup().data().lists(),
+            topology: world.topology(),
+            resident_bytes: world.resident_bytes(),
+            store_resident_bytes: world.store_resident_bytes(),
+        }
+    }
+    fn topology(self) -> &'a world::Topology {
+        self.topology
+    }
+    fn resident_bytes(self) -> usize {
+        self.resident_bytes
+    }
+    fn store_resident_bytes(self) -> usize {
+        self.store_resident_bytes
+    }
+}
+struct PackageParts {
+    maps: Vec<assembly::AssembledMap>,
+    models: Vec<NamedModel>,
+    stats: Stats,
+}
 fn build(world: world::Completed, stage: Stage, limits: Limits) -> Result<Completed, Error> {
+    let PackageParts {
+        maps,
+        models,
+        stats,
+    } = build_parts(WorldView::complete(&world), stage, limits)?;
+    Ok(Completed {
+        world,
+        maps,
+        models,
+        stats,
+    })
+}
+fn build_parts(world: WorldView<'_>, stage: Stage, limits: Limits) -> Result<PackageParts, Error> {
     // Only this module can call this function or construct a sealed stage.
     limits.validate()?;
     if stage.error.is_some() {
@@ -517,7 +586,7 @@ fn build(world: world::Completed, stage: Stage, limits: Limits) -> Result<Comple
         stage_peak_bytes: stage.memory.peak,
         ..Stats::default()
     };
-    let source = world.startup().extraction().models();
+    let source = world.source;
     if source.len() > MAX_MODELS {
         return Err(Error::Limit);
     }
@@ -548,7 +617,7 @@ fn build(world: world::Completed, stage: Stage, limits: Limits) -> Result<Comple
         }
     }
     let list = gameobject_models::TempList::parse(
-        world.startup().data().lists().temp_bytes(),
+        world.lists.temp_bytes(),
         gameobject_models::Limits::default(),
     )
     .map_err(Error::Lists)?;
@@ -605,7 +674,7 @@ fn build(world: world::Completed, stage: Stage, limits: Limits) -> Result<Comple
     bump(&mut stats.files, 1, limits.max_files)?;
     bump(
         &mut stats.output_bytes,
-        world.startup().data().lists().dtree_bytes().len(),
+        world.lists.dtree_bytes().len(),
         limits.max_output_bytes,
     )?;
     for map in &stage.maps {
@@ -712,8 +781,7 @@ fn build(world: world::Completed, stage: Stage, limits: Limits) -> Result<Comple
     memory.release(stage_bytes);
     stats.resident_bytes = memory.live;
     stats.peak_bytes = memory.peak;
-    Ok(Completed {
-        world,
+    Ok(PackageParts {
         maps,
         models,
         stats,

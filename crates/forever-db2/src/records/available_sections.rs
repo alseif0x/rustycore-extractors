@@ -39,6 +39,15 @@ pub(crate) fn read_map(
         _ => Err(RecordError::Schema),
     }
 }
+pub(crate) fn read_vmap_maps(
+    input: &impl Source,
+) -> Result<AvailableRecords<terrain::VMapFields>, RecordError> {
+    let (rows, sections) = read(input, "Map", Collector::VMap(Vec::new()))?;
+    match rows {
+        Collected::VMap(records) => Ok(AvailableRecords { records, sections }),
+        _ => Err(RecordError::Schema),
+    }
+}
 pub(crate) fn read_gameobjects(
     input: &impl Source,
 ) -> Result<AvailableRecords<terrain::GameObjectFields>, RecordError> {

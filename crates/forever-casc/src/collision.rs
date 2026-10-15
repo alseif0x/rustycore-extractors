@@ -13,6 +13,8 @@
 //! source. Typed requests retain their existing parser admission rules.
 //! Neither placement publication, VMap assembly nor runtime loading occurs here.
 pub mod assemble;
+#[cfg(target_os = "linux")]
+pub mod available_70374;
 pub mod gameobjects;
 #[cfg(target_os = "linux")]
 pub mod inventory_spool;
@@ -162,6 +164,38 @@ impl Limits {
     }
 }
 
+/// Availability-only failures without another nested LocalStore error payload.
+/// Store failures retain the existing `Error::Store` variant and typed details.
+#[cfg(target_os = "linux")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AvailableError {
+    Blte(crate::blte::Error),
+    KeysPresent,
+    Build,
+    AmbiguousEncoding,
+    UnsupportedArchive,
+}
+#[cfg(target_os = "linux")]
+impl AvailableError {
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Blte(e) => e.code(),
+            Self::KeysPresent => "available_source_keys_not_admitted",
+            Self::Build => "available_source_build_not_admitted",
+            Self::AmbiguousEncoding => "available_source_ambiguous_encoding",
+            Self::UnsupportedArchive => "available_source_archive_not_admitted",
+        }
+    }
+}
+#[cfg(target_os = "linux")]
+impl std::fmt::Display for AvailableError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.code())
+    }
+}
+#[cfg(target_os = "linux")]
+impl std::error::Error for AvailableError {}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     InvalidLimits,
@@ -176,10 +210,25 @@ pub enum Error {
     State,
     Aborted,
     Store(local_store::Error),
+    #[cfg(target_os = "linux")]
+    Available(AvailableError),
     M2(forever_vmap::Error),
     Wmo(wmo::Error),
 }
 impl Error {
+    /// Flatten existing store failures; no allocation or loss of candidate facts.
+    #[cfg(target_os = "linux")]
+    pub const fn from_available(error: local_store::availability::Error) -> Self {
+        use local_store::availability::Error as SourceError;
+        match error {
+            SourceError::Store(e) => Self::Store(e),
+            SourceError::Blte(e) => Self::Available(AvailableError::Blte(e)),
+            SourceError::KeysPresent => Self::Available(AvailableError::KeysPresent),
+            SourceError::Build => Self::Available(AvailableError::Build),
+            SourceError::AmbiguousEncoding => Self::Available(AvailableError::AmbiguousEncoding),
+            SourceError::UnsupportedArchive => Self::Available(AvailableError::UnsupportedArchive),
+        }
+    }
     pub const fn code(self) -> &'static str {
         match self {
             Self::InvalidLimits => "collision_invalid_limits",
@@ -194,9 +243,17 @@ impl Error {
             Self::State => "collision_invalid_state",
             Self::Aborted => "collision_external_run_failure",
             Self::Store(e) => e.code(),
+            #[cfg(target_os = "linux")]
+            Self::Available(e) => e.code(),
             Self::M2(e) => e.code(),
             Self::Wmo(e) => e.code(),
         }
+    }
+}
+#[cfg(target_os = "linux")]
+impl From<local_store::availability::Error> for Error {
+    fn from(error: local_store::availability::Error) -> Self {
+        Self::from_available(error)
     }
 }
 impl std::fmt::Display for Error {
@@ -641,6 +698,54 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             let read = self.read_capped(input, cap)?;
             self.external_sources = add(self.external_sources, read.0.capacity())?;
             Ok(read)
+        })();
+        self.remember(result)
+    }
+    /// Explicit disabled-key70374 source read. The declared address space
+    /// counts toward the cumulative source ceiling, including encrypted holes;
+    /// actual source residency stays charged until release_source. No complete
+    /// SourceFacts or VerifiedFile is created for this capability.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_available_source(
+        &mut self,
+        id: u32,
+        requested_cap: usize,
+    ) -> Result<local_store::availability::AvailableSource, Error> {
+        let result = (|| {
+            self.ready()?;
+            names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
+            if self.reads >= self.limits.max_reads {
+                return Err(Error::Limit);
+            }
+            let cap = requested_cap.min(self.limits.max_file_bytes).min(
+                self.limits
+                    .max_source_bytes
+                    .checked_sub(self.source_bytes)
+                    .ok_or(Error::Limit)?,
+            );
+            if cap == 0 {
+                return Err(Error::Limit);
+            }
+            let memory_limit = add(self.store.stats().resident_bytes, self.available_total()?)?;
+            self.reads += 1;
+            let file = self
+                .store
+                .read_file_data_id_available_with_external_budget(
+                    id,
+                    cap as u64,
+                    self.live,
+                    memory_limit,
+                )
+                .map_err(Error::from_available)?;
+            let declared = usize::try_from(file.declared_bytes()).map_err(|_| Error::Limit)?;
+            if declared > cap {
+                return Err(Error::Limit);
+            }
+            let resident = file.resident_bytes().map_err(Error::from_available)?;
+            self.charge(resident)?;
+            self.external_sources = add(self.external_sources, resident)?;
+            self.source_bytes = add(self.source_bytes, declared)?;
+            Ok(file)
         })();
         self.remember(result)
     }

@@ -110,7 +110,15 @@ pub fn extract_shared<L: LiquidLookup + ?Sized, S: Sink + ?Sized>(
     sink: &mut S,
     limits: SharedLimits,
 ) -> Result<SharedReport, Error> {
-    let collector = context.collector_mut();
+    extract_collector(context.collector_mut(), maps, sink, limits)
+}
+
+pub(in crate::collision) fn extract_collector<L: LiquidLookup + ?Sized, S: Sink + ?Sized>(
+    collector: &mut Extractor<'_, '_, L>,
+    maps: &plan::Maps<'_>,
+    sink: &mut S,
+    limits: SharedLimits,
+) -> Result<SharedReport, Error> {
     let result = execute(collector, maps, sink, limits);
     if result.is_err() {
         collector.abort();

@@ -101,7 +101,7 @@ impl Limits {
             .min(gameobject_models::MAX_VERTEX_VISITS);
         bounded.validate()
     }
-    fn validate(self) -> Result<(), Error> {
+    pub(super) fn validate(self) -> Result<(), Error> {
         let defaults = Self::default();
         let l = self.lists;
         let d = defaults.lists;
@@ -337,6 +337,40 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
     collector
         .release_external(copy_capacity)
         .map_err(Error::Collision)?;
+    let (outcomes, stats) =
+        collect_direct(&mut collector, &direct, copy_records, allowance, limits)?;
+    let direct_capacity = capacity(&direct)?;
+    drop(direct);
+    collector
+        .release_external(direct_capacity)
+        .map_err(Error::Collision)?;
+
+    let engine = finish_lists(&mut collector, outcomes, stats, limits)?;
+    Ok(Context {
+        data: Data {
+            source,
+            outcomes: engine.outcomes,
+            lists: engine.lists,
+            stats: engine.stats,
+            startup_facts: engine.startup_facts,
+        },
+        collector,
+    })
+}
+
+pub(super) struct EngineData {
+    pub(super) outcomes: Vec<RowOutcome>,
+    pub(super) lists: gameobject_models::Lists,
+    pub(super) stats: Stats,
+    pub(super) startup_facts: Facts,
+}
+pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
+    collector: &mut Extractor<'_, '_, L>,
+    direct: &[terrain_sources::DirectRecord<terrain_sources::GameObjectFields>],
+    copy_records: usize,
+    allowance: usize,
+    limits: Limits,
+) -> Result<(Vec<RowOutcome>, Stats), Error> {
     if direct.len() > limits.max_direct_rows || copy_records > limits.max_copy_records {
         return Err(Error::Limit);
     }
@@ -347,7 +381,7 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
     if candidates > limits.max_candidate_requests {
         return Err(Error::Limit);
     }
-    let mut outcomes = reserved_vec(&mut collector, direct.len())?;
+    let mut outcomes = reserved_vec(collector, direct.len())?;
     let mut stats = Stats {
         direct_rows: direct.len(),
         copy_records,
@@ -395,15 +429,17 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
             outcome,
         });
     }
-    let direct_capacity = capacity(&direct)?;
-    drop(direct);
-    collector
-        .release_external(direct_capacity)
-        .map_err(Error::Collision)?;
-
+    Ok((outcomes, stats))
+}
+pub(super) fn finish_lists<L: LiquidLookup + ?Sized>(
+    collector: &mut Extractor<'_, '_, L>,
+    outcomes: Vec<RowOutcome>,
+    mut stats: Stats,
+    limits: Limits,
+) -> Result<EngineData, Error> {
     // Charge descriptor storage before borrowing models, then delegate both
     // list allocations and bounds scratch under the remaining admitted budget.
-    let mut rows = reserved_vec(&mut collector, stats.collision_rows)?;
+    let mut rows = reserved_vec(collector, stats.collision_rows)?;
     let row_capacity = capacity(&rows)?;
     let list_allowance = limits
         .lists
@@ -451,15 +487,11 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
     stats.collector_retained_bytes = collector.retained_bytes();
     collector.verify().map_err(Error::Collision)?;
     let startup_facts = collector.facts();
-    Ok(Context {
-        data: Data {
-            source,
-            outcomes,
-            lists,
-            stats,
-            startup_facts,
-        },
-        collector,
+    Ok(EngineData {
+        outcomes,
+        lists,
+        stats,
+        startup_facts,
     })
 }
 
