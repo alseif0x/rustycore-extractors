@@ -2683,3 +2683,20 @@ and twelve-method test inventory facts. Ten common source-contract and five
 v12 contract checks pass locally. The first immutable source/qualification
 admission remain unexecuted; actual qualification must bind the corrected
 commit and source snapshot before any real product call.
+
+The first actual joint v12 qualification then fails at its fifth command:
+both Rust profiles pass 3,100 tests / 26 historical ignores and both builds
+succeed, but three old verification anchors in two source-contract files omit
+the explicit v12 branch. Their test-only correction retains legacy checks and
+requires v12 coverage finish. The full selected CI set passes 421 methods with
+two existing skips locally. Rust/Cargo inputs remain unchanged; failed whole
+attempt1 and its prefix remain unaccepted. A fresh whole qualification is
+required before the real Map0 product attempt.
+
+Independent negative closure of attempt1 additionally finds three public
+test dependencies absent from the immutable snapshot: tools/generate_forever_catalog.py,
+docs/forever-windows-output.md and docs/forever-windows-membership.md. Actual
+immutable CI results are 388 methods / three failures / three errors / one skip;
+the metadata module never executes. All five groups and the failed service
+close, but no producer qualification transfers. Add those exact committed
+inputs to the next qualification snapshot; live421 success remains separate.

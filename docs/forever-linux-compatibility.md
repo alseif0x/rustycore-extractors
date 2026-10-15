@@ -274,3 +274,21 @@ the strict common boundary guard and updates the explicit twelve-method
 lifecycle inventory. Ten common source-contract checks and five v12 public
 checks pass locally. The initial CI failure remains historical; immutable
 qualification must use the corrected source and fresh producer builds.
+
+The first actual v12 joint qualification subsequently fails at the selected
+CI source-contract stage after both 3,100-test Rust profiles and both product
+builds succeed. Three old verification anchors across two Python files omit
+v12's explicit preflight/coverage branch. Their specific correction preserves
+legacy intrinsic/v8 checks and adds the required v12 finish assertion; the
+complete 421-method CI selection passes locally with two existing skips.
+No production Rust/Cargo input changes follow. The failed whole attempt and
+its artifacts remain retained without prefix acceptance; a fresh complete
+qualification remains necessary before the real product attempt.
+
+Independent negative closure also identifies the catalog generator and two
+public Windows scope documents missing from that qualification snapshot.
+Actual immutable source-contract results are 388 methods, three failures,
+three errors and one skip. All five owned groups and the failed service close;
+software/source/binary checks pass, but no producer qualification transfers.
+The fresh snapshot must add those exact committed test inputs. The live
+421-method result remains a separate diagnostic.

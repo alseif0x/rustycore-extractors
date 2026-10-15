@@ -71,6 +71,24 @@ adapter defaults to the older terrain producer. The operating-system boundary
 guard is retained. Its ten source-contract checks and the five v12 public
 contract checks pass locally; fresh joint qualification remains pending.
 
+The first actual joint qualification retains a whole failure after five
+commands: both Rust profiles pass 3,100 tests / 26 historical ignores and both
+product builds succeed, but the CI source-contract set rejects three outdated
+verification anchors across two Python files. The correction explicitly checks
+v12 metadata preflight/coverage dispatch while retaining the older intrinsic
+and v8 checks. All 421 selected CI methods then pass locally with two existing
+skips. The failed joint attempt is not accepted as a prefix; a fresh complete
+qualification is required before real product execution. Production Rust and
+Cargo inputs are unchanged by this test-only correction.
+
+Independent negative review additionally finds three omitted public test
+dependencies in the first immutable snapshot: the catalog generator and the
+Windows output/membership documents. Its actual selected suite runs 388
+methods with three failures, three errors and one skip; the metadata catalog
+module does not execute. The new qualification snapshot must include those
+three exact committed inputs. Live 421-method success does not qualify that
+incomplete snapshot or its retained producers.
+
 The original extractor may continue after failed terrain loads/conversions;
 v12 deliberately rejects a known-present failure. No native failure-admission
 parity is claimed. This component does not deliver DB2, GT, cameras, collision,
