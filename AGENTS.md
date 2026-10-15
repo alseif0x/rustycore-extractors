@@ -2734,7 +2734,25 @@ The first post-extract preparation attempt fails before private preparation
 because the already-pinned static inspector target is absent from its guard
 map; it writes no input directory or receipt. A fresh configuration adds only
 that expected tool guard and a new receipt destination, and the unchanged
-helper succeeds. No extractor rerun occurs. Actual synthetic CLI acquisition,
-cut/resume lifecycle, full suite and reproducible
-stable distribution remain gates; PR #77 stays draft. Windows remains deferred.
+helper succeeds. No extractor rerun occurs. Full suite and reproducible stable
+distribution remain gates; the separate synthetic recovery evidence follows
+below. Windows remains deferred.
 See docs/forever-terrain-v12.md for the scoped executed evidence.
+
+### Linux70374 terrain recovery lifecycle — 2026-10-15
+
+The qualified b40 debug/release producers pass the actual 48-call authored
+lifecycle: 30 successes, four forced cuts and fourteen expected rejections.
+Both pending-tile and sealed-before-manifest recovery succeed. Completed resume,
+missing present ADT, corrupted-source sealed replay and altered coverage reject
+with their exact causes. Eight complete package views match sixteen whole MAPS
+files against two separately original-C++-compared outputs / 101,343 bytes.
+Independent terminal QA passes without findings
+(`3f95af7b7c06b1b498e270478f1e01c520891cb111f57657a47c649a334826b2`),
+closing 336 leaf evidence files, fourteen output roots, 4,060 guards/48 aliases,
+child groups/traces/seccomp and the retained numeric parent terminal. There are
+zero retries. Source-only controller/auditor corrections and earlier metadata
+failures are retained; no producer rebuild follows. This closes authored process
+recovery, not power-loss or real-client recovery. Final PR integration still
+requires its exact-head CI; complete all-map, collision/navigation, runtime and
+stable-suite/distribution gates remain. See docs/forever-terrain-v12.md.

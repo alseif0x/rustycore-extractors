@@ -146,3 +146,43 @@ configuration adds that exact expected guard and a fresh receipt destination;
 the unchanged helper then succeeds. The failure is retained, and the actual
 extractor is not rerun. The earlier failed qualification and source-only
 closing proposals retain their recorded scopes.
+
+## Executed recovery lifecycle — 2026-10-15
+
+The qualified debug and release producers complete the separate authored
+48-call lifecycle: 30 successful calls, four forced process cuts and fourteen
+expected runtime rejections (ten exit-9 and four exit-8). Both profiles recover
+after the first MAPS pending-file sync and after the maps seal, before manifest
+publication. Completed-package resume, a missing present ADT, a corrupted
+source during sealed replay and tampered coverage reject as specified.
+
+Two strict Rust conversions precede two original C++ conversions of the same
+authored inputs. Both whole outputs match, totaling 101,343 bytes; independent
+oracle QA passes 65 checks without findings. The lifecycle compares sixteen
+whole MAPS files across eight complete package views with that separate oracle.
+Clean/resumed manifest equality is an additional recovery check. The run records
+48 closed child groups, accepted network/fsync traces and seccomp proofs, one
+successful numeric parent terminal and zero retries. Its 4,060 software/input
+guards and 48 aliases close unchanged. This is process recovery, not power-loss
+durability or a real-client recovery run.
+
+Lifecycle receipt SHA-256:
+`0217a63051f17c258c4a843fa626f8696d4d50001936a8564b8d070d54a7c75a`.
+Independent terminal QA accepts all 48 calls, 336 leaf evidence files and fourteen
+retained output roots, without findings:
+`3f95af7b7c06b1b498e270478f1e01c520891cb111f57657a47c649a334826b2`.
+
+The first unexecuted lifecycle controller expected exit-2 for runtime failures.
+Its replacement derives exit-8/9 from the frozen CLI and checks each exact
+failure cause; fourteen pure controls pass. The unexecuted first terminal
+auditor also expected failed replay to retain the pending manifest. Its reviewed
+replacement permits only removal of that exact canonical transient, preserving
+every artifact, seal and receipt. Fourteen auditor controls pass before its one
+actual review. Earlier metadata/auditor failures remain retained. These changes
+leave the qualified producer binaries unchanged; the 48-call stage executes
+once, without producer retries.
+
+The real Map0 and authored recovery gates are now closed for this terrain
+component. An actual all-available-maps run, build-70374 collision/navigation
+product integration, runtime acceptance and reproducible stable distribution
+remain separate work. No complete stable extraction-suite claim follows.
