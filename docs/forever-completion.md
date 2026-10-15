@@ -4315,3 +4315,27 @@ Independent review closes all source/fixture/output inventories, 5,496 guards /
 (`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
 Real v13 publication verification, stable distribution and remaining component
 and runtime gates stay open.
+
+The subsequent real v13 product closes the declared available-map terrain gate:
+one extract/verify/verify-links triplet exits zero, with 3,322 MAPS, 71 tilelists
+and coverage (3,394 artifacts / 215,621,491 bytes). Sixty-nine WDTs load and two
+are unavailable; 8,192 coordinates remain unknown, never known absent. Every
+known-present ADT converts, with zero MissingFile root omissions. Map still has
+one admitted and three omitted sections, authenticated encoded bytes and no
+full content-key verification. Whole-client coverage remains false.
+
+Final closing receipt is
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`;
+independent QA is
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`.
+Two complete frozen-ledger replays, all retained Map0 bytes, two original native
+MAPS comparisons and 4,908 guards / 48 aliases pass. Qualified software, private
+inputs, metadata and historical failed outputs close unchanged; actual parents
+exit zero, owned groups are absent and runtime network traces are empty. The
+preparation-only validator correction has 72 passing authored controls and
+retains earlier failure/proof bindings without another product invocation.
+
+Issue #80's terrain acceptance is complete within this explicit omission policy.
+Build70374 collision/navigation, complete client coverage, RustyCore runtime use
+and reproducible stable distribution remain separate requirements for the usable
+full extraction suite. See [current terrain scope and commands](forever-terrain-v13.md).

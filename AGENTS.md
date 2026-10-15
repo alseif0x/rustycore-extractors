@@ -2851,3 +2851,24 @@ zero (`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
 This closes the authored original-loop gate only. Real v13 publication
 verification, stable distribution and the remaining component/runtime gates
 stay open; see docs/forever-terrain-v13.md.
+
+The subsequent real v13 all-available extraction and one call of each verifier
+all exit zero. Its 3,322 MAPS, 71 tilelists and coverage file total 3,394 artifacts /
+215,621,491 bytes. Sixty-nine WDTs load; two remain unavailable, accounting for
+8,192 unknown coordinates. All 3,322 known-present ADTs convert, with zero
+MissingFile root omissions. Map startup still admits one section and omits three;
+encoded-key authentication passes, full content-key verification remains false.
+Final closing receipt is
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`.
+Independent final QA
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`
+passes two full frozen-ledger replays, exact retained Map0 and two native MAPS
+comparisons, all 4,908 guards / 48 aliases, source/tool/input/failed-output
+continuity and numeric parent/group/empty-trace closure. The preparation-only
+hash-reference defect and failed preparation stay retained; corrected frozen
+checker v3 passes 72 authored controls and preserves predecessor/current proof
+closures without repeating the product triplet or regenerating its snapshot.
+This accepts the declared available-map terrain domain and explicit omissions;
+coverage is producer-reported. Full-client, collision/navigation for 70374,
+runtime and reproducible stable distribution remain gates. See
+docs/forever-terrain-v13.md.

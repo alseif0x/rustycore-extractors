@@ -1,11 +1,11 @@
-# Linux70374 compatible terrain product v13 — candidate
+# Linux70374 compatible terrain product v13
 
-This explicit candidate preserves strict v12 and adds a separately selected
+This explicit product preserves strict v12 and adds a separately selected
 available-map traversal policy. Committed software qualification, authored
-forced recovery and original-loop comparison pass within the scopes below.
-Real v13 publication verification, whole-world, runtime, distribution and
-release acceptance remain separate gates. Existing v12 evidence retains its
-original scope.
+forced recovery, original-loop comparison and the bounded real extraction with
+both verifiers pass within the scopes below. Whole-client coverage, runtime,
+reproducible distribution and full-suite release remain separate gates.
+Existing v12 evidence retains its original scope.
 
 ## Explicit plan and commands
 
@@ -14,6 +14,21 @@ V13 requires Linux, Rust-local build70374, the current wowdbdefs-70374-v1 catalo
 disabled keys, resident maps-only component mask8, and `map:<u32>` or
 `all-available-maps`. Tile subsets, supplied keys, native backend, scratch,
 DB2/GT/camera outputs, collision and navigation are rejected.
+
+For the admitted build/locale, the following commands select the checked-in
+all-available plan. The output parent must exist and the destination must be
+new, outside both Git and the read-only client. Run long extraction in a
+persistent user service or tmux. These commands produce terrain only.
+
+```bash
+source .opencode/environment.sh
+cargo build --offline --locked --release -p forever-extractor
+BIN="$CARGO_TARGET_DIR/release/forever-extractor"
+PLAN="$PWD/tests/contracts/fixtures/forever-product-v13/available.tsv"
+"$BIN" extract --plan "$PLAN" --client /absolute/client --output /absolute/private/new-terrain
+"$BIN" verify --plan "$PLAN" --output /absolute/private/new-terrain
+"$BIN" verify-links --plan "$PLAN" --output /absolute/private/new-terrain
+```
 
 The commands remain inspect, extract, resume, verify and verify-links. V13 uses
 `Build70374CompatibleTerrainV1`, the separate
@@ -176,3 +191,44 @@ independent review:
 The first native build remains failed; the separately reviewed build adds the
 unchanged original StringVFormat provider and succeeds. No native malformed
 input, general failure-admission, runtime or real all-map acceptance follows.
+
+## Subsequent real all-available terrain acceptance
+
+The same qualified source `3eb45c1` and release executable complete one actual
+70374/esES extraction with disabled keys, followed by one `verify` and one
+`verify-links` call. All three exit zero; there are no automatic retries or new
+producer calls during closing. Extraction takes 133.291 seconds. The package
+contains 3,322 MAPS, 71 tilelists and one coverage file: 3,394 artifacts /
+215,621,491 bytes.
+
+Of 71 selected materialized Map rows, 69 WDTs load and two are unavailable.
+All 3,322 known-present root ADTs convert; none has a MissingFile omission.
+Coverage reports 279,302 known-absent and 8,192 unknown coordinates. The latter
+belong to unavailable WDTs and are never represented as known absent. Map
+startup admits one section and omits three; encoded-key authentication passes,
+while full content-key verification and whole-client Map coverage remain false.
+
+Final closing passes with receipt
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`.
+Independent final review
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`
+replays the complete frozen physical ledger twice and closes 4,908 guards /
+48 aliases, 795 qualified source files, tool trees, all three product invocation
+leaves, final validation leaf, numeric parent, metadata and retained failed v12
+outputs unchanged. Runtime traces are empty and owned process groups are absent.
+All 736 retained Map0 MAPS plus its tilelist match complete bytes (57,333,793
+bytes); both retained same-input original native MAPS also match (142,084 bytes).
+Both comparisons repeat at final closure.
+
+A preparation-only validator defect lost hash references while constructing the
+pre-links view. Its failed preparation is retained, with no validator or product
+call and no new output. The separately frozen checker v3 preserves completed
+v1 proof bindings and requires both predecessor and current software closures;
+72 authored controls pass before corrected preparation. Context, snapshot and
+ledger are reused unchanged. The actual extraction and verifier triplet is not
+repeated.
+
+This accepts artifact integrity, intrinsic formats, exact declared links and the
+bounded available-map traversal with explicit MissingFile omissions. Coverage
+remains producer-reported. Collision/navigation for this build, whole-client
+coverage, RustyCore runtime use and reproducible stable distribution remain open.
