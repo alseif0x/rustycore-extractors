@@ -444,6 +444,52 @@ class DistributionTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertTrue(m.bundle_path_allowed("source/" + name))
 
+    def test_current_ci_optional_inputs_are_shipped_and_moved(self):
+        names = m.OPTIONAL_CI_DOCS + m.OPTIONAL_CI_SOURCE
+        self.assertEqual(len(names), 5)
+        self.assertTrue(set(names).issubset(m.selected_paths(REPO)))
+        for name in names:
+            path = self.source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(("authored current CI input:" + name + "\n").encode())
+            self.assertTrue(m.bundle_path_allowed("source/" + name))
+        root = self.unpack("current-ci")
+        manifest, _ = m.verify_bundle(root)
+        for name in names:
+            with self.subTest(name=name):
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual((root / "source" / name).read_bytes(),
+                                 (self.source / name).read_bytes())
+        with patch.object(m, "compile_source", self.compiler):
+            rebuilt = m.rebuild_bundle(root, self.root / "rebuilt-current-ci")
+        self.assertEqual(rebuilt["binary_sha256"],
+                         manifest["inventory"]["bin/forever-extractor"]["sha256"])
+
+    def test_current_ci_optional_absence_preserves_frozen_rebuild(self):
+        names = m.OPTIONAL_CI_DOCS + m.OPTIONAL_CI_SOURCE
+        self.assertTrue(all(not (self.source / name).exists() for name in names))
+        root = self.unpack("older-ci")
+        manifest, _ = m.verify_bundle(root)
+        self.assertTrue(all("source/" + name not in manifest["inventory"]
+                            for name in names))
+        with patch.object(m, "compile_source", self.compiler):
+            rebuilt = m.rebuild_bundle(root, self.root / "rebuilt-older-ci")
+        self.assertEqual(rebuilt["binary_sha256"],
+                         manifest["inventory"]["bin/forever-extractor"]["sha256"])
+
+    def test_current_ci_optional_allowlist_is_exact(self):
+        self.assertEqual(m.OPTIONAL_CI_DOCS, (
+            "docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md",
+            "docs/forever-windows-membership.md", "docs/forever-windows-output.md"))
+        self.assertEqual(m.OPTIONAL_CI_SOURCE, ("tools/generate_forever_catalog.py",))
+        for name in ("source/docs/forever-linux-compatibility-extra.md",
+                     "source/docs/forever-terrain-v12-extra.md",
+                     "source/docs/forever-windows-membership-extra.md",
+                     "source/docs/forever-windows-output-extra.md",
+                     "source/tools/generate_forever_catalog_extra.py"):
+            with self.subTest(name=name):
+                self.assertFalse(m.bundle_path_allowed(name))
+
     def test_optional_windows_qa_source_is_shipped_when_present(self):
         for name in m.OPTIONAL_WINDOWS_QA_SOURCE:
             path = self.source / name
