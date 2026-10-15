@@ -2609,3 +2609,59 @@ each profile, both example builds, Clippy and format. Earlier timeout/format
 attempts stay failed. Native getter comparison, real terrain and the versioned
 CLI remain pending; this is not full extraction or runtime acceptance. Receipt
 identities and limits are in `docs/forever-linux-compatibility.md`.
+
+The subsequent original available-section getter comparison passes eight
+authored positive cases / 14 direct rows / 16 copy pairs. All 42 commands close;
+independent terminal QA passes without findings. Original ReadMapDBC, native
+CASC and real native inputs are not executed. PR #73 merges as
+`4b9a67767ef382e5a7accdf53ecbaf8f1663d491` after six exact-head CI passes,
+and its branch is deleted. Issue #74 separately implements selected terrain
+70374 with available Map coverage and complete liquid/WDT/ADT sources. The
+fixed proposed two-tile request must reject missing maps/tiles; no real terrain
+availability, product CLI or complete extraction is established. Detailed
+receipts and limits remain in `docs/forever-linux-compatibility.md`.
+
+Issue #74's source candidate now provides a separate Linux70374 selected-terrain
+API for at most two tiles on one map, with available Map coverage, complete
+liquid/WDT/ADT inputs and whole-selection failure. Explicit 70374 pure conversion
+and MAPS wrappers retain older gates. The private fixed two-tile example has an
+optional bounded native-input witness using the same complete buffers after
+Rust conversion; no extra acquisition or raw DB2 export occurs. Focused checks
+pass 226 tests per profile with one historical ignore, selected all-target Clippy
+and format. Fresh immutable qualification, original converter comparison and
+real requested-tile availability remain pending. This is not a product CLI,
+whole-world extraction or runtime acceptance; see the compatibility document.
+
+The subsequent immutable qualification binds all 729 selected committed files
+at `ffdec1aa86fc4a266f6da323fde6ba5ca0e521c4` plus 41 vendor/config files.
+Six commands pass, including 3,061 tests / 26 historical ignores per profile,
+both example builds, all-target Clippy and formatting. Independent terminal
+QA passes without findings; its receipt is
+`46145b344ab5d013420a8ad50ef9a8e4489eea2d6736a366f749e0f3c10cf702`.
+Current-original native compilation and static symbol inspection pass separately;
+the prior overly broad symbol-rule failure remains failed. No native conversion
+or real terrain acceptance follows from these software checks.
+
+The subsequent four authored complete terrain cases pass all 15 commands and
+match 200,470 MAPS bytes with the current-original parser/converter. Terminal
+QA passes (`c5e06a553ff9774addc33df3aeb8a94017791abea3d31fa243dad129006066eb`).
+The first actual fixed Map0 two-tile 70374/esES request also succeeds with
+disabled keys: two MAPS / 142,084 bytes, complete liquid/WDT/ADT inputs and
+available Map coverage (71 rows, one admitted section, three omitted). Its
+single owned group closes with an empty child network trace. Independent
+terminal QA passes (`34ed46c7cd581f63d59cf6ba95a015b0c84167679baa5353dcbfa764636a36da`)
+without producer reruns. Eight private files include complete same-buffer
+witnesses; they are not product artifacts or committed client data. MAPS framing
+checks are not an independent complete-format verifier.
+
+The subsequent same-input comparison separately replays and strictly verifies
+both MAPS through Rust, then executes the current-original parser/converter
+once per tile. All four calls close with empty child traces and exact equality
+against the two acquired files / 142,084 bytes; no new CASC acquisition occurs.
+Independent terminal QA passes without findings
+(`e78aca423acfc6d946b914914c0fcb6091d5a4b6fdb17de1483c688e35b0d629`).
+The source-only first comparison proposal's dynamic-evidence guard finding is
+retained; only the corrected proposal executes. Native CASC, the complete original
+ExtractMaps, scalable map extraction, versioned product CLI and full extraction
+remain pending; this two-tile proof is not the requested stable functional
+release. Details remain in the compatibility document.

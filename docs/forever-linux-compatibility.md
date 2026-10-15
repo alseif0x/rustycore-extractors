@@ -104,7 +104,147 @@ Independent qualification QA: `33ce92a71c9d2d9eb4b909fed1e7617523da3d70e4030dd46
 Aggregate real closing receipt: `332c352719ff5ad36723ef5f625651d27facac57cd5b2833488eae2da70eb6f6`.
 Independent real QA: `76ae874da2a5ad72aa4baf9a45d21a8dc9eda43e9b5a85ff1121301f3c5b367c`.
 
-This establishes available-row acquisition and projection. The original C++
-getter comparison, selected real terrain, product CLI and complete extraction
-remain pending. No terrain, model conversion or runtime consumer executes in
-this diagnostic.
+This establishes available-row acquisition and projection. No terrain, model
+conversion or runtime consumer executes in this diagnostic.
+
+## Original available-section getter comparison
+
+The separately qualified original C++ loader/getters match Rust on all eight
+authored positive fixtures: 14 direct records and 16 copy pairs across complete,
+mixed, all-unknown and empty-middle section cases for both tables. Authored Map
+materialization separately yields eight rows; original `ReadMapDBC` is not run.
+All 42 build/comparison commands exit zero with closed groups. Six original
+translation units and one authored adapter compile; full-system dependencies
+are admitted before compilation and checked again afterward. Sixteen compiler
+traces pass their reviewed local IPC policy; 26 comparison traces are empty.
+All committed DB2 files at `65d0342` match the companion's immutable dependency.
+
+Campaign receipt: `d1556305e7f9f0d08c54d545245fa9e3ee777577d6645c375f55605ee1548853`.
+Independent terminal QA: `e8ad4c0f70d642e54fae12644dd20315ac666afa502e351829f06582448e0b5f`.
+The initial execution admission omitted two already-guarded runtime libraries;
+its failed review is preserved. The corrected admission adds only those loader
+bindings and passes independent review before the single campaign execution.
+There is no native CASC, real-input native comparison or full extractor claim.
+
+PR #73 merged as `4b9a67767ef382e5a7accdf53ecbaf8f1663d491` after all six
+CI jobs passed on its exact head. Its implementation branch is deleted.
+[Issue #74](https://github.com/alseif0x/rustycore-extractors/issues/74) now tracks
+selected real terrain through a separate 70374 API. Map 0 tiles (31,31) and
+(31,32) are the fixed proposed request, not established available inputs.
+Missing maps/tiles or incomplete dependencies must fail the whole selection.
+The selected terrain, versioned product CLI and complete extraction remain open.
+
+## Selected-terrain source candidate
+
+Issue #74 adds a separate Linux-only `terrain::available_70374::run_selected`
+capability for at most two explicit tiles on one map. Available Map coverage
+remains separate from complete liquid/WDT/ADT source facts. Both requested
+tiles must exist; missing or incomplete dependencies, sink errors and source
+changes reject the whole selection. Callbacks remain provisional until success.
+No tile lists are emitted. The pure 70374 conversion/assembly/verification
+entry points share the existing kernels while preserving older API build gates.
+
+The private `terrain_available_70374` example fixes Map 0 tiles (31,31)/(31,32)
+and creates output only after successful conversion of both. Its explicit
+`--native-inputs` option additionally stages the same complete ADT buffers,
+complete typed liquid lookups and contexts for an original-converter comparison.
+These private artifacts are not a product format. A separate 64 MiB caller
+reservation reduces the runner's memory ceiling; no extra acquisition occurs.
+No raw Map/DB2 buffers or inaccessible spans are exported.
+
+Focused debug/release checks each pass 226 tests with one historical corpus
+ignore: terrain 156, CASC terrain 57, availability 9 and the example 4. Selected
+all-target Clippy and formatting pass. The initial catalog-gate and duplicate
+fixture-module failures remain failed and retained. Source freeze:
+`aea7e2da9fdd37ec53036d930629282ff80b836e76a89903ae39f16c136608e6`;
+validation receipt: `6be70b30725e6bc5a5efa8139eaa098d5efdc92a751e1bc6e0b36241984dfa4b`.
+Independent source QA passes without findings:
+`e4497532b5144fa50861bc7b6225990637a4630dd8eaf7241cecd1f59795315f`.
+
+The fresh immutable whole-workspace qualification binds the 729 committed
+files at `ffdec1aa86fc4a266f6da323fde6ba5ca0e521c4`, plus 41 pinned vendor/config
+files. All six commands pass: debug/release each pass 3,061 tests with the same
+26 historical ignores, both example builds, all-target Clippy and formatting.
+Independent terminal QA checks the source snapshot, software guards, streams,
+owned groups, compiler traces and two literal producer copies without findings.
+The two workspace test commands retain `network_not_observed`; four compiler
+commands have separately classified local IPC traces. Qualification receipt:
+`66d83d46834c61fec363305a28551167cb1ebe539300b3ada7ca273fb6bc6405`;
+independent QA: `46145b344ab5d013420a8ad50ef9a8e4489eea2d6736a366f749e0f3c10cf702`.
+
+The current-original supplied-input converter builds separately against the
+pinned upstream `8a864593bb4d566153e89058b33793752ff81c57` sources. Static
+inspection retains the four required parser/converter functions and no forbidden
+acquisition/exporter functions. An initial overly broad symbol rule rejected
+two inert, identical weak shared-pointer destructors; that attempt remains
+failed. A narrow exact-symbol rule and ten passing controls precede the new
+successful static inspection. Neither inspection executes the native program.
+Build receipt: `31fa1e0a66b01c8c2e479f4a3c1372db78d475bcbc964781da7f0fa385ac8d2d`;
+static receipt: `2364318ae6b98c1beb8627706a13c345f8dd8c6e9883e0609754e72b6683cf3a`.
+
+The subsequent four authored complete ADTs compare flat/ramped heights with
+packing disabled/enabled. All 15 commands pass, including four Rust conversions
+with strict 70374 verification followed by four original parser/converter calls.
+All four complete MAPS files match byte for byte (200,470 bytes total).
+Campaign receipt: `86afa9f62a434f9750780bf3b0bbc7efea64a0f14982be6afe5ed5b7d2d008a7`.
+Independent terminal review passes without findings:
+`c5e06a553ff9774addc33df3aeb8a94017791abea3d31fa243dad129006066eb`.
+All 15 groups are absent; fourteen runtime traces are empty and the compiler
+trace passes its local IPC policy. This comparison reads no client and executes
+no native CASC or complete exporter.
+
+## First complete real selected-terrain run
+
+The fixed Map 0 request for (31,31)/(31,32) completes on the same admitted
+70374/esES source with disabled keys. Rust emits two MAPS files / 142,084 bytes
+from 1,253,174 logical source bytes, including the declared Map size. Map retains
+71 direct/materialized rows, one admitted section and three omitted sections.
+Both requested ADTs and all liquid/WDT inputs use the complete-source path.
+There are no tile lists or automatic retries. The owned group closes, the child
+network trace is empty, and software/client metadata checks pass.
+
+The optional private witness contains the same two complete ADTs, contexts and
+one materialized liquid lookup. The closing controller checks their CKeys,
+coordinates, private source identity and exact owned output inventory. It
+checks MAPS framing and extents, not an independent full MAPS interpretation.
+No raw DB2, key material or client asset is committed or published.
+Invocation receipt: `9b8681cf9e50d473929bf1623cc5b470d3795b44ca86fe358e47628fc5657446`.
+Private completion-report receipt:
+`a944d8abe9a4d988656fe46afcfb8434a5310d15b9d80745659d75e3c2ae363e`.
+
+Independent terminal review passes without findings:
+`34ed46c7cd581f63d59cf6ba95a015b0c84167679baa5353dcbfa764636a36da`.
+It independently checks all 3,956 software guards / 48 aliases, the single
+invocation and eight private files, without another acquisition or producer run.
+Map's complete decoded CKey remains unverified; the requested terrain inputs
+have complete-source verification. This two-tile check does not establish a stable
+whole-map extractor, product publication, collision/navigation or runtime
+acceptance. The next product milestone must expand usable extraction coverage;
+the two-tile proof is not the final delivery requested by the operator.
+
+## Current-original comparison on those real inputs
+
+The separately qualified Rust conversion caller replays each same-buffer ADT,
+liquid lookup and context, executes strict 70374 MAPS verification, and matches
+the complete acquired MAPS bytes before the native call is admitted. The
+current-original parser/converter then runs once per tile. Both original outputs
+match the acquired files byte for byte: two files / 142,084 bytes, with four
+complete comparisons including the Rust replays. All four calls exit zero,
+groups close and child network traces are empty. No new CASC acquisition occurs.
+
+The pure final closing binds the original real extraction and independent QA,
+the authored producer qualification, all input CKeys/contexts, per-call guards,
+prechecks, streams and exact private output inventory. An initial source-only
+comparison proposal missed final dynamic evidence guards; it remains unexecuted
+with its finding retained. The corrected proposal closes each complete per-call
+guard map and passes five controls before the four actual calls.
+Closing receipt: `af4cf9efcfda48a52224579adeb5c7a76bd9005325ef8236040a9536b1485e70`.
+Independent terminal review passes without findings:
+`e78aca423acfc6d946b914914c0fcb6091d5a4b6fdb17de1483c688e35b0d629`.
+It independently rechecks all base/dynamic guards, 78 aliases, four current
+absent groups, input/source bindings, full bytes and 51 owned evidence nodes.
+
+This compares supplied complete inputs with the current-original converter;
+it does not execute native CASC, the complete original `ExtractMaps`, a whole
+map or a runtime consumer. The versioned CLI and scalable map traversal are
+the next implementation milestone.

@@ -669,3 +669,56 @@ fn assembly_and_verification_do_not_modify_inputs() {
     assert_eq!(holes, before.3);
     assert_eq!(bytes, bytes_before);
 }
+
+#[test]
+fn current_70374_entrypoints_do_not_widen_legacy_gates() {
+    let a = area(true);
+    let h = heights(Encoding::Uint8, true);
+    let l = liquids(true, true, false);
+    let sections = MapSections {
+        area: &a,
+        height: &h,
+        liquid: Some(&l),
+        holes: None,
+    };
+    let bytes = assemble_70374(70374, sections, MAX_MAP_BYTES).unwrap();
+    assert_eq!(
+        verify_70374(&bytes, 70374, MAX_MAP_BYTES).unwrap().build(),
+        70374
+    );
+    assert_eq!(
+        assemble(70374, sections, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    assert_eq!(
+        verify(&bytes, 70374, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    for build in [0, 70170, 70205, 70338, u32::MAX] {
+        assert_eq!(
+            assemble_70374(build, sections, MAX_MAP_BYTES).err(),
+            Some(Error::UnsupportedBuild)
+        );
+        assert_eq!(
+            verify_70374(&bytes, build, MAX_MAP_BYTES).err(),
+            Some(Error::UnsupportedBuild)
+        );
+    }
+    let mut legacy = bytes.clone();
+    set32(&mut legacy, 8, 70205);
+    assert!(verify(&legacy, 70205, MAX_MAP_BYTES).is_ok());
+    assert_eq!(
+        verify_70374(&legacy, 70374, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    assert_eq!(
+        verify_70374(&bytes, 70374, bytes.len() - 1).err(),
+        Some(Error::Limit)
+    );
+    let mut trailing = bytes;
+    trailing.push(0);
+    assert_eq!(
+        verify_70374(&trailing, 70374, MAX_MAP_BYTES).err(),
+        Some(Error::Layout)
+    );
+}

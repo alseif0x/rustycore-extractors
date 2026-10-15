@@ -144,3 +144,34 @@ fn other_builds_cannot_implicitly_use_new_profile() {
         Err(AvailableError::Build)
     ));
 }
+
+#[test]
+fn external_live_budget_constrains_strict_and_partial_before_allocation() {
+    for partial in [false, true] {
+        let mut b = if partial {
+            partial_builder()
+        } else {
+            Builder::new(CONTENT)
+        };
+        b.version = "1.60.1.70374";
+        let f = b.write();
+        let mut s = available_store(&f);
+        let resident = s.stats().resident_bytes;
+        for (external, cap) in [(1, resident), (usize::MAX, resident), (0, resident)] {
+            assert!(matches!(
+                s.read_file_data_id_available_with_external_budget(FILE_ID, 1024, external, cap),
+                Err(AvailableError::Store(Error::Limit))
+            ));
+            s.verify_unchanged().unwrap();
+        }
+        assert!(
+            s.read_file_data_id_available_with_external_budget(
+                FILE_ID,
+                1024,
+                1024,
+                Limits::default().max_memory_bytes
+            )
+            .is_ok()
+        );
+    }
+}

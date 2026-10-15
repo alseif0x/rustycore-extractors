@@ -3,7 +3,7 @@
 use super::*;
 use crate::local_store::tests::{CollisionFile, CollisionFixture};
 use plan::{Selection, TileRequest};
-mod fixtures;
+pub(crate) mod fixtures;
 mod native;
 use fixtures::*;
 

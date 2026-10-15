@@ -23,7 +23,7 @@ use forever_terrain::{Wdt, conversion, liquid};
 
 mod tables;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 
 pub const MAP_ID: u32 = 1_349_477;
 pub const MATERIAL_ID: u32 = 1_132_538;
