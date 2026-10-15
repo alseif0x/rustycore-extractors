@@ -251,3 +251,44 @@ The observed Rust error alone still does not establish physical absence,
 encryption or native-reader failure. The same-request native comparison is
 the next gate. A separate compatible-mode source candidate is being prepared;
 it has no product, real-client or native-loop acceptance at this checkpoint.
+
+## Same-request native diagnosis closed — 2026-10-15
+
+The qualified native observer makes one invocation containing two predeclared
+fresh-storage observations of that exact private WDT request. Both esES stores
+open, but both file opens return error 2 / `missing`: zero opened targets,
+complete files or acquired bytes. The invocation closes in 6.982 seconds with
+child and numeric parent exit zero, empty runtime trace/groups and no retries.
+These diagnostic exits record unavailable input; they do not accept extraction.
+
+The observer links the pinned existing CascLib archives and uses their built-in
+keys, with no supplied keys. Its earlier build runner remains failed after an
+incomplete static dependency allowlist. A separate static qualification admits
+the same retained executable and the already-pinned transitive dependencies;
+there is no compiler rerun or retrospective successful-runner claim. The runtime
+keeps its empty-network requirement. Varying the ignored file-open locale
+argument is not a ROOT-locale comparison or evidence of locale recovery.
+
+Independent terminal review passes 859 checks without findings, covering all
+4,709 physical guards / 88 original alias bindings, all 645 native and 4,102
+Rust guard authorities, the 782 qualified files, exact private request and
+source correlations, retained failed inventory/prefix, bounded client metadata,
+seven child evidence files and current terminal state. Closing receipt is
+`9b87c499b8a472de8e4c0d15bc21ad468f1ad1b77193390adeaf39ef52ee5797`;
+independent QA is
+`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`.
+Two auditor assumptions were corrected without changing or replaying a producer:
+native aliases use the original runtime's lexical-path resolution rules, and an
+empty terminal ControlGroup denotes no owned cgroup rather than the root group.
+
+This closes the selected missing-request diagnosis, not general native/Rust
+routing or key-policy parity, physical absence from every locale, encryption
+classification or original full-loop execution. The demonstrated difference is
+the strict product's terminal response to an unavailable requested WDT versus
+the original map loop's continuation with an empty list.
+[Issue #80](https://github.com/alseif0x/rustycore-extractors/issues/80) tracks the
+separate compatible terrain API/product: unavailable WDT coverage is unknown,
+unavailable ADTs do not set output bits, and integrity/conversion/publication
+failures remain terminal. Its implementation and authored original-loop,
+real all-map, verifier/recovery and packaging gates remain open. Strict v12 and
+the earlier failed all-map output retain their contracts.

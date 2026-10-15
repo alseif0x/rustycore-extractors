@@ -4263,3 +4263,16 @@ and group, and numeric parent exit zero
 (`2c24ff5bfb511cf5ca3b437f4ac1d173fb7ec77cd24ae6c0b890d9503ce86ea5`).
 Same-request native comparison and the separate compatible-mode implementation
 remain pending; full extraction stays open.
+
+The subsequent native same-request invocation closes the selected diagnosis:
+two predeclared fresh esES storage observations both fail at file open with
+error2/missing, yielding zero complete files or bytes. Independent terminal QA
+passes 859 checks without findings
+(`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`).
+Native built-in keys and an ignored file-open locale argument establish no
+general policy/routing parity. The original loop's missing-input continuation
+differs from strict v12's terminal policy.
+[Issue #80](https://github.com/alseif0x/rustycore-extractors/issues/80) tracks the
+new compatible terrain API/product and its authored-loop, whole-map,
+verification/recovery and packaging acceptance. That implementation and the
+remaining extraction-suite/runtime gates stay open; v12 is not relabeled.

@@ -2788,3 +2788,17 @@ Independent terminal QA passes without findings
 The same-request native comparison remains pending; this error alone proves
 neither physical absence nor encryption. A compatible-mode source candidate
 has no executed acceptance yet; strict v12 remains unchanged.
+
+The native same-request observer subsequently makes two predeclared fresh esES
+storage observations in one invocation: both stores open, both target opens
+return error2/missing, and zero complete files/bytes result. Child/parent exit0,
+empty runtime trace/groups and unchanged 4,709 physical guards / 88 aliases,
+645 native authorities, 4,102 Rust authorities, 782 qualified files and private
+request/inventories/metadata close independently. QA passes 859 checks
+(`80898c937f7dcdaebe1a7c3f5a5764f130e77acee4eba9c96f9fb9bb26cb1a9d`).
+Native built-in keys do not establish policy parity; the ignored open-locale
+argument establishes no locale recovery. The earlier native build runner stays
+failed; separate static qualification admits its same retained binary without
+recompiling. This closes the selected diagnosis, not physical global absence,
+encryption or full-loop/runtime acceptance. Issue #80 tracks the separately
+versioned compatible terrain implementation and its remaining acceptance gates.
