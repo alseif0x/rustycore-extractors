@@ -58,6 +58,17 @@ The missing source/dependency still needs typed diagnosis. Disk startup/world
 integration, complete real outputs, navigation, runtime and Linux distribution
 remain goal gates. See docs/forever-collision.md and docs/forever-completion.md.
 
+Subsequent issue #82 closing binds functional commit
+`fc7ad770b2a103f8964205569e86ccd5c5bca599` to all 758 selected Git sources
+and two documentation annexes. Fresh V6 qualification passes all eight commands;
+independent final QA is
+`9eda7513779ef440ca83412128b77889bb0e88c46d2c42b2e09a54d8d455e71e`.
+Independent review closes the actual startup as an expected negative. A separate
+two-request diagnostic reads both current Map and GODI successfully (71 and
+3,195 direct rows; zero and twenty copy pairs). It does not acquire models or
+accept collision ancestry/runtime. The unavailable dependency remains unidentified.
+This closing paragraph is a later metadata-only addition, not a rebuilt source.
+
 ### Current Linux product scope — 2026-10-14
 
 Issue #70 separately exercises the three liquid startup sources on real

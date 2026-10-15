@@ -79,6 +79,42 @@ world/staged product integration, complete real geometry and navigation,
 runtime installation, final source qualification and a reproducible Linux
 release remain gates. This checkpoint does not complete the extractor.
 
+### Subsequent issue #82 closing
+
+Fresh V6 software qualification passes the same eight commands and test totals.
+Whole report is
+`69779919e487271666fb8402d5d15a83e77be191a4897bdbcd9e1ea7c0e63d01`;
+independent final QA is
+`9eda7513779ef440ca83412128b77889bb0e88c46d2c42b2e09a54d8d455e71e`.
+Its 799 selected inputs include 758 Git sources and 41 external offline
+vendor/configuration inputs; two documentation annexes are separately guarded.
+Functional commit `fc7ad770b2a103f8964205569e86ccd5c5bca599` exactly matches
+the 758 selected Git inputs and both annexes. Source equality is recorded by
+`2897ec8fe785cd131338eb4269b6dcf29beac826a29bf377e98935631c89f54f`.
+Qualification preceded that commit; there was no recompilation at the commit.
+The first final auditor failed on its own missing command-list binding; its
+failure is retained and the corrected read-only audit passes without producer
+reruns or source/admission changes.
+
+Independent real negative QA is
+`677b801a726aeb92415807717d98d9026a833d4e7586cffb998d15f6575d92e7`.
+A distinct, separately admitted existing probe then makes two complete
+available-source requests: Map has 71 direct rows and no copies; GODI has
+3,195 direct rows and twenty checked, unreplayed copies. Both projections pass
+with no errors, new collection identity matches and sources remain unchanged.
+Whole diagnostic closing is
+`f1924bc5cffb150dd44f7a8763a89a2d431cab2748dffc2c23c6cf9fadf9ac69`;
+independent diagnostic QA is
+`84d4451d6c2246942a6c344f78f4881f034e449016efae55954f3e3c996c8aea`.
+The older probe's Map projection does not accept the new collision ancestry
+reader. It exports no plaintext/model package and establishes no real model,
+world or runtime acceptance. Diagnosis now points toward model/dependency
+acquisition; the exact unavailable dependency remains unidentified. No omission
+policy or product admission changes. This closing subsection and the companion
+Markdown closing paragraphs are later metadata-only additions, not rebuilt by
+the V6 qualification. Disk integration, real outputs/navigation/runtime and
+full Linux distribution remain goal gates.
+
 The dependency-free `forever-vmap` crate implements borrowed M2 collision
 parsing, a single-M2 raw writer and a strict reader for that raw subset. Its
 WMO implementation parses borrowed root/group files, projects collision

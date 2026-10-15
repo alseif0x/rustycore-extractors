@@ -64,6 +64,16 @@ disk startup/world/product integration, complete real component outputs,
 navigation, runtime acceptance and reproducible Linux packaging. Earlier
 component evidence below remains tied to its producing source and collection.
 
+The subsequent issue #82 closing accepts fresh eight-command V6 software
+qualification, with independent QA
+`9eda7513779ef440ca83412128b77889bb0e88c46d2c42b2e09a54d8d455e71e`.
+Functional commit `fc7ad770b2a103f8964205569e86ccd5c5bca599` matches all 758
+selected Git sources and two annex documents. Independent real closing confirms
+the startup failure; a separate two-request diagnostic successfully reads both
+Map and GODI, narrowing diagnosis toward model/dependency acquisition without
+identifying the missing dependency. Full extraction and the gates above remain
+open. This paragraph is a later metadata-only addition, not a rebuilt source.
+
 ## Required components
 
 | Component | Current evidence | Completion requirement |
