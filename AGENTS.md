@@ -2753,6 +2753,24 @@ closing 336 leaf evidence files, fourteen output roots, 4,060 guards/48 aliases,
 child groups/traces/seccomp and the retained numeric parent terminal. There are
 zero retries. Source-only controller/auditor corrections and earlier metadata
 failures are retained; no producer rebuild follows. This closes authored process
-recovery, not power-loss or real-client recovery. Final PR integration still
-requires its exact-head CI; complete all-map, collision/navigation, runtime and
+recovery, not power-loss or real-client recovery. PR #77 merges into forever
+after all six final-head CI checks pass; complete all-map, collision/navigation, runtime and
 stable-suite/distribution gates remain. See docs/forever-terrain-v12.md.
+
+### Linux70374 first all-available terrain attempt — 2026-10-15
+
+The qualified release's first actual all-available-maps run fails after 54.131s
+with file_unavailable/maps (child 9, parent 1). Its 1,724 MAPS and two tile lists /
+128,123,861 bytes remain provisional; coverage, complete manifest and maps seal are
+absent. No verifier/resume/retry or accepted prefix follows. Negative terminal
+QA closes 4,010 guards / 48 aliases, 782 qualified source files and bounded build metadata
+unchanged, with empty child trace and empty owned groups. QA SHA is
+`f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`.
+Private failed outputs and numeric parent proof are retained; only the terminal
+service is cleaned after QA. The explicit long helper declares 21,600 wall / 14,400 CPU
+seconds; this is an input-read failure, not a timeout. Source-only original
+geometry routing uses ALL_WOW while Rust uses its explicit locale, and the
+original loop continues unsuccessful loads. Neither native same-request parity
+nor a causal missing/encrypted request is established. Issue #78 tracks bounded
+private diagnosis before any separately versioned policy change; strict v12 and
+accepted real Map0/recovery evidence remain unchanged. See docs/forever-terrain-v12.md.

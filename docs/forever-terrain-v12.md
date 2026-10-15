@@ -183,6 +183,44 @@ leave the qualified producer binaries unchanged; the 48-call stage executes
 once, without producer retries.
 
 The real Map0 and authored recovery gates are now closed for this terrain
-component. An actual all-available-maps run, build-70374 collision/navigation
+component. All-available-maps acceptance, build-70374 collision/navigation
 product integration, runtime acceptance and reproducible stable distribution
 remain separate work. No complete stable extraction-suite claim follows.
+
+## Failed all-available-maps attempt — 2026-10-15
+
+After PR #77 merges, the same qualified release makes one actual
+`all-available-maps` attempt with disabled keys. It fails after 54.131 seconds
+with `file_unavailable` / component `maps`, child exit 9 and parent exit 1.
+There are 1,724 provisional MAPS and two provisional tile lists, totaling
+1,726 artifacts / 128,123,861 bytes. None is accepted as a successful prefix.
+Coverage, a complete manifest and the maps seal are absent; no snapshot,
+verifier, resume or retry follows.
+
+The separately reviewed launcher declares 21,600 wall seconds and 14,400 CPU
+seconds per inherited process, preserving the other resource and network
+controls. This failure occurs before either deadline. Fifty-one pure controls
+pass for the new streaming inventory/closing helpers; they do not validate this
+failed product. Two preparation failures remain recorded: the helper directory
+needed its existing frozen files sealed under a read-only directory, and the
+preparer needed the already-pinned resolved ELF inspector guard. These fixes
+change neither the qualified producer nor the failed attempt's interpretation.
+
+Independent negative terminal QA closes all 4,010 guards / 48 aliases, the 782
+qualified source files and bounded build metadata unchanged. Child network
+trace is empty, the recorded child group and parent cgroup are empty, and there
+are zero restarts. The private incomplete inventory has 3,456 physical files /
+five directories / 128,364,056 bytes. Failure QA receipt SHA-256 is
+`f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`.
+The numeric parent proof is retained before removing only its terminal service;
+all failed outputs remain private and preserved.
+
+The generic error establishes neither the causal request nor encryption or
+native-reader failure. Source inspection shows that the original map loop
+continues after unsuccessful WDT loading and writes an empty tile list; an
+unsuccessful ADT conversion leaves that tile's bit clear. Its geometry reader
+uses `CASC_LOCALE_ALL_WOW`, whereas current Rust ROOT eligibility uses the
+explicit store locale. No same-request native comparison or original complete
+map-loop execution has established the cause. [Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78)
+tracks a bounded private diagnosis before any separately versioned policy
+change. Strict v12 behavior and the earlier accepted Map0 package remain intact.
