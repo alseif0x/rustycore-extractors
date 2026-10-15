@@ -20,7 +20,7 @@ fn chunk(tag: &[u8; 4], body: &[u8]) -> Vec<u8> {
     out
 }
 // Literal numeric WDC5 fixture, independent of generated schema objects.
-fn gameobject_db2(rows: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<u8> {
+pub(in crate::collision) fn gameobject_db2(rows: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<u8> {
     let mut bytes = vec![0; 496];
     bytes[..4].copy_from_slice(b"WDC5");
     for (at, value) in [
@@ -77,7 +77,7 @@ fn gameobject_db2(rows: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<u8> {
     }
     bytes
 }
-fn m2(faces: bool) -> Vec<u8> {
+pub(in crate::collision) fn m2(faces: bool) -> Vec<u8> {
     let mut bytes = vec![0; 304];
     bytes[..4].copy_from_slice(b"MD20");
     if faces {
@@ -99,7 +99,7 @@ fn m2(faces: bool) -> Vec<u8> {
     }
     bytes
 }
-fn wmo_root(group: u32, child: Option<u32>) -> Vec<u8> {
+pub(in crate::collision) fn wmo_root(group: u32, child: Option<u32>) -> Vec<u8> {
     let mut header = [0; 64];
     put(&mut header, 4, 1);
     put(&mut header, 32, 777);
@@ -119,7 +119,7 @@ fn wmo_root(group: u32, child: Option<u32>) -> Vec<u8> {
     }
     bytes
 }
-fn wmo_group(faces: bool, child: bool, liquid: bool) -> Vec<u8> {
+pub(in crate::collision) fn wmo_group(faces: bool, child: bool, liquid: bool) -> Vec<u8> {
     let mut header = vec![0; 68];
     put(&mut header, 56, 99);
     if liquid {
@@ -255,7 +255,7 @@ fn table(
     }
     bytes
 }
-fn map_db2(values: &[(u32, u32, i16)], copies: &[(u32, u32)]) -> Vec<u8> {
+pub(in crate::collision) fn map_db2(values: &[(u32, u32, i16)], copies: &[(u32, u32)]) -> Vec<u8> {
     let mut rows = Vec::new();
     let mut strings = Vec::new();
     for (ordinal, &(id, wdt, parent)) in values.iter().enumerate() {
@@ -298,7 +298,7 @@ fn type_db2(values: &[(u32, u8)], copies: &[(u32, u32)]) -> Vec<u8> {
         .collect();
     table(0xD1EC_EEC9, TYPE, &rows, &[], copies)
 }
-fn files(maps: &[(u32, u32, i16)]) -> Vec<CollisionFile<'static>> {
+pub(in crate::collision) fn files(maps: &[(u32, u32, i16)]) -> Vec<CollisionFile<'static>> {
     vec![
         (
             gameobjects::TABLE_FILE_DATA_ID,
@@ -310,7 +310,7 @@ fn files(maps: &[(u32, u32, i16)]) -> Vec<CollisionFile<'static>> {
         (TYPE_FILE_DATA_ID, None, type_db2(&[(22, 7)], &[])),
     ]
 }
-fn wdt(global: Option<u32>, tile: Option<u32>) -> Vec<u8> {
+pub(in crate::collision) fn wdt(global: Option<u32>, tile: Option<u32>) -> Vec<u8> {
     let mut bytes = Vec::new();
     if let Some(id) = global {
         bytes.extend(wmo_adt(id, 7));
@@ -331,14 +331,14 @@ fn wdt(global: Option<u32>, tile: Option<u32>) -> Vec<u8> {
     }
     bytes
 }
-fn wmo_adt(id: u32, unique: u32) -> Vec<u8> {
+pub(in crate::collision) fn wmo_adt(id: u32, unique: u32) -> Vec<u8> {
     let mut row = [0; 64];
     put(&mut row, 0, id);
     put(&mut row, 4, unique);
     row[56..58].copy_from_slice(&8u16.to_le_bytes());
     chunk(b"MODF", &row)
 }
-fn m2_adt(id: u32, unique: u32) -> Vec<u8> {
+pub(in crate::collision) fn m2_adt(id: u32, unique: u32) -> Vec<u8> {
     let mut row = [0; 36];
     put(&mut row, 0, id);
     put(&mut row, 4, unique);

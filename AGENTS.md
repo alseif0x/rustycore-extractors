@@ -31,6 +31,33 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Linux70374 available collision checkpoint — 2026-10-16
+
+Issue #82 adds separate available GameObjectDisplayInfo/Map startup, world and
+resident assembly owners. Available TableFacts remain distinct from complete
+SourceFacts; model, liquid, WDT and object dependencies stay strict. No product
+profile, omission policy or resource-cap increase is introduced. The immutable
+V5 candidate passes eight software commands, including 3,220 workspace tests /
+26 historical ignores per debug/release profile. A separate joined comparison
+passes all 173 processes: 56 complete original/Rust cases, three partial-section
+twins and four expected Rust failures. Independent QA closes 8,860 checks.
+The private startup observer additionally passes its 15-process authored matrix
+(one preparation, 12 release calls, two debug calls) and 2,114 independent checks;
+that matrix does not execute its sixteen authored Rust unit methods.
+
+The current client still declares 70374/esES, but its logical collection identity
+differs from the previously accepted collection. The old admission rejects;
+historical real DB2/terrain/model/runtime acceptance is not transferred. A new,
+separate metadata admission has two stable observations and an independent
+configuration-MD5/identity check. Its single actual startup observation rejects
+with file_unavailable: identity matches, names activate and the store remains
+unchanged, but startup does not complete and no prefix is accepted. Only a
+private aggregate report is emitted. Root closing passes; independent real
+closing review and final source qualification remain pending at this checkpoint.
+The missing source/dependency still needs typed diagnosis. Disk startup/world
+integration, complete real outputs, navigation, runtime and Linux distribution
+remain goal gates. See docs/forever-collision.md and docs/forever-completion.md.
+
 ### Current Linux product scope — 2026-10-14
 
 Issue #70 separately exercises the three liquid startup sources on real

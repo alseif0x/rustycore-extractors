@@ -826,6 +826,8 @@ fn legacy_error_remains_exhaustively_matchable_without_new_variant() {
             CollisionError::State => "collision_invalid_state",
             CollisionError::Aborted => "collision_external_run_failure",
             CollisionError::Store(e) => e.code(),
+            #[cfg(target_os = "linux")]
+            CollisionError::Available(e) => e.code(),
             CollisionError::M2(e) => e.code(),
             CollisionError::Wmo(e) => e.code(),
         }

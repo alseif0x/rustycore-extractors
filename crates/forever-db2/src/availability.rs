@@ -105,6 +105,69 @@ impl AvailableRecords<source::MapFields> {
     }
 }
 
+/// Available VMap rows with their original admitted-direct prefix and section
+/// coverage. Copy replay never adds parent lookup sources or removes WDT-zero
+/// rows. This owner does not validate or traverse the parent graph.
+pub struct MaterializedVMapMaps {
+    rows: Vec<source::DirectRecord<source::VMapFields>>,
+    direct_len: usize,
+    sections: Vec<SectionCoverage>,
+}
+impl MaterializedVMapMaps {
+    /// Actual retained Vec/String capacities, excluding the borrowed source,
+    /// fixed owner and temporary allocations already released by materialize.
+    pub fn resident_bytes(&self) -> Result<usize, RecordError> {
+        let rows = self
+            .rows
+            .capacity()
+            .checked_mul(std::mem::size_of::<source::DirectRecord<source::VMapFields>>())
+            .ok_or(RecordError::Limit)?;
+        let sections = self
+            .sections
+            .capacity()
+            .checked_mul(std::mem::size_of::<SectionCoverage>())
+            .ok_or(RecordError::Limit)?;
+        self.rows.iter().try_fold(
+            rows.checked_add(sections).ok_or(RecordError::Limit)?,
+            |n, row| {
+                n.checked_add(row.fields.name.capacity())
+                    .and_then(|v| v.checked_add(row.fields.directory.capacity()))
+                    .ok_or(RecordError::Limit)
+            },
+        )
+    }
+    pub fn rows(&self) -> &[source::DirectRecord<source::VMapFields>] {
+        &self.rows
+    }
+    /// Only these unchanged prefix rows may supply native-style parent lookup.
+    /// Copy-created IDs in the remainder never become direct parent sources.
+    pub fn direct_records(&self) -> &[source::DirectRecord<source::VMapFields>] {
+        &self.rows[..self.direct_len]
+    }
+    pub fn sections(&self) -> &[SectionCoverage] {
+        &self.sections
+    }
+    /// This reports declared section admission, not CKey/EKey authentication.
+    pub fn all_sections_admitted(&self) -> bool {
+        self.sections
+            .iter()
+            .all(|s| s.state == SectionState::Admitted)
+    }
+}
+impl AvailableRecords<source::VMapFields> {
+    /// Reuse the complete VMap materializer's source-direct-only copies,
+    /// signed effective parents and 200k-row/64 MiB cumulative text limits.
+    /// WDT-zero rows and the admitted-direct prefix remain unchanged.
+    pub fn materialize(self) -> Result<MaterializedVMapMaps, RecordError> {
+        let direct_len = self.records.direct_records().len();
+        Ok(MaterializedVMapMaps {
+            rows: self.records.materialize()?,
+            direct_len,
+            sections: self.sections,
+        })
+    }
+}
+
 /// Explicit current-catalog terrain Map projection; a missing known-section
 /// byte or any required logical string dependency is fatal, not a silent skip.
 pub fn read_map_70374(
@@ -112,10 +175,76 @@ pub fn read_map_70374(
 ) -> Result<AvailableRecords<source::MapFields>, RecordError> {
     available_sections::read_map(input)
 }
+/// Explicit current-catalog available VMap Map projection. Omitted sections
+/// stay omitted with attached coverage; required known bytes/text are fatal.
+/// This cannot be converted into a public complete-file SourceRecords owner.
+pub fn read_vmap_maps_70374(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::VMapFields>, RecordError> {
+    available_sections::read_vmap_maps(input)
+}
 /// Original GODI consumer reads physical direct rows only. Copies are retained
 /// inspection facts, never replayed or implicitly used for model acquisition.
 pub fn read_gameobject_display_info_70374(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
     available_sections::read_gameobjects(input)
+}
+
+#[cfg(test)]
+mod vmap_capacity_tests {
+    use super::*;
+
+    #[test]
+    fn available_vmap_resident_bytes_charge_retained_capacity_and_strings() {
+        let mut rows = Vec::with_capacity(7);
+        let mut name = String::with_capacity(32);
+        name.push('n');
+        let mut directory = String::with_capacity(64);
+        directory.push('d');
+        rows.push(source::DirectRecord {
+            id: 1,
+            fields: source::VMapFields {
+                wdt_file_data_id: 0,
+                parent_map_id: -1,
+                name,
+                directory,
+            },
+        });
+        let mut sections = Vec::with_capacity(5);
+        sections.push(SectionCoverage {
+            ordinal: 0,
+            declared_records: 1,
+            declared_copies: 0,
+            state: SectionState::UnknownTact,
+        });
+        let expected = rows.capacity()
+            * std::mem::size_of::<source::DirectRecord<source::VMapFields>>()
+            + rows[0].fields.name.capacity()
+            + rows[0].fields.directory.capacity()
+            + sections.capacity() * std::mem::size_of::<SectionCoverage>();
+        let owner = MaterializedVMapMaps {
+            rows,
+            direct_len: 1,
+            sections,
+        };
+        assert_eq!(owner.resident_bytes().unwrap(), expected);
+        assert!(!owner.all_sections_admitted());
+    }
+
+    #[test]
+    fn available_vmap_resident_bytes_charge_empty_reserved_vectors() {
+        let rows = Vec::with_capacity(3);
+        let sections = Vec::with_capacity(2);
+        let expected = rows.capacity()
+            * std::mem::size_of::<source::DirectRecord<source::VMapFields>>()
+            + sections.capacity() * std::mem::size_of::<SectionCoverage>();
+        let owner = MaterializedVMapMaps {
+            rows,
+            direct_len: 0,
+            sections,
+        };
+        assert_eq!(owner.resident_bytes().unwrap(), expected);
+        assert!(owner.direct_records().is_empty());
+    }
 }

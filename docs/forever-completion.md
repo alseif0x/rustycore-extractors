@@ -20,7 +20,7 @@ a later delivery, preserved in deferred draft PR #27. Historical cross-platform
 requirements below do not make Windows a prerequisite for the Linux milestone.
 Completed, validated implementations merge into `forever`; their feature branches
 are deleted while pending source and the legacy version line remain preserved.
-Bounded current `.build.info` reads declare build 70374 and Classic 70003;
+Earlier bounded `.build.info` reads declared build 70374 and Classic 70003;
 this does not authenticate a game PE or complete installed assets. Historical
 70205 and 70338 evidence remains tied to its recorded sources.
 Linux v11 separately admits explicit 70374 DB2/GT/raw cameras, sealed source and
@@ -38,6 +38,31 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 31-file views, with final independent REAL QA `passed`.
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
+
+## Current70374 collision checkpoint — 2026-10-16
+
+Issue #82's separate available collision owners have candidate software
+qualification, 56 complete joined comparisons against original C++ and a
+15-process private-observer matrix, each with independent synthetic QA. These
+are library/source results; the product CLI does not yet expose this collision
+profile. Final source qualification remains pending.
+
+The current installed collection still declares 70374/esES but has a different
+logical identity from the previous accepted collection. The old admission
+rejects and its historical real acceptance is not transferred. A distinct new
+metadata admission passes two stable observations and an independent identity
+check. Its one actual startup observation rejects with `file_unavailable`:
+identity matches, names activate and final source verification passes, but
+startup is incomplete and completion facts are null. No prefix or full
+extraction is accepted. Root negative closing is
+`8e9351c4fbc4caeddded86808ad82ab8a8455410f4e76dbeb460e41d608aaa59`;
+independent real closing review is pending. See the precise scope and reports
+in [the collision checkpoint](forever-collision.md#linux70374-available-collision-checkpoint--2026-10-16).
+
+Next gates are typed diagnosis of the unavailable source/dependency, available
+disk startup/world/product integration, complete real component outputs,
+navigation, runtime acceptance and reproducible Linux packaging. Earlier
+component evidence below remains tied to its producing source and collection.
 
 ## Required components
 

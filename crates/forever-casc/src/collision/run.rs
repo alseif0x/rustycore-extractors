@@ -33,7 +33,7 @@ use forever_vmap::{
     wmo::liquid::LiquidLookup,
 };
 
-mod shared;
+pub(super) mod shared;
 pub use shared::{SharedLimits, SharedReport, extract_shared};
 #[cfg(target_os = "linux")]
 pub mod inventory;

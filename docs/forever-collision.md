@@ -1,5 +1,84 @@
 # Forever collision foundation
 
+## Linux70374 available collision checkpoint — 2026-10-16
+
+Issue #82 provides separate available-section startup/world owners in
+`forever_casc::collision::available_70374` and a consuming resident assembly
+owner in `collision::assemble::available_70374`. Producer-reported available
+coverage remains distinct from complete SourceFacts. Unknown encrypted sections
+retain explicit coverage; known-section holes and missing model, liquid, WDT or
+object dependencies are terminal. Map projection retains WDT-zero rows and
+signed parents, with checked direct-source copy replay. GODI copies validate
+without initiating model acquisition. One collector/cache/ledger survives the
+startup/world/assembly transitions. Existing strict APIs and product profiles
+keep their contracts; this increment adds no product CLI, omission policy or
+resource-cap increase.
+
+Immutable V5 candidate qualification passes all eight commands: 3,220 ordinary
+workspace tests / 26 historical ignores per debug/release profile, 403 DB2 tests
+/ one historical ignore, Clippy/format, 424 source checks / two skips and 165
+distribution checks / one skip. Whole report:
+`3e41576a13ce7a2468bf95d574e9c758e1d6117e3d23a49eb284083e25ee29aa`;
+independent QA:
+`b8cc66e73a34ced72d4d67ed4666439eb375ec7279c62e4761fdcaba481f59cd`.
+This is pre-commit qualification; final source qualification is pending.
+
+The separate original-getter campaign passes 26 authored processes and eight
+complete comparisons. Its report/QA are
+`34c42e0cfdabda85ad2f428e8b18653531cdab0ec705ec12b45fe9ec60610197`
+and `d48c25d4deaaa77ebcc9a8404afb7d9ed8ea949e4001cfb43e0440306653c9c4`.
+The joined campaign then executes one fixture generator, 112 Rust positive calls,
+56 original native calls and four expected Rust failures. All 56 complete
+startup/world/assembly comparisons pass, including three partial-section cases
+compared with complete twins. Original producer bodies at pinned TrinityCore
+`8a864593bb4d566153e89058b33793752ff81c57` run serially against an authored memory
+inventory; Rust reads complete toy CASC. Whole joined report:
+`86824f8c16cca97cb34282e5a0bcefaa529ec08afef0f86a5de4c7c83363b9e9`;
+independent QA:
+`71c2f704a45c15d078119e22923ccbd0ad3bc8814b8f25af7f8beed71ce2fb91`.
+All 173 runtime traces are empty and owned groups absent at closing. Source,
+binary, fixture, output and software physical guards close. This authored
+comparison does not establish native CASC routing, parallel scheduling or real
+client parity.
+
+A private startup observer has separate debug/release compiler and static ELF
+acceptance. Its authored matrix passes one preparation and fourteen observer
+calls (twelve release, two debug), with successful shapes and expected failure
+and exclusive-output boundaries. Whole report:
+`3f7bf9d36e066b09267b54e51ed37d6872d5529e50ba6f74c0643f8057f026cf`;
+independent QA:
+`a8b5b9aab54531d3d9c4c6c9e4f98d52ff80e64341a888bae3508284d834d01c`.
+Its sixteen authored Rust unit methods were not run by that matrix. No general
+CLI coverage or product publication is inferred.
+
+### Actual current-collection startup remains negative
+
+The installed client still declares 70374/esES, but both its whole build metadata
+and calculated logical identity differ from the previously accepted collection.
+Retained historical metadata cannot identify which opaque identity component
+changed. The old admission fails before observer execution and remains failed.
+A separately recorded new collection admission uses two stable metadata
+observations, configuration MD5 verification and an independently recomputed
+expected identity. It transfers no historical real DB2, terrain, model, world
+or runtime acceptance.
+
+Its one actual observer call exits 4 with `file_unavailable`. Source identity
+matches, conservative names activate, final store verification passes and the
+closing error is null. Startup is incomplete; completion facts are null and no
+available prefix is accepted. The only observer output is one private aggregate
+report; no RAW/model package is exported. The literal runtime trace is empty,
+the owned group is absent and all 4,998 software/metadata proof guards with 48
+aliases close. Whole root negative closing:
+`8e9351c4fbc4caeddded86808ad82ab8a8455410f4e76dbeb460e41d608aaa59`.
+Independent real closing review remains pending. The flattened error does not
+yet distinguish the GODI source from a model dependency; a separately admitted
+typed diagnostic is needed before any omission-policy change.
+
+The resident 4,096 candidate/model ceilings remain. Available disk startup,
+world/staged product integration, complete real geometry and navigation,
+runtime installation, final source qualification and a reproducible Linux
+release remain gates. This checkpoint does not complete the extractor.
+
 The dependency-free `forever-vmap` crate implements borrowed M2 collision
 parsing, a single-M2 raw writer and a strict reader for that raw subset. Its
 WMO implementation parses borrowed root/group files, projects collision

@@ -506,3 +506,452 @@ fn available_known_empty_section_accepts_source_that_rejects_empty_reads() {
     assert_eq!(out.sections()[0].declared_records, 0);
     assert!(input.range(input.data.len() as u64, 0).is_err());
 }
+
+fn vmap_short(spec: &mut Spec, row: usize, field: usize, value: i16) {
+    let at = field_offset(spec, field) as usize / 8;
+    spec.records[row][at..at + 2].copy_from_slice(&value.to_le_bytes());
+}
+fn vmap_text(spec: &mut Spec, row: usize, field: usize, value: &str) {
+    let at = field_offset(spec, field);
+    let relative =
+        (spec.records.len() - row) * record_size(&spec.cols) + spec.strings.len() - at as usize / 8;
+    write_word(&mut spec.records[row], at, relative as u32);
+    spec.strings.extend_from_slice(value.as_bytes());
+    spec.strings.push(0);
+}
+
+#[test]
+fn available_vmap_complete_matches_existing_strict_projection() {
+    let mut spec = source_spec("Map", &[7, 8], 0);
+    vmap_short(&mut spec, 0, 13, -1);
+    vmap_short(&mut spec, 0, 14, -2);
+    vmap_short(&mut spec, 1, 13, 7);
+    vmap_text(&mut spec, 0, 0, "Dír\\logical");
+    vmap_text(&mut spec, 0, 1, "Nombre\té\n");
+    spec.copies = vec![(9, 7), (10, 9), (11, 99)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let strict = crate::terrain_sources::read_vmap_maps(&input.data).unwrap();
+    let view = available::read_vmap_maps_70374(&input).unwrap();
+    assert!(strict.direct_records() == view.direct_records());
+    assert_eq!(strict.copies(), view.copies());
+    assert_eq!(strict.decoded_utf8_bytes(), view.decoded_utf8_bytes());
+    let rows = view.materialize().unwrap();
+    assert!(strict.materialize().unwrap() == rows.rows());
+    assert_eq!(rows.direct_records().len(), 2);
+    assert_eq!(rows.rows().len(), 3);
+    assert_eq!(rows.rows()[0].fields.directory, "Dír\\logical");
+    assert_eq!(rows.rows()[0].fields.name, "Nombre\té\n");
+    assert!(rows.all_sections_admitted());
+}
+
+#[test]
+fn available_vmap_signed_effective_parent_extremes_survive() {
+    let cases = [
+        (-1, -1, -1),
+        (-1, 0, 0),
+        (-1, 7, 7),
+        (0, 7, 0),
+        (7, 9, 7),
+        (i16::MAX, i16::MIN, i16::MAX),
+        (i16::MIN, i16::MAX, i16::MAX),
+        (-2, i16::MIN, i16::MIN),
+    ];
+    let ids: Vec<_> = (1..=cases.len() as u32).collect();
+    let mut spec = source_spec("Map", &ids, 0);
+    for (row, (parent, cosmetic, _)) in cases.iter().copied().enumerate() {
+        vmap_short(&mut spec, row, 13, parent);
+        vmap_short(&mut spec, row, 14, cosmetic);
+    }
+    let input = fixture("Map", vec![spec], &[false]);
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert_eq!(rows.direct_records().len(), cases.len());
+    for (row, (_, _, expected)) in rows.rows().iter().zip(cases) {
+        assert_eq!(row.fields.parent_map_id, expected);
+        assert_eq!(row.fields.wdt_file_data_id, 0);
+    }
+}
+
+#[test]
+fn available_vmap_copy_prefix_keeps_wdt_zero_and_last_direct_source() {
+    let mut spec = source_spec("Map", &[0, 7, 9, 7, 11], 0);
+    let wdt_at = field_offset(&spec, 21);
+    for (row, (wdt, parent)) in [(10, -1), (20, 3), (30, 4), (40, 5), (0, 6)]
+        .into_iter()
+        .enumerate()
+    {
+        write_word(&mut spec.records[row], wdt_at, wdt);
+        vmap_short(&mut spec, row, 13, parent);
+    }
+    spec.copies = vec![(100, 7), (101, 100), (7, 7), (0, 11), (90, 99), (55, 0)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let view = available::read_vmap_maps_70374(&input).unwrap();
+    assert_eq!(view.copies().len(), 6);
+    let rows = view.materialize().unwrap();
+    assert_eq!(
+        rows.rows().iter().map(|r| r.id).collect::<Vec<_>>(),
+        [0, 7, 9, 7, 11, 100, 7, 0, 55]
+    );
+    assert_eq!(rows.direct_records().len(), 5);
+    assert_eq!(rows.rows()[5].fields.wdt_file_data_id, 40);
+    assert_eq!(rows.rows()[5].fields.parent_map_id, 5);
+    assert_eq!(rows.rows()[7].fields.wdt_file_data_id, 0);
+    assert_eq!(rows.rows()[7].fields.parent_map_id, 6);
+}
+
+#[test]
+fn available_vmap_keeps_zero_wdt_ancestors_without_changing_terrain() {
+    let mut spec = source_spec("Map", &[7], 0);
+    spec.copies = vec![(8, 7)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let vmap = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert_eq!(vmap.rows().len(), 2);
+    assert_eq!(vmap.direct_records().len(), 1);
+    assert!(
+        available::read_map_70374(&input)
+            .unwrap()
+            .materialize()
+            .unwrap()
+            .rows()
+            .is_empty()
+    );
+}
+
+#[test]
+fn available_vmap_unknown_section_and_copies_remain_attached_after_replay() {
+    let mut omitted = source_spec("Map", &[7], 0);
+    omitted.copies = vec![(20, 8)];
+    let mut admitted = source_spec("Map", &[8], 2);
+    vmap_short(&mut admitted, 0, 13, 7);
+    admitted.copies = vec![(21, 7), (22, 8)];
+    let mut input = fixture("Map", vec![omitted, admitted], &[true, false]);
+    let hole = payload(&input, 0);
+    input.holes.push(hole.clone());
+    let view = available::read_vmap_maps_70374(&input).unwrap();
+    assert_eq!(view.copies().len(), 2);
+    let coverage = view.sections().to_vec();
+    let rows = view.materialize().unwrap();
+    assert_eq!(rows.sections(), coverage);
+    assert_eq!(rows.sections()[0].declared_copies, 1);
+    assert_eq!(rows.sections()[1].declared_copies, 2);
+    assert_eq!(rows.sections()[0].state, SectionState::UnknownTact);
+    assert!(!rows.all_sections_admitted());
+    assert_eq!(rows.direct_records().len(), 1);
+    assert_eq!(
+        rows.rows().iter().map(|r| r.id).collect::<Vec<_>>(),
+        [8, 22]
+    );
+    assert_eq!(rows.rows()[0].fields.parent_map_id, 7);
+    assert!(
+        input
+            .reads
+            .borrow()
+            .iter()
+            .all(|r| r.end <= hole.start || r.start >= hole.end)
+    );
+}
+
+#[test]
+fn available_vmap_unknown_readable_payload_never_becomes_source() {
+    let input = fixture("Map", vec![source_spec("Map", &[7], 0)], &[true]);
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert!(rows.rows().is_empty());
+    assert!(rows.direct_records().is_empty());
+    assert!(!rows.all_sections_admitted());
+    let omitted = payload(&input, 0);
+    assert!(input.reads.borrow().iter().all(|r| r.end <= omitted.start));
+}
+
+#[test]
+fn available_vmap_preserves_signed_wdt_bits_and_duplicate_direct_order() {
+    let mut spec = source_spec("Map", &[7, 7, 9, 10], 0);
+    let at = field_offset(&spec, 21);
+    for (row, bits) in [0, i32::MAX, i32::MIN, -1].into_iter().enumerate() {
+        write_word(&mut spec.records[row], at, bits as u32);
+    }
+    let input = fixture("Map", vec![spec], &[false]);
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert_eq!(
+        rows.rows()
+            .iter()
+            .map(|r| (r.id, r.fields.wdt_file_data_id))
+            .collect::<Vec<_>>(),
+        [(7, 0), (7, i32::MAX), (9, i32::MIN), (10, -1)]
+    );
+}
+
+#[test]
+fn available_vmap_repaired_ids_keep_omitted_global_ordinal() {
+    let input = fixture(
+        "Map",
+        vec![source_spec("Map", &[5, 6], 0), source_spec("Map", &[0], 0)],
+        &[true, false],
+    );
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert_eq!(rows.direct_records()[0].id, 2);
+}
+
+#[test]
+fn available_vmap_logical_text_after_omitted_pool_is_not_shifted() {
+    let mut omitted = source_spec("Map", &[7], 0);
+    vmap_text(&mut omitted, 0, 0, "omitted-directory");
+    vmap_text(&mut omitted, 0, 1, "omitted-name");
+    let mut admitted = source_spec("Map", &[8], 0);
+    vmap_text(&mut admitted, 0, 0, "Dír");
+    vmap_text(&mut admitted, 0, 1, "Nombre");
+    let mut input = fixture("Map", vec![omitted, admitted], &[true, false]);
+    input.holes.push(payload(&input, 0));
+    let view = available::read_vmap_maps_70374(&input).unwrap();
+    assert_eq!(view.direct_records()[0].fields.directory, "Dír");
+    assert_eq!(view.direct_records()[0].fields.name, "Nombre");
+    assert_eq!(view.decoded_utf8_bytes(), "DírNombre".len());
+}
+
+#[test]
+fn available_vmap_selected_or_ignored_text_into_omitted_pool_is_terminal() {
+    for field in [0, 2] {
+        let spec = source_spec("Map", &[7], 0);
+        let field_byte = field_offset(&spec, field) as usize / 8;
+        let mut input = fixture(
+            "Map",
+            vec![spec, source_spec("Map", &[8], 0)],
+            &[false, true],
+        );
+        let at = payload(&input, 0).start + field_byte;
+        let size = u32::from_le_bytes(input.data[144..148].try_into().unwrap()) as usize;
+        put32(&mut input.data, at, (2 * size + 2 - field_byte) as u32);
+        let hole = payload(&input, 1);
+        input.holes.push(hole.clone());
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Bounds)
+        );
+        assert!(input.reads.borrow().iter().all(|r| r.end <= hole.start));
+    }
+}
+
+#[test]
+fn available_vmap_header_columns_and_encrypted_ids_are_required_metadata() {
+    for at in [0, HEADER, HEADER + SECTION + 4 * 26] {
+        let mut input = one("Map");
+        input.holes.push(at..at + 1);
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Bounds)
+        );
+    }
+    let mut input = fixture("Map", vec![source_spec("Map", &[7], 0)], &[true]);
+    let at = payload(&input, 0).start - 4;
+    input.holes.push(at..at + 4);
+    assert_eq!(
+        available::read_vmap_maps_70374(&input).err(),
+        Some(RecordError::Bounds)
+    );
+}
+
+#[test]
+fn available_vmap_missing_known_records_strings_ids_or_copies_is_terminal() {
+    let mut spec = source_spec("Map", &[7], 0);
+    spec.copies = vec![(8, 7)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let start = payload(&input, 0).start;
+    let size = u32::from_le_bytes(input.data[144..148].try_into().unwrap()) as usize;
+    for at in [start, start + size, start + size + 2, input.data.len() - 8] {
+        let mut input = Input {
+            data: input.data.clone(),
+            holes: std::iter::once(at..at + 1).collect(),
+            reads: RefCell::new(Vec::new()),
+        };
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Bounds)
+        );
+        input.holes.clear();
+    }
+}
+
+#[test]
+fn available_vmap_omitted_rows_copies_and_scalar_limits_still_charge() {
+    for (at, value) in [
+        (136, 100_001),
+        (136, 50_000),
+        (HEADER + 36, 100_001),
+        (HEADER + 12, 100_001),
+    ] {
+        let mut input = fixture("Map", vec![source_spec("Map", &[7], 0)], &[true]);
+        put32(&mut input.data, at, value);
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Limit)
+        );
+    }
+}
+
+#[test]
+fn available_vmap_sparse_and_parent_layouts_remain_unsupported() {
+    for (at, value) in [
+        (184, 1),
+        (HEADER + 20, 1),
+        (HEADER + 28, 1),
+        (HEADER + 32, 1),
+    ] {
+        let mut input = one("Map");
+        put32(&mut input.data, at, value);
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Unsupported)
+        );
+    }
+    let mut input = one("Map");
+    put16(&mut input.data, 172, 1);
+    assert_eq!(
+        available::read_vmap_maps_70374(&input).err(),
+        Some(RecordError::Unsupported)
+    );
+}
+
+#[test]
+fn available_vmap_current_catalog_hashes_are_mandatory() {
+    for at in [152, 156] {
+        let mut input = one("Map");
+        put32(&mut input.data, at, 0);
+        assert_eq!(
+            available::read_vmap_maps_70374(&input).err(),
+            Some(RecordError::Schema)
+        );
+    }
+}
+
+#[test]
+fn available_vmap_null_selected_or_invalid_utf8_text_rejects() {
+    let mut input = one("Map");
+    let at = payload(&input, 0).start;
+    put32(&mut input.data, at, 0);
+    assert_eq!(
+        available::read_vmap_maps_70374(&input).err(),
+        Some(RecordError::String)
+    );
+    let mut input = one("Map");
+    let size = u32::from_le_bytes(input.data[144..148].try_into().unwrap()) as usize;
+    let at = payload(&input, 0).start + size;
+    input.data[at] = 255;
+    assert_eq!(
+        available::read_vmap_maps_70374(&input).err(),
+        Some(RecordError::String)
+    );
+}
+
+#[test]
+fn available_vmap_empty_known_section_keeps_coverage_and_zero_prefix() {
+    let input = fixture("Map", vec![source_spec("Map", &[], 0)], &[false]);
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    assert!(rows.rows().is_empty());
+    assert!(rows.direct_records().is_empty());
+    assert_eq!(rows.sections().len(), 1);
+    assert!(rows.all_sections_admitted());
+    assert!(rows.resident_bytes().unwrap() >= std::mem::size_of::<available::SectionCoverage>());
+}
+
+#[test]
+fn available_vmap_resident_accounting_includes_copied_owned_strings() {
+    let mut spec = source_spec("Map", &[7], 0);
+    vmap_text(&mut spec, 0, 0, "directory");
+    vmap_text(&mut spec, 0, 1, "name");
+    spec.copies = vec![(8, 7), (9, 7)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let rows = available::read_vmap_maps_70374(&input)
+        .unwrap()
+        .materialize()
+        .unwrap();
+    let strings: usize = rows
+        .rows()
+        .iter()
+        .map(|r| r.fields.name.capacity() + r.fields.directory.capacity())
+        .sum();
+    let minimum =
+        std::mem::size_of_val(rows.rows()) + strings + std::mem::size_of_val(rows.sections());
+    assert!(rows.resident_bytes().unwrap() >= minimum);
+    assert_eq!(rows.direct_records().len(), 1);
+    assert_eq!(rows.rows().len(), 3);
+}
+
+#[test]
+fn available_vmap_reuses_existing_materializer_downward_row_limit() {
+    let mut spec = source_spec("Map", &[7], 0);
+    spec.copies = vec![(8, 7)];
+    let input = fixture("Map", vec![spec], &[false]);
+    let view = available::read_vmap_maps_70374(&input).unwrap();
+    assert_eq!(
+        view.records.materialize_with_limit(1).err(),
+        Some(RecordError::Limit)
+    );
+}
+
+#[test]
+fn available_vmap_complete_api_still_rejects_partial_or_multisection() {
+    for tact in [[false, false], [false, true]] {
+        let input = fixture(
+            "Map",
+            vec![source_spec("Map", &[7], 0), source_spec("Map", &[8], 0)],
+            &tact,
+        );
+        assert_eq!(
+            crate::terrain_sources::read_vmap_maps(&input.data).err(),
+            Some(RecordError::Unsupported)
+        );
+        assert!(available::read_vmap_maps_70374(&input).is_ok());
+    }
+}
+
+#[test]
+fn available_vmap_section_size_and_successful_short_ranges_reject() {
+    struct Huge;
+    impl Source for Huge {
+        fn declared_bytes(&self) -> u64 {
+            u64::MAX
+        }
+        fn range(&self, _: u64, _: usize) -> Result<&[u8], Unavailable> {
+            panic!("size rejects before read")
+        }
+    }
+    assert_eq!(
+        available::read_vmap_maps_70374(&Huge).err(),
+        Some(RecordError::Limit)
+    );
+    let mut input = one("Map");
+    put32(&mut input.data, 200, 17);
+    assert_eq!(
+        available::read_vmap_maps_70374(&input).err(),
+        Some(RecordError::Limit)
+    );
+    struct Short(Vec<u8>);
+    impl Source for Short {
+        fn declared_bytes(&self) -> u64 {
+            self.0.len() as u64
+        }
+        fn range(&self, _: u64, _: usize) -> Result<&[u8], Unavailable> {
+            Ok(&self.0[..1])
+        }
+    }
+    assert_eq!(
+        available::read_vmap_maps_70374(&Short(one("Map").data)).err(),
+        Some(RecordError::Bounds)
+    );
+}
