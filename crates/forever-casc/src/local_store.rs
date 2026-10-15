@@ -31,6 +31,7 @@
 //! stable ROOT-name index, never OS paths, textual FDIDs or fallback routes.
 //! Opening a store and the existing acquisition profile do not enable names.
 
+pub mod availability;
 mod build_info;
 pub mod framing;
 mod io;

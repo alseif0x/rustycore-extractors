@@ -22,6 +22,7 @@
 //! produce exactly its declared output size and pass its Adler32 check. This
 //! module neither opens CASC stores nor returns partial data after any error.
 
+pub mod available;
 pub mod framing;
 pub(crate) mod md5;
 

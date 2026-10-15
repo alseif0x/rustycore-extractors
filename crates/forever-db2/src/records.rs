@@ -13,6 +13,7 @@
 //! regular sections. At most one parent-lookup block is admitted in production
 //! `read`, and only for a table whose reviewed metadata declares a parent index
 //! field.
+pub(crate) mod available_sections;
 pub mod catalog;
 mod columns;
 mod regular_sections;

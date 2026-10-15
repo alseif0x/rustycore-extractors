@@ -10,6 +10,9 @@ use std::{
 
 use crate::local_index::jenkins;
 
+#[cfg(target_os = "linux")]
+#[path = "availability_tests.rs"]
+mod availability_tests;
 #[path = "encrypted_tests.rs"]
 mod encrypted_tests;
 #[path = "route_tests.rs"]
