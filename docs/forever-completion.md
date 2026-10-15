@@ -4304,3 +4304,14 @@ coverage expectations. Independent QA closes 251 checks without findings
 This closes software and authored interruption gates for source `3eb45c1`;
 original-loop comparison, real all-map extraction/verification, reproducible
 stable distribution and the remaining suite/runtime gates remain open.
+
+The subsequent original ExtractMaps comparison independently passes eleven
+authored cases, 44 children and eleven native loop calls after complete Rust
+triplets. All 22 MAPS and 15 tilelists match complete original bytes and
+independent tile bits (1,495,563 bytes). Four startup calls use authored preloaded
+state; this does not execute original DB2 startup or native CASC routing.
+Independent review closes all source/fixture/output inventories, 5,496 guards /
+78 aliases, empty runtime traces and numeric parent exit zero
+(`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
+Real v13 publication verification, stable distribution and remaining component
+and runtime gates stay open.

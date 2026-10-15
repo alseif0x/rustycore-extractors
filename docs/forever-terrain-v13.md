@@ -1,9 +1,11 @@
 # Linux70374 compatible terrain product v13 — candidate
 
 This explicit candidate preserves strict v12 and adds a separately selected
-available-map traversal policy. It has no real v13 extraction, original-loop
-comparison, whole-world, runtime, distribution or release acceptance yet.
-The existing v12 evidence retains its original scope.
+available-map traversal policy. Committed software qualification, authored
+forced recovery and original-loop comparison pass within the scopes below.
+Real v13 publication verification, whole-world, runtime, distribution and
+release acceptance remain separate gates. Existing v12 evidence retains its
+original scope.
 
 ## Explicit plan and commands
 
@@ -145,3 +147,32 @@ This checkpoint executes no real-client extraction or original native loop.
 The separately prepared eleven-case original-loop comparison, real all-map
 extraction with both verifiers, stable distribution and remaining component and
 runtime gates stay open. Historical v12 failures and contracts remain intact.
+
+## Subsequent original ExtractMaps loop comparison
+
+Eleven authored cases execute the original ExtractMaps loop from Forever
+commit `8a864593bb4d566153e89058b33793752ff81c57`. Four startup calls are
+redirected to preloaded authored Map/liquid state; original ReadMapDBC,
+ReadLiquid* and main are not executed. Original loadlib, FDID ConvertADT,
+parser/converter and tilelist traversal execute over a memory inventory.
+This does not compare native CASC routing or real-client outputs.
+
+For each case, the qualified v13 release executable completes extract, verify
+and verify-links before the original native call runs. The cases include
+missing first/middle/last ADTs, missing WDTs followed by later maps, all WDTs
+missing, empty MAIN, physical Map order/direct copies/WDT-zero filtering,
+packing choices, liquids and all ADTs missing. All 22 MAPS and 15 tilelists
+match complete original bytes and independently calculated list bits:
+37 files / 1,495,563 bytes.
+
+The campaign records 44 successful children, including eleven original calls,
+with no automatic retries. Independent review closes 5,496 guards / 78 aliases,
+both source trees, complete fixture correspondence, all outputs, seven-file
+invocation leaves, empty runtime network traces, absent owned groups and numeric
+parent exit zero. Campaign report:
+`9f136b7ead5991556298ee23ac09072adb16f5a3778dace492a1682ac540c38e`;
+independent review:
+`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`.
+The first native build remains failed; the separately reviewed build adds the
+unchanged original StringVFormat provider and succeeds. No native malformed
+input, general failure-admission, runtime or real all-map acceptance follows.

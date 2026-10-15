@@ -2839,3 +2839,15 @@ expectations. Its independent review passes 251 checks, retaining 4,024 guards /
 This is authored process-interruption evidence, not power-loss durability or
 real-client extraction. Original-loop comparison, real all-map verification,
 stable distribution and the full suite/runtime gates remain open.
+
+The subsequent authored original ExtractMaps comparison passes eleven cases /
+44 children, including eleven original native calls after successful Rust
+extract/verify/verify-links triplets. All 22 MAPS and 15 tilelists match complete
+original bytes and independently calculated list bits (1,495,563 bytes).
+Four startup calls use authored preloaded state; original DB2 startup and native
+CASC routing do not execute. Independent review closes 5,496 guards / 78 aliases,
+source/fixture/output inventories, empty runtime traces and numeric parent exit
+zero (`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
+This closes the authored original-loop gate only. Real v13 publication
+verification, stable distribution and the remaining component/runtime gates
+stay open; see docs/forever-terrain-v13.md.
