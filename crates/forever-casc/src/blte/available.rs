@@ -70,6 +70,7 @@ impl AvailableBytes {
         }
         Ok(&self.backing[offset as usize..end as usize])
     }
+    #[cfg(target_os = "linux")]
     pub(crate) fn resident_bytes(&self) -> Result<usize, Error> {
         self.coverage
             .capacity()
@@ -77,6 +78,7 @@ impl AvailableBytes {
             .and_then(|n| n.checked_add(self.backing.capacity()))
             .ok_or(Error::Limit)
     }
+    #[cfg(target_os = "linux")]
     pub(crate) fn from_verified(backing: Vec<u8>) -> Result<Self, Error> {
         let bytes = backing.len() as u64;
         let mut coverage = Vec::new();

@@ -70,3 +70,41 @@ selected terrain map may use a globally incomplete Map table when its required
 row and all terrain inputs are available. That does not establish complete
 global DB2 data, collision models, all-world extraction or runtime acceptance.
 Existing v11 and v8 product promises are not widened by this candidate.
+
+## First bounded real reader checkpoint — 2026-10-15
+
+The source-bound Linux diagnostic compiled from `2273d4f45b3ad865873e2b48ef681bdd789c0f69`
+passes its first build-70374/esES run with disabled keys:
+
+| Table | Available direct rows | Copy pairs | Admitted sections | Omitted sections |
+| --- | ---: | ---: | ---: | ---: |
+| Map | 71 | 0 | 1 | 3 |
+| GameObjectDisplayInfo | 3,195 | 20 | 1 | 1 |
+
+Map materialization retains 71 rows. GODI copies remain inspection facts and
+are not replayed. Both sources have authenticated encoded keys and checked
+frame coverage; neither has complete decoded CKey verification. Map has 607
+unavailable bytes out of 10,191, and GODI has 360 out of 116,270. No rows or raw
+files are exported. The two-request diagnostic has zero retries, an empty child
+network trace and a closed process group. Client metadata and the private
+logical source identity match the preceding accepted liquid input.
+
+The corrected whole offline qualification passes all six commands: debug and
+release each pass 3,043 tests with 26 historical ignores across 48 targets,
+including eight diagnostic tests; both example builds, Clippy and format pass.
+Separate checks pass 363 contract tests and 162 distribution tests with one
+platform skip. The earlier traced timeout and module-order formatting failure
+remain failed. The later two private-helper Linux `cfg` attributes repair
+non-Linux linting; the recorded diagnostic retains its original producer binding.
+
+Evidence root:
+`/mnt/nvme2/datos/forever-product-runs/linux-functional-db2-20261015-39o2hd2n`.
+Whole qualification SHA-256: `7f921223a3da5693ec17deaeb48c95181d06fa4980e5f9431587543560d19ff7`.
+Independent qualification QA: `33ce92a71c9d2d9eb4b909fed1e7617523da3d70e4030dd46d9a754c460e6716`.
+Aggregate real closing receipt: `332c352719ff5ad36723ef5f625651d27facac57cd5b2833488eae2da70eb6f6`.
+Independent real QA: `76ae874da2a5ad72aa4baf9a45d21a8dc9eda43e9b5a85ff1121301f3c5b367c`.
+
+This establishes available-row acquisition and projection. The original C++
+getter comparison, selected real terrain, product CLI and complete extraction
+remain pending. No terrain, model conversion or runtime consumer executes in
+this diagnostic.

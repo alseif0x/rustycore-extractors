@@ -2593,3 +2593,19 @@ section with an unavailable dependency rejects. Existing complete-file/CKey APIs
 strict product profiles and historical failed batches keep their contracts.
 This is an implementation direction, not executed acceptance. First prove the
 available readers, then real selected terrain, then the versioned product CLI.
+
+### First Linux 70374 available-row evidence — 2026-10-15
+
+The separate disabled-key diagnostic now reads 71 direct/materialized Map rows
+and 3,195 direct GameObjectDisplayInfo rows with 20 unreplayed copies. Map admits
+one section and omits three; GODI admits one and omits one. Encoded keys and
+frame coverage validate; complete decoded CKeys do not. Independent terminal
+QA passes with two requests, zero retries, an empty child trace, closed groups
+and stable metadata/private source identity. The source-bound producer is
+`2273d4f45b3ad865873e2b48ef681bdd789c0f69`; later private-helper Linux cfg
+attributes address non-Linux linting without changing Linux function bodies.
+Corrected whole qualification passes 3,043 tests / 26 historical ignores in
+each profile, both example builds, Clippy and format. Earlier timeout/format
+attempts stay failed. Native getter comparison, real terrain and the versioned
+CLI remain pending; this is not full extraction or runtime acceptance. Receipt
+identities and limits are in `docs/forever-linux-compatibility.md`.
