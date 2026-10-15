@@ -2768,9 +2768,12 @@ unchanged, with empty child trace and empty owned groups. QA SHA is
 `f83372bc6a2d8057a8fde443f64a246240677d190f690f9e7cafbd2dcb4ac55f`.
 Private failed outputs and numeric parent proof are retained; only the terminal
 service is cleaned after QA. The explicit long helper declares 21,600 wall / 14,400 CPU
-seconds; this is an input-read failure, not a timeout. Source-only original
-geometry routing uses ALL_WOW while Rust uses its explicit locale, and the
-original loop continues unsuccessful loads. Neither native same-request parity
+seconds; this is an input-read failure, not a timeout. Source review confirms
+the original geometry caller passes ALL_WOW, but the pinned CascLib ignores
+the file-open locale argument and selects ROOT locale at storage opening.
+Both proposed native observations use fresh esES storage; they cannot establish
+locale recovery by varying the ignored argument. The original loop continues
+unsuccessful loads. Neither native same-request parity
 nor a causal missing/encrypted request is established. Issue #78 tracks bounded
 private diagnosis before any separately versioned policy change; strict v12 and
 accepted real Map0/recovery evidence remain unchanged. See docs/forever-terrain-v12.md.

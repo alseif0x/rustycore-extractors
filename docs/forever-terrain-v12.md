@@ -219,8 +219,12 @@ The generic error establishes neither the causal request nor encryption or
 native-reader failure. Source inspection shows that the original map loop
 continues after unsuccessful WDT loading and writes an empty tile list; an
 unsuccessful ADT conversion leaves that tile's bit clear. Its geometry reader
-uses `CASC_LOCALE_ALL_WOW`, whereas current Rust ROOT eligibility uses the
-explicit store locale. No same-request native comparison or original complete
-map-loop execution has established the cause. [Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78)
+passes `CASC_LOCALE_ALL_WOW` to the file-open API. Subsequent source review
+confirms that the pinned CascLib ignores that argument: ROOT locale selection
+occurs when opening storage. The native comparison therefore uses fresh esES
+storage for both observations; changing the ignored file-open argument cannot
+establish locale recovery. Native built-in keys also remain distinct from the
+Rust disabled-key policy. No same-request native comparison or original complete
+map-loop execution has yet established the cause. [Issue #78](https://github.com/alseif0x/rustycore-extractors/issues/78)
 tracks a bounded private diagnosis before any separately versioned policy
 change. Strict v12 behavior and the earlier accepted Map0 package remain intact.
