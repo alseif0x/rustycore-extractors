@@ -2,8 +2,10 @@
 // Authored 2026-10-11: original two-phase, bounded terrain dependency planner.
 // Source facts: TrinityCore 02245dcd245e7433e524577656177723d3e4992e,
 // System.cpp:275-315,1100-1141 and wdt.h:25-86. No upstream code imported.
-//! Phase one borrows the COMPLETE output of terrain_sources::read_map(...)
-//! .materialize(), preserving its post-copy/post-zero-filter physical ordinals.
+//! Phase one borrows a validated materialized Map domain, preserving its
+//! post-copy/post-zero-filter physical ordinals. A separately admitted available
+//! source caller may supply only admitted sections; this planner does not infer
+//! completeness of omitted sections or authenticate that scoped domain.
 //! Phase two accepts one checked WDT at a time and retains no WDT bytes.
 //! Full-map selections expose all 4096 coordinates, including absent tiles;
 //! explicit tile selections expose exactly those coordinates. Never truncate.

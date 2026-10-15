@@ -63,6 +63,9 @@ struct Stage<'a> {
     sources: Vec<run::SourceFacts>,
     tiles: Vec<Vec<u8>>,
     witnesses: usize,
+    lists: Vec<(u32, Vec<u8>)>,
+    fail_list: bool,
+    change_on_list: Option<&'a CollisionFixture>,
     fail: bool,
     change: Option<&'a CollisionFixture>,
 }
@@ -82,6 +85,16 @@ impl Sink for Stage<'_> {
         assert!(!w.materials.is_empty());
         assert!(!w.types.is_empty());
         self.witnesses += 1;
+        Ok(())
+    }
+    fn tile_list(&mut self, id: u32, list: &tilelist::TileList) -> Result<(), run::SinkError> {
+        if self.fail_list {
+            return Err(run::SinkError);
+        }
+        self.lists.push((id, list.bytes().to_vec()));
+        if let Some(f) = self.change_on_list {
+            f.change_metadata();
+        }
         Ok(())
     }
     fn tile(
@@ -159,6 +172,7 @@ fn selected_complete_sources_current_headers_and_fixed_order() {
     assert_eq!(s.maps.len(), 1);
     assert_eq!(s.tiles.len(), 2);
     assert_eq!(s.witnesses, 2);
+    assert!(s.lists.is_empty());
     for t in s.tiles {
         forever_terrain::maps::verify_70374(&t, 70374, 202112).unwrap();
         assert!(forever_terrain::maps::verify(&t, 70374, 202112).is_err());
@@ -323,4 +337,381 @@ fn source_mutation_and_sink_errors_cannot_return_completion() {
         };
         assert!(run_selected(&mut store, &requests(), true, Limits::default(), &mut s).is_err());
     }
+}
+
+fn full_execute(
+    f: &[CollisionFile<'_>],
+    selection: plan::Selection<'_>,
+    limits: FullMapLimits,
+) -> (Result<CompletedFullMaps, Failure>, Stage<'static>) {
+    let fixture = CollisionFixture::new(f);
+    let mut store = open(&fixture);
+    let mut sink = Stage::default();
+    (
+        run_full_maps(&mut store, selection, true, limits, &mut sink),
+        sink,
+    )
+}
+fn replace_maps(f: &mut [CollisionFile<'_>], rows: &[(u32, u32, i16)], copies: &[(u32, u32)]) {
+    f[0].2 = map_db2(rows, copies);
+    put(
+        &mut f[0].2,
+        152,
+        catalog::resolve_for(catalog::WOWDBDEFS_70374_CATALOG_ID, "Map")
+            .unwrap()
+            .unwrap()
+            .metadata()
+            .table_hash
+            .unwrap(),
+    );
+}
+#[test]
+fn full_maps_mixed_present_absent_exact_list_and_70374_outputs() {
+    let (r, s) = full_execute(
+        &files(),
+        plan::Selection::MapIds(&[7]),
+        FullMapLimits::default(),
+    );
+    let done = r.unwrap();
+    assert_eq!(done.profile(), FULL_MAP_PROFILE);
+    assert_eq!(done.plan().scope, plan::Scope::MapIds);
+    assert_eq!(
+        (
+            done.plan().maps,
+            done.plan().selected_coordinates,
+            done.plan().present_tiles,
+            done.plan().absent_tiles
+        ),
+        (1, 4096, 2, 4094)
+    );
+    assert_eq!(
+        (
+            done.stats().read_attempts,
+            done.stats().converted_tiles,
+            done.stats().tile_lists
+        ),
+        (7, 2, 1)
+    );
+    assert_eq!(s.lists.len(), 1);
+    let (id, list) = &s.lists[0];
+    assert_eq!(*id, 7);
+    for y in 0..64 {
+        for x in 0..64 {
+            assert_eq!(
+                tilelist::present_70374(list, 70374, x, y).unwrap(),
+                [(3, 2), (1, 4)].contains(&(x, y))
+            );
+        }
+    }
+    for t in &s.tiles {
+        forever_terrain::maps::verify_70374(t, 70374, 202112).unwrap();
+    }
+    assert_eq!(
+        done.stats().output_bytes,
+        s.tiles.iter().map(|t| t.len() as u64).sum::<u64>() + tilelist::BYTES as u64
+    );
+}
+#[test]
+fn full_maps_multiple_maps_startup_once_and_materialized_order() {
+    let mut f = files();
+    replace_maps(&mut f, &[(9, 100, -1), (7, 101, -1)], &[]);
+    f.push((101, None, wdt(&[(0, 0, 201)], true)));
+    let (r, s) = full_execute(
+        &f,
+        plan::Selection::MapIds(&[7, 9]),
+        FullMapLimits::default(),
+    );
+    let done = r.unwrap();
+    assert_eq!(
+        (
+            done.plan().maps,
+            done.plan().selected_coordinates,
+            done.stats().read_attempts
+        ),
+        (2, 8192, 9)
+    );
+    assert_eq!(
+        s.lists.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+        [9, 7]
+    );
+    assert_eq!(s.maps.len(), 1);
+    for id in [MATERIAL_ID, OBJECT_ID, TYPE_ID] {
+        assert_eq!(s.sources.iter().filter(|v| v.file_data_id == id).count(), 1);
+    }
+}
+#[test]
+fn full_maps_empty_wdt_emits_one_zero_list() {
+    let mut f = files();
+    f[4].2 = wdt(&[], true);
+    let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(done.plan().absent_tiles, 4096);
+    assert_eq!(
+        (
+            done.stats().converted_tiles,
+            done.stats().tile_lists,
+            done.stats().read_attempts
+        ),
+        (0, 1, 5)
+    );
+    assert!(s.tiles.is_empty());
+    assert!(s.lists[0].1[12..].iter().all(|b| *b == b'0'));
+}
+#[test]
+fn full_maps_empty_admitted_domain_is_not_empty_world_claim() {
+    let mut f = files();
+    replace_maps(&mut f, &[], &[]);
+    let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(done.plan().scope, plan::Scope::AllMaps);
+    assert_eq!(
+        (
+            done.plan().maps,
+            done.plan().selected_coordinates,
+            done.stats().read_attempts
+        ),
+        (0, 0, 4)
+    );
+    assert!(s.tiles.is_empty() && s.lists.is_empty());
+    assert_eq!(s.maps.len(), 1);
+}
+#[test]
+fn full_maps_unknown_sections_remain_disclosed() {
+    let mut f = files();
+    f[0].2 = unknown(f[0].2.clone(), 1);
+    let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(
+        done.map().sections[1].unwrap().state,
+        db2::SectionState::UnknownTact
+    );
+    assert_eq!(done.map().sections[1].unwrap().declared_records, 1);
+    assert_eq!((done.map().materialized_rows, s.lists.len()), (1, 1));
+}
+#[test]
+fn full_maps_copy_replay_order_and_zero_wdt_filter() {
+    let mut f = files();
+    replace_maps(&mut f, &[(9, 100, -1), (7, 0, -1)], &[(11, 9)]);
+    let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(done.map().direct_rows, 2);
+    assert_eq!(done.map().copy_records, 1);
+    assert_eq!(done.map().materialized_rows, 2);
+    assert_eq!(
+        s.lists.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+        [9, 11]
+    );
+    assert_eq!(
+        (done.stats().converted_tiles, done.stats().read_attempts),
+        (4, 10)
+    );
+}
+#[test]
+fn full_maps_missing_duplicate_ambiguous_and_empty_explicit_ids_reject() {
+    for ids in [&[][..], &[99][..], &[7, 7][..]] {
+        let (r, s) = full_execute(
+            &files(),
+            plan::Selection::MapIds(ids),
+            FullMapLimits::default(),
+        );
+        assert!(r.is_err());
+        assert!(s.tiles.is_empty() && s.lists.is_empty());
+    }
+    let mut f = files();
+    replace_maps(&mut f, &[(7, 100, -1), (7, 100, -1)], &[]);
+    for selection in [plan::Selection::MapIds(&[7]), plan::Selection::AllMaps] {
+        let (r, s) = full_execute(&f, selection, FullMapLimits::default());
+        assert_eq!(
+            r.err().unwrap().error,
+            plan_error(plan::Error::AmbiguousMap)
+        );
+        assert!(s.lists.is_empty());
+    }
+}
+#[test]
+fn full_maps_rejects_tile_selection_before_acquisition() {
+    let (r, s) = full_execute(
+        &files(),
+        plan::Selection::Tiles(&requests()),
+        FullMapLimits::default(),
+    );
+    let failure = r.err().unwrap();
+    assert_eq!(failure.error, Error::FullMapSelection);
+    assert_eq!(failure.stats.read_attempts, 0);
+    assert!(s.maps.is_empty());
+}
+#[test]
+fn full_maps_preflights_present_root_ids_and_fd_id_policy() {
+    for id in [0, u32::MAX] {
+        let mut f = files();
+        f[4].2 = wdt(&[(3, 2, 201), (1, 4, id)], true);
+        let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+        let failure = r.err().unwrap();
+        assert_eq!(failure.error, Error::FileIdRouting);
+        assert_eq!(failure.stats.read_attempts, 5);
+        assert!(s.tiles.is_empty() && s.lists.is_empty());
+    }
+    let mut f = files();
+    f[4].2 = wdt(&[(3, 2, 201)], false);
+    assert_eq!(
+        full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default())
+            .0
+            .err()
+            .unwrap()
+            .error,
+        Error::FileIdRouting
+    );
+}
+#[test]
+fn full_maps_present_missing_or_corrupt_adt_never_emits_partial_list() {
+    for corrupt in [false, true] {
+        let mut f = files();
+        if corrupt {
+            f[6].2 = vec![0; 12];
+        } else {
+            f.remove(6);
+        }
+        let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+        assert!(r.is_err());
+        assert_eq!(s.tiles.len(), 1);
+        assert!(s.lists.is_empty());
+    }
+}
+#[test]
+fn full_maps_later_map_failure_leaves_earlier_list_only_provisional() {
+    let mut f = files();
+    replace_maps(&mut f, &[(7, 100, -1), (9, 101, -1)], &[]);
+    let (r, s) = full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let failure = r.err().unwrap();
+    assert_eq!(failure.step, run::Step::Wdt { map: 9 });
+    assert_eq!(s.lists.len(), 1);
+    assert_eq!(failure.stats.tile_lists, 1);
+    assert_eq!(s.tiles.len(), 2);
+}
+#[test]
+fn full_maps_source_mutation_is_fatal_before_list_or_after_list() {
+    for at_list in [false, true] {
+        let fixture = CollisionFixture::new(&files());
+        let mut store = open(&fixture);
+        let mut sink = Stage::default();
+        if at_list {
+            sink.change_on_list = Some(&fixture);
+        } else {
+            sink.change = Some(&fixture);
+        }
+        let r = run_full_maps(
+            &mut store,
+            plan::Selection::AllMaps,
+            true,
+            FullMapLimits::default(),
+            &mut sink,
+        );
+        assert!(r.is_err());
+        assert_eq!(sink.lists.len(), usize::from(at_list));
+        assert!(store.verify_unchanged().is_err());
+    }
+}
+#[test]
+fn full_maps_list_sink_failure_prevents_completion() {
+    let fixture = CollisionFixture::new(&files());
+    let mut store = open(&fixture);
+    let mut sink = Stage {
+        fail_list: true,
+        ..Stage::default()
+    };
+    let failure = run_full_maps(
+        &mut store,
+        plan::Selection::AllMaps,
+        true,
+        FullMapLimits::default(),
+        &mut sink,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(failure.error, Error::Run(run::Error::Sink));
+    assert_eq!(failure.step, run::Step::TileList { map: 7 });
+    assert_eq!(sink.tiles.len(), 2);
+    assert!(sink.lists.is_empty());
+}
+#[test]
+fn full_maps_downward_read_output_coordinate_and_memory_limits_reject() {
+    for which in 0..4 {
+        let mut limits = FullMapLimits::default();
+        match which {
+            0 => limits.resources.max_reads = 6,
+            1 => limits.resources.max_output_bytes = tilelist::BYTES as u64 + 87,
+            2 => limits.resources.plan.max_total_coordinates = 4095,
+            _ => limits.resources.max_memory_bytes = 1,
+        }
+        let (r, s) = full_execute(&files(), plan::Selection::AllMaps, limits);
+        assert!(r.is_err());
+        assert!(s.tiles.is_empty() && s.lists.is_empty());
+    }
+}
+#[test]
+fn full_maps_upward_nested_limits_reject_before_acquisition() {
+    for which in 0..8 {
+        let mut limits = FullMapLimits::default();
+        match which {
+            0 => limits.resources.max_reads += 1,
+            1 => limits.resources.max_memory_bytes += 1,
+            2 => limits.resources.plan.max_maps += 1,
+            3 => limits.resources.plan.max_total_coordinates += 1,
+            4 => limits.resources.plan.max_expansion_bytes += 1,
+            5 => limits.resources.plan.max_source_rows += 1,
+            6 => limits.resources.conversion.max_input_bytes += 1,
+            _ => limits.resources.conversion.max_chunks += 1,
+        }
+        let (r, s) = full_execute(&files(), plan::Selection::AllMaps, limits);
+        assert!(r.is_err());
+        assert!(s.maps.is_empty() && s.lists.is_empty());
+    }
+}
+
+#[test]
+fn full_maps_selected_only_sink_default_rejects_required_list() {
+    struct SelectedOnly;
+    impl Sink for SelectedOnly {
+        fn tile(
+            &mut self,
+            _: conversion::Context,
+            _: run::SourceFacts,
+            _: &conversion::ConvertedTile,
+        ) -> Result<(), run::SinkError> {
+            Ok(())
+        }
+    }
+    let fixture = CollisionFixture::new(&files());
+    let mut store = open(&fixture);
+    let failure = run_full_maps(
+        &mut store,
+        plan::Selection::AllMaps,
+        true,
+        FullMapLimits::default(),
+        &mut SelectedOnly,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(failure.error, Error::Run(run::Error::Sink));
+    assert_eq!(failure.stats.converted_tiles, 2);
+    assert_eq!(failure.stats.tile_lists, 0);
+}
+#[test]
+fn full_maps_final_source_closure_runs_even_on_invalid_limits() {
+    let fixture = CollisionFixture::new(&files());
+    let mut store = open(&fixture);
+    fixture.change_metadata();
+    let mut limits = FullMapLimits::default();
+    limits.resources.max_reads += 1;
+    let failure = run_full_maps(
+        &mut store,
+        plan::Selection::AllMaps,
+        true,
+        limits,
+        &mut Stage::default(),
+    )
+    .err()
+    .unwrap();
+    assert!(matches!(failure.error, Error::Run(run::Error::Store(_))));
+    assert_eq!(failure.stats.read_attempts, 0);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Explicit Linux non-geometry component publication, separate from DB2 metadata.
+//! Explicit Linux component publication, separate from DB2 metadata.
 use super::{CollisionStorage, Component, Plan, SchemaCatalog, Selection};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -9,6 +9,7 @@ pub enum PublicationProfile {
     Build70338Db2GtCamerasV1,
     Build70374Db2OnlyV1,
     Build70374Db2GtCamerasV1,
+    Build70374AvailableTerrainV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -27,6 +28,11 @@ impl PublicationProfile {
                 SchemaCatalog::WowDbDefs70374V1,
                 Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
             ),
+            Self::Build70374AvailableTerrainV1 => (
+                70374,
+                SchemaCatalog::WowDbDefs70374V1,
+                Component::Terrain.bit(),
+            ),
             Self::Build70374Db2OnlyV1 => {
                 (70374, SchemaCatalog::WowDbDefs70374V1, Component::Db2.bit())
             }
@@ -43,6 +49,16 @@ impl PublicationProfile {
             || plan.offmesh.is_some()
         {
             return Err("product_plan_component_scope");
+        }
+        if self == Self::Build70374AvailableTerrainV1 {
+            if plan.decryption != super::Decryption::Disabled
+                || !plan.db2.is_empty()
+                || !matches!(plan.terrain, Selection::All | Selection::Map(_))
+                || plan.navigation != Selection::None
+            {
+                return Err("product_plan_dependencies");
+            }
+            return Ok(());
         }
         if plan.terrain != Selection::None || plan.navigation != Selection::None {
             return Err("product_plan_dependencies");

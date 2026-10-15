@@ -9,6 +9,10 @@ use package::Component;
 /// Adapter-owned capabilities survive every producer and final package seal.
 /// Some input leases require an additional check before each active producer.
 pub(super) trait Adapter {
+    #[cfg(target_os = "linux")]
+    fn product_context(&self) -> Option<package::Context> {
+        None
+    }
     fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
         None
     }
@@ -36,6 +40,14 @@ pub(super) fn execute(
             adapter,
         },
     )
+}
+
+fn replay_mask(plan: &Plan, completed: u8) -> u8 {
+    if plan.is_v12() {
+        completed & !Component::Terrain.bit()
+    } else {
+        completed
+    }
 }
 
 struct Production<'a, A> {
@@ -66,7 +78,9 @@ trait Work {
 impl<A: Adapter> Work for Production<'_, A> {
     type Summary = package::Summary;
     fn completed_components(&self) -> Result<u8, Error> {
-        Ok(self.run.completed_components()?)
+        let completed = self.run.completed_components()?;
+        // v12 replays even a sealed terrain stage to bind current coverage and outputs.
+        Ok(replay_mask(self.plan, completed))
     }
     fn verify_before_producer(&self) -> Result<(), Error> {
         self.adapter.verify_before_producer()
@@ -86,6 +100,15 @@ impl<A: Adapter> Work for Production<'_, A> {
         super::cameras(self.plan, self.store, &mut self.run)
     }
     fn terrain(&mut self) -> Result<(), Error> {
+        #[cfg(target_os = "linux")]
+        if self.plan.is_v12() {
+            return super::terrain_v12::extract(
+                self.plan,
+                self.store,
+                &mut self.run,
+                self.adapter.product_context().ok_or("product_context")?,
+            );
+        }
         super::maps(
             self.plan,
             self.store,
@@ -368,5 +391,28 @@ mod tests {
         assert_eq!(error.code, "authored_execution_failure");
         assert_eq!(error.component, None);
         assert_eq!(*events.borrow(), expected(&[]));
+    }
+}
+
+#[cfg(test)]
+mod v12_replay_tests {
+    use super::*;
+    #[test]
+    fn v12_replays_sealed_terrain_and_older_profiles_keep_skips() {
+        let old = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v11/disabled.tsv"
+        ))
+        .unwrap();
+        assert_eq!(replay_mask(&old, 63), 63);
+        let selected = Plan {
+            publication_profile: crate::plan::PublicationProfile::Build70374AvailableTerrainV1,
+            components: Component::Terrain.bit(),
+            db2: Vec::new(),
+            terrain: crate::plan::Selection::All,
+            ..old
+        };
+        selected.validate().unwrap();
+        assert_eq!(replay_mask(&selected, 8), 0);
+        assert_eq!(replay_mask(&selected, 63), 55);
     }
 }

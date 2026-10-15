@@ -1,0 +1,64 @@
+{
+  "contract": "forever-product-v12",
+  "version": 12,
+  "publication_profile": "Build70374AvailableTerrainV1",
+  "builds": [70374],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70374-v1",
+    "component_mask": 8,
+    "components": ["maps"],
+    "terrain": ["map:<canonical-u32>", "all-available-maps"],
+    "decryption": "disabled",
+    "storage": "resident",
+    "navigation": "none",
+    "db2_output_entries": 0,
+    "tile_subsets": false
+  },
+  "source_profile": "linux70374-full-maps-available-map-v1",
+  "source_policy": {
+    "map": "Separate available-section reader; unknown encrypted sections remain inaccessible and omitted with coverage. An admitted section with unavailable required bytes fails.",
+    "dependencies": "Complete authenticated liquid tables, WDT and every known-present root ADT; absent MAIN coordinates are normal.",
+    "failure": "Any known-present dependency, conversion, budget or sink failure rejects the complete selection; provisional outputs remain incomplete.",
+    "native_failure_parity": false
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2,
+    "tile": "maps/<map-min-width4>_<row-width2>_<column-width2>.map",
+    "tilelist": "maps/<map-min-width4>.tilelist",
+    "coverage": "maps/selected-terrain-coverage-v1.tsv"
+  },
+  "coverage": {
+    "authentication": "producer_reported",
+    "binds": ["source", "plan", "producer", "build", "locale", "selection", "pack"],
+    "facts": ["Map byte availability and independent authentication flags", "declared/admitted/omitted sections and row counts", "sorted selected maps and converted/present tile counts", "exact whole-map tilelist association"],
+    "complete_global_map_coverage_claim": false
+  },
+  "verification": {
+    "profile": "linux70374-available-map-terrain-product-v1",
+    "scope": "artifact_integrity_intrinsic_formats_and_declared_available_map_coverage_links",
+    "both_commands": "Metadata preflight before payload allocation, exact coverage/list/tile inventory, strict70374 MAPS and tilelist formats, equal complete tile/list bitsets and counts.",
+    "source_authentication": "Offline verification checks producer-reported source coverage, not an independent client snapshot."
+  },
+  "resume": "Same-context incomplete output only; rerun terrain even if sealed and compare retained artifacts through existing Run receipts before finishing. Complete output refuses writes.",
+  "limits": {
+    "maps": 4096,
+    "source_bytes": 68719476736,
+    "output_bytes": 68719476736,
+    "logical_memory_bytes": 1073741824,
+    "package_metadata_reservation_bytes": 268435456,
+    "sink_reservation_bytes": 8388608,
+    "coverage_bytes": 1048576,
+    "package_files": 262144,
+    "meaning": "Downward-only API budgets; package/sink reservations subtract from the combined core ceiling. Logical counters are not RSS or all CPU operations. Cap failures do not truncate output."
+  },
+  "excluded": ["native backend", "Windows execution", "provided keys", "scratch/disk storage", "DB2/GT/camera output", "collision", "navigation", "full encrypted Map coverage", "real full-world acceptance", "RustyCore runtime", "release acceptance"],
+  "legacy_preservation": "Existing plans, complete-file APIs, historical failures and component formats retain their explicit scopes; catalog equality does not opt into v12.",
+  "full_extractor_complete": false
+}

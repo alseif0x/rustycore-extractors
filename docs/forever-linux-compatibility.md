@@ -248,3 +248,21 @@ This compares supplied complete inputs with the current-original converter;
 it does not execute native CASC, the complete original `ExtractMaps`, a whole
 map or a runtime consumer. The versioned CLI and scalable map traversal are
 the next implementation milestone.
+
+## Full-map product candidate
+
+[Issue #76](https://github.com/alseif0x/rustycore-extractors/issues/76)
+introduces `run_full_maps` and explicit Linux70374 terrain-only product v12.
+It traverses every coordinate of selected complete maps, streams verified
+MAPS and whole-map tilelists through the existing package lifecycle and
+retains available Map coverage. Known-present failures reject the selection.
+Both offline verification commands check exact tile/list/coverage associations;
+sealed-stage resume replays and compares the retained artifacts.
+
+The six-file API source review passes; the twelve-file product review found
+one inherited unknown-version test that still uses newly admitted version 12.
+The root correction changes that fixture to version 13. Focused product
+checks alone do not establish historical CLI regression or real full-map
+acceptance. Joint immutable qualification and the first actual full-map
+product attempt remain pending. Public plans, command shapes and boundaries
+are in [the v12 runbook](forever-terrain-v12.md).

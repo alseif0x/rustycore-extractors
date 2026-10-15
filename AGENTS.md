@@ -2665,3 +2665,13 @@ retained; only the corrected proposal executes. Native CASC, the complete origin
 ExtractMaps, scalable map extraction, versioned product CLI and full extraction
 remain pending; this two-tile proof is not the requested stable functional
 release. Details remain in the compatibility document.
+
+Issue #76 separately adds the Linux70374 full-map terrain API and explicit
+terrain-only product v12 candidate. It requires complete known-present
+dependencies, whole-map tilelists and producer-reported available Map coverage.
+Both verification scopes check exact tile/list/coverage associations; resume
+replays retained sealed terrain through existing receipts. The first product
+review identifies an inherited unknown-version test using newly supported12;
+the root correction uses13. Joint immutable qualification and real full-map
+acceptance remain pending. See docs/forever-terrain-v12.md; the preceding
+two-tile proof and historical bundles do not establish stable full extraction.
