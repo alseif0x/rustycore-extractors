@@ -187,7 +187,7 @@ class LinuxMapDomainContract(unittest.TestCase):
 
     def test_v8_verification_enforces_exact_map_domains_and_links(self):
         verifier = compact(self.source['verify'])
-        self.assertIn('(!plan.is_v12()&&(matches!(scope,Scope::Links)||plan.map_domain.is_some())).then(links::Facts::default)', verifier)
+        self.assertIn('(!plan.is_available_terrain()&&(matches!(scope,Scope::Links)||plan.map_domain.is_some())).then(links::Facts::default)', verifier)
         self.assertIn('ifplan.map_domain.is_none(){returnOk(());}', verifier)
         self.assertIn('domain.ids().len()!=self.domain_terrain_lists.len()', verifier)
         self.assertIn('!self.domain_terrain_lists.contains(id)', verifier)

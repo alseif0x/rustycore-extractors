@@ -45,15 +45,15 @@ class LinuxOutputLinksContract(unittest.TestCase):
         self.assertIn('verify_inner(plan, output, expected, Scope::Intrinsic)', verify)
         self.assertIn('verify_inner(plan, output, expected, Scope::Links)', verify)
         # One shared payload inspector is dispatched through exactly one call
-        # per platform. Linux's explicit v9-v12 branch adds metadata preflight.
+        # per platform. Linux's explicit v9-v13 branch adds metadata preflight.
         self.assertEqual(verify.count('package::verify_with('), 2)
         self.assertEqual(verify.count('package::verify_with_preflight('), 1)
         compact = re.sub(r'\s+', '', verify).replace(',)', ')')
         self.assertEqual(compact.count("letinspect=|artifact:&Artifact,file:ArtifactReader<'_>|"), 1)
         self.assertIn('#[cfg(target_os="linux")]typeArtifactReader<\'a>=&\'amutstd::fs::File;', compact)
         self.assertIn('#[cfg(not(target_os="linux"))]typeArtifactReader<\'a>=&\'amut(dynRead+\'a);', compact)
-        self.assertIn('#[cfg(target_os="linux")]letverified=ifplan.is_gt_cameras()||plan.is_v10()||plan.is_v12(){package::verify_with_preflight(', compact)
-        self.assertIn('letadmitted=ifplan.is_v12(){crate::driver::terrain_v12::admit_metadata(plan,artifacts)}elseifplan.is_v10(){v10::admit_metadata(plan,artifacts)}else{v9::admit_metadata(plan,artifacts)};', compact)
+        self.assertIn('#[cfg(target_os="linux")]letverified=ifplan.is_gt_cameras()||plan.is_v10()||plan.is_available_terrain(){package::verify_with_preflight(', compact)
+        self.assertIn('letadmitted=ifplan.is_v13(){crate::driver::terrain_v13::admit_metadata(plan,artifacts)}elseifplan.is_v12(){crate::driver::terrain_v12::admit_metadata(plan,artifacts)}elseifplan.is_v10(){v10::admit_metadata(plan,artifacts)}else{v9::admit_metadata(plan,artifacts)};', compact)
         self.assertIn('},inspect)}else{package::verify_with(output,expected,limits,inspect)};', compact)
         self.assertIn('#[cfg(not(target_os="linux"))]letverified=package::verify_with(output,expected,limits,inspect);', compact)
         self.assertIn('artifact_integrity_and_intrinsic_formats', self.s['main'])
@@ -63,10 +63,10 @@ class LinuxOutputLinksContract(unittest.TestCase):
 
     def test_v8_auto_enables_links_without_changing_legacy_intrinsic_scope(self):
         verify = re.sub(r'\s+', '', self.s['verify'])
-        self.assertIn('(!plan.is_v12()&&(matches!(scope,Scope::Links)||plan.map_domain.is_some())).then(links::Facts::default)', verify)
+        self.assertIn('(!plan.is_available_terrain()&&(matches!(scope,Scope::Links)||plan.map_domain.is_some())).then(links::Facts::default)', verify)
         # Both operands are false for the existing intrinsic invocation with
-        # map_domain=None; explicit links or v8 enable legacy facts. V12 uses
-        # its own required coverage validator for both verification commands.
+        # map_domain=None; explicit links or v8 enable legacy facts. V12/V13 use
+        # their own required coverage validator for both verification commands.
         self.assertIn('ifplan.is_v12(){facts.terrain_v12.take().ok_or("product_terrain_coverage")?.finish(plan,context)?;}', verify)
         self.assertIn('verify_inner(plan,output,expected,Scope::Intrinsic)', verify)
         self.assertIn('ifplan.map_domain.is_none(){returnOk(());}', verify)

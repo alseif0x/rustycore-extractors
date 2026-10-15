@@ -18,6 +18,39 @@ mod tests;
 pub const PROFILE: &str = "linux70374-selected-terrain-available-map-v1";
 /// Whole requested maps in the admitted/materialized Map domain, not all client sections.
 pub const FULL_MAP_PROFILE: &str = "linux70374-full-maps-available-map-v1";
+/// Separately opted-in traversal; only explicit LocalStore::MissingFile may be
+/// omitted. This profile makes no native acquisition or error-category claim.
+pub const COMPATIBLE_FULL_MAP_PROFILE: &str = "linux70374-compatible-full-maps-available-map-v1";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WdtDisposition {
+    Loaded,
+    /// MAIN is unknown, not an empty or entirely absent MAIN.
+    Unavailable,
+}
+
+/// Owned, constant-size per-map outcome; callbacks remain provisional until
+/// CompletedCompatibleFullMaps, including final source closure. No FDID, CKey,
+/// name, or source bytes are retained here. Ordinals preserve the Map domain.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct CompatibleMapOutcome {
+    pub map_id: u32,
+    pub plan_index: usize,
+    pub materialized_ordinal: usize,
+    pub wdt: WdtDisposition,
+    pub known_present_tiles: Option<usize>,
+    pub converted_tiles: usize,
+    pub missing_root_adts: usize,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CompatibleSummary {
+    pub loaded_wdts: usize,
+    pub unavailable_wdts: usize,
+    pub known_present_tiles: u64,
+    pub converted_tiles: u64,
+    pub missing_root_adts: u64,
+}
 
 /// Separate scalable ceilings, no larger than the existing full terrain runner.
 /// Every nested override is downward-only. Selected Limits remain unchanged.
@@ -159,6 +192,14 @@ pub trait Sink {
     ) -> Result<(), run::SinkError> {
         Err(run::SinkError)
     }
+    /// Required explicit opt-in for compatible outcomes. A full-map sink must
+    /// not silently drop the distinction between unknown MAIN and omissions.
+    fn compatible_map_outcome(
+        &mut self,
+        _outcome: CompatibleMapOutcome,
+    ) -> Result<(), run::SinkError> {
+        Err(run::SinkError)
+    }
     fn tile(
         &mut self,
         context: conversion::Context,
@@ -214,6 +255,79 @@ impl CompletedFullMaps {
     }
     pub const fn liquids(&self) -> &[run::TableFacts; 3] {
         &self.completed.liquids
+    }
+}
+
+/// Completion of the separate compatible traversal, not proof that every
+/// selected source/tile was available. Earlier callbacks are provisional.
+pub struct CompletedCompatibleFullMaps {
+    plan: plan::CompatibleCompletion,
+    stats: run::Stats,
+    map: MapFacts,
+    liquids: [run::TableFacts; 3],
+    outcomes: CompatibleSummary,
+}
+impl CompletedCompatibleFullMaps {
+    pub const fn profile(&self) -> &'static str {
+        COMPATIBLE_FULL_MAP_PROFILE
+    }
+    pub const fn build(&self) -> u32 {
+        70374
+    }
+    pub const fn plan(&self) -> plan::CompatibleCompletion {
+        self.plan
+    }
+    pub const fn stats(&self) -> run::Stats {
+        self.stats
+    }
+    pub const fn map(&self) -> MapFacts {
+        self.map
+    }
+    pub const fn liquids(&self) -> &[run::TableFacts; 3] {
+        &self.liquids
+    }
+    pub const fn outcomes(&self) -> CompatibleSummary {
+        self.outcomes
+    }
+}
+
+/// Explicit compatible whole-map traversal. Only WDT/root-ADT MissingFile is
+/// skipped, after successful source closure. Every other acquisition, parse,
+/// resource, conversion, sink or source-change error remains fatal. Lists mark
+/// converted tiles only; unavailable WDTs emit zero lists with MAIN unknown.
+pub fn run_compatible_full_maps(
+    store: &mut LocalStore,
+    selection: plan::Selection<'_>,
+    pack: bool,
+    limits: FullMapLimits,
+    sink: &mut impl Sink,
+) -> Result<CompletedCompatibleFullMaps, Failure> {
+    let mut r = Runner {
+        store,
+        sink,
+        limits: limits.resources,
+        stats: run::Stats::default(),
+        step: run::Step::Admission,
+        retained: 0,
+    };
+    let result = limits
+        .resources
+        .validate()
+        .map_err(Error::Run)
+        .and_then(|()| {
+            if matches!(selection, plan::Selection::Tiles(_)) {
+                return Err(Error::FullMapSelection);
+            }
+            r.execute_compatible(selection, pack)
+        });
+    let closing = r.store.verify_unchanged().map_err(store_error);
+    match (result, closing) {
+        (_, Err(error)) | (Err(error), _) => Err(Failure {
+            error,
+            step: r.step,
+            stats: r.stats,
+        }),
+        (Ok(completed), Ok(())) => Ok(completed),
     }
 }
 
@@ -321,6 +435,219 @@ impl liquid::LiquidLookup for Tables {
     }
 }
 impl<S: Sink> Runner<'_, S> {
+    fn execute_compatible(
+        &mut self,
+        selection: plan::Selection<'_>,
+        pack: bool,
+    ) -> Result<CompletedCompatibleFullMaps, Error> {
+        self.store.verify_unchanged().map_err(store_error)?;
+        if self.store.build().build != 70374 {
+            return Err(Error::Build);
+        }
+        catalog_gate()?;
+        let tables = self.tables()?;
+        self.retained = add(
+            self.retained,
+            add(
+                self.limits.plan.max_planner_bytes,
+                self.limits.plan.max_expansion_bytes,
+            )?,
+        )?;
+        self.memory(self.retained)?;
+        let planned =
+            plan::WdtPlan::from_materialized(tables.maps.rows(), selection, self.limits.plan)
+                .map_err(plan_error)?;
+        let mut expansion = planned.compatible_expansion();
+        let mut outcomes = CompatibleSummary::default();
+        for map in planned.maps() {
+            self.step = run::Step::Wdt { map: map.map_id };
+            let file = match self.read(
+                map.file_data_id,
+                self.limits.max_wdt_bytes,
+                add(self.retained, 256 * 1024)?,
+            ) {
+                Ok(file) => file,
+                Err(error) if missing_file(error) => {
+                    self.store.verify_unchanged().map_err(store_error)?;
+                    expansion.unavailable_next(map).map_err(plan_error)?;
+                    let list = tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?;
+                    self.compatible_list_outcome(
+                        map,
+                        &list,
+                        CompatibleMapOutcome {
+                            map_id: map.map_id,
+                            plan_index: map.plan_index,
+                            materialized_ordinal: map.materialized_ordinal,
+                            wdt: WdtDisposition::Unavailable,
+                            known_present_tiles: None,
+                            converted_tiles: 0,
+                            missing_root_adts: 0,
+                        },
+                    )?;
+                    outcomes.unavailable_wdts = add(outcomes.unavailable_wdts, 1)?;
+                    continue;
+                }
+                Err(error) => return Err(error),
+            };
+            let wdt = Wdt::parse(
+                &file.bytes,
+                forever_terrain::Limits {
+                    max_file_bytes: self.limits.max_wdt_bytes,
+                    ..Default::default()
+                },
+            )
+            .map_err(|e| Error::Run(run::Error::Terrain(e)))?;
+            if !wdt
+                .mphd()
+                .is_some_and(|h| h.flags & forever_terrain::wdt::FILE_ID_REFERENCES != 0)
+            {
+                return Err(Error::FileIdRouting);
+            }
+            let tiles = expansion
+                .expand_next(file.file_data_id, &wdt)
+                .map_err(plan_error)?;
+            if tiles.tiles().iter().filter(|t| t.present()).any(|t|
+                !matches!(t.source(), plan::TileSource::FileDataId(id) if *id != 0 && *id != u32::MAX)) {
+                return Err(Error::FileIdRouting);
+            }
+            // Every known present request remains charged, including failures.
+            // Only the list is guaranteed output; per-tile bytes charge on actual conversion.
+            let reads = self
+                .stats
+                .read_attempts
+                .checked_add(tiles.present_tiles() as u64)
+                .ok_or(limit())?;
+            let minimum = self
+                .stats
+                .output_bytes
+                .checked_add(tilelist::BYTES as u64)
+                .ok_or(limit())?;
+            if reads > self.limits.max_reads || minimum > self.limits.max_output_bytes {
+                return Err(limit());
+            }
+            self.memory(add(
+                self.retained,
+                add(self.limits.max_wdt_bytes, 256 * 1024)?,
+            )?)?;
+            let mut list = tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?;
+            let mut converted = 0usize;
+            let mut missing = 0usize;
+            drop(wdt);
+            drop(file);
+            for tile in tiles.tiles().iter().filter(|t| t.present()) {
+                let plan::TileSource::FileDataId(id) = tile.source() else {
+                    return Err(Error::FileIdRouting);
+                };
+                self.step = run::Step::Adt {
+                    map: map.map_id,
+                    x: tile.x(),
+                    y: tile.y(),
+                };
+                let file = match self.read(
+                    *id,
+                    self.limits.conversion.max_input_bytes,
+                    add(self.retained, SCRATCH)?,
+                ) {
+                    Ok(file) => file,
+                    Err(error) if missing_file(error) => {
+                        self.store.verify_unchanged().map_err(store_error)?;
+                        missing = add(missing, 1)?;
+                        continue;
+                    }
+                    Err(error) => return Err(error),
+                };
+                let context = conversion::Context {
+                    map_id: map.map_id,
+                    tile_x: tile.x(),
+                    tile_y: tile.y(),
+                    build: 70374,
+                    pack,
+                };
+                let output = conversion::convert_adt_70374(
+                    &file.bytes,
+                    &tables,
+                    context,
+                    self.limits.conversion,
+                )
+                .map_err(|e| Error::Run(run::Error::Conversion(e)))?;
+                self.output(output.bytes().len())?;
+                self.store.verify_unchanged().map_err(store_error)?;
+                self.sink
+                    .tile(context, self.facts(&file), &output)
+                    .map_err(|_| Error::Run(run::Error::Sink))?;
+                self.store.verify_unchanged().map_err(store_error)?;
+                self.sink
+                    .native_witness(NativeWitness {
+                        adt: &file.bytes,
+                        materials: &tables.materials,
+                        types: &tables.types,
+                        context,
+                        source: self.facts(&file),
+                    })
+                    .map_err(|_| Error::Run(run::Error::Sink))?;
+                self.stats.converted_tiles += 1;
+                converted = add(converted, 1)?;
+                self.store.verify_unchanged().map_err(store_error)?;
+                list.set(tile.x(), tile.y())
+                    .map_err(|_| Error::FileIdRouting)?;
+            }
+            let known = tiles.present_tiles();
+            self.compatible_list_outcome(
+                map,
+                &list,
+                CompatibleMapOutcome {
+                    map_id: map.map_id,
+                    plan_index: map.plan_index,
+                    materialized_ordinal: map.materialized_ordinal,
+                    wdt: WdtDisposition::Loaded,
+                    known_present_tiles: Some(known),
+                    converted_tiles: converted,
+                    missing_root_adts: missing,
+                },
+            )?;
+            outcomes.loaded_wdts = add(outcomes.loaded_wdts, 1)?;
+            outcomes.known_present_tiles = outcomes
+                .known_present_tiles
+                .checked_add(known as u64)
+                .ok_or(limit())?;
+            outcomes.converted_tiles = outcomes
+                .converted_tiles
+                .checked_add(converted as u64)
+                .ok_or(limit())?;
+            outcomes.missing_root_adts = outcomes
+                .missing_root_adts
+                .checked_add(missing as u64)
+                .ok_or(limit())?;
+        }
+        self.step = run::Step::Finish;
+        let plan = expansion.finish_compatible().map_err(plan_error)?;
+        Ok(CompletedCompatibleFullMaps {
+            plan,
+            stats: self.stats,
+            map: tables.map_facts,
+            liquids: tables.facts,
+            outcomes,
+        })
+    }
+    fn compatible_list_outcome(
+        &mut self,
+        map: plan::WdtRequest,
+        list: &tilelist::TileList,
+        outcome: CompatibleMapOutcome,
+    ) -> Result<(), Error> {
+        self.step = run::Step::TileList { map: map.map_id };
+        self.store.verify_unchanged().map_err(store_error)?;
+        self.output(tilelist::BYTES)?;
+        self.sink
+            .tile_list(map.map_id, list)
+            .map_err(|_| Error::Run(run::Error::Sink))?;
+        self.stats.tile_lists += 1;
+        self.store.verify_unchanged().map_err(store_error)?;
+        self.sink
+            .compatible_map_outcome(outcome)
+            .map_err(|_| Error::Run(run::Error::Sink))?;
+        self.store.verify_unchanged().map_err(store_error)
+    }
     fn execute(
         &mut self,
         selection: plan::Selection<'_>,
@@ -765,6 +1092,12 @@ fn limit() -> Error {
 }
 fn store_error(e: local_store::Error) -> Error {
     Error::Run(run::Error::Store(e))
+}
+fn missing_file(error: Error) -> bool {
+    matches!(
+        error,
+        Error::Run(run::Error::Store(local_store::Error::MissingFile))
+    )
 }
 fn db2_error(e: RecordError) -> Error {
     Error::Run(run::Error::Db2(e))

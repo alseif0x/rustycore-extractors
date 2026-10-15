@@ -4276,3 +4276,66 @@ differs from strict v12's terminal policy.
 new compatible terrain API/product and its authored-loop, whole-map,
 verification/recovery and packaging acceptance. That implementation and the
 remaining extraction-suite/runtime gates stay open; v12 is not relabeled.
+
+## Linux70374 compatible terrain candidate — 2026-10-15
+
+Issue #80's new v13 source separates explicit MissingFile omissions from fatal
+integrity/conversion/publication failures. Coverage v2 retains unknown MAIN for
+unavailable WDTs, known-present/converted/omitted ADT counts and exact MAPS/list
+associations. Strict v12 remains intact. Focused authored validation passes 389
+extractor tests per profile, the source/distribution subsets, Clippy and scoped
+formatting (`2f138088e8c15aee3e8b885db4ee1919c6103855b8d2370cc80666f706b49b8b`).
+These toy-CASC and manufactured-state replay tests are not current real-client,
+killed-process, whole-workspace or original-loop acceptance. Fresh committed
+qualification, authored native-loop comparison and real all-map/verification
+gates remain before accepting the component. Full extraction-suite, runtime and
+reproducible stable distribution remain open. See
+[v13 scope](forever-terrain-v13.md).
+
+The later committed v13 software checkpoint passes 3,147 workspace tests / 26
+historical ignores per debug/release profile, all eight offline qualification
+commands, 424 source contracts / two skips and 165 distribution tests / one
+skip. Independent terminal QA is
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+Eleven separate authored release calls then pass two real SIGKILL cuts and
+recovery, comparing three complete views against independent MAPS, list and
+coverage expectations. Independent QA closes 251 checks without findings
+(`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`).
+This closes software and authored interruption gates for source `3eb45c1`;
+original-loop comparison, real all-map extraction/verification, reproducible
+stable distribution and the remaining suite/runtime gates remain open.
+
+The subsequent original ExtractMaps comparison independently passes eleven
+authored cases, 44 children and eleven native loop calls after complete Rust
+triplets. All 22 MAPS and 15 tilelists match complete original bytes and
+independent tile bits (1,495,563 bytes). Four startup calls use authored preloaded
+state; this does not execute original DB2 startup or native CASC routing.
+Independent review closes all source/fixture/output inventories, 5,496 guards /
+78 aliases, empty runtime traces and numeric parent exit zero
+(`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
+Real v13 publication verification, stable distribution and remaining component
+and runtime gates stay open.
+
+The subsequent real v13 product closes the declared available-map terrain gate:
+one extract/verify/verify-links triplet exits zero, with 3,322 MAPS, 71 tilelists
+and coverage (3,394 artifacts / 215,621,491 bytes). Sixty-nine WDTs load and two
+are unavailable; 8,192 coordinates remain unknown, never known absent. Every
+known-present ADT converts, with zero MissingFile root omissions. Map still has
+one admitted and three omitted sections, authenticated encoded bytes and no
+full content-key verification. Whole-client coverage remains false.
+
+Final closing receipt is
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`;
+independent QA is
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`.
+Two complete frozen-ledger replays, all retained Map0 bytes, two original native
+MAPS comparisons and 4,908 guards / 48 aliases pass. Qualified software, private
+inputs, metadata and historical failed outputs close unchanged; actual parents
+exit zero, owned groups are absent and runtime network traces are empty. The
+preparation-only validator correction has 72 passing authored controls and
+retains earlier failure/proof bindings without another product invocation.
+
+Issue #80's terrain acceptance is complete within this explicit omission policy.
+Build70374 collision/navigation, complete client coverage, RustyCore runtime use
+and reproducible stable distribution remain separate requirements for the usable
+full extraction suite. See [current terrain scope and commands](forever-terrain-v13.md).

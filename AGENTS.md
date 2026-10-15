@@ -2802,3 +2802,73 @@ failed; separate static qualification admits its same retained binary without
 recompiling. This closes the selected diagnosis, not physical global absence,
 encryption or full-loop/runtime acceptance. Issue #80 tracks the separately
 versioned compatible terrain implementation and its remaining acceptance gates.
+
+### Linux70374 compatible terrain candidate — 2026-10-15
+
+Issue #80 adds explicit product v13 and a separate compatible full-map API.
+Only typed MissingFile during WDT/root-ADT acquisition is omittable. Unavailable
+WDTs emit zero lists with unknown MAIN; loaded WDTs distinguish present,
+converted and omitted ADTs. Startup, malformed/incomplete/encrypted-only inputs,
+integrity/source drift, limits, conversion and publication errors stay terminal.
+Coverage v2 preserves source order, ordinals and exact successful MAPS/list
+associations. Strict v12 remains separate; resume replays even sealed terrain.
+Focused candidate validation passes 389 extractor tests per profile, 424 source
+checks/two historical skips, 162 distribution checks/one historical skip,
+Clippy and scoped formatting. Receipt is
+`2f138088e8c15aee3e8b885db4ee1919c6103855b8d2370cc80666f706b49b8b`.
+The tests use authored toy CASC and manufactured recovery states, not actual
+client data, killed processes or power-loss evidence. Native original-loop
+source preparation redirects four startup calls to authored state; it has no
+executed comparison yet. Fresh committed whole-workspace qualification,
+original-loop comparison, real all-map and reproducible product acceptance
+remain gates. Full suite/runtime completion and Windows delivery stay open.
+See docs/forever-terrain-v13.md.
+
+The subsequent committed v13 software qualification pins source `3eb45c1`,
+795 files / 202 directories and both actual executable copies. All eight
+commands pass, including 3,147 tests / 26 historical ignores per debug/release
+profile, 424 source contracts / two skips, 165 distribution tests / one skip,
+workspace Clippy and formatting. Independent terminal QA is
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+The separate release recovery campaign executes eleven authored CLI calls,
+including two actual fsync-injected SIGKILL cuts and successful resume with both
+verifiers. Three completed views match independent MAPS, tilelist and coverage
+expectations. Its independent review passes 251 checks, retaining 4,024 guards /
+48 aliases and numeric parent/source/evidence closure
+(`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`).
+This is authored process-interruption evidence, not power-loss durability or
+real-client extraction. Original-loop comparison, real all-map verification,
+stable distribution and the full suite/runtime gates remain open.
+
+The subsequent authored original ExtractMaps comparison passes eleven cases /
+44 children, including eleven original native calls after successful Rust
+extract/verify/verify-links triplets. All 22 MAPS and 15 tilelists match complete
+original bytes and independently calculated list bits (1,495,563 bytes).
+Four startup calls use authored preloaded state; original DB2 startup and native
+CASC routing do not execute. Independent review closes 5,496 guards / 78 aliases,
+source/fixture/output inventories, empty runtime traces and numeric parent exit
+zero (`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`).
+This closes the authored original-loop gate only. Real v13 publication
+verification, stable distribution and the remaining component/runtime gates
+stay open; see docs/forever-terrain-v13.md.
+
+The subsequent real v13 all-available extraction and one call of each verifier
+all exit zero. Its 3,322 MAPS, 71 tilelists and coverage file total 3,394 artifacts /
+215,621,491 bytes. Sixty-nine WDTs load; two remain unavailable, accounting for
+8,192 unknown coordinates. All 3,322 known-present ADTs convert, with zero
+MissingFile root omissions. Map startup still admits one section and omits three;
+encoded-key authentication passes, full content-key verification remains false.
+Final closing receipt is
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`.
+Independent final QA
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`
+passes two full frozen-ledger replays, exact retained Map0 and two native MAPS
+comparisons, all 4,908 guards / 48 aliases, source/tool/input/failed-output
+continuity and numeric parent/group/empty-trace closure. The preparation-only
+hash-reference defect and failed preparation stay retained; corrected frozen
+checker v3 passes 72 authored controls and preserves predecessor/current proof
+closures without repeating the product triplet or regenerating its snapshot.
+This accepts the declared available-map terrain domain and explicit omissions;
+coverage is producer-reported. Full-client, collision/navigation for 70374,
+runtime and reproducible stable distribution remain gates. See
+docs/forever-terrain-v13.md.

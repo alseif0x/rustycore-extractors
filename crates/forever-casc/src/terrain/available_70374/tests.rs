@@ -68,8 +68,24 @@ struct Stage<'a> {
     change_on_list: Option<&'a CollisionFixture>,
     fail: bool,
     change: Option<&'a CollisionFixture>,
+    outcomes: Vec<CompatibleMapOutcome>,
+    fail_outcome: bool,
+    change_on_outcome: Option<&'a CollisionFixture>,
 }
 impl Sink for Stage<'_> {
+    fn compatible_map_outcome(
+        &mut self,
+        outcome: CompatibleMapOutcome,
+    ) -> Result<(), run::SinkError> {
+        if self.fail_outcome {
+            return Err(run::SinkError);
+        }
+        self.outcomes.push(outcome);
+        if let Some(f) = self.change_on_outcome {
+            f.change_metadata();
+        }
+        Ok(())
+    }
     fn map_source(&mut self, f: MapFacts) -> Result<(), run::SinkError> {
         self.maps.push(f);
         Ok(())
@@ -714,4 +730,413 @@ fn full_maps_final_source_closure_runs_even_on_invalid_limits() {
     .unwrap();
     assert!(matches!(failure.error, Error::Run(run::Error::Store(_))));
     assert_eq!(failure.stats.read_attempts, 0);
+}
+
+fn compatible_execute(
+    f: &[CollisionFile<'_>],
+    selection: plan::Selection<'_>,
+    limits: FullMapLimits,
+) -> (Result<CompletedCompatibleFullMaps, Failure>, Stage<'static>) {
+    let fixture = CollisionFixture::new(f);
+    let mut store = open(&fixture);
+    let mut sink = Stage::default();
+    (
+        run_compatible_full_maps(&mut store, selection, true, limits, &mut sink),
+        sink,
+    )
+}
+
+#[test]
+fn compatible_missing_wdt_then_loaded_map_preserves_serial_order_and_unknown_main() {
+    let mut f = files();
+    replace_maps(&mut f, &[(9, 100, -1), (7, 101, -1)], &[]);
+    f.retain(|(id, _, _)| *id != 100);
+    f.push((101, None, wdt(&[(0, 0, 201)], true)));
+    let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(done.profile(), COMPATIBLE_FULL_MAP_PROFILE);
+    assert_eq!(done.build(), 70374);
+    assert_eq!(done.stats().read_attempts, 7);
+    assert_eq!(done.stats().converted_tiles, 1);
+    assert_eq!(done.stats().tile_lists, 2);
+    assert_eq!(
+        done.plan(),
+        plan::CompatibleCompletion {
+            scope: plan::Scope::AllMaps,
+            maps: 2,
+            selected_coordinates: 8192,
+            known_present_tiles: 1,
+            known_absent_tiles: 4095,
+            unknown_coordinates: 4096,
+            unavailable_wdts: 1,
+        }
+    );
+    assert_eq!(
+        done.outcomes(),
+        CompatibleSummary {
+            loaded_wdts: 1,
+            unavailable_wdts: 1,
+            known_present_tiles: 1,
+            converted_tiles: 1,
+            missing_root_adts: 0,
+        }
+    );
+    assert_eq!(
+        s.outcomes
+            .iter()
+            .map(|o| (o.map_id, o.materialized_ordinal))
+            .collect::<Vec<_>>(),
+        [(9, 0), (7, 1)]
+    );
+    assert_eq!(s.outcomes[0].wdt, WdtDisposition::Unavailable);
+    assert_eq!(s.outcomes[0].known_present_tiles, None);
+    assert_eq!(s.outcomes[1].wdt, WdtDisposition::Loaded);
+    assert_eq!(s.outcomes[1].known_present_tiles, Some(1));
+    assert!(s.lists[0].1[12..].iter().all(|b| *b == b'0'));
+    assert!(tilelist::present_70374(&s.lists[1].1, 70374, 0, 0).unwrap());
+    let (strict, strict_sink) =
+        full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    assert!(matches!(
+        strict.err().unwrap().error,
+        Error::Run(run::Error::Store(local_store::Error::MissingFile))
+    ));
+    assert!(strict_sink.lists.is_empty() && strict_sink.tiles.is_empty());
+}
+
+#[test]
+fn compatible_first_middle_last_missing_adt_never_sets_omitted_bit() {
+    for missing in 0..3 {
+        let mut f = files();
+        f[4].2 = wdt(&[(3, 2, 201), (4, 2, 202), (5, 2, 203)], true);
+        f.push((203, None, adt(3.0)));
+        f.retain(|(id, _, _)| *id != 201 + missing as u32);
+        let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+        let done = r.unwrap();
+        assert_eq!(
+            (done.stats().read_attempts, done.stats().converted_tiles),
+            (8, 2)
+        );
+        assert_eq!(
+            (
+                done.plan().known_present_tiles,
+                done.plan().known_absent_tiles,
+                done.plan().unknown_coordinates
+            ),
+            (3, 4093, 0)
+        );
+        assert_eq!(
+            (
+                s.outcomes[0].known_present_tiles,
+                s.outcomes[0].converted_tiles,
+                s.outcomes[0].missing_root_adts
+            ),
+            (Some(3), 2, 1)
+        );
+        assert_eq!(done.outcomes().missing_root_adts, 1);
+        for n in 0..3 {
+            assert_eq!(
+                tilelist::present_70374(&s.lists[0].1, 70374, 3 + n, 2).unwrap(),
+                usize::from(n) != missing
+            );
+        }
+        let (strict, strict_sink) =
+            full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+        assert!(matches!(
+            strict.err().unwrap().error,
+            Error::Run(run::Error::Store(local_store::Error::MissingFile))
+        ));
+        assert!(strict_sink.lists.is_empty());
+    }
+}
+
+#[test]
+fn compatible_all_unavailable_wdts_are_unknown_not_absent() {
+    let mut f = files();
+    replace_maps(&mut f, &[(9, 100, -1), (7, 101, -1), (11, 102, -1)], &[]);
+    f.retain(|(id, _, _)| *id != 100);
+    let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(
+        (
+            done.stats().read_attempts,
+            done.stats().converted_tiles,
+            done.stats().tile_lists
+        ),
+        (7, 0, 3)
+    );
+    assert_eq!(
+        (
+            done.plan().known_present_tiles,
+            done.plan().known_absent_tiles,
+            done.plan().unknown_coordinates
+        ),
+        (0, 0, 12288)
+    );
+    assert_eq!(done.stats().output_bytes, 3 * tilelist::BYTES as u64);
+    assert_eq!(done.outcomes().unavailable_wdts, 3);
+    assert!(s.outcomes.iter().all(|o| o.known_present_tiles.is_none()
+        && o.converted_tiles == 0
+        && o.missing_root_adts == 0));
+    assert!(
+        s.lists
+            .iter()
+            .all(|(_, list)| list[12..].iter().all(|b| *b == b'0'))
+    );
+}
+
+#[test]
+fn compatible_loaded_empty_main_and_empty_domain_keep_distinct_facts() {
+    let mut f = files();
+    f[4].2 = wdt(&[], true);
+    let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(
+        (
+            done.plan().known_absent_tiles,
+            done.plan().unknown_coordinates
+        ),
+        (4096, 0)
+    );
+    assert_eq!(s.outcomes[0].known_present_tiles, Some(0));
+    assert_eq!(s.outcomes[0].wdt, WdtDisposition::Loaded);
+    replace_maps(&mut f, &[], &[]);
+    let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(done.plan().maps, 0);
+    assert_eq!(done.stats().read_attempts, 4);
+    assert_eq!(done.outcomes(), CompatibleSummary::default());
+    assert!(s.lists.is_empty() && s.outcomes.is_empty());
+}
+
+#[test]
+fn compatible_malformed_sources_converter_and_sink_failures_remain_fatal() {
+    for which in 0..3 {
+        let mut f = files();
+        match which {
+            0 => f[4].2 = vec![0; 12],
+            1 => f[6].2 = vec![0; 12],
+            _ => f[4].2 = wdt(&[(3, 2, 0)], true),
+        }
+        let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+        assert!(r.is_err());
+        assert!(s.lists.is_empty() && s.outcomes.is_empty());
+    }
+    for outcome in [false, true] {
+        let f = CollisionFixture::new(&files());
+        let mut store = open(&f);
+        let mut s = Stage {
+            fail_list: !outcome,
+            fail_outcome: outcome,
+            ..Default::default()
+        };
+        let failure = run_compatible_full_maps(
+            &mut store,
+            plan::Selection::AllMaps,
+            true,
+            FullMapLimits::default(),
+            &mut s,
+        )
+        .err()
+        .unwrap();
+        assert_eq!(failure.error, Error::Run(run::Error::Sink));
+        assert!(s.outcomes.is_empty());
+    }
+}
+
+#[test]
+fn compatible_only_missing_file_is_omittable() {
+    assert!(missing_file(store_error(local_store::Error::MissingFile)));
+    for error in [
+        local_store::Error::Input,
+        local_store::Error::InputChanged,
+        local_store::Error::Limit,
+        local_store::Error::UnknownSize,
+        local_store::Error::Integrity,
+        local_store::Error::NoLocalEncoding(local_store::CandidateFailures::default()),
+        local_store::Error::NoLocalEncoding(local_store::CandidateFailures {
+            incomplete: 1,
+            ..Default::default()
+        }),
+        local_store::Error::NoLocalEncoding(local_store::CandidateFailures {
+            corrupt: 1,
+            ..Default::default()
+        }),
+    ] {
+        assert!(!missing_file(store_error(error)));
+    }
+    assert!(!missing_file(Error::Run(run::Error::Sink)));
+    assert!(!missing_file(limit()));
+}
+
+#[test]
+fn compatible_missing_reads_and_lists_respect_downward_budgets() {
+    let mut f = files();
+    f.retain(|(id, _, _)| *id != 100);
+    for which in 0..5 {
+        let mut limits = FullMapLimits::default();
+        match which {
+            0 => limits.resources.max_reads = 4,
+            1 => limits.resources.max_output_bytes = tilelist::BYTES as u64 - 1,
+            2 => limits.resources.plan.max_total_coordinates = 4095,
+            3 => limits.resources.max_memory_bytes = 1,
+            _ => limits.resources.max_source_bytes = 0,
+        }
+        let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, limits);
+        assert!(r.is_err());
+        assert!(s.lists.is_empty() && s.outcomes.is_empty());
+    }
+    let mut limits = FullMapLimits::default();
+    limits.resources.max_reads = 5;
+    limits.resources.max_output_bytes = tilelist::BYTES as u64;
+    let (r, _) = compatible_execute(&f, plan::Selection::AllMaps, limits);
+    assert_eq!(r.unwrap().stats().read_attempts, 5);
+    let (r, s) = compatible_execute(
+        &files(),
+        plan::Selection::Tiles(&requests()),
+        FullMapLimits::default(),
+    );
+    assert_eq!(r.err().unwrap().error, Error::FullMapSelection);
+    assert!(s.maps.is_empty());
+}
+
+#[test]
+fn compatible_source_change_after_list_or_outcome_is_fatal() {
+    for after_outcome in [false, true] {
+        let mut f = files();
+        f.retain(|(id, _, _)| *id != 100);
+        let fixture = CollisionFixture::new(&f);
+        let mut store = open(&fixture);
+        let mut s = Stage {
+            change_on_list: (!after_outcome).then_some(&fixture),
+            change_on_outcome: after_outcome.then_some(&fixture),
+            ..Default::default()
+        };
+        let failure = run_compatible_full_maps(
+            &mut store,
+            plan::Selection::AllMaps,
+            true,
+            FullMapLimits::default(),
+            &mut s,
+        )
+        .err()
+        .unwrap();
+        assert_eq!(failure.error, store_error(local_store::Error::InputChanged));
+        assert_eq!(s.outcomes.len(), usize::from(after_outcome));
+    }
+}
+
+#[test]
+fn compatible_outcome_callback_requires_explicit_sink_opt_in() {
+    struct FullOnly;
+    impl Sink for FullOnly {
+        fn tile(
+            &mut self,
+            _: conversion::Context,
+            _: run::SourceFacts,
+            _: &conversion::ConvertedTile,
+        ) -> Result<(), run::SinkError> {
+            Ok(())
+        }
+        fn tile_list(&mut self, _: u32, _: &tilelist::TileList) -> Result<(), run::SinkError> {
+            Ok(())
+        }
+    }
+    let fixture = CollisionFixture::new(&files());
+    let mut store = open(&fixture);
+    let failure = run_compatible_full_maps(
+        &mut store,
+        plan::Selection::AllMaps,
+        true,
+        FullMapLimits::default(),
+        &mut FullOnly,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(failure.error, Error::Run(run::Error::Sink));
+    assert_eq!(failure.stats.tile_lists, 1);
+}
+
+#[test]
+fn compatible_all_missing_adts_keep_loaded_main_known() {
+    let mut f = files();
+    f.retain(|(id, _, _)| *id != 201 && *id != 202);
+    let (r, s) = compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let done = r.unwrap();
+    assert_eq!(
+        (done.stats().read_attempts, done.stats().converted_tiles),
+        (7, 0)
+    );
+    assert_eq!(
+        (
+            done.plan().known_present_tiles,
+            done.plan().known_absent_tiles,
+            done.plan().unknown_coordinates
+        ),
+        (2, 4094, 0)
+    );
+    assert_eq!(
+        (
+            s.outcomes[0].known_present_tiles,
+            s.outcomes[0].converted_tiles,
+            s.outcomes[0].missing_root_adts
+        ),
+        (Some(2), 0, 2)
+    );
+    assert!(s.lists[0].1[12..].iter().all(|b| *b == b'0'));
+}
+
+#[test]
+fn compatible_complete_inputs_match_strict_tile_and_list_bytes() {
+    let f = files();
+    let (strict, strict_sink) =
+        full_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let (compatible, compatible_sink) =
+        compatible_execute(&f, plan::Selection::AllMaps, FullMapLimits::default());
+    let strict = strict.unwrap();
+    let compatible = compatible.unwrap();
+    assert_eq!(compatible_sink.tiles, strict_sink.tiles);
+    assert_eq!(compatible_sink.lists, strict_sink.lists);
+    assert_eq!(compatible.stats(), strict.stats());
+    assert_eq!(
+        compatible.plan().known_present_tiles,
+        strict.plan().present_tiles
+    );
+    assert_eq!(
+        compatible.plan().known_absent_tiles,
+        strict.plan().absent_tiles
+    );
+    assert_eq!(compatible.plan().unknown_coordinates, 0);
+}
+
+#[test]
+fn compatible_ckey_corruption_is_fatal_not_an_unavailable_omission() {
+    for target in [100, 202] {
+        let f = files();
+        let fixture = CollisionFixture::new(&f);
+        let payload = &f.iter().find(|(id, _, _)| *id == target).unwrap().2;
+        let archive_path = fixture.path().join("Data/data/data.000");
+        let mut archive = std::fs::read(&archive_path).unwrap();
+        let start = archive
+            .windows(payload.len())
+            .position(|part| part == payload)
+            .unwrap();
+        archive[start] ^= 1; // Authored source bytes differ from the retained CKey.
+        std::fs::write(archive_path, archive).unwrap();
+        let mut store = open(&fixture); // Mutation predates the store snapshot.
+        let mut sink = Stage::default();
+        let failure = run_compatible_full_maps(
+            &mut store,
+            plan::Selection::AllMaps,
+            true,
+            FullMapLimits::default(),
+            &mut sink,
+        )
+        .err()
+        .unwrap();
+        assert!(matches!(
+            failure.error,
+            Error::Run(run::Error::Store(local_store::Error::NoLocalEncoding(_)))
+        ));
+        assert!(sink.lists.is_empty() && sink.outcomes.is_empty());
+    }
 }

@@ -20,6 +20,11 @@ pub const AVAILABLE_TERRAIN_VERIFY_PROFILE: &str = "linux70374-available-map-ter
 pub const AVAILABLE_TERRAIN_VERIFY_SCOPE: &str =
     "artifact_integrity_intrinsic_formats_and_declared_available_map_coverage_links";
 
+pub const COMPATIBLE_TERRAIN_VERIFY_PROFILE: &str =
+    "linux70374-compatible-available-map-terrain-product-v1";
+pub const COMPATIBLE_TERRAIN_VERIFY_SCOPE: &str =
+    "artifact_integrity_intrinsic_formats_and_declared_available_map_omission_coverage_links";
+
 pub const MAX_PLAN_BYTES: usize = 128 * 1024;
 pub const MAX_DB2_ENTRIES: usize = 1126;
 pub const MAX_70205_DB2_ENTRIES: usize = 1161;
@@ -172,6 +177,7 @@ impl Plan {
             "10" => 10,
             "11" => 11,
             "12" => 12,
+            "13" => 13,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -201,7 +207,7 @@ impl Plan {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            10..=12 => match field(&mut lines, "schema-catalog")? {
+            10..=13 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70374-v1" => SchemaCatalog::WowDbDefs70374V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -213,7 +219,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=12 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=13 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -245,11 +251,11 @@ impl Plan {
             components |= component.bit();
         }
         let terrain_text = field(&mut lines, "terrain")?;
-        let terrain = if version == 12 && terrain_text == "all-available-maps" {
+        let terrain = if matches!(version, 12 | 13) && terrain_text == "all-available-maps" {
             Selection::All
         } else {
             let selected = Selection::parse(terrain_text)?;
-            if version == 12 && selected == Selection::All {
+            if matches!(version, 12 | 13) && selected == Selection::All {
                 return Err("product_plan_selection");
             }
             selected
@@ -299,7 +305,9 @@ impl Plan {
             });
         }
         let plan = Self {
-            publication_profile: if version == 12 {
+            publication_profile: if version == 13 {
+                PublicationProfile::Build70374CompatibleTerrainV1
+            } else if version == 12 {
                 PublicationProfile::Build70374AvailableTerrainV1
             } else if version == 9 {
                 PublicationProfile::Build70338Db2GtCamerasV1
@@ -357,7 +365,7 @@ impl Plan {
         if ![70170, 70205, 70338].contains(&self.build)
             && !self.is_v10()
             && !self.is_v11()
-            && !self.is_v12()
+            && !self.is_available_terrain()
         {
             return Err("product_plan_build");
         }
@@ -372,7 +380,7 @@ impl Plan {
         if (self.schema_catalog == SchemaCatalog::WowDbDefs70374V1 || self.build == 70374)
             && !self.is_v10()
             && !self.is_v11()
-            && !self.is_v12()
+            && !self.is_available_terrain()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -469,6 +477,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v13() {
+            return 13;
+        }
         if self.is_v12() {
             return 12;
         }
@@ -503,6 +514,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v13() {
+            return "forever-product-v13";
+        }
         if self.is_v12() {
             return "forever-product-v12";
         }
@@ -557,6 +571,17 @@ impl Plan {
         )
     }
 
+    pub const fn is_v13(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70374CompatibleTerrainV1
+        )
+    }
+
+    pub const fn is_available_terrain(&self) -> bool {
+        self.is_v12() || self.is_v13()
+    }
+
     pub const fn is_v11(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -598,7 +623,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70374V1 => "schema-catalog\twowdbdefs-70374-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=12, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=13, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -609,7 +634,7 @@ impl Plan {
             self.version(),
             self.build,
             self.locale.name(),
-            if self.is_v12() && self.terrain == Selection::All {
+            if self.is_available_terrain() && self.terrain == Selection::All {
                 "all-available-maps".into()
             } else {
                 self.terrain.render()
@@ -685,3 +710,6 @@ mod v11_tests;
 
 #[cfg(test)]
 mod v12_tests;
+
+#[cfg(test)]
+mod v13_tests;

@@ -166,7 +166,7 @@ fn unknown_version_keeps_generic_parse_error_envelope() {
     let p = lab.0.join("plan.tsv");
     fs::write(
         &p,
-        PLAN.replace("forever-product\t11", "forever-product\t13"),
+        PLAN.replace("forever-product\t11", "forever-product\t14"),
     )
     .unwrap();
     let r = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))

@@ -10,6 +10,7 @@ pub enum PublicationProfile {
     Build70374Db2OnlyV1,
     Build70374Db2GtCamerasV1,
     Build70374AvailableTerrainV1,
+    Build70374CompatibleTerrainV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -28,7 +29,7 @@ impl PublicationProfile {
                 SchemaCatalog::WowDbDefs70374V1,
                 Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
             ),
-            Self::Build70374AvailableTerrainV1 => (
+            Self::Build70374AvailableTerrainV1 | Self::Build70374CompatibleTerrainV1 => (
                 70374,
                 SchemaCatalog::WowDbDefs70374V1,
                 Component::Terrain.bit(),
@@ -50,7 +51,10 @@ impl PublicationProfile {
         {
             return Err("product_plan_component_scope");
         }
-        if self == Self::Build70374AvailableTerrainV1 {
+        if matches!(
+            self,
+            Self::Build70374AvailableTerrainV1 | Self::Build70374CompatibleTerrainV1
+        ) {
             if plan.decryption != super::Decryption::Disabled
                 || !plan.db2.is_empty()
                 || !matches!(plan.terrain, Selection::All | Selection::Map(_))

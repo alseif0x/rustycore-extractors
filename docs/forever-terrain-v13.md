@@ -1,0 +1,234 @@
+# Linux70374 compatible terrain product v13
+
+This explicit product preserves strict v12 and adds a separately selected
+available-map traversal policy. Committed software qualification, authored
+forced recovery, original-loop comparison and the bounded real extraction with
+both verifiers pass within the scopes below. Whole-client coverage, runtime,
+reproducible distribution and full-suite release remain separate gates.
+Existing v12 evidence retains its original scope.
+
+## Explicit plan and commands
+
+Use the canonical examples in `tests/contracts/fixtures/forever-product-v13`.
+V13 requires Linux, Rust-local build70374, the current wowdbdefs-70374-v1 catalog,
+disabled keys, resident maps-only component mask8, and `map:<u32>` or
+`all-available-maps`. Tile subsets, supplied keys, native backend, scratch,
+DB2/GT/camera outputs, collision and navigation are rejected.
+
+For the admitted build/locale, the following commands select the checked-in
+all-available plan. The output parent must exist and the destination must be
+new, outside both Git and the read-only client. Run long extraction in a
+persistent user service or tmux. These commands produce terrain only.
+
+```bash
+source .opencode/environment.sh
+cargo build --offline --locked --release -p forever-extractor
+BIN="$CARGO_TARGET_DIR/release/forever-extractor"
+PLAN="$PWD/tests/contracts/fixtures/forever-product-v13/available.tsv"
+"$BIN" extract --plan "$PLAN" --client /absolute/client --output /absolute/private/new-terrain
+"$BIN" verify --plan "$PLAN" --output /absolute/private/new-terrain
+"$BIN" verify-links --plan "$PLAN" --output /absolute/private/new-terrain
+```
+
+The commands remain inspect, extract, resume, verify and verify-links. V13 uses
+`Build70374CompatibleTerrainV1`, the separate
+`linux70374-compatible-full-maps-available-map-v1` source profile, and coveragev2.
+Catalog/build equality does not opt older plans into the new policy.
+
+## Explicit missing-input policy
+
+Map's authenticated available sections and all three complete liquid startup
+tables remain mandatory. Global Map coverage keeps admitted/omitted sections,
+declared/admitted row counts, and independent full-CKey/EKey authentication
+flags. Unknown encrypted sections are not plaintext or a complete Map claim.
+
+Only `LocalStore::MissingFile` while reading a WDT or known-present root ADT is
+an admitted omission. Other store errors, encrypted-only candidates, corrupt or
+incomplete encodings, unsupported formats, invalid routing, malformed WDT/ADT,
+conversion errors, resource limits, source changes and output failures remain
+terminal. Every omission is followed by source closure before traversal
+continues. Reads and outputs retain the existing logical budgets.
+
+An unavailable WDT emits a zero tilelist and reports MAIN as **unknown**. Its
+4096 coordinates are unknown, not known absent. A loaded WDT reports known MAIN
+present/absent coordinates. A MissingFile root ADT emits no MAPS and leaves its
+list bit clear while traversal continues. Converted and missing root counts sum
+to that map's known-present count. A successfully loaded empty MAIN remains
+distinct from an unavailable WDT.
+
+Source traversal preserves the materialized Map order and each WDT's row then
+column order. Every selected map, including unavailable/empty maps, emits a
+whole-map tilelist. Invalid dependencies do not become omissions. The source
+policy follows the original successful-output/list-bit behavior for these
+explicit unavailable inputs; it does not claim general native failure parity.
+Original output-open failure also returns false, while product publication
+failure deliberately stays terminal.
+
+## Coverage and verification
+
+`maps/compatible-terrain-coverage-v2.tsv` is canonical bounded ASCII TSV. It binds
+the six-key Context (source/plan/producer/build/locale/component mask), selection
+and packing. Per-map rows retain plan index, materialized ordinal, full-u32 map
+ID, loaded/unavailable WDT disposition, known present count or unknown, converted
+count, MissingFile root ADT count and exact tilelist association. The finish row
+separates known present, known absent, unknown, converted and omitted counts.
+Transient candidate-work counters do not change canonical replay bytes.
+
+Both offline verifiers preflight inventory metadata before payload allocation,
+validate strict70374 MAPS and tilelists, require every declared map's list, and
+check exact successful MAPS/list bitsets and counts. Extra/missing/foreign outputs,
+wrong context, false counts and malformed coverage reject. The verification
+profile is `linux70374-compatible-available-map-terrain-product-v1`, with scope
+`artifact_integrity_intrinsic_formats_and_declared_available_map_omission_coverage_links`.
+Coverage remains producer-reported; offline verification does not independently
+authenticate unobserved client MAIN, Map sections or omission causes.
+
+A completed selected output can therefore contain explicitly admitted omissions.
+It does not assert that all client maps or all known-present inputs were acquired.
+
+## Publication, resume and resources
+
+Incomplete same-context output can resume. Even a sealed terrain stage is
+reacquired and replayed through existing Run receipts, including coverage and
+omission bytes. A changed disposition/coverage rejects; complete packages reject
+resume without modification. Any fatal error leaves an incomplete product that
+both verifiers reject. No provisional prefix is accepted.
+
+V13 retains v12 ceilings: 64GiB logical source/output, 262144 package files,
+4096 maps, 96MiB manifest metadata, 1MiB coverage, 256MiB package-metadata
+reservation, and the 8MiB sink reservation subtracted from the 1GiB combined core
+memory ceiling. Sink state and outcome capacities are charged; MAPS is streamed
+through Run::put and never retained as a whole selection. These are logical
+budgets, not exact RSS, physical I/O or global process-tree CPU measurements.
+Caps fail without truncating the requested domain.
+
+## Authored acceptance scope
+
+Focused Rust source tests cover plan admission, canonical coverage, unknown MAIN,
+omission accounting, source order, output associations, malformed inputs and
+sealed replay. CLI tests use only authored CASC/DB2/WDT/ADT bytes, including a
+correctly framed synthetic encrypted omitted Map section. They exercise selected/all acquisition,
+MissingFile WDT/root behavior, strict-v12 negatives and both verifiers.
+Recovery tests construct deterministic empty/partial/sealed Run states, then run
+the actual CLI resume and compare complete output bytes. They are not killed-process
+or fsync-crash tests. Clean/recovered equality is a lifecycle regression, not an
+independent native conversion oracle. Original-loop authored comparison and a
+fresh immutable whole qualification were separate gates at that checkpoint.
+The subsequent qualification below closes the software gate only.
+
+The focused candidate validation passes 389 extractor tests per debug/release
+profile (358 library and 31 integration), including 32 new authored methods.
+The exact source-contract subset passes 424 tests with two historical skips;
+distribution passes 162 with one historical platform skip. Extractor all-target
+Clippy and scoped formatting pass. Validation receipt is
+`2f138088e8c15aee3e8b885db4ee1919c6103855b8d2370cc80666f706b49b8b`.
+Three initial source-anchor failures are retained; only the anchors for the
+shared terrain gate and explicit v13/v12 metadata dispatch are corrected.
+Separate earlier library validation passes 65 tests before formatting; its
+receipt remains tied to that earlier source. None is whole-workspace or
+real-client acceptance for the current committed producer.
+
+## Committed Linux software and forced-interruption checkpoint
+
+Source commit `3eb45c1c734b6f950303ac1f26587e27b3b3cdbd` is frozen with
+795 files and 202 directories. Its eight-command offline qualification passes
+3,147 tests / 26 historical ignores in both debug and release, 424 source
+contracts / two skips, 165 distribution tests / one skip, workspace all-target
+Clippy and full formatting. Both executable copies match their actual build
+outputs. All 3,970 software guards / 48 aliases and the source inventory close
+unchanged. Qualification report:
+`751c1854296f681f7d791a25637d81a6918c759f0729fddc928aa54171a24993`;
+independent terminal review:
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+The packaging correction includes five existing CI inputs and passes 84 focused
+synthetic packaging tests; it does not establish reproducible distribution.
+
+A separate release campaign executes eleven authored CLI calls: a clean triplet
+and two actual fsync-injected SIGKILL cuts followed by resume and both verifiers.
+One cut interrupts the first MAPS transaction; the other occurs after the maps
+seal and before manifest publication. All three completed views match the
+independent authored MAPS oracle, exact tilelists, coverage, manifests and state
+receipts: six MAPS, six lists and three coverage files across those views.
+Independent review passes 251 checks, with 4,024 guards / 48 aliases, exact cut
+snapshots, traces, absent owned groups and numeric parent exit zero. Report:
+`5778a4fcd90f6f303fd15d5eb58e94a334b75c7385eed6c869668dcbf9315243`;
+independent review:
+`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`.
+Two auditor-only scope/mode assumptions were corrected in retained attempts;
+the producer was not changed or rerun. Interrupted fsync is not successful fsync,
+and these cuts do not establish power-loss or crash durability.
+
+This checkpoint executes no real-client extraction or original native loop.
+The separately prepared eleven-case original-loop comparison, real all-map
+extraction with both verifiers, stable distribution and remaining component and
+runtime gates stay open. Historical v12 failures and contracts remain intact.
+
+## Subsequent original ExtractMaps loop comparison
+
+Eleven authored cases execute the original ExtractMaps loop from Forever
+commit `8a864593bb4d566153e89058b33793752ff81c57`. Four startup calls are
+redirected to preloaded authored Map/liquid state; original ReadMapDBC,
+ReadLiquid* and main are not executed. Original loadlib, FDID ConvertADT,
+parser/converter and tilelist traversal execute over a memory inventory.
+This does not compare native CASC routing or real-client outputs.
+
+For each case, the qualified v13 release executable completes extract, verify
+and verify-links before the original native call runs. The cases include
+missing first/middle/last ADTs, missing WDTs followed by later maps, all WDTs
+missing, empty MAIN, physical Map order/direct copies/WDT-zero filtering,
+packing choices, liquids and all ADTs missing. All 22 MAPS and 15 tilelists
+match complete original bytes and independently calculated list bits:
+37 files / 1,495,563 bytes.
+
+The campaign records 44 successful children, including eleven original calls,
+with no automatic retries. Independent review closes 5,496 guards / 78 aliases,
+both source trees, complete fixture correspondence, all outputs, seven-file
+invocation leaves, empty runtime network traces, absent owned groups and numeric
+parent exit zero. Campaign report:
+`9f136b7ead5991556298ee23ac09072adb16f5a3778dace492a1682ac540c38e`;
+independent review:
+`6cbe4eb797096f588ea969df8e3405c8d9d5c8dae2a22e60de20be2451367d02`.
+The first native build remains failed; the separately reviewed build adds the
+unchanged original StringVFormat provider and succeeds. No native malformed
+input, general failure-admission, runtime or real all-map acceptance follows.
+
+## Subsequent real all-available terrain acceptance
+
+The same qualified source `3eb45c1` and release executable complete one actual
+70374/esES extraction with disabled keys, followed by one `verify` and one
+`verify-links` call. All three exit zero; there are no automatic retries or new
+producer calls during closing. Extraction takes 133.291 seconds. The package
+contains 3,322 MAPS, 71 tilelists and one coverage file: 3,394 artifacts /
+215,621,491 bytes.
+
+Of 71 selected materialized Map rows, 69 WDTs load and two are unavailable.
+All 3,322 known-present root ADTs convert; none has a MissingFile omission.
+Coverage reports 279,302 known-absent and 8,192 unknown coordinates. The latter
+belong to unavailable WDTs and are never represented as known absent. Map
+startup admits one section and omits three; encoded-key authentication passes,
+while full content-key verification and whole-client Map coverage remain false.
+
+Final closing passes with receipt
+`c7dbbe6c8ea7c13ab0c06f05b95c40556f6223db5d0a05a27582d6e71d3fd127`.
+Independent final review
+`b5a6df394dc3be190c25b135519f687fb27a818aeddfaca8dfc504e93a7d373f`
+replays the complete frozen physical ledger twice and closes 4,908 guards /
+48 aliases, 795 qualified source files, tool trees, all three product invocation
+leaves, final validation leaf, numeric parent, metadata and retained failed v12
+outputs unchanged. Runtime traces are empty and owned process groups are absent.
+All 736 retained Map0 MAPS plus its tilelist match complete bytes (57,333,793
+bytes); both retained same-input original native MAPS also match (142,084 bytes).
+Both comparisons repeat at final closure.
+
+A preparation-only validator defect lost hash references while constructing the
+pre-links view. Its failed preparation is retained, with no validator or product
+call and no new output. The separately frozen checker v3 preserves completed
+v1 proof bindings and requires both predecessor and current software closures;
+72 authored controls pass before corrected preparation. Context, snapshot and
+ledger are reused unchanged. The actual extraction and verifier triplet is not
+repeated.
+
+This accepts artifact integrity, intrinsic formats, exact declared links and the
+bounded available-map traversal with explicit MissingFile omissions. Coverage
+remains producer-reported. Collision/navigation for this build, whole-client
+coverage, RustyCore runtime use and reproducible stable distribution remain open.

@@ -73,12 +73,12 @@ fn verify_inner(
         limits.total_bytes = budget.output_bytes;
     }
     #[cfg(target_os = "linux")]
-    if plan.is_v12() {
+    if plan.is_available_terrain() {
         limits = crate::driver::terrain_v12::package_limits();
     }
     let mut facts = Facts::default();
     #[cfg(target_os = "linux")]
-    let mut link_facts = (!plan.is_v12()
+    let mut link_facts = (!plan.is_available_terrain()
         && (matches!(scope, Scope::Links) || plan.map_domain.is_some()))
     .then(links::Facts::default);
     #[cfg(not(target_os = "linux"))]
@@ -112,13 +112,15 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if plan.is_gt_cameras() || plan.is_v10() || plan.is_v12() {
+    let verified = if plan.is_gt_cameras() || plan.is_v10() || plan.is_available_terrain() {
         package::verify_with_preflight(
             output,
             expected,
             limits,
             |artifacts| {
-                let admitted = if plan.is_v12() {
+                let admitted = if plan.is_v13() {
+                    crate::driver::terrain_v13::admit_metadata(plan, artifacts)
+                } else if plan.is_v12() {
                     crate::driver::terrain_v12::admit_metadata(plan, artifacts)
                 } else if plan.is_v10() {
                     v10::admit_metadata(plan, artifacts)
@@ -162,6 +164,14 @@ fn verify_inner(
         return Err("product_inventory".into());
     }
     #[cfg(target_os = "linux")]
+    if plan.is_v13() {
+        facts
+            .terrain_v13
+            .take()
+            .ok_or("product_terrain_coverage")?
+            .finish(plan, context)?;
+    }
+    #[cfg(target_os = "linux")]
     if plan.is_v12() {
         facts
             .terrain_v12
@@ -181,6 +191,8 @@ fn verify_inner(
 struct Facts {
     #[cfg(target_os = "linux")]
     terrain_v12: Option<crate::driver::terrain_v12::VerifyFacts>,
+    #[cfg(target_os = "linux")]
+    terrain_v13: Option<crate::driver::terrain_v13::VerifyFacts>,
     db2: BTreeSet<String>,
     gt: usize,
     cameras: BTreeSet<u32>,
@@ -249,6 +261,13 @@ impl Facts {
     fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
         if bytes.is_empty() {
             return Err("product_empty_artifact".into());
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v13() {
+            return self
+                .terrain_v13
+                .get_or_insert_with(crate::driver::terrain_v13::VerifyFacts::new)
+                .inspect(artifact, bytes);
         }
         #[cfg(target_os = "linux")]
         if plan.is_v12() {
