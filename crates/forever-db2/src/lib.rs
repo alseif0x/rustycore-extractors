@@ -15,6 +15,7 @@
 //! DB2FileLoader.h::DB2Header/DB2SectionHeader and LoadHeaders. This is an
 //! independent bounded implementation, not an imported C++ loader.
 use std::io::{self, Read};
+pub mod availability;
 mod records;
 pub use records::catalog;
 pub use records::terrain_sources;

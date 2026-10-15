@@ -9,6 +9,9 @@ use super::{DecodeLimits, DecodedTable, RecordError, Value};
 #[path = "terrain_sources/tests.rs"]
 mod terrain_source_tests;
 
+#[path = "available_sections/tests.rs"]
+mod available_source_tests;
+
 const HEADER: usize = 204;
 const SECTION: usize = 40;
 /// Offset of the first column entry for a single-section file: 204 header +
