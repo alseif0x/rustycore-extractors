@@ -2675,3 +2675,11 @@ review identifies an inherited unknown-version test using newly supported12;
 the root correction uses13. Joint immutable qualification and real full-map
 acceptance remain pending. See docs/forever-terrain-v12.md; the preceding
 two-tile proof and historical bundles do not establish stable full extraction.
+
+Initial PR #77 CI also finds Linux-specific dispatch in the common execution
+boundary. The correction moves v12 terrain/context handling to the platform
+adapter, keeps the strict OS-free boundary guard and updates explicit adapter
+and twelve-method test inventory facts. Ten common source-contract and five
+v12 contract checks pass locally. The first immutable source/qualification
+admission remain unexecuted; actual qualification must bind the corrected
+commit and source snapshot before any real product call.

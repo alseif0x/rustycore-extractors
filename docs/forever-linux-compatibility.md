@@ -266,3 +266,11 @@ checks alone do not establish historical CLI regression or real full-map
 acceptance. Joint immutable qualification and the first actual full-map
 product attempt remain pending. Public plans, command shapes and boundaries
 are in [the v12 runbook](forever-terrain-v12.md).
+
+Initial PR #77 CI additionally rejects a Linux conditional in the common
+execution boundary and outdated adapter/test-inventory anchors. The correction
+moves v12 terrain dispatch and context into the platform adapter, preserves
+the strict common boundary guard and updates the explicit twelve-method
+lifecycle inventory. Ten common source-contract checks and five v12 public
+checks pass locally. The initial CI failure remains historical; immutable
+qualification must use the corrected source and fresh producer builds.

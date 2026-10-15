@@ -64,6 +64,13 @@ using now-supported version 12 as an unknown version. Its correction uses
 version 13; joint immutable qualification must execute that historical test
 alongside the whole workspace and the new product tests.
 
+Initial PR #77 CI also exposes a common-execution boundary regression: the
+candidate placed a Linux conditional in the shared lifecycle. The correction
+moves terrain dispatch/context to the existing platform adapter; the generic
+adapter defaults to the older terrain producer. The operating-system boundary
+guard is retained. Its ten source-contract checks and the five v12 public
+contract checks pass locally; fresh joint qualification remains pending.
+
 The original extractor may continue after failed terrain loads/conversions;
 v12 deliberately rejects a known-present failure. No native failure-admission
 parity is claimed. This component does not deliver DB2, GT, cameras, collision,

@@ -9,12 +9,16 @@ use package::Component;
 /// Adapter-owned capabilities survive every producer and final package seal.
 /// Some input leases require an additional check before each active producer.
 pub(super) trait Adapter {
-    #[cfg(target_os = "linux")]
-    fn product_context(&self) -> Option<package::Context> {
-        None
-    }
     fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
         None
+    }
+    fn extract_terrain(
+        &self,
+        plan: &Plan,
+        store: &mut LocalStore,
+        run: &mut Run,
+    ) -> Result<(), Error> {
+        super::maps(plan, store, run, self.map_domain())
     }
     fn verify_before_producer(&self) -> Result<(), Error> {
         Ok(())
@@ -100,21 +104,8 @@ impl<A: Adapter> Work for Production<'_, A> {
         super::cameras(self.plan, self.store, &mut self.run)
     }
     fn terrain(&mut self) -> Result<(), Error> {
-        #[cfg(target_os = "linux")]
-        if self.plan.is_v12() {
-            return super::terrain_v12::extract(
-                self.plan,
-                self.store,
-                &mut self.run,
-                self.adapter.product_context().ok_or("product_context")?,
-            );
-        }
-        super::maps(
-            self.plan,
-            self.store,
-            &mut self.run,
-            self.adapter.map_domain(),
-        )
+        self.adapter
+            .extract_terrain(self.plan, self.store, &mut self.run)
     }
     fn collision(&mut self) -> Result<(), Error> {
         self.adapter.extract_collision(self.store, &mut self.run)

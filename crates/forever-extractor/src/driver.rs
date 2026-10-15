@@ -324,8 +324,17 @@ struct LinuxExecution {
 
 #[cfg(target_os = "linux")]
 impl execution::Adapter for LinuxExecution {
-    fn product_context(&self) -> Option<Context> {
-        Some(self.context)
+    fn extract_terrain(
+        &self,
+        plan: &Plan,
+        store: &mut LocalStore,
+        run: &mut Run,
+    ) -> Result<(), Error> {
+        if plan.is_v12() {
+            terrain_v12::extract(plan, store, run, self.context)
+        } else {
+            maps(plan, store, run, self.domain.as_ref())
+        }
     }
     fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
         self.domain.as_ref()
