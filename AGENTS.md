@@ -2823,3 +2823,19 @@ executed comparison yet. Fresh committed whole-workspace qualification,
 original-loop comparison, real all-map and reproducible product acceptance
 remain gates. Full suite/runtime completion and Windows delivery stay open.
 See docs/forever-terrain-v13.md.
+
+The subsequent committed v13 software qualification pins source `3eb45c1`,
+795 files / 202 directories and both actual executable copies. All eight
+commands pass, including 3,147 tests / 26 historical ignores per debug/release
+profile, 424 source contracts / two skips, 165 distribution tests / one skip,
+workspace Clippy and formatting. Independent terminal QA is
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+The separate release recovery campaign executes eleven authored CLI calls,
+including two actual fsync-injected SIGKILL cuts and successful resume with both
+verifiers. Three completed views match independent MAPS, tilelist and coverage
+expectations. Its independent review passes 251 checks, retaining 4,024 guards /
+48 aliases and numeric parent/source/evidence closure
+(`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`).
+This is authored process-interruption evidence, not power-loss durability or
+real-client extraction. Original-loop comparison, real all-map verification,
+stable distribution and the full suite/runtime gates remain open.

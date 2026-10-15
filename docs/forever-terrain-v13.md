@@ -96,7 +96,8 @@ Recovery tests construct deterministic empty/partial/sealed Run states, then run
 the actual CLI resume and compare complete output bytes. They are not killed-process
 or fsync-crash tests. Clean/recovered equality is a lifecycle regression, not an
 independent native conversion oracle. Original-loop authored comparison and a
-fresh immutable whole qualification remain separate gates before real v13 use.
+fresh immutable whole qualification were separate gates at that checkpoint.
+The subsequent qualification below closes the software gate only.
 
 The focused candidate validation passes 389 extractor tests per debug/release
 profile (358 library and 31 integration), including 32 new authored methods.
@@ -109,3 +110,38 @@ shared terrain gate and explicit v13/v12 metadata dispatch are corrected.
 Separate earlier library validation passes 65 tests before formatting; its
 receipt remains tied to that earlier source. None is whole-workspace or
 real-client acceptance for the current committed producer.
+
+## Committed Linux software and forced-interruption checkpoint
+
+Source commit `3eb45c1c734b6f950303ac1f26587e27b3b3cdbd` is frozen with
+795 files and 202 directories. Its eight-command offline qualification passes
+3,147 tests / 26 historical ignores in both debug and release, 424 source
+contracts / two skips, 165 distribution tests / one skip, workspace all-target
+Clippy and full formatting. Both executable copies match their actual build
+outputs. All 3,970 software guards / 48 aliases and the source inventory close
+unchanged. Qualification report:
+`751c1854296f681f7d791a25637d81a6918c759f0729fddc928aa54171a24993`;
+independent terminal review:
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+The packaging correction includes five existing CI inputs and passes 84 focused
+synthetic packaging tests; it does not establish reproducible distribution.
+
+A separate release campaign executes eleven authored CLI calls: a clean triplet
+and two actual fsync-injected SIGKILL cuts followed by resume and both verifiers.
+One cut interrupts the first MAPS transaction; the other occurs after the maps
+seal and before manifest publication. All three completed views match the
+independent authored MAPS oracle, exact tilelists, coverage, manifests and state
+receipts: six MAPS, six lists and three coverage files across those views.
+Independent review passes 251 checks, with 4,024 guards / 48 aliases, exact cut
+snapshots, traces, absent owned groups and numeric parent exit zero. Report:
+`5778a4fcd90f6f303fd15d5eb58e94a334b75c7385eed6c869668dcbf9315243`;
+independent review:
+`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`.
+Two auditor-only scope/mode assumptions were corrected in retained attempts;
+the producer was not changed or rerun. Interrupted fsync is not successful fsync,
+and these cuts do not establish power-loss or crash durability.
+
+This checkpoint executes no real-client extraction or original native loop.
+The separately prepared eleven-case original-loop comparison, real all-map
+extraction with both verifiers, stable distribution and remaining component and
+runtime gates stay open. Historical v12 failures and contracts remain intact.

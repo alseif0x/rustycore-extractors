@@ -4291,3 +4291,16 @@ qualification, authored native-loop comparison and real all-map/verification
 gates remain before accepting the component. Full extraction-suite, runtime and
 reproducible stable distribution remain open. See
 [v13 scope](forever-terrain-v13.md).
+
+The later committed v13 software checkpoint passes 3,147 workspace tests / 26
+historical ignores per debug/release profile, all eight offline qualification
+commands, 424 source contracts / two skips and 165 distribution tests / one
+skip. Independent terminal QA is
+`fff748597289d44d43c3957398f22182e45482c908acb6e2f708591845ed79e5`.
+Eleven separate authored release calls then pass two real SIGKILL cuts and
+recovery, comparing three complete views against independent MAPS, list and
+coverage expectations. Independent QA closes 251 checks without findings
+(`b54fb176f3c584d62df4cdbcb0b06191e3352160aff3ce22afa6c5a9de4a2093`).
+This closes software and authored interruption gates for source `3eb45c1`;
+original-loop comparison, real all-map extraction/verification, reproducible
+stable distribution and the remaining suite/runtime gates remain open.
