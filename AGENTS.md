@@ -2609,3 +2609,14 @@ each profile, both example builds, Clippy and format. Earlier timeout/format
 attempts stay failed. Native getter comparison, real terrain and the versioned
 CLI remain pending; this is not full extraction or runtime acceptance. Receipt
 identities and limits are in `docs/forever-linux-compatibility.md`.
+
+The subsequent original available-section getter comparison passes eight
+authored positive cases / 14 direct rows / 16 copy pairs. All 42 commands close;
+independent terminal QA passes without findings. Original ReadMapDBC, native
+CASC and real native inputs are not executed. PR #73 merges as
+`4b9a67767ef382e5a7accdf53ecbaf8f1663d491` after six exact-head CI passes,
+and its branch is deleted. Issue #74 separately implements selected terrain
+70374 with available Map coverage and complete liquid/WDT/ADT sources. The
+fixed proposed two-tile request must reject missing maps/tiles; no real terrain
+availability, product CLI or complete extraction is established. Detailed
+receipts and limits remain in `docs/forever-linux-compatibility.md`.

@@ -104,7 +104,32 @@ Independent qualification QA: `33ce92a71c9d2d9eb4b909fed1e7617523da3d70e4030dd46
 Aggregate real closing receipt: `332c352719ff5ad36723ef5f625651d27facac57cd5b2833488eae2da70eb6f6`.
 Independent real QA: `76ae874da2a5ad72aa4baf9a45d21a8dc9eda43e9b5a85ff1121301f3c5b367c`.
 
-This establishes available-row acquisition and projection. The original C++
-getter comparison, selected real terrain, product CLI and complete extraction
-remain pending. No terrain, model conversion or runtime consumer executes in
-this diagnostic.
+This establishes available-row acquisition and projection. No terrain, model
+conversion or runtime consumer executes in this diagnostic.
+
+## Original available-section getter comparison
+
+The separately qualified original C++ loader/getters match Rust on all eight
+authored positive fixtures: 14 direct records and 16 copy pairs across complete,
+mixed, all-unknown and empty-middle section cases for both tables. Authored Map
+materialization separately yields eight rows; original `ReadMapDBC` is not run.
+All 42 build/comparison commands exit zero with closed groups. Six original
+translation units and one authored adapter compile; full-system dependencies
+are admitted before compilation and checked again afterward. Sixteen compiler
+traces pass their reviewed local IPC policy; 26 comparison traces are empty.
+All committed DB2 files at `65d0342` match the companion's immutable dependency.
+
+Campaign receipt: `d1556305e7f9f0d08c54d545245fa9e3ee777577d6645c375f55605ee1548853`.
+Independent terminal QA: `e8ad4c0f70d642e54fae12644dd20315ac666afa502e351829f06582448e0b5f`.
+The initial execution admission omitted two already-guarded runtime libraries;
+its failed review is preserved. The corrected admission adds only those loader
+bindings and passes independent review before the single campaign execution.
+There is no native CASC, real-input native comparison or full extractor claim.
+
+PR #73 merged as `4b9a67767ef382e5a7accdf53ecbaf8f1663d491` after all six
+CI jobs passed on its exact head. Its implementation branch is deleted.
+[Issue #74](https://github.com/alseif0x/rustycore-extractors/issues/74) now tracks
+selected real terrain through a separate 70374 API. Map 0 tiles (31,31) and
+(31,32) are the fixed proposed request, not established available inputs.
+Missing maps/tiles or incomplete dependencies must fail the whole selection.
+The selected terrain, versioned product CLI and complete extraction remain open.
