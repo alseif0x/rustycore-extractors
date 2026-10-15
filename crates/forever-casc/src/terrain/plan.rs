@@ -307,6 +307,15 @@ impl<'a> WdtPlan<'a> {
             failed: false,
         }
     }
+    /// Separate whole-map discovery state. Only this state permits an explicit
+    /// unavailable-WDT transition; it never classifies unknown MAIN as absent.
+    pub fn compatible_expansion(&self) -> CompatibleExpansion<'_, 'a> {
+        CompatibleExpansion {
+            inner: self.expansion(),
+            unknown_coordinates: 0,
+            unavailable_wdts: 0,
+        }
+    }
     fn request(&self, index: usize, selected: &SelectedMap) -> WdtRequest {
         let row = &self.rows[selected.ordinal];
         WdtRequest {
@@ -521,6 +530,95 @@ pub struct Completion {
     pub selected_coordinates: u64,
     pub present_tiles: u64,
     pub absent_tiles: u64,
+}
+
+/// Discovery facts for the separate compatible whole-map traversal. Unknown
+/// coordinates belong to unavailable WDTs, and are neither present nor absent.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CompatibleCompletion {
+    pub scope: Scope,
+    pub maps: usize,
+    pub selected_coordinates: u64,
+    pub known_present_tiles: u64,
+    pub known_absent_tiles: u64,
+    pub unknown_coordinates: u64,
+    pub unavailable_wdts: usize,
+}
+
+/// Serial whole-map discovery with a separately named unavailable transition.
+/// Tile selections reject and poison this state; strict Expansion is unchanged.
+pub struct CompatibleExpansion<'p, 'a> {
+    inner: Expansion<'p, 'a>,
+    unknown_coordinates: u64,
+    unavailable_wdts: usize,
+}
+impl CompatibleExpansion<'_, '_> {
+    fn whole_map_state(&mut self) -> Result<(), Error> {
+        if self.inner.failed {
+            return Err(Error::FailedExpansion);
+        }
+        if self.inner.plan.scope == Scope::Tiles {
+            self.inner.failed = true;
+            return Err(Error::UnexpectedWdt);
+        }
+        Ok(())
+    }
+    pub fn expand_next(&mut self, file_data_id: u32, wdt: &Wdt<'_>) -> Result<MapExpansion, Error> {
+        self.whole_map_state()?;
+        self.inner.expand_next(file_data_id, wdt)
+    }
+    /// The full request tag must be the exact next selected ordinal, even when
+    /// different maps use the same FDID. No WDT bytes or MAIN facts are invented.
+    pub fn unavailable_next(&mut self, request: WdtRequest) -> Result<(), Error> {
+        self.whole_map_state()?;
+        let result = (|| {
+            let selected = self
+                .inner
+                .plan
+                .maps
+                .get(self.inner.next)
+                .ok_or(Error::UnexpectedWdt)?;
+            let expected = self.inner.plan.request(self.inner.next, selected);
+            if request.plan_index != expected.plan_index
+                || request.materialized_ordinal != expected.materialized_ordinal
+                || request.map_id != expected.map_id
+                || request.file_data_id != expected.file_data_id
+                || request.whole_map != expected.whole_map
+                || !request.whole_map
+            {
+                return Err(Error::WrongWdt);
+            }
+            let coordinates = self
+                .unknown_coordinates
+                .checked_add(wdt::TILE_COUNT as u64)
+                .ok_or(Error::Limit)?;
+            let unavailable = self.unavailable_wdts.checked_add(1).ok_or(Error::Limit)?;
+            self.unknown_coordinates = coordinates;
+            self.unavailable_wdts = unavailable;
+            self.inner.next += 1;
+            Ok(())
+        })();
+        if result.is_err() {
+            self.inner.failed = true;
+        }
+        result
+    }
+    pub fn finish_compatible(mut self) -> Result<CompatibleCompletion, Error> {
+        self.whole_map_state()?;
+        let complete = self.inner.finish()?;
+        Ok(CompatibleCompletion {
+            scope: complete.scope,
+            maps: complete.maps,
+            selected_coordinates: complete.selected_coordinates,
+            known_present_tiles: complete.present_tiles,
+            known_absent_tiles: complete
+                .absent_tiles
+                .checked_sub(self.unknown_coordinates)
+                .ok_or(Error::Limit)?,
+            unknown_coordinates: self.unknown_coordinates,
+            unavailable_wdts: self.unavailable_wdts,
+        })
+    }
 }
 
 /// Canonical relative output identity; never uses Name or Directory. Decimal

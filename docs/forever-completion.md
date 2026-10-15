@@ -4276,3 +4276,18 @@ differs from strict v12's terminal policy.
 new compatible terrain API/product and its authored-loop, whole-map,
 verification/recovery and packaging acceptance. That implementation and the
 remaining extraction-suite/runtime gates stay open; v12 is not relabeled.
+
+## Linux70374 compatible terrain candidate — 2026-10-15
+
+Issue #80's new v13 source separates explicit MissingFile omissions from fatal
+integrity/conversion/publication failures. Coverage v2 retains unknown MAIN for
+unavailable WDTs, known-present/converted/omitted ADT counts and exact MAPS/list
+associations. Strict v12 remains intact. Focused authored validation passes 389
+extractor tests per profile, the source/distribution subsets, Clippy and scoped
+formatting (`2f138088e8c15aee3e8b885db4ee1919c6103855b8d2370cc80666f706b49b8b`).
+These toy-CASC and manufactured-state replay tests are not current real-client,
+killed-process, whole-workspace or original-loop acceptance. Fresh committed
+qualification, authored native-loop comparison and real all-map/verification
+gates remain before accepting the component. Full extraction-suite, runtime and
+reproducible stable distribution remain open. See
+[v13 scope](forever-terrain-v13.md).

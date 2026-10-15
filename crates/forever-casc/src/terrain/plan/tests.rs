@@ -668,3 +668,88 @@ fn expansion_owns_no_wdt_bytes_and_preserves_input_rows() {
     assert_eq!(rows, before);
     assert_eq!(expansion.finish().unwrap().maps, 1);
 }
+
+#[test]
+fn compatible_planner_unknown_coordinates_and_loaded_main_remain_separate() {
+    let rows = [row(9, 100, "Nine"), row(7, 100, "Seven")];
+    let p = plan(&rows, Selection::AllMaps);
+    let mut e = p.compatible_expansion();
+    let requests: Vec<_> = p.maps().collect();
+    e.unavailable_next(requests[0]).unwrap();
+    let bytes = modern(&[(3, 2, 1, 0, 201)]);
+    e.expand_next(100, &parse(&bytes)).unwrap();
+    let done = e.finish_compatible().unwrap();
+    assert_eq!(
+        done,
+        CompatibleCompletion {
+            scope: Scope::AllMaps,
+            maps: 2,
+            selected_coordinates: 8192,
+            known_present_tiles: 1,
+            known_absent_tiles: 4095,
+            unknown_coordinates: 4096,
+            unavailable_wdts: 1,
+        }
+    );
+}
+
+#[test]
+fn compatible_unavailable_transition_requires_exact_next_owned_request() {
+    for field in 0..5 {
+        let rows = [row(9, 100, "Nine"), row(7, 100, "Seven")];
+        let p = plan(&rows, Selection::AllMaps);
+        let requests: Vec<_> = p.maps().collect();
+        let mut wrong = requests[0];
+        match field {
+            0 => wrong.plan_index = requests[1].plan_index,
+            1 => wrong.materialized_ordinal = requests[1].materialized_ordinal,
+            2 => wrong.map_id = requests[1].map_id,
+            3 => wrong.file_data_id += 1,
+            _ => wrong.whole_map = false,
+        }
+        let mut e = p.compatible_expansion();
+        assert_eq!(e.unavailable_next(wrong), Err(Error::WrongWdt));
+        assert_eq!(e.unavailable_next(requests[0]), Err(Error::FailedExpansion));
+        assert_eq!(e.finish_compatible(), Err(Error::FailedExpansion));
+    }
+}
+
+#[test]
+fn compatible_planner_incomplete_extra_failed_and_tiles_lifecycles_reject() {
+    let rows = [row(9, 100, "Nine")];
+    let p = plan(&rows, Selection::AllMaps);
+    assert_eq!(
+        p.compatible_expansion().finish_compatible(),
+        Err(Error::IncompleteExpansion)
+    );
+    let request = p.maps().next().unwrap();
+    let mut e = p.compatible_expansion();
+    e.unavailable_next(request).unwrap();
+    assert_eq!(e.unavailable_next(request), Err(Error::UnexpectedWdt));
+    assert_eq!(e.finish_compatible(), Err(Error::FailedExpansion));
+    let bytes = modern(&[]);
+    let mut e = p.compatible_expansion();
+    assert!(e.expand_next(101, &parse(&bytes)).is_err());
+    assert_eq!(e.unavailable_next(request), Err(Error::FailedExpansion));
+    let tiles = [TileRequest {
+        map_id: 9,
+        x: 0,
+        y: 0,
+    }];
+    let p = plan(&rows, Selection::Tiles(&tiles));
+    let mut e = p.compatible_expansion();
+    assert_eq!(
+        e.unavailable_next(p.maps().next().unwrap()),
+        Err(Error::UnexpectedWdt)
+    );
+    assert_eq!(e.finish_compatible(), Err(Error::FailedExpansion));
+    assert_eq!(
+        p.compatible_expansion().finish_compatible(),
+        Err(Error::UnexpectedWdt)
+    );
+    // The existing strict transition remains unable to finish without a WDT.
+    assert_eq!(
+        plan(&rows, Selection::AllMaps).expansion().finish(),
+        Err(Error::IncompleteExpansion)
+    );
+}

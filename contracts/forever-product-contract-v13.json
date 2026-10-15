@@ -1,0 +1,103 @@
+{
+  "contract": "forever-product-v13",
+  "version": 13,
+  "publication_profile": "Build70374CompatibleTerrainV1",
+  "builds": [
+    70374
+  ],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify",
+    "verify-links"
+  ],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70374-v1",
+    "component_mask": 8,
+    "components": [
+      "maps"
+    ],
+    "terrain": [
+      "map:<canonical-u32>",
+      "all-available-maps"
+    ],
+    "decryption": "disabled",
+    "storage": "resident",
+    "navigation": "none",
+    "db2_output_entries": 0,
+    "tile_subsets": false
+  },
+  "source_profile": "linux70374-compatible-full-maps-available-map-v1",
+  "source_policy": {
+    "map": "Separate available-section reader; unknown encrypted sections remain inaccessible and omitted with coverage. An admitted section with unavailable required bytes fails.",
+    "dependencies": "Map and liquid startup remain mandatory. Only explicit MissingFile at WDT/root ADT is an admitted omission; all other acquisition/conversion/integrity/resource/publication errors are fatal.",
+    "failure": "Unavailable WDT writes a zero list with unknown MAIN; loaded WDT known-present MissingFile ADT clears output/list bit and continues. Every selected map emits a list. No empty-MAIN inference follows unavailable WDT.",
+    "native_failure_parity": false
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2,
+    "tile": "maps/<map-min-width4>_<row-width2>_<column-width2>.map",
+    "tilelist": "maps/<map-min-width4>.tilelist",
+    "coverage": "maps/compatible-terrain-coverage-v2.tsv"
+  },
+  "coverage": {
+    "authentication": "producer_reported",
+    "binds": [
+      "source",
+      "plan",
+      "producer",
+      "build",
+      "locale",
+      "selection",
+      "pack"
+    ],
+    "facts": [
+      "Global Map sections and independent crypto flags",
+      "Selected source order, plan indices and materialized ordinals",
+      "Loaded WDT known MAIN present/absent counts or unavailable WDT unknown coordinates",
+      "Converted tiles and explicit MissingFile root ADT omission counts",
+      "Exact successful MAPS/list bitset association"
+    ],
+    "complete_global_map_coverage_claim": false
+  },
+  "verification": {
+    "profile": "linux70374-compatible-available-map-terrain-product-v1",
+    "scope": "artifact_integrity_intrinsic_formats_and_declared_available_map_omission_coverage_links",
+    "both_commands": "Metadata preflight before payload allocation, exact coverage/list/tile inventory, strict70374 MAPS and tilelist formats, equal complete tile/list bitsets and counts.",
+    "source_authentication": "Offline verification checks producer-reported source coverage, not an independent client snapshot."
+  },
+  "resume": "Same-context incomplete output only; rerun terrain even if sealed and compare retained artifacts through existing Run receipts before finishing. Complete output refuses writes.",
+  "limits": {
+    "maps": 4096,
+    "source_bytes": 68719476736,
+    "output_bytes": 68719476736,
+    "logical_memory_bytes": 1073741824,
+    "package_metadata_reservation_bytes": 268435456,
+    "sink_reservation_bytes": 8388608,
+    "coverage_bytes": 1048576,
+    "package_files": 262144,
+    "meaning": "Downward-only API budgets; package/sink reservations subtract from the combined core ceiling. Logical counters are not RSS or all CPU operations. Cap failures do not truncate output."
+  },
+  "excluded": [
+    "native backend",
+    "Windows execution",
+    "provided keys",
+    "scratch/disk storage",
+    "DB2/GT/camera output",
+    "collision",
+    "navigation",
+    "full encrypted Map coverage",
+    "real full-world acceptance",
+    "RustyCore runtime",
+    "release acceptance"
+  ],
+  "legacy_preservation": "Strict v12 retains terminal MissingFile behavior; v13 is an explicit plan/publication/coverage capability.",
+  "full_extractor_complete": false
+}

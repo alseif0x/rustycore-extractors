@@ -47,7 +47,7 @@ pub(super) fn execute(
 }
 
 fn replay_mask(plan: &Plan, completed: u8) -> u8 {
-    if plan.is_v12() {
+    if plan.is_available_terrain() {
         completed & !Component::Terrain.bit()
     } else {
         completed
@@ -405,5 +405,12 @@ mod v12_replay_tests {
         selected.validate().unwrap();
         assert_eq!(replay_mask(&selected, 8), 0);
         assert_eq!(replay_mask(&selected, 63), 55);
+        let compatible = Plan {
+            publication_profile: crate::plan::PublicationProfile::Build70374CompatibleTerrainV1,
+            ..selected
+        };
+        compatible.validate().unwrap();
+        assert_eq!(replay_mask(&compatible, 8), 0);
+        assert_eq!(replay_mask(&compatible, 63), 55);
     }
 }

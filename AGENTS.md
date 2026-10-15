@@ -2802,3 +2802,24 @@ failed; separate static qualification admits its same retained binary without
 recompiling. This closes the selected diagnosis, not physical global absence,
 encryption or full-loop/runtime acceptance. Issue #80 tracks the separately
 versioned compatible terrain implementation and its remaining acceptance gates.
+
+### Linux70374 compatible terrain candidate — 2026-10-15
+
+Issue #80 adds explicit product v13 and a separate compatible full-map API.
+Only typed MissingFile during WDT/root-ADT acquisition is omittable. Unavailable
+WDTs emit zero lists with unknown MAIN; loaded WDTs distinguish present,
+converted and omitted ADTs. Startup, malformed/incomplete/encrypted-only inputs,
+integrity/source drift, limits, conversion and publication errors stay terminal.
+Coverage v2 preserves source order, ordinals and exact successful MAPS/list
+associations. Strict v12 remains separate; resume replays even sealed terrain.
+Focused candidate validation passes 389 extractor tests per profile, 424 source
+checks/two historical skips, 162 distribution checks/one historical skip,
+Clippy and scoped formatting. Receipt is
+`2f138088e8c15aee3e8b885db4ee1919c6103855b8d2370cc80666f706b49b8b`.
+The tests use authored toy CASC and manufactured recovery states, not actual
+client data, killed processes or power-loss evidence. Native original-loop
+source preparation redirects four startup calls to authored state; it has no
+executed comparison yet. Fresh committed whole-workspace qualification,
+original-loop comparison, real all-map and reproducible product acceptance
+remain gates. Full suite/runtime completion and Windows delivery stay open.
+See docs/forever-terrain-v13.md.

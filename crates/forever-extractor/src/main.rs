@@ -46,7 +46,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_usage".into());
     };
     if command == "--help" && args.len() == 1 {
-        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nforever-extractor verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT] (Linux only)\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, v6 pinned-metadata inline off-mesh navigation, Linux v8 selected map and ancestors, Linux v9 build-70338 exact DB2+GT+cameras, Linux v10 build-70374 DB2-only, Linux v11 build-70374 exact DB2+GT+cameras, or Linux v12 build-70374 available-Map terrain-only full map/all-available-maps, disabled keys (v7 reserved). Supplied-key v2-v6/v8-v11 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6/v8 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Legacy Linux and Windows resident product IO; v9-v11 require Linux; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; verify-links additionally checks published terrain tile sets and navigation tile/global presence. V8 navigation builds each map's own candidates across the selected map and ancestor dependencies; maps without own candidates emit no MMaps. V8 verification enforces that whole domain and its terrain/navigation links; global GameObject startup remains required. Linux v10 is explicit Rust-local build-70374 DB2-only with wowdbdefs-70374-v1; disabled/provided-salsa20-v1 follow the same explicit key rules. Native, other components and Windows v10 execution reject. Linux v11 is explicit Rust-local build-70374 exact DB2+GT+cameras with wowdbdefs-70374-v1 and the same key policies and limits; Windows/native/geometry remain unsupported. No runtime/full-client claim.".into());
+        return Ok("forever-extractor inspect --plan PLAN [--client CLIENT [--keys KEYS]]\nforever-extractor extract|resume --plan PLAN --client CLIENT --output NEW_OR_INCOMPLETE_OUTPUT [--keys KEYS] [--scratch PRIVATE_DIRECTORY]\nforever-extractor verify --plan PLAN --output OUTPUT [--expect-context CONTEXT]\nforever-extractor verify-links --plan PLAN --output OUTPUT [--expect-context CONTEXT] (Linux only)\nOffline Rust-local only; canonical TSV v1 N/Z, v2 provided-salsa20-v1, v3 leased disk-world collision, v4 build-70205 metadata, v5 build-70338 metadata, v6 pinned-metadata inline off-mesh navigation, Linux v8 selected map and ancestors, Linux v9 build-70338 exact DB2+GT+cameras, Linux v10 build-70374 DB2-only, Linux v11 build-70374 exact DB2+GT+cameras, or Linux v12 build-70374 available-Map terrain-only full map/all-available-maps, disabled keys; Linux v13 separately records unavailable WDT/root ADT omissions (MissingFile only), with coverage v2 and unchanged fatal integrity/format/resource policies (v7 reserved). Supplied-key v2-v6/v8-v11 client commands require --keys; disabled plans forbid it; plan-only inspection and verification need no keys. V3-v6/v8 extract/resume with leased disk storage require --scratch; resident plans forbid it. Inspection and verification take no scratch. Legacy Linux and Windows resident product IO; v9-v11 require Linux; leased disk storage requires Linux. Windows client commands require the actual loaded sealed PE. Verification is bounded artifact/intrinsic-format scope; verify-links additionally checks published terrain tile sets and navigation tile/global presence. V8 navigation builds each map's own candidates across the selected map and ancestor dependencies; maps without own candidates emit no MMaps. V8 verification enforces that whole domain and its terrain/navigation links; global GameObject startup remains required. Linux v10 is explicit Rust-local build-70374 DB2-only with wowdbdefs-70374-v1; disabled/provided-salsa20-v1 follow the same explicit key rules. Native, other components and Windows v10 execution reject. Linux v11 is explicit Rust-local build-70374 exact DB2+GT+cameras with wowdbdefs-70374-v1 and the same key policies and limits; Windows/native/geometry remain unsupported. No runtime/full-client claim.".into());
     }
     #[cfg(not(target_os = "linux"))]
     if command == "verify-links" {
@@ -148,7 +148,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             forever_extractor::plan::PLACEMENT_ID_DOMAIN_PROFILE,
         )
     });
-    let terrain_capability = if plan.is_v12() {
+    let terrain_capability = if plan.is_v13() {
+        ",\"terrain_source_profile\":\"linux70374-compatible-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"omission_policy\":\"missing-file-only\",\"whole_client_map_coverage\":false"
+    } else if plan.is_v12() {
         ",\"terrain_source_profile\":\"linux70374-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
     } else {
         ""
@@ -189,14 +191,18 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 return Ok(format!(
                     "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
                     plan.contract(),
-                    if plan.is_v12() {
+                    if plan.is_v13() {
+                        forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
+                    } else if plan.is_v12() {
                         forever_extractor::plan::AVAILABLE_TERRAIN_VERIFY_SCOPE
                     } else if plan.map_domain.is_some() {
                         forever_extractor::plan::MAP_DOMAIN_VERIFY_SCOPE
                     } else {
                         verify::links::SCOPE
                     },
-                    if plan.is_v12() {
+                    if plan.is_v13() {
+                        forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_PROFILE
+                    } else if plan.is_v12() {
                         forever_extractor::plan::AVAILABLE_TERRAIN_VERIFY_PROFILE
                     } else if plan.map_domain.is_some() {
                         forever_extractor::plan::MAP_DOMAIN_VERIFICATION_PROFILE
@@ -207,7 +213,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 ));
             }
             let summary = verify::verify(&plan, path("--output")?, expected)?;
-            let scope = if plan.is_v12() {
+            let scope = if plan.is_v13() {
+                forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
+            } else if plan.is_v12() {
                 forever_extractor::plan::AVAILABLE_TERRAIN_VERIFY_SCOPE
             } else if plan.map_domain.is_some() {
                 forever_extractor::plan::MAP_DOMAIN_VERIFY_SCOPE

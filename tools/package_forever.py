@@ -222,6 +222,9 @@ def selected_paths(source):
     for name in DOCS:
         if (source / name).exists():
             result.add(name)
+    # Optional explicit v13 capability documentation; older recipes remain scoped.
+    if (source / "docs/forever-terrain-v13.md").exists():
+        result.add("docs/forever-terrain-v13.md")
     for crate in CRATES:
         root = source / "crates" / crate
         require((root / "Cargo.toml").is_file(), "source_crate_missing")
@@ -442,7 +445,7 @@ def bundle_path_allowed(name):
     if not name.startswith("source/"):
         return False
     relative = name[7:]
-    if relative in REQUIRED or relative in DOCS or relative in OPTIONAL_WINDOWS_QA_SOURCE or relative == ".cargo/config.toml":
+    if relative in REQUIRED or relative in DOCS or relative in OPTIONAL_WINDOWS_QA_SOURCE or relative in (".cargo/config.toml", "docs/forever-terrain-v13.md"):
         return True
     pieces = relative.split("/")
     if pieces[0] == "dependency-archives":
