@@ -2720,9 +2720,13 @@ with empty traces and zero retries, and all three persistent parents record
 numeric exit status zero. The private closing validator preserves the complete
 captured inventory and compares both earlier native-compared MAPS in full:
 two exact matches / 142,084 bytes. Closing receipt is
-`8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`;
-independent actual terminal review remains pending. No new native execution
-occurs in this comparison. Map coverage retains 71 rows, one admitted and three
+`8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`.
+Independent actual terminal review passes 43 checks without findings
+(`e514da54d82e8a8b457ecaad6ff2f11872e5367f10e2898f1f0902be9dbe0afa`).
+Its first audit failure is retained; the reviewed correction normalizes the
+qualification's recorded compact inventory and preserves separate current
+source/product identity checks. No qualification inode snapshot is inferred.
+No new native execution occurs in this comparison. Map coverage retains 71 rows, one admitted and three
 omitted encrypted sections, with encoded authentication but no full decoded
 CKey. Requested Map0 completion is not all-map/world or runtime acceptance.
 
@@ -2731,6 +2735,6 @@ because the already-pinned static inspector target is absent from its guard
 map; it writes no input directory or receipt. A fresh configuration adds only
 that expected tool guard and a new receipt destination, and the unchanged
 helper succeeds. No extractor rerun occurs. Actual synthetic CLI acquisition,
-cut/resume lifecycle, independent terminal closure, full suite and reproducible
+cut/resume lifecycle, full suite and reproducible
 stable distribution remain gates; PR #77 stays draft. Windows remains deferred.
 See docs/forever-terrain-v12.md for the scoped executed evidence.

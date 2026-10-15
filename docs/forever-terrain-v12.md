@@ -4,8 +4,8 @@
 adds explicit `forever-product-v12` for build 70374 on Linux. This candidate
 connects available Map rows to complete terrain acquisition and ordinary
 product publication. Whole software qualification and the first real Map0
-extraction with both verifiers pass. Independent terminal review and CLI
-recovery acceptance remain pending. The preceding two-tile proof is recorded in
+extraction with both verifiers pass. Independent terminal review passes; CLI
+recovery acceptance remains pending. The preceding two-tile proof is recorded in
 [the compatibility report](forever-linux-compatibility.md).
 
 ## Plans and commands
@@ -123,7 +123,15 @@ source identity and bounded build metadata. It also compares both previously
 native-compared MAPS in full: two matches / 142,084 bytes. No original converter
 or new CASC acquisition runs during those offline comparisons. Closing receipt
 SHA-256 is `8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`.
-Independent review of this actual terminal result remains pending.
+Independent review of this actual terminal result passes all 43 checks without
+findings; QA receipt SHA-256 is
+`e514da54d82e8a8b457ecaad6ff2f11872e5367f10e2898f1f0902be9dbe0afa`.
+It checks all 1,481 private product files and their captured identities. Its
+first audit remains failed: it compared the qualification's compact inventory
+directly with a later inventory containing identities. The reviewed correction
+compares exactly the qualification's recorded bytes/modes/hashes and directory
+modes, while retaining separate current-source and product identity checks.
+It does not infer an inode snapshot from qualification metadata.
 
 Coverage retains 71 direct/materialized Map rows, one admitted section and
 three omitted encrypted sections. The encoded source authenticates; its full
