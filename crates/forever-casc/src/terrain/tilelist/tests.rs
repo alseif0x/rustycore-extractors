@@ -49,3 +49,60 @@ fn malformed_lengths_builds_headers_and_non_ascii_bits_reject() {
         assert_eq!(verify(&bytes, 70205), Err(Error::Encoding));
     }
 }
+
+#[test]
+fn explicit_70374_codec_retains_legacy_gates_and_exact_layout() {
+    assert!(TileList::new(70374).is_err());
+    for build in [70170, 70205, 0] {
+        assert!(TileList::new_70374(build).is_err());
+    }
+    let mut list = TileList::new_70374(70374).unwrap();
+    let mut old = TileList::new(70205).unwrap();
+    for (x, y) in [(0, 0), (63, 63), (3, 2), (1, 4)] {
+        list.set(x, y).unwrap();
+        old.set(x, y).unwrap();
+    }
+    let mut expected = *old.bytes();
+    expected[8..12].copy_from_slice(&70374u32.to_le_bytes());
+    assert_eq!(list.bytes(), &expected);
+    assert_eq!(verify(list.bytes(), 70374), Err(Error::Build));
+    assert_eq!(present(list.bytes(), 70374, 3, 2), Err(Error::Build));
+    verify_70374(list.bytes(), 70374).unwrap();
+    assert!(present_70374(list.bytes(), 70374, 3, 2).unwrap());
+    assert!(!present_70374(list.bytes(), 70374, 2, 3).unwrap());
+}
+#[test]
+fn explicit_70374_empty_full_lists_and_coordinate_bounds() {
+    let mut list = TileList::new_70374(70374).unwrap();
+    assert!(list.bytes()[12..].iter().all(|b| *b == b'0'));
+    for y in 0..64 {
+        for x in 0..64 {
+            list.set(x, y).unwrap();
+        }
+    }
+    assert!(list.bytes()[12..].iter().all(|b| *b == b'1'));
+    assert_eq!(
+        present_70374(list.bytes(), 70374, 64, 0),
+        Err(Error::Coordinates)
+    );
+    assert_eq!(list.set(0, 64), Err(Error::Coordinates));
+}
+#[test]
+fn explicit_70374_rejects_truncated_extra_header_and_non_ascii() {
+    let list = TileList::new_70374(70374).unwrap();
+    for n in [0, 12, BYTES - 1] {
+        assert_eq!(
+            verify_70374(&list.bytes()[..n], 70374),
+            Err(Error::Encoding)
+        );
+    }
+    let mut extra = list.bytes().to_vec();
+    extra.push(b'0');
+    assert_eq!(verify_70374(&extra, 70374), Err(Error::Encoding));
+    for at in [0, 4, 8, 12, BYTES - 1] {
+        let mut b = *list.bytes();
+        b[at] = 0xff;
+        assert_eq!(verify_70374(&b, 70374), Err(Error::Encoding));
+    }
+    assert_eq!(verify_70374(list.bytes(), 70205), Err(Error::Build));
+}

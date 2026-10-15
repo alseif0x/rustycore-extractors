@@ -19,11 +19,21 @@ impl TileList {
         if !matches!(build, 70170 | 70205) {
             return Err(Error::Build);
         }
+        Ok(Self::header(build))
+    }
+    /// Explicit70374 codec; old new/verify/present retain their older gates.
+    pub fn new_70374(build: u32) -> Result<Self, Error> {
+        if build != 70374 {
+            return Err(Error::Build);
+        }
+        Ok(Self::header(build))
+    }
+    fn header(build: u32) -> Self {
         let mut bytes = [b'0'; BYTES];
         bytes[..4].copy_from_slice(b"MAPS");
         bytes[4..8].copy_from_slice(&10u32.to_le_bytes());
         bytes[8..12].copy_from_slice(&build.to_le_bytes());
-        Ok(Self { bytes })
+        Self { bytes }
     }
     pub fn set(&mut self, x: u8, y: u8) -> Result<(), Error> {
         self.bytes[index(x, y)?] = b'1';
@@ -35,6 +45,13 @@ impl TileList {
 }
 pub fn verify(bytes: &[u8], build: u32) -> Result<(), Error> {
     let header = TileList::new(build)?;
+    verify_header(bytes, &header)
+}
+/// Explicit70374 list verification; no source or referenced-file authentication.
+pub fn verify_70374(bytes: &[u8], build: u32) -> Result<(), Error> {
+    verify_header(bytes, &TileList::new_70374(build)?)
+}
+fn verify_header(bytes: &[u8], header: &TileList) -> Result<(), Error> {
     if bytes.len() != BYTES
         || bytes[..12] != header.bytes[..12]
         || bytes[12..].iter().any(|b| !matches!(b, b'0' | b'1'))
@@ -45,6 +62,10 @@ pub fn verify(bytes: &[u8], build: u32) -> Result<(), Error> {
 }
 pub fn present(bytes: &[u8], build: u32, x: u8, y: u8) -> Result<bool, Error> {
     verify(bytes, build)?;
+    Ok(bytes[index(x, y)?] == b'1')
+}
+pub fn present_70374(bytes: &[u8], build: u32, x: u8, y: u8) -> Result<bool, Error> {
+    verify_70374(bytes, build)?;
     Ok(bytes[index(x, y)?] == b'1')
 }
 fn index(x: u8, y: u8) -> Result<usize, Error> {

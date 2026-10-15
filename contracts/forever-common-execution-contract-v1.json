@@ -56,7 +56,8 @@
     "post_producer_verification_failure_prevents_component_and_final_seals",
     "final_verification_failure_prevents_package_seal",
     "component_seal_failure_prevents_later_producers_and_package_seal",
-    "final_seal_error_is_returned_without_component_relabeling"
+    "final_seal_error_is_returned_without_component_relabeling",
+    "v12_replays_sealed_terrain_and_older_profiles_keep_skips"
   ],
   "unchanged_gates": [
     "build and locale admission",
@@ -73,5 +74,7 @@
   "full_extractor_complete": false,
   "new_real_client_acceptance": false,
   "new_native_windows_acceptance_recorded": false,
-  "new_distribution_acceptance": false
+  "new_distribution_acceptance": false,
+  "terrain_dispatch": "Generic adapter method defaults to the existing maps producer; the platform adapter owns explicit v12 dispatch and its context. Common execution contains no operating-system setup or conditional compilation.",
+  "explicit_resume_replay": "Only an explicitly admitted v12 plan clears the completed terrain bit before the common lifecycle; every retained artifact must replay through existing package receipts. Older skip behavior is unchanged."
 }

@@ -73,7 +73,7 @@ impl Default for Limits {
     }
 }
 impl Limits {
-    fn validate(self) -> Result<(), Error> {
+    pub(super) fn validate(self) -> Result<(), Error> {
         let d = Self::default();
         if self.max_db2_bytes > d.max_db2_bytes
             || self.max_wdt_bytes > d.max_wdt_bytes

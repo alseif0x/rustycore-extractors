@@ -4228,3 +4228,19 @@ Current source/build, static original-runtime qualification, resource bounds
 and retained preparation failures are recorded in
 [forever-product.md](forever-product.md). No production code or distributed
 binary changed; Windows/draft PR #27 remain deferred.
+
+## Linux70374 terrain product and recovery — 2026-10-15
+
+The later explicit v12 available-Map terrain profile completes the requested
+real Map0: 736 MAPS, one whole-map tilelist and coverage / 57,334,413 bytes.
+Separate verification scopes and independent terminal QA pass. Its partial Map
+coverage remains explicit; complete encrypted Map acquisition is not inferred.
+
+The same qualified producers subsequently pass 48 authored lifecycle calls in
+debug/release, including four forced cuts, successful recovery and fourteen
+exact expected rejections. Independent QA closes all evidence without findings
+(`3f95af7b7c06b1b498e270478f1e01c520891cb111f57657a47c649a334826b2`).
+Sixteen complete MAPS comparisons use a separate original-converter oracle.
+See [v12 evidence](forever-terrain-v12.md). Actual all-available-map execution,
+build-70374 collision/navigation product integration, runtime acceptance and
+reproducible stable distribution remain open; the extractor goal stays active.

@@ -56,11 +56,12 @@ class CommonExecutionContract(unittest.TestCase):
         for call in ('super::db2(self.plan, self.store, &mut self.run, self.adapter.map_domain())',
                      'super::game_tables(self.plan, self.store, &mut self.run)',
                      'super::cameras(self.plan, self.store, &mut self.run)',
-                     'super::maps(self.plan, self.store, &mut self.run, self.adapter.map_domain())',
+                     'self.adapter.extract_terrain(self.plan, self.store, &mut self.run)',
                      'self.adapter.extract_collision(self.store, &mut self.run)',
                      'super::mmaps(self.plan, self.store, self.output, &mut self.run, self.adapter.map_domain())'):
             self.assertIn(compact(call), compact(s))
-        self.assertEqual(s.count('self.adapter.map_domain()'), 3)
+        self.assertEqual(s.count('self.adapter.map_domain()'), 2)
+        self.assertIn(compact('super::maps(plan, store, run, self.map_domain())'), compact(s))
         self.assertIn(compact('fn map_domain(&self) -> Option<&crate::map_domain::Domain> { None }'), compact(s))
         components = re.findall(r'Component::(\w+) => work\.', s)
         self.assertEqual(components, ['Db2', 'GameTables', 'Cameras', 'Terrain', 'Collision', 'Navigation'])
@@ -82,7 +83,7 @@ class CommonExecutionContract(unittest.TestCase):
 
     def test_linux_owns_scratch_without_moving_platform_io_into_core(self):
         s = self.s['linux']
-        self.assertIn(compact('execution::execute(plan, &mut store, output, run, LinuxExecution { preflight, domain })'), compact(s))
+        self.assertIn(compact('execution::execute(plan, &mut store, output, run, LinuxExecution { preflight, domain, context })'), compact(s))
         adapter = s.split('struct LinuxExecution', 1)[1].split('fn read(', 1)[0]
         for marker in ('preflight: Option<disk::Preflight>', 'impl execution::Adapter for LinuxExecution',
                        'disk.verify_unchanged()?', 'None => disk.run(store, run)',
@@ -90,6 +91,8 @@ class CommonExecutionContract(unittest.TestCase):
                        'None => vmaps(store, run)', 'self.domain.as_ref()'):
             self.assertIn(marker, adapter)
         self.assertNotIn('fn verify_before_producer', adapter)
+        self.assertIn('terrain_v12::extract(plan, store, run, self.context)', adapter)
+        self.assertIn('maps(plan, store, run, self.domain.as_ref())', adapter)
         self.assertTrue(self.c['linux']['scratch_owned_through_finish'])
 
     def test_windows_retains_key_lease_and_every_return_guard(self):
@@ -105,7 +108,7 @@ class CommonExecutionContract(unittest.TestCase):
 
     def test_exact_lifecycle_unit_inventory(self):
         names = re.findall(r'#\[test\]\s*fn (\w+)\(', self.s['execution'])
-        self.assertEqual(len(names), 11)
+        self.assertEqual(len(names), 12)
         self.assertEqual(names, self.c['unit_test_names'])
         self.assertNotIn('#[ignore', self.s['execution'])
 

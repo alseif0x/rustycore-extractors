@@ -64,6 +64,7 @@ impl Context {
         if self.build == 70374
             && (![
                 Component::Db2.bit(),
+                Component::Terrain.bit(),
                 Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
             ]
             .contains(&self.components)

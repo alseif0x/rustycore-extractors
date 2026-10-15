@@ -2665,3 +2665,94 @@ retained; only the corrected proposal executes. Native CASC, the complete origin
 ExtractMaps, scalable map extraction, versioned product CLI and full extraction
 remain pending; this two-tile proof is not the requested stable functional
 release. Details remain in the compatibility document.
+
+Issue #76 separately adds the Linux70374 full-map terrain API and explicit
+terrain-only product v12 candidate. It requires complete known-present
+dependencies, whole-map tilelists and producer-reported available Map coverage.
+Both verification scopes check exact tile/list/coverage associations; resume
+replays retained sealed terrain through existing receipts. The first product
+review identifies an inherited unknown-version test using newly supported12;
+the root correction uses13. Joint immutable qualification and real full-map
+acceptance remain pending. See docs/forever-terrain-v12.md; the preceding
+two-tile proof and historical bundles do not establish stable full extraction.
+
+Initial PR #77 CI also finds Linux-specific dispatch in the common execution
+boundary. The correction moves v12 terrain/context handling to the platform
+adapter, keeps the strict OS-free boundary guard and updates explicit adapter
+and twelve-method test inventory facts. Ten common source-contract and five
+v12 contract checks pass locally. The first immutable source/qualification
+admission remain unexecuted; actual qualification must bind the corrected
+commit and source snapshot before any real product call.
+
+The first actual joint v12 qualification then fails at its fifth command:
+both Rust profiles pass 3,100 tests / 26 historical ignores and both builds
+succeed, but three old verification anchors in two source-contract files omit
+the explicit v12 branch. Their test-only correction retains legacy checks and
+requires v12 coverage finish. The full selected CI set passes 421 methods with
+two existing skips locally. Rust/Cargo inputs remain unchanged; failed whole
+attempt1 and its prefix remain unaccepted. A fresh whole qualification is
+required before the real Map0 product attempt.
+
+Independent negative closure of attempt1 additionally finds three public
+test dependencies absent from the immutable snapshot: tools/generate_forever_catalog.py,
+docs/forever-windows-output.md and docs/forever-windows-membership.md. Actual
+immutable CI results are 388 methods / three failures / three errors / one skip;
+the metadata module never executes. All five groups and the failed service
+close, but no producer qualification transfers. Add those exact committed
+inputs to the next qualification snapshot; live421 success remains separate.
+
+### Linux70374 Map0 product checkpoint — 2026-10-15
+
+The corrected immutable v12 source at `b40bacf35f5a30b7c3cd0e5a0156ef4714d83680`
+contains 741 committed inputs plus 41 offline vendor/config files. Its second
+whole eight-command qualification passes: 3,100 tests / 26 historical ignores
+per profile, both product builds, 421 source checks / two expected skips,
+163 distribution checks / one platform skip, Clippy and formatting. Independent
+qualification QA passes without findings
+(`706835989b069897c7e26a0084b42b02b7eeab678a53b03ea633ca148b0fedea`).
+All six exact-head GitHub checks pass. Later documentation does not recompile
+these retained producers or transfer acceptance to a different binary.
+
+The first actual qualified v12 Map0 extraction succeeds in 28.568 seconds:
+736 present MAPS, one whole-map tilelist and coverage yield 738 artifacts /
+57,334,413 bytes. Both offline verifiers succeed; all three child groups close
+with empty traces and zero retries, and all three persistent parents record
+numeric exit status zero. The private closing validator preserves the complete
+captured inventory and compares both earlier native-compared MAPS in full:
+two exact matches / 142,084 bytes. Closing receipt is
+`8b839f0fe0ee65be213e2e8cde3b8676077ff7ebd33e1350f32a0fc8c0e24fe9`.
+Independent actual terminal review passes 43 checks without findings
+(`e514da54d82e8a8b457ecaad6ff2f11872e5367f10e2898f1f0902be9dbe0afa`).
+Its first audit failure is retained; the reviewed correction normalizes the
+qualification's recorded compact inventory and preserves separate current
+source/product identity checks. No qualification inode snapshot is inferred.
+No new native execution occurs in this comparison. Map coverage retains 71 rows, one admitted and three
+omitted encrypted sections, with encoded authentication but no full decoded
+CKey. Requested Map0 completion is not all-map/world or runtime acceptance.
+
+The first post-extract preparation attempt fails before private preparation
+because the already-pinned static inspector target is absent from its guard
+map; it writes no input directory or receipt. A fresh configuration adds only
+that expected tool guard and a new receipt destination, and the unchanged
+helper succeeds. No extractor rerun occurs. Full suite and reproducible stable
+distribution remain gates; the separate synthetic recovery evidence follows
+below. Windows remains deferred.
+See docs/forever-terrain-v12.md for the scoped executed evidence.
+
+### Linux70374 terrain recovery lifecycle — 2026-10-15
+
+The qualified b40 debug/release producers pass the actual 48-call authored
+lifecycle: 30 successes, four forced cuts and fourteen expected rejections.
+Both pending-tile and sealed-before-manifest recovery succeed. Completed resume,
+missing present ADT, corrupted-source sealed replay and altered coverage reject
+with their exact causes. Eight complete package views match sixteen whole MAPS
+files against two separately original-C++-compared outputs / 101,343 bytes.
+Independent terminal QA passes without findings
+(`3f95af7b7c06b1b498e270478f1e01c520891cb111f57657a47c649a334826b2`),
+closing 336 leaf evidence files, fourteen output roots, 4,060 guards/48 aliases,
+child groups/traces/seccomp and the retained numeric parent terminal. There are
+zero retries. Source-only controller/auditor corrections and earlier metadata
+failures are retained; no producer rebuild follows. This closes authored process
+recovery, not power-loss or real-client recovery. Final PR integration still
+requires its exact-head CI; complete all-map, collision/navigation, runtime and
+stable-suite/distribution gates remain. See docs/forever-terrain-v12.md.

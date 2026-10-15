@@ -23,6 +23,8 @@ use std::path::Path;
 #[cfg(target_os = "linux")]
 mod disk;
 mod execution;
+#[cfg(target_os = "linux")]
+pub(crate) mod terrain_v12;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -64,7 +66,7 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v10() || plan.is_v11() {
+    let mut store = if plan.is_v10() || plan.is_v11() || plan.is_v12() {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70374(client).map_err(|e| Error::from(e.code()))?
@@ -91,7 +93,8 @@ fn open_inner(
     if store.build().build != plan.build {
         return Err("product_build_mismatch".into());
     }
-    if plan.contains(Component::Terrain) || plan.contains(Component::Collision) {
+    if !plan.is_v12() && (plan.contains(Component::Terrain) || plan.contains(Component::Collision))
+    {
         store
             .enable_names(root::name::Limits::default())
             .map_err(|e| Error::from(e.code()))?;
@@ -106,7 +109,7 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.map_domain.is_some() || plan.is_gt_cameras() || plan.is_v10() {
+    if plan.map_domain.is_some() || plan.is_gt_cameras() || plan.is_v10() || plan.is_v12() {
         return Err("product_platform".into());
     }
     #[cfg(windows)]
@@ -257,6 +260,9 @@ fn extract_inner(
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
     let mut package_limits = package::Limits::default();
+    if plan.is_v12() {
+        package_limits = terrain_v12::package_limits();
+    }
     if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
         // Physical output admission covers all selected producers, not only
         // vmaps. The canonical v3 output budget also bounds common replay.
@@ -272,7 +278,11 @@ fn extract_inner(
         &mut store,
         output,
         run,
-        LinuxExecution { preflight, domain },
+        LinuxExecution {
+            preflight,
+            domain,
+            context,
+        },
     )
 }
 
@@ -307,12 +317,25 @@ mod keys_tests;
 /// post-producer/final positions; resident execution has no extra input lease.
 #[cfg(target_os = "linux")]
 struct LinuxExecution {
+    context: Context,
     preflight: Option<disk::Preflight>,
     domain: Option<crate::map_domain::Domain>,
 }
 
 #[cfg(target_os = "linux")]
 impl execution::Adapter for LinuxExecution {
+    fn extract_terrain(
+        &self,
+        plan: &Plan,
+        store: &mut LocalStore,
+        run: &mut Run,
+    ) -> Result<(), Error> {
+        if plan.is_v12() {
+            terrain_v12::extract(plan, store, run, self.context)
+        } else {
+            maps(plan, store, run, self.domain.as_ref())
+        }
+    }
     fn map_domain(&self) -> Option<&crate::map_domain::Domain> {
         self.domain.as_ref()
     }
@@ -418,7 +441,7 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let cap = if plan.is_gt_cameras() || plan.is_v10() {
+        let cap = if plan.is_gt_cameras() || plan.is_v10() || plan.is_v12() {
             db2_remaining(total)?
         } else {
             DB2_FILE_BYTES

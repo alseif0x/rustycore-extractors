@@ -3,8 +3,10 @@
 //! Map coverage can be partial; every requested tile must be present and its
 //! WDT/root ADT and all liquid inputs must be complete CKey-verified sources.
 //! All callbacks are provisional until CompletedSelected, including on closing
-//! failure. No tilelist, whole-world, publication, restart or product claim.
-use super::{plan, run};
+//! failure. The selected facade never emits lists; the separate full-map facade
+//! emits lists only after complete maps. Neither admits omitted Map sections or
+//! establishes whole-world, publication, restart or product acceptance.
+use super::{plan, run, tilelist};
 use crate::local_store::{self, LocalStore, VerifiedFile, availability as acquired};
 use forever_db2::{RecordError, availability as db2, catalog, terrain_sources as source};
 use forever_terrain::{Wdt, conversion, liquid};
@@ -14,6 +16,15 @@ use std::{collections::BTreeMap, mem::size_of};
 mod tests;
 
 pub const PROFILE: &str = "linux70374-selected-terrain-available-map-v1";
+/// Whole requested maps in the admitted/materialized Map domain, not all client sections.
+pub const FULL_MAP_PROFILE: &str = "linux70374-full-maps-available-map-v1";
+
+/// Separate scalable ceilings, no larger than the existing full terrain runner.
+/// Every nested override is downward-only. Selected Limits remain unchanged.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct FullMapLimits {
+    pub resources: run::Limits,
+}
 const MIB: usize = 1024 * 1024;
 const SCRATCH: usize = 4 * MIB;
 
@@ -77,6 +88,7 @@ pub enum Error {
     Catalog,
     AbsentTile,
     FileIdRouting,
+    FullMapSelection,
 }
 impl Error {
     pub fn code(self) -> &'static str {
@@ -87,6 +99,7 @@ impl Error {
             Self::Catalog => "terrain_70374_catalog",
             Self::AbsentTile => "terrain_70374_requested_tile_absent",
             Self::FileIdRouting => "terrain_70374_file_id_routing_required",
+            Self::FullMapSelection => "terrain_70374_full_map_selection_required",
         }
     }
 }
@@ -137,6 +150,15 @@ pub trait Sink {
     fn native_witness(&mut self, _witness: NativeWitness<'_>) -> Result<(), run::SinkError> {
         Ok(())
     }
+    /// Full-map lists are provisional until CompletedFullMaps. Default rejection
+    /// prevents a selected-only sink silently dropping required whole-map output.
+    fn tile_list(
+        &mut self,
+        _map_id: u32,
+        _list: &tilelist::TileList,
+    ) -> Result<(), run::SinkError> {
+        Err(run::SinkError)
+    }
     fn tile(
         &mut self,
         context: conversion::Context,
@@ -168,6 +190,73 @@ impl CompletedSelected {
     }
 }
 
+/// Completion of the entire chosen admitted Map domain. Earlier callbacks are
+/// provisional on any failure, including final source closure. Global MapFacts
+/// disclose omitted sections; AllMaps never means those sections were decoded.
+pub struct CompletedFullMaps {
+    completed: CompletedSelected,
+}
+impl CompletedFullMaps {
+    pub const fn profile(&self) -> &'static str {
+        FULL_MAP_PROFILE
+    }
+    pub const fn build(&self) -> u32 {
+        70374
+    }
+    pub const fn plan(&self) -> plan::Completion {
+        self.completed.plan
+    }
+    pub const fn stats(&self) -> run::Stats {
+        self.completed.stats
+    }
+    pub const fn map(&self) -> MapFacts {
+        self.completed.map
+    }
+    pub const fn liquids(&self) -> &[run::TableFacts; 3] {
+        &self.completed.liquids
+    }
+}
+
+/// Complete each requested map or the full admitted/materialized Map domain.
+/// Tiles selections are rejected; absence in MAIN is normal for whole maps.
+/// Known-present missing/invalid dependencies fail the whole selection, never a
+/// successful prefix. Startup sources are loaded once and ADTs remain serial.
+pub fn run_full_maps(
+    store: &mut LocalStore,
+    selection: plan::Selection<'_>,
+    pack: bool,
+    limits: FullMapLimits,
+    sink: &mut impl Sink,
+) -> Result<CompletedFullMaps, Failure> {
+    let mut r = Runner {
+        store,
+        sink,
+        limits: limits.resources,
+        stats: run::Stats::default(),
+        step: run::Step::Admission,
+        retained: 0,
+    };
+    let result = limits
+        .resources
+        .validate()
+        .map_err(Error::Run)
+        .and_then(|()| {
+            if matches!(selection, plan::Selection::Tiles(_)) {
+                return Err(Error::FullMapSelection);
+            }
+            r.execute(selection, pack, true)
+        });
+    let closing = r.store.verify_unchanged().map_err(store_error);
+    match (result, closing) {
+        (_, Err(error)) | (Err(error), _) => Err(Failure {
+            error,
+            step: r.step,
+            stats: r.stats,
+        }),
+        (Ok(completed), Ok(())) => Ok(CompletedFullMaps { completed }),
+    }
+}
+
 pub fn run_selected(
     store: &mut LocalStore,
     requests: &[plan::TileRequest],
@@ -183,7 +272,9 @@ pub fn run_selected(
         step: run::Step::Admission,
         retained: 0,
     };
-    let result = limits.validate().and_then(|()| r.execute(requests, pack));
+    let result = limits
+        .validate()
+        .and_then(|()| r.execute(plan::Selection::Tiles(requests), pack, false));
     // Always attempt final source closure, including all early/partial failures.
     let closing = r
         .store
@@ -232,31 +323,37 @@ impl liquid::LiquidLookup for Tables {
 impl<S: Sink> Runner<'_, S> {
     fn execute(
         &mut self,
-        requests: &[plan::TileRequest],
+        selection: plan::Selection<'_>,
         pack: bool,
+        full_maps: bool,
     ) -> Result<CompletedSelected, Error> {
         self.store.verify_unchanged().map_err(store_error)?;
         if self.store.build().build != 70374 {
             return Err(Error::Build);
         }
-        // Shape-only admission before acquisition, then planner binds actual rows.
-        if requests.is_empty() || requests.len() > self.limits.plan.max_explicit_tiles {
-            return Err(Error::Run(run::Error::Plan(if requests.is_empty() {
-                plan::Error::EmptySelection
-            } else {
-                plan::Error::Limit
-            })));
-        }
-        if requests.iter().any(|t| t.x >= 64 || t.y >= 64) {
-            return Err(Error::Run(run::Error::Plan(
-                plan::Error::InvalidCoordinates,
-            )));
-        }
-        if requests.iter().any(|t| t.map_id != requests[0].map_id) {
-            return Err(Error::Run(run::Error::Plan(plan::Error::Limit)));
-        }
-        if requests.len() == 2 && requests[0] == requests[1] {
-            return Err(Error::Run(run::Error::Plan(plan::Error::DuplicateRequest)));
+        if !full_maps {
+            let plan::Selection::Tiles(requests) = selection else {
+                return Err(Error::FullMapSelection);
+            };
+            // Shape-only admission before acquisition, then planner binds actual rows.
+            if requests.is_empty() || requests.len() > self.limits.plan.max_explicit_tiles {
+                return Err(Error::Run(run::Error::Plan(if requests.is_empty() {
+                    plan::Error::EmptySelection
+                } else {
+                    plan::Error::Limit
+                })));
+            }
+            if requests.iter().any(|t| t.x >= 64 || t.y >= 64) {
+                return Err(Error::Run(run::Error::Plan(
+                    plan::Error::InvalidCoordinates,
+                )));
+            }
+            if requests.iter().any(|t| t.map_id != requests[0].map_id) {
+                return Err(Error::Run(run::Error::Plan(plan::Error::Limit)));
+            }
+            if requests.len() == 2 && requests[0] == requests[1] {
+                return Err(Error::Run(run::Error::Plan(plan::Error::DuplicateRequest)));
+            }
         }
         catalog_gate()?;
         let tables = self.tables()?;
@@ -268,12 +365,9 @@ impl<S: Sink> Runner<'_, S> {
             )?,
         )?;
         self.memory(self.retained)?;
-        let planned = plan::WdtPlan::from_materialized(
-            tables.maps.rows(),
-            plan::Selection::Tiles(requests),
-            self.limits.plan,
-        )
-        .map_err(plan_error)?;
+        let planned =
+            plan::WdtPlan::from_materialized(tables.maps.rows(), selection, self.limits.plan)
+                .map_err(plan_error)?;
         let mut expansion = planned.expansion();
         for map in planned.maps() {
             self.step = run::Step::Wdt { map: map.map_id };
@@ -299,14 +393,38 @@ impl<S: Sink> Runner<'_, S> {
             let tiles = expansion
                 .expand_next(file.file_data_id, &wdt)
                 .map_err(plan_error)?;
-            if tiles.absent_tiles() != 0 {
+            if !full_maps && tiles.absent_tiles() != 0 {
                 return Err(Error::AbsentTile);
             }
             // Preflight all selected roots before converting any tile.
-            if tiles.tiles().iter().any(|t|!matches!(t.source(),plan::TileSource::FileDataId(id) if *id!=0 && *id!=u32::MAX)) {return Err(Error::FileIdRouting);}
+            if tiles.tiles().iter().filter(|t|t.present()).any(|t|!matches!(t.source(),plan::TileSource::FileDataId(id) if *id!=0 && *id!=u32::MAX)) {return Err(Error::FileIdRouting);}
+            let mut list = if full_maps {
+                // Reserve every known remaining read and minimum framing output
+                // before converting this map; actual lengths charge cumulatively.
+                let reads = self
+                    .stats
+                    .read_attempts
+                    .checked_add(tiles.present_tiles() as u64)
+                    .ok_or(limit())?;
+                let minimum = (tiles.present_tiles() as u64)
+                    .checked_mul(44)
+                    .and_then(|n| n.checked_add(tilelist::BYTES as u64))
+                    .and_then(|n| n.checked_add(self.stats.output_bytes))
+                    .ok_or(limit())?;
+                if reads > self.limits.max_reads || minimum > self.limits.max_output_bytes {
+                    return Err(limit());
+                }
+                self.memory(add(
+                    self.retained,
+                    add(self.limits.max_wdt_bytes, 256 * 1024)?,
+                )?)?;
+                Some(tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?)
+            } else {
+                None
+            };
             drop(wdt);
             drop(file);
-            for tile in tiles.tiles() {
+            for tile in tiles.tiles().iter().filter(|tile| tile.present()) {
                 let plan::TileSource::FileDataId(id) = tile.source() else {
                     return Err(Error::FileIdRouting);
                 };
@@ -348,6 +466,19 @@ impl<S: Sink> Runner<'_, S> {
                     })
                     .map_err(|_| Error::Run(run::Error::Sink))?;
                 self.stats.converted_tiles += 1;
+                self.store.verify_unchanged().map_err(store_error)?;
+                if let Some(list) = &mut list {
+                    list.set(tile.x(), tile.y())
+                        .map_err(|_| Error::FileIdRouting)?;
+                }
+            }
+            if let Some(list) = list {
+                self.step = run::Step::TileList { map: map.map_id };
+                self.output(tilelist::BYTES)?;
+                self.sink
+                    .tile_list(map.map_id, &list)
+                    .map_err(|_| Error::Run(run::Error::Sink))?;
+                self.stats.tile_lists += 1;
                 self.store.verify_unchanged().map_err(store_error)?;
             }
         }
