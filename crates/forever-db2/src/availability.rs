@@ -68,6 +68,27 @@ pub struct MaterializedMaps {
     sections: Vec<SectionCoverage>,
 }
 impl MaterializedMaps {
+    /// Retained Vec/String capacities, excluding the source and fixed object.
+    pub fn resident_bytes(&self) -> Result<usize, RecordError> {
+        let rows = self
+            .rows
+            .capacity()
+            .checked_mul(std::mem::size_of::<source::DirectRecord<source::MapFields>>())
+            .ok_or(RecordError::Limit)?;
+        let sections = self
+            .sections
+            .capacity()
+            .checked_mul(std::mem::size_of::<SectionCoverage>())
+            .ok_or(RecordError::Limit)?;
+        self.rows.iter().try_fold(
+            rows.checked_add(sections).ok_or(RecordError::Limit)?,
+            |n, row| {
+                n.checked_add(row.fields.name.capacity())
+                    .and_then(|v| v.checked_add(row.fields.directory.capacity()))
+                    .ok_or(RecordError::Limit)
+            },
+        )
+    }
     pub fn rows(&self) -> &[source::DirectRecord<source::MapFields>] {
         &self.rows
     }

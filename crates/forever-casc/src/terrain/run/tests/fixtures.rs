@@ -2,7 +2,7 @@
 // Authored 2026-10-11: independent literal WDC5/WDT/ADT synthetic fixtures.
 // Reuses this project's authored shared-world test wire builder, not decoder metadata.
 use super::*;
-pub(super) fn basic() -> Vec<CollisionFile<'static>> {
+pub(crate) fn basic() -> Vec<CollisionFile<'static>> {
     vec![
         (MAP_ID, None, map_db2(&[(7, 100, -1)], &[])),
         (MATERIAL_ID, None, material_db2(&[(7, 0)], &[])),
@@ -13,7 +13,7 @@ pub(super) fn basic() -> Vec<CollisionFile<'static>> {
         (202, None, adt(2.0)),
     ]
 }
-pub(super) fn object_db2() -> Vec<u8> {
+pub(crate) fn object_db2() -> Vec<u8> {
     let mut row = vec![0; 12];
     row[8..10].copy_from_slice(&65535u16.to_le_bytes());
     table(
@@ -24,7 +24,7 @@ pub(super) fn object_db2() -> Vec<u8> {
         &[(10, 9), (11, 10), (0, 0), (12, 99)],
     )
 }
-pub(super) fn wdt(tiles: &[(u8, u8, u32)], modern: bool) -> Vec<u8> {
+pub(crate) fn wdt(tiles: &[(u8, u8, u32)], modern: bool) -> Vec<u8> {
     let mut out = chunk(b"MVER", &18u32.to_le_bytes());
     let mut mphd = [0; 32];
     put(&mut mphd, 0, if modern { 0x200 } else { 0 });
@@ -44,7 +44,7 @@ pub(super) fn wdt(tiles: &[(u8, u8, u32)], modern: bool) -> Vec<u8> {
     }
     out
 }
-pub(super) fn adt(height: f32) -> Vec<u8> {
+pub(crate) fn adt(height: f32) -> Vec<u8> {
     let mut out = chunk(b"MVER", &18u32.to_le_bytes());
     let mut cell = vec![0; 128];
     put(&mut cell, 52, 42);
@@ -52,7 +52,7 @@ pub(super) fn adt(height: f32) -> Vec<u8> {
     out.extend(chunk(b"MCNK", &cell));
     out
 }
-pub(super) fn liquid_adt() -> Vec<u8> {
+pub(crate) fn liquid_adt() -> Vec<u8> {
     let mut out = adt(1.0);
     let mut mh2o = vec![0; 3096];
     put(&mut mh2o, 0, 3072);
@@ -65,13 +65,13 @@ pub(super) fn liquid_adt() -> Vec<u8> {
     out.extend(chunk(b"MH2O", &mh2o));
     out
 }
-pub(super) fn put(bytes: &mut [u8], at: usize, value: u32) {
+pub(crate) fn put(bytes: &mut [u8], at: usize, value: u32) {
     bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
 }
 fn words(v: &[u32]) -> Vec<u8> {
     v.iter().flat_map(|v| v.to_le_bytes()).collect()
 }
-pub(super) fn chunk(tag: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+pub(crate) fn chunk(tag: &[u8; 4], payload: &[u8]) -> Vec<u8> {
     let mut out: Vec<_> = tag.iter().rev().copied().collect();
     out.extend_from_slice(&(payload.len() as u32).to_le_bytes());
     out.extend_from_slice(payload);
@@ -128,16 +128,16 @@ const TYPE: &[(u16, u16)] = &[
     (32, 4),
     (32, 4),
 ];
-pub(super) fn offset(fields: &[(u16, u16)], index: usize) -> usize {
+pub(crate) fn offset(fields: &[(u16, u16)], index: usize) -> usize {
     fields[..index]
         .iter()
         .map(|(b, n)| usize::from(b * n / 8))
         .sum()
 }
-pub(super) fn size(fields: &[(u16, u16)]) -> usize {
+pub(crate) fn size(fields: &[(u16, u16)]) -> usize {
     offset(fields, fields.len())
 }
-pub(super) fn table(
+pub(crate) fn table(
     layout: u32,
     fields: &[(u16, u16)],
     rows: &[(u32, Vec<u8>)],
@@ -191,7 +191,7 @@ pub(super) fn table(
     }
     bytes
 }
-pub(super) fn map_db2(values: &[(u32, u32, i16)], copies: &[(u32, u32)]) -> Vec<u8> {
+pub(crate) fn map_db2(values: &[(u32, u32, i16)], copies: &[(u32, u32)]) -> Vec<u8> {
     let mut rows = Vec::new();
     let mut strings = Vec::new();
     for (ordinal, &(id, wdt, parent)) in values.iter().enumerate() {
@@ -212,7 +212,7 @@ pub(super) fn map_db2(values: &[(u32, u32, i16)], copies: &[(u32, u32)]) -> Vec<
     }
     table(0xD43A_FAC3, MAP, &rows, &strings, copies)
 }
-pub(super) fn material_db2(values: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<u8> {
+pub(crate) fn material_db2(values: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<u8> {
     let rows: Vec<_> = values
         .iter()
         .map(|(id, flags)| {
@@ -223,7 +223,7 @@ pub(super) fn material_db2(values: &[(u32, u32)], copies: &[(u32, u32)]) -> Vec<
         .collect();
     table(0x98E5_D7AA, &[(32, 1), (8, 1)], &rows, &[], copies)
 }
-pub(super) fn type_db2(values: &[(u32, u8)], copies: &[(u32, u32)]) -> Vec<u8> {
+pub(crate) fn type_db2(values: &[(u32, u8)], copies: &[(u32, u32)]) -> Vec<u8> {
     let rows: Vec<_> = values
         .iter()
         .map(|(id, material)| {

@@ -8,3 +8,7 @@
 pub mod plan;
 pub mod run;
 pub mod tilelist;
+
+/// Separate Linux70374 available-Map, complete-selected-tile capability.
+#[cfg(target_os = "linux")]
+pub mod available_70374;

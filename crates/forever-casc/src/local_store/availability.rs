@@ -127,6 +127,23 @@ impl LocalStore {
         file_data_id: u32,
         max_decoded_bytes: u64,
     ) -> Result<AvailableSource, Error> {
+        self.read_file_data_id_available_with_external_budget(
+            file_data_id,
+            max_decoded_bytes,
+            0,
+            self.limits.max_memory_bytes,
+        )
+    }
+
+    /// Caller-owned live allocations participate in both strict and partial
+    /// acquisition budgets BEFORE archive I/O/allocation; no policy expansion.
+    pub(crate) fn read_file_data_id_available_with_external_budget(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+        external_live_bytes: usize,
+        combined_cap: usize,
+    ) -> Result<AvailableSource, Error> {
         if self.build.build != 70374 {
             return Err(Error::Build);
         }
@@ -134,16 +151,44 @@ impl LocalStore {
             return Err(Error::KeysPresent);
         }
         io::check_guards(&self.guards)?;
-        let result = self.available_inner(file_data_id, max_decoded_bytes);
+        let result = self.available_inner(
+            file_data_id,
+            max_decoded_bytes,
+            external_live_bytes,
+            combined_cap,
+        );
         io::check_guards(&self.guards)?;
         result
     }
 
-    fn available_inner(&mut self, id: u32, max_decoded: u64) -> Result<AvailableSource, Error> {
-        let failure = match self.read_file_data_id_with_limit(id, max_decoded) {
+    fn available_inner(
+        &mut self,
+        id: u32,
+        max_decoded: u64,
+        external: usize,
+        combined_cap: usize,
+    ) -> Result<AvailableSource, Error> {
+        let effective = super::Limits {
+            max_memory_bytes: self
+                .limits
+                .max_memory_bytes
+                .min(combined_cap)
+                .checked_sub(external)
+                .ok_or(super::Error::Limit)?,
+            ..self.limits
+        };
+        if self.stats.resident_bytes > effective.max_memory_bytes {
+            return Err(super::Error::Limit.into());
+        }
+        let failure = match self.read_file_data_id_with_external_budget(
+            id,
+            max_decoded,
+            external,
+            combined_cap,
+        ) {
             Ok(full) => {
                 let budget = Budget {
-                    limits: self.limits,
+                    limits: effective,
                     resident: self.stats.resident_bytes,
                     scratch: Cell::new(0),
                 };
@@ -181,7 +226,7 @@ impl LocalStore {
             return Err(super::Error::Limit.into());
         }
         let budget = Budget {
-            limits: self.limits,
+            limits: effective,
             resident: self.stats.resident_bytes,
             scratch: Cell::new(0),
         };

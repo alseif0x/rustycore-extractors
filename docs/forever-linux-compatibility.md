@@ -133,3 +133,34 @@ selected real terrain through a separate 70374 API. Map 0 tiles (31,31) and
 (31,32) are the fixed proposed request, not established available inputs.
 Missing maps/tiles or incomplete dependencies must fail the whole selection.
 The selected terrain, versioned product CLI and complete extraction remain open.
+
+## Selected-terrain source candidate
+
+Issue #74 adds a separate Linux-only `terrain::available_70374::run_selected`
+capability for at most two explicit tiles on one map. Available Map coverage
+remains separate from complete liquid/WDT/ADT source facts. Both requested
+tiles must exist; missing or incomplete dependencies, sink errors and source
+changes reject the whole selection. Callbacks remain provisional until success.
+No tile lists are emitted. The pure 70374 conversion/assembly/verification
+entry points share the existing kernels while preserving older API build gates.
+
+The private `terrain_available_70374` example fixes Map 0 tiles (31,31)/(31,32)
+and creates output only after successful conversion of both. Its explicit
+`--native-inputs` option additionally stages the same complete ADT buffers,
+complete typed liquid lookups and contexts for an original-converter comparison.
+These private artifacts are not a product format. A separate 64 MiB caller
+reservation reduces the runner's memory ceiling; no extra acquisition occurs.
+No raw Map/DB2 buffers or inaccessible spans are exported.
+
+Focused debug/release checks each pass 226 tests with one historical corpus
+ignore: terrain 156, CASC terrain 57, availability 9 and the example 4. Selected
+all-target Clippy and formatting pass. The initial catalog-gate and duplicate
+fixture-module failures remain failed and retained. Source freeze:
+`aea7e2da9fdd37ec53036d930629282ff80b836e76a89903ae39f16c136608e6`;
+validation receipt: `6be70b30725e6bc5a5efa8139eaa098d5efdc92a751e1bc6e0b36241984dfa4b`.
+Independent source QA passes without findings:
+`e4497532b5144fa50861bc7b6225990637a4630dd8eaf7241cecd1f59795315f`.
+
+This is source-level synthetic evidence. Fresh immutable whole-workspace
+qualification, current-original converter comparison and the fixed real
+selection remain pending. Neither requested tile is yet accepted as available.

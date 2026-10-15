@@ -733,3 +733,44 @@ fn exact_complex_output_budget_and_input_immutability_hold() {
         assert_eq!(input, before);
     }
 }
+
+#[test]
+fn explicit_70374_conversion_preserves_kernels_and_old_build_rejections() {
+    let input = adt(&[
+        cell(&prefix(0, 0, 12.5, 42), &[]),
+        frame(b"MH2O", &modern_liquid()),
+    ]);
+    for pack in [false, true] {
+        let mut c = context();
+        c.pack = pack;
+        let old = convert_adt(&input, &LOOKUP, c, Limits::default()).unwrap();
+        c.build = 70374;
+        assert!(matches!(
+            convert_adt(&input, &LOOKUP, c, Limits::default()),
+            Err(Error::Maps(maps::Error::UnsupportedBuild))
+        ));
+        let now = convert_adt_70374(&input, &LOOKUP, c, Limits::default()).unwrap();
+        let mut expected = old.bytes().to_vec();
+        put(&mut expected, 8, 70374);
+        assert_eq!(now.bytes(), expected);
+        assert_eq!(
+            maps::verify_70374(now.bytes(), 70374, maps::MAX_MAP_BYTES)
+                .unwrap()
+                .build(),
+            70374
+        );
+        c.build = 70205;
+        assert!(matches!(
+            convert_adt_70374(&input, &LOOKUP, c, Limits::default()),
+            Err(Error::Maps(maps::Error::UnsupportedBuild))
+        ));
+    }
+    let mut c = context();
+    c.build = 70374;
+    assert!(convert_adt_70374(&input[..11], &LOOKUP, c, Limits::default()).is_err());
+    c.tile_x = 64;
+    assert!(matches!(
+        convert_adt_70374(&input, &LOOKUP, c, Limits::default()),
+        Err(Error::InvalidCoordinates)
+    ));
+}

@@ -104,6 +104,25 @@ pub struct MapSections<'a> {
 
 pub fn assemble(build: u32, sections: MapSections<'_>, max_bytes: usize) -> Result<Vec<u8>, Error> {
     supported_build(build)?;
+    assemble_impl(build, sections, max_bytes, false)
+}
+
+/// Explicit70374 declaration; legacy assemble/verify gates remain unchanged.
+pub fn assemble_70374(
+    build: u32,
+    sections: MapSections<'_>,
+    max_bytes: usize,
+) -> Result<Vec<u8>, Error> {
+    current_build(build)?;
+    assemble_impl(build, sections, max_bytes, true)
+}
+
+fn assemble_impl(
+    build: u32,
+    sections: MapSections<'_>,
+    max_bytes: usize,
+    current: bool,
+) -> Result<Vec<u8>, Error> {
     let pieces = [
         Some(sections.area.bytes()),
         Some(sections.height.bytes()),
@@ -138,7 +157,7 @@ pub fn assemble(build: u32, sections: MapSections<'_>, max_bytes: usize) -> Resu
     }
     // Typed section constructors establish content invariants. Independently
     // check their assembled placement before returning any complete bytes.
-    verify(&out, build, max_bytes)?;
+    verify_impl(&out, build, max_bytes, current)?;
     Ok(out)
 }
 
@@ -293,6 +312,25 @@ impl<'a> LiquidView<'a> {
 /// declaration, not authentication of the original client or source tables.
 pub fn verify(bytes: &[u8], expected_build: u32, max_bytes: usize) -> Result<MapView<'_>, Error> {
     supported_build(expected_build)?;
+    verify_impl(bytes, expected_build, max_bytes, false)
+}
+
+/// Separate70374 verifier; build tags remain declarations, not source proofs.
+pub fn verify_70374(
+    bytes: &[u8],
+    expected_build: u32,
+    max_bytes: usize,
+) -> Result<MapView<'_>, Error> {
+    current_build(expected_build)?;
+    verify_impl(bytes, expected_build, max_bytes, true)
+}
+
+fn verify_impl(
+    bytes: &[u8],
+    expected_build: u32,
+    max_bytes: usize,
+    current: bool,
+) -> Result<MapView<'_>, Error> {
     if bytes.len() > max_bytes || bytes.len() > MAX_MAP_BYTES {
         return Err(Error::Limit);
     }
@@ -300,7 +338,11 @@ pub fn verify(bytes: &[u8], expected_build: u32, max_bytes: usize) -> Result<Map
         return Err(Error::Header);
     }
     let build = word(bytes, 8);
-    supported_build(build)?;
+    if current {
+        current_build(build)?;
+    } else {
+        supported_build(build)?;
+    }
     if build != expected_build {
         return Err(Error::BuildMismatch);
     }
@@ -463,6 +505,13 @@ fn verify_liquid(raw: &[u8]) -> Result<LiquidView<'_>, Error> {
     Ok(LiquidView { raw })
 }
 
+fn current_build(build: u32) -> Result<(), Error> {
+    if build == 70374 {
+        Ok(())
+    } else {
+        Err(Error::UnsupportedBuild)
+    }
+}
 fn supported_build(build: u32) -> Result<(), Error> {
     if matches!(build, 70170 | 70205) {
         Ok(())

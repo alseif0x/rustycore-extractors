@@ -128,13 +128,38 @@ pub fn convert_adt(
     context: Context,
     limits: Limits,
 ) -> Result<ConvertedTile, Error> {
+    convert_impl(bytes, lookup, context, limits, false)
+}
+
+/// Explicit70374 complete-ADT conversion. Caller binds acquisition/Map coverage.
+/// This does not widen the historical convert_adt build gate.
+pub fn convert_adt_70374(
+    bytes: &[u8],
+    lookup: &impl liquid::LiquidLookup,
+    context: Context,
+    limits: Limits,
+) -> Result<ConvertedTile, Error> {
+    convert_impl(bytes, lookup, context, limits, true)
+}
+
+fn convert_impl(
+    bytes: &[u8],
+    lookup: &impl liquid::LiquidLookup,
+    context: Context,
+    limits: Limits,
+    current: bool,
+) -> Result<ConvertedTile, Error> {
     limits.validate()?;
     if usize::from(context.tile_x) >= crate::wdt::MAP_SIZE
         || usize::from(context.tile_y) >= crate::wdt::MAP_SIZE
     {
         return Err(Error::InvalidCoordinates);
     }
-    if !matches!(context.build, 70170 | 70205) {
+    if if current {
+        context.build != 70374
+    } else {
+        !matches!(context.build, 70170 | 70205)
+    } {
         return Err(Error::Maps(maps::Error::UnsupportedBuild));
     }
     let adt = Adt::parse(
@@ -195,7 +220,12 @@ pub fn convert_adt(
     } else {
         None
     };
-    let output = maps::assemble(
+    let assemble = if current {
+        maps::assemble_70374
+    } else {
+        maps::assemble
+    };
+    let output = assemble(
         context.build,
         maps::MapSections {
             area: &area,

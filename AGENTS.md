@@ -2620,3 +2620,14 @@ and its branch is deleted. Issue #74 separately implements selected terrain
 fixed proposed two-tile request must reject missing maps/tiles; no real terrain
 availability, product CLI or complete extraction is established. Detailed
 receipts and limits remain in `docs/forever-linux-compatibility.md`.
+
+Issue #74's source candidate now provides a separate Linux70374 selected-terrain
+API for at most two tiles on one map, with available Map coverage, complete
+liquid/WDT/ADT inputs and whole-selection failure. Explicit 70374 pure conversion
+and MAPS wrappers retain older gates. The private fixed two-tile example has an
+optional bounded native-input witness using the same complete buffers after
+Rust conversion; no extra acquisition or raw DB2 export occurs. Focused checks
+pass 226 tests per profile with one historical ignore, selected all-target Clippy
+and format. Fresh immutable qualification, original converter comparison and
+real requested-tile availability remain pending. This is not a product CLI,
+whole-world extraction or runtime acceptance; see the compatibility document.
