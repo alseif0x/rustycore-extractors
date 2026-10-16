@@ -39,6 +39,68 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible startup checkpoint — 2026-10-16
+
+Issue #90 qualifies separate Linux compatible spooled startup/model owners for
+builds 70374 and 70425 with supplied keys disabled. Required GODI remains fatal;
+available TableFacts stay distinct from complete SourceFacts. The same collector,
+cache, handles and cumulative counters survive startup, lookup transitions,
+explicit later requests and finish. Indexed startup inventory includes committed
+orphan children without requiring a later request.
+
+Functional `bb60e2b418d24c32a7a5c9b71874f28eec61c011` matches accepted C8.
+Eight software commands pass: 3,357 tests / 26 historical ignores / 52 targets
+per debug/release profile; 39 compatible and 49 explicit70425 methods in each;
+424 source contracts / two skips; 165 distribution checks / one skip; both
+product builds, Clippy and format. The separate Linux-only constructor gate
+`629cd27f1a5476d8c74c5d4f46e3734313718992` does not establish Windows delivery.
+README commit `d0f4735998e6b0135dd9aa320f84c6d8727606ef` is documentation only.
+
+| Gate | Current evidence | Remaining requirement |
+| --- | --- | --- |
+| Compatible library/software | Accepted C8 whole run | Preserve existing strict/product scopes |
+| Finite startup output parity | 14 full Rust/native pairs; 88 files / 9,608 bytes | Real acquisition and complete selected startup |
+| Orphan retention | Two Rust cases; four child files / 592 bytes | Real dependency behavior |
+| Finite campaign lifecycle | 47 children: 16 Rust, 14 native, 16 constructors, one generator; all exit0 | Separate actual real-run closure |
+| Rust rejection controls | Three exit4 controls, no native calls | Preserve typed rejection and no prefix acceptance |
+| Current real70425 startup | One failed controller1/4 and target4 | Typed phase/limit diagnosis and newly admitted software |
+| Compatible path integration | Open | Join this startup path to world/placements and final VMap; preserve existing strict APIs |
+| Full extractor | Open | Complete real world resources/navigation, product/runtime and Linux delivery |
+
+The accepted rejection codes are `qa_envelope_tail`,
+`qa_fixture_unlisted_route` and `qa_output_exists`. Independent finite aggregate
+QA is `c7582b4e2b832b54b6b0f2c5f214c55450d5efd095d38eedd89f4a4dcae081a5`;
+negative aggregate QA is
+`f1e011f73cf2f5374b2f8238669f011e763fa5c263832eaff6a7875ba7d9b086`.
+These receipts accept finite synthetic startup/rejection scopes only.
+
+The sole subsequent real70425/esES attempt returns
+`local_store_policy_limit`, outside its original two-code admission. Startup
+completion remains unknown. Retained namespace metadata records no output
+directory; no prefix is accepted. There is no retry, retrospective allowlist
+change or acceptance transferred from synthetic or earlier real evidence.
+The separate failed-run preservation observer closes once without findings,
+retaining controller1/4 and target4, initial-group emptiness before one cleanup
+stop, and zero extra client metadata or identity closing accesses. The unit is
+stopped. Independent failed-terminal QA passes with no findings in the scope
+`passed-preservation-of-failed-real-observation-only`. Public aggregate QA:
+`799c57e3264f7966cbe0461e7b8cdb0a68b7b3fd150c647213250cb767c9369c`.
+The root proof is `preserved-failed-real-observation-only`; real startup and
+acquisition remain unaccepted. Existing strict world/placement/assembly APIs
+retain their recorded scopes; joining the new compatible path to those phases
+remains a separate gate.
+
+The generic LocalStore code cannot identify a particular byte/count/memory limit.
+`DiskWorldV1` does not change LocalStore limits, so selecting it alone is not a
+causal fix. Next work is a separately qualified phase/usage diagnostic and coherent
+caller reservation accounting. Real mode retains no authored fixture envelope;
+published output byte totals are not simultaneous heap usage. Snapshot, list,
+report, row-ledger, publication metadata and active-payload overlap still need
+explicit bounds. No cap increase or new real invocation follows automatically.
+
+Details: [compatible collision checkpoint](forever-collision.md#compatible-spooled-startup-for-7037470425--2026-10-16).
+Windows development/distribution remains deferred until the Linux goal closes.
+
 ## Explicit70425 bootstrap and catalog checkpoint — 2026-10-16
 
 Issue #86 adds a separate Linux70425 disabled-key LocalStore bootstrap and the

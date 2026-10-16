@@ -31,6 +31,54 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Linux compatible spooled collision startup — 2026-10-16
+
+Issue #90 adds separately selected compatible spooled startup/model owners for
+builds 70374 and 70425 with supplied keys disabled. Required GODI acquisition
+remains fatal; available TableFacts stay distinct from complete SourceFacts.
+The same collector, cache, model handles and cumulative counters survive startup,
+lookup transitions, explicit later requests and finish. Indexed enumeration also
+retains committed child models when their parent is omitted, without requiring a
+later request for those children. Existing strict/product profiles remain scoped.
+
+Functional `bb60e2b418d24c32a7a5c9b71874f28eec61c011` matches the qualified C8
+implementation. Its eight software commands pass: 3,357 tests / 26 historical
+ignores / 52 targets per debug/release profile, all 39 compatible methods and
+49 explicit70425 methods in each profile, 424 source contracts / two skips,
+165 distribution checks / one skip, both product builds, Clippy and format.
+The separate `629cd27f1a5476d8c74c5d4f46e3734313718992` adds a Linux-only
+constructor gate; it does not establish Windows delivery. The README refresh
+`d0f4735998e6b0135dd9aa320f84c6d8727606ef` is documentation only.
+
+Independent acceptance closes a 47-child finite synthetic campaign: fourteen
+full Rust calls, fourteen original-native calls, two Rust-only orphan cases,
+sixteen independent identity-constructor calls and one generator. Full comparisons
+match 88 files / 9,608 bytes; the two orphan cases additionally retain four child
+files / 592 bytes. Three separate Rust-only controls reject with
+`qa_envelope_tail`, `qa_fixture_unlisted_route` and `qa_output_exists`, each exit4,
+without native calls. Public aggregate QA receipts are recorded in
+`docs/forever-collision.md`; finite acceptance does not transfer to real inputs.
+
+The single subsequent real70425 startup attempt fails: controller numeric1/4,
+target exit4, `local_store_policy_limit`, outside its original two-code admission.
+Startup completion remains unknown; no prefix or output directory is accepted.
+The separate failed-run preservation observer completes once with no findings: it
+retains controller1/4 and target4, observes the initial group empty before one
+cleanup stop, and performs zero extra client metadata or identity closing
+accesses. Independent failed-terminal QA passes preservation only; public aggregate
+SHA-256 is
+`799c57e3264f7966cbe0461e7b8cdb0a68b7b3fd150c647213250cb767c9369c`.
+This closes preservation of a failed observation; real startup/acquisition stays
+unaccepted.
+There is no retry or retrospective allowlist change. The code identifies a
+LocalStore policy failure but not its particular limit; `DiskWorldV1` does not
+change LocalStore limits. Closed phase/usage diagnostics and coherent caller
+reservation accounting are the next software work. Existing strict world and
+placement APIs retain their recorded scopes. Integration of this compatible path
+with world/placements and final VMap, complete real navigation, product/runtime
+and Linux delivery remain open; Windows is
+deferred. See `docs/forever-collision.md` and `docs/forever-completion.md`.
+
 ### Explicit Linux70425 bootstrap and catalog — 2026-10-16
 
 Issue #86 adds `admit_db2_70425`, disabled-key `LocalStore::open_db2_70425`
