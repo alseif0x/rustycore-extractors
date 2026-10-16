@@ -321,7 +321,17 @@ pub(crate) fn extract_precharged<L: LiquidLookup + ?Sized, S: Sink>(
     sink: ReservedSink<S>,
     limits: Limits,
 ) -> Result<Report, Error<S::Error>> {
-    let collector = context.collector_mut();
+    extract_collector_precharged(context.collector_mut(), maps, wdts, caches, sink, limits)
+}
+// Same execute/final inventory/source guards; no Context/source-fact cast.
+pub(crate) fn extract_collector_precharged<L: LiquidLookup + ?Sized, S: Sink>(
+    collector: &mut SpoolingExtractor<'_, '_, L>,
+    maps: &plan::Maps<'_>,
+    wdts: &mut Inventory,
+    caches: &mut Inventory,
+    sink: ReservedSink<S>,
+    limits: Limits,
+) -> Result<Report, Error<S::Error>> {
     let result = execute(collector, maps, wdts, caches, sink, limits);
     // execute has destroyed the owned Sink, including every early-error path.
     // Evaluate each independent inventory guard even when another already failed.

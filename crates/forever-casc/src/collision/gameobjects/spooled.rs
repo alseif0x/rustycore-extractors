@@ -248,6 +248,34 @@ fn extract_data(
     let copy_capacity = super::capacity(&copies)?;
     drop(copies);
     collector.release_external(copy_capacity)?;
+    let (outcomes, stats) = collect_direct(collector, &direct, copy_records, allowance, limits)?;
+    let direct_capacity = super::capacity(&direct)?;
+    drop(direct);
+    collector.release_external(direct_capacity)?;
+    let engine = finish_lists(collector, outcomes, stats, limits)?;
+    Ok(Data {
+        source,
+        outcomes: engine.outcomes,
+        lists: engine.lists,
+        stats: engine.stats,
+        startup_facts: engine.startup_facts,
+    })
+}
+// Private policy seam: retain exact profile validation for available startup.
+pub(in crate::collision) fn validate_resources(
+    limits: Limits,
+    profile: crate::collision::resources::Profile,
+) -> Result<(), Error> {
+    limits.validate_resources(profile)?;
+    Ok(())
+}
+pub(in crate::collision) fn collect_direct<L: LiquidLookup + ?Sized>(
+    collector: &mut SpoolingExtractor<'_, '_, L>,
+    direct: &[terrain_sources::DirectRecord<terrain_sources::GameObjectFields>],
+    copy_records: usize,
+    allowance: usize,
+    limits: Limits,
+) -> Result<(Vec<RowOutcome>, Stats), Error> {
     if direct.len() > limits.max_direct_rows || copy_records > limits.max_copy_records {
         return Err(super::Error::Limit.into());
     }
@@ -305,23 +333,28 @@ fn extract_data(
             outcome,
         });
     }
-    let direct_capacity = super::capacity(&direct)?;
-    drop(direct);
-    collector.release_external(direct_capacity)?;
+    Ok((outcomes, stats))
+}
+pub(in crate::collision) fn finish_lists<L: LiquidLookup + ?Sized>(
+    collector: &mut SpoolingExtractor<'_, '_, L>,
+    outcomes: Vec<RowOutcome>,
+    mut stats: Stats,
+    limits: Limits,
+) -> Result<super::EngineData, Error> {
     let lists = build_lists(collector, &outcomes, stats.collision_rows, limits.lists)?;
     stats.resident_bytes = super::capacity(&outcomes)?
         .checked_add(lists.stats().resident_bytes)
         .ok_or(super::Error::Limit)?;
     stats.collector_retained_bytes = collector.retained_bytes()?;
     collector.verify_unchanged()?;
-    Ok(Data {
-        source,
+    Ok(super::EngineData {
         outcomes,
         lists,
         stats,
         startup_facts: collector.facts()?,
     })
 }
+
 fn class(class: Class) -> streaming::Class {
     match class {
         Class::M2 => streaming::Class::M2,

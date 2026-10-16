@@ -496,6 +496,52 @@ fn mount_parser_accepts_only_complete_bounded_decimal_record() {
     assert_eq!(parse_mount(&long), Err(Error::Mount));
 }
 #[test]
+fn mount_fastpath_only_falls_back_for_explicit_unavailability() {
+    use forever_platform::linux::mount::Error as MountError;
+    for result in [
+        Err(MountError::Unsupported),
+        Err(MountError::Unavailable),
+        Err(MountError::MissingMask),
+    ] {
+        let mut invoked = false;
+        assert_eq!(
+            mount_id_or_else(result, || {
+                invoked = true;
+                Ok(11)
+            }),
+            Ok(11)
+        );
+        assert!(invoked);
+    }
+    for result in [Ok(11), Err(MountError::Query), Err(MountError::Invalid)] {
+        let expected = result.map_err(|_| Error::Mount);
+        assert_eq!(
+            mount_id_or_else(result, || panic!("unexpected mount fallback")),
+            expected
+        );
+    }
+    assert_eq!(
+        mount_id_or_else(Err(MountError::Unavailable), || Err(Error::Mount)),
+        Err(Error::Mount)
+    );
+}
+#[test]
+fn mount_query_matches_original_bounded_reader_on_owned_file_and_directory() {
+    let p = Paths::new();
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(p.parent.join("authored-mount"))
+        .unwrap();
+    let directory = File::open(&p.parent).unwrap();
+    for held in [&file, &directory] {
+        assert_eq!(mount_id(held), proc_mount_id(held));
+        assert!(mount_id(held).unwrap() > 0);
+    }
+}
+#[test]
 fn mount_mismatch_rejects_before_namespace_creation() {
     let p = Paths::new();
     let mut protected = ProtectedInputs::capture(&p.source, &[]).unwrap();

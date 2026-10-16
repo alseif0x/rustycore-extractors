@@ -88,6 +88,21 @@ fn parse_mount(bytes: &[u8]) -> Result<u64, Error> {
     found.ok_or(Error::Mount)
 }
 fn mount_id(file: &File) -> Result<u64, Error> {
+    mount_id_or_else(forever_platform::linux::mount::id(file), || {
+        proc_mount_id(file)
+    })
+}
+fn mount_id_or_else(
+    result: Result<u64, forever_platform::linux::mount::Error>,
+    fallback: impl FnOnce() -> Result<u64, Error>,
+) -> Result<u64, Error> {
+    match result {
+        Ok(id) => Ok(id),
+        Err(error) if error.allows_fallback() => fallback(),
+        Err(_) => Err(Error::Mount),
+    }
+}
+fn proc_mount_id(file: &File) -> Result<u64, Error> {
     let mut fdinfo =
         File::open(format!("/proc/self/fdinfo/{}", file.as_raw_fd())).map_err(|_| Error::Mount)?;
     let mut bytes = [0u8; MAX_FDINFO + 1];

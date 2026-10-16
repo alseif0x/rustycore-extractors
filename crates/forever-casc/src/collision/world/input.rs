@@ -42,7 +42,7 @@ impl<L: LiquidLookup + ?Sized> Access for Extractor<'_, '_, L> {
         Extractor::release_source(self, n)
     }
 }
-pub(super) fn topology<A: Access>(
+pub(in crate::collision) fn topology<A: Access>(
     maps: &plan::Maps<'_>,
     collector: &mut A,
     max_bytes: usize,

@@ -13,6 +13,9 @@ use crate::local_store::{LocalStore, availability as acquired};
 use forever_db2::{RecordError, availability as db2};
 use forever_vmap::{gameobject_models, wmo::liquid::LiquidLookup};
 
+/// Separate available-section startup over the existing private payload spool.
+pub mod spooled;
+
 #[cfg(test)]
 mod tests;
 
@@ -407,13 +410,58 @@ struct Prepared {
     liquids: [world::TableFacts; 2],
     retained: usize,
 }
+// Private shared Map preparation. Available facts stay distinct; complete
+// liquid reads still use the established world::input::Access contract.
+enum PrepareFailure<E> {
+    Available(Error),
+    Collector(E),
+}
+impl<E> From<Error> for PrepareFailure<E> {
+    fn from(e: Error) -> Self {
+        Self::Available(e)
+    }
+}
+trait AvailableAccess: world::input::Access {
+    fn read_available_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<acquired::AvailableSource, Self::Error>;
+}
+impl<L: LiquidLookup + ?Sized> AvailableAccess for Extractor<'_, '_, L> {
+    fn read_available_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<acquired::AvailableSource, Self::Error> {
+        Extractor::read_available_source(self, id, cap)
+    }
+}
+impl<L: LiquidLookup + ?Sized> AvailableAccess for super::payload::SpoolingExtractor<'_, '_, L> {
+    fn read_available_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<acquired::AvailableSource, Self::Error> {
+        super::payload::SpoolingExtractor::read_available_source(self, id, cap)
+    }
+}
 fn prepare(
     collector: &mut Extractor<'_, '_, gameobjects::EmptyLookup>,
     limits: world::Limits,
 ) -> Result<Prepared, Error> {
+    prepare_available(collector, limits).map_err(|e| match e {
+        PrepareFailure::Available(e) => e,
+        PrepareFailure::Collector(e) => Error::Collision(e),
+    })
+}
+fn prepare_available<A: AvailableAccess>(
+    collector: &mut A,
+    limits: world::Limits,
+) -> Result<Prepared, PrepareFailure<A::Error>> {
     let file = collector
         .read_available_source(world::MAP_FILE_DATA_ID, limits.max_db2_bytes)
-        .map_err(Error::Collision)?;
+        .map_err(PrepareFailure::Collector)?;
     let source_resident = file
         .resident_bytes()
         .map_err(|e| Error::Collision(super::Error::from_available(e)))?;
@@ -425,7 +473,7 @@ fn prepare(
     )?;
     collector
         .reserve_external(allowance)
-        .map_err(Error::Collision)?;
+        .map_err(PrepareFailure::Collector)?;
     let snapshot = db2::read_vmap_maps_70374(&file).map_err(Error::Db2)?;
     let mut map = table_facts(
         &file,
@@ -437,13 +485,13 @@ fn prepare(
     if map.declared_direct_rows > limits.max_direct_rows
         || map.declared_copy_records > limits.max_copy_records
     {
-        return Err(Error::Limit);
+        return Err(Error::Limit.into());
     }
     for row in snapshot.direct_records() {
         if row.fields.name.len() > limits.maps.max_name_bytes
             || row.fields.directory.len() > limits.maps.max_name_bytes
         {
-            return Err(Error::Limit);
+            return Err(Error::Limit.into());
         }
     }
     let owner = snapshot.materialize().map_err(Error::Db2)?;
@@ -452,19 +500,22 @@ fn prepare(
         || retained > limits.max_table_memory_bytes
         || retained > allowance
     {
-        return Err(Error::Limit);
+        return Err(Error::Limit.into());
     }
     map.materialized_rows = owner.rows().len();
     map.retained_bytes = retained;
     drop(file);
     collector
         .release_source(source_resident)
-        .map_err(Error::Collision)?;
+        .map_err(PrepareFailure::Collector)?;
     collector
         .release_external(allowance - retained)
-        .map_err(Error::Collision)?;
-    let (lookup, liquids, retained) =
-        world::input::prepare_liquids(collector, limits, retained).map_err(world_failure)?;
+        .map_err(PrepareFailure::Collector)?;
+    let (lookup, liquids, retained) = world::input::prepare_liquids(collector, limits, retained)
+        .map_err(|e| match e {
+            world::input::Failure::World(e) => PrepareFailure::Available(Error::World(e)),
+            world::input::Failure::Collector(e) => PrepareFailure::Collector(e),
+        })?;
     Ok(Prepared {
         owner,
         map,
@@ -472,12 +523,6 @@ fn prepare(
         liquids,
         retained,
     })
-}
-fn world_failure(e: world::input::Failure<super::Error>) -> Error {
-    match e {
-        world::input::Failure::World(e) => Error::World(e),
-        world::input::Failure::Collector(e) => Error::Collision(e),
-    }
 }
 fn allowance(bytes: u64, text: bool, cap: usize) -> Result<usize, Error> {
     let value = usize::try_from(bytes)
