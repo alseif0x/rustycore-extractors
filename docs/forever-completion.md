@@ -39,6 +39,28 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Available leased-disk collision checkpoint — 2026-10-16
+
+Issue #84 supplies explicit available-section disk startup/world owners while
+preserving one collector/cache/handle sequence/payload repository and resource
+ledger. Functional `ce5d0bf` passes frozen debug/release qualification (3,258
+workspace tests per profile), focused startup/world checks and 56 authored
+world byte comparisons plus two expected Rust rejections. Root closing accepts
+396 files / 41,863 bytes against retained original output; independent terminal
+QA passes with no findings. The separate two-case scale campaign fails at the
+71,428-row case's unchanged 660-second wall limit; its earlier 4,097-row result
+does not grant partial campaign acceptance. Repeated-row processing cost still
+requires diagnosis. See the precise scope in
+[the disk collision checkpoint](forever-collision.md#linux70374-available-leased-disk-startupworld--2026-10-16).
+
+This closes no real acquisition or final-package gate. Compatible missing-file
+handling, final disk collision assembly, product publication, navigation,
+RustyCore runtime and Linux distribution remain required. A subsequent stable
+metadata observation declares 70425/esES; explicit target catalog, acquisition
+and reader admission are still required before current-client extraction.
+Historical 70374 acceptance is not transferred. This documentation delta is
+not rebuilt into the qualified functional binaries.
+
 ## Current70374 collision checkpoint — 2026-10-16
 
 Issue #82's separate available collision owners have candidate software

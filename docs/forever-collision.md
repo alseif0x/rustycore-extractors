@@ -1,5 +1,69 @@
 # Forever collision foundation
 
+## Linux70374 available leased-disk startup/world — 2026-10-16
+
+Issue #84 extends the explicit available-section owner through the existing
+leased disk collector and inventory world runner. The new APIs are
+`collision::available_70374::spooled::extract_startup_fdid` and
+`collision::available_70374::spooled::world::{extract, extract_selected}`.
+One payload repository, cache, model-handle sequence and cumulative resource
+ledger survive startup, liquid lookup transitions and world processing. Map
+topology retains available section facts, WDT-zero rows, signed effective
+parents and checked copy materialization. GODI direct order and duplicates
+survive; copies remain unreplayed. Strict model/liquid/WDT/object acquisition,
+sticky failures and all-or-error completion remain. Existing resident owners,
+product profiles and their resource limits are unchanged.
+
+Functional commit `ce5d0bf0c8afd6d2b2b43380613564f8732b2f5e` matches the frozen
+source through binding
+`fb760fcf0c31ab60d9cc75e99d30b6b8cc0d425135e8544cd43df206af0a00af`.
+Focused startup/world acceptance passes 38 methods in debug and release.
+The 803-file V6 source passes all eight whole-qualification commands: 3,258
+ordinary workspace tests / 26 historical ignores per profile, both product
+builds, Clippy/format, 424 source contracts / two skips and 165 distribution
+checks / one skip. Whole report and independent qualification QA are
+`4b6bd06f4f0b2869baad27145881faf5d551772bc96227b253a35a2daea3c344`
+and `9099588316b2644da953e083c8f7a8bbda55762b36373ea2d71b749e3a55ec32`.
+The private observer separately passes debug/release compilation and static
+ELF dependency review; compiler report is
+`7ee6e7053726ee895ba2777d5a4206f106ce34c4a73d04fd0b17649376b00a8a`.
+
+The release caller runs the retained joined authored inventory in 58 serial
+calls: 56 successes and two exact Rust rejection cases. All startup lists,
+RAWs, dtree and per-map dir_bin outputs match the retained original C++ bytes:
+396 files / 41,863 bytes. Three complete/available twins retain identical
+outputs and distinct authentication facts. Both negative cases publish no
+completed output. All 58 child network traces are empty; source, work, output,
+receipt and physical inventories close, with all child groups absent.
+Terminal report and root closing are
+`94110f0134418cdca31db7a1141cca7a87a1cdc248e63feed067d89bc48499d6`
+and `df5bd1db3eea78ad29523509db0a15659afb8138f9ad568550236ab113e25888`.
+Independent terminal review passes with no findings:
+`5bd7d9bab2489b68a8d7ab93c22e48015a2e1385ffb1a2b9a1dcb033107ea725`.
+A separate
+two-case authored repeated-model campaign is failed: the 4,097-row case
+completed, while the 71,428-row case reached the unchanged 660-second wall
+limit under tracing. The latter exits by SIGTERM with `TimeoutExpired`; its
+cleanup confirms the child group absent. No terminal success report or partial
+campaign is accepted. Source and input guards remain unchanged. Processing
+cost must be diagnosed before this scale claim can be accepted. Failed whole
+campaign closing is
+`fa53c5a488209632be35802e9b42844044a7497ecbbcfecb8b481ebfb3cde6a2`.
+Source inspection identifies repeated mount-ID queries through proc fdinfo
+in the unchanged guard cadence; a descriptor-based query optimization is being
+prepared separately and has no runtime or timing acceptance yet.
+
+This campaign executes no new native producer, client acquisition or fixture
+generator. Its oracle remains the previously executed original serial producer
+at `8a864593bb4d566153e89058b33793752ff81c57`; native CASC routing and parallel
+scheduling are outside this evidence. Final `vmaps/` assembly is excluded from
+this startup/world comparison. No product CLI or MissingFile omission policy
+is introduced. A later metadata-only observation declares 70425/esES; this
+70374 profile transfers no extraction acceptance to that collection. Complete
+real inputs, final disk assembly/product publication, navigation, RustyCore
+runtime and a reproducible full-suite Linux distribution remain required.
+The later documentation delta is not rebuilt into the qualified binaries.
+
 ## Linux70374 available collision checkpoint — 2026-10-16
 
 Issue #82 provides separate available-section startup/world owners in

@@ -69,6 +69,36 @@ two-request diagnostic reads both current Map and GODI successfully (71 and
 accept collision ancestry/runtime. The unavailable dependency remains unidentified.
 This closing paragraph is a later metadata-only addition, not a rebuilt source.
 
+### Linux70374 available leased-disk collision — 2026-10-16
+
+Issue #84 adds available startup and consuming world owners under
+`collision::available_70374::spooled`. They retain one leased payload repository,
+collector, cache, model handles and cumulative ledger through startup, liquid
+lookup changes and world processing. Available DB2 TableFacts remain distinct
+from complete SourceFacts. Model, liquid, WDT and object dependencies stay strict;
+existing resident APIs, product profiles and resource ceilings are unchanged.
+Functional commit `ce5d0bf0c8afd6d2b2b43380613564f8732b2f5e` matches the frozen
+source. Focused acceptance passes 38 methods per profile; whole qualification
+passes eight commands, including 3,258 workspace tests / 26 historical ignores
+per debug/release profile, Clippy/format, 424 source contracts / two skips and
+165 distribution checks / one skip.
+
+The private disk-world caller completes 56 authored world comparisons against
+retained original C++ output and two exact Rust rejection cases. Root closing
+checks 396 complete files / 41,863 bytes, three complete/available twins, all
+58 empty child network traces and absent child groups. No new native or client
+execution occurs. Independent terminal QA passes with no findings:
+`5bd7d9bab2489b68a8d7ab93c22e48015a2e1385ffb1a2b9a1dcb033107ea725`.
+A separate two-case
+scale campaign is failed: the 4,097-row case completed, but the 71,428-row case
+timed out at the unchanged 660-second limit. No partial campaign is accepted;
+repeated-row processing cost remains unresolved. This is startup/world library
+evidence;
+final disk VMap assembly, compatible missing-dependency policy, current-client
+acquisition, product integration, navigation, runtime and Linux distribution
+remain goal gates. See docs/forever-collision.md and docs/forever-completion.md.
+This documentation delta is not rebuilt into the qualified binaries.
+
 ### Current Linux product scope — 2026-10-14
 
 Issue #70 separately exercises the three liquid startup sources on real
