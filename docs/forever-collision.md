@@ -14,19 +14,27 @@ survive; copies remain unreplayed. Strict model/liquid/WDT/object acquisition,
 sticky failures and all-or-error completion remain. Existing resident owners,
 product profiles and their resource limits are unchanged.
 
-Functional commit `ce5d0bf0c8afd6d2b2b43380613564f8732b2f5e` matches the frozen
-source through binding
-`fb760fcf0c31ab60d9cc75e99d30b6b8cc0d425135e8544cd43df206af0a00af`.
-Focused startup/world acceptance passes 38 methods in debug and release.
-The 803-file V6 source passes all eight whole-qualification commands: 3,258
+Functional commit `ab5e7966c1e7c827d5710b236c1b1467a2bcf397` matches all 765
+selected Git files in the 806-file V7 frozen source. Source freeze and independent
+source review are
+`2831f120cb01de5d1f1fc7c521b421f8e8080996759d3c164e63371e09dc545a`
+and `17a6663af4c40da0a1cd0adff9cba0e949b19d132f4922fa4a375042eb175229`.
+The held-descriptor mount-ID optimization uses statx on Linux GNU x86_64 LP64
+and retains the proc-fdinfo fallback for unsupported or unavailable queries
+and missing mount-ID masks. It changes neither guard cadence nor resource caps.
+Focused startup/world acceptance passes 38 methods per profile. The eleven new
+mount-query methods pass in both whole-workspace profiles. V7 passes all eight
+whole-qualification commands: 3,269
 ordinary workspace tests / 26 historical ignores per profile, both product
 builds, Clippy/format, 424 source contracts / two skips and 165 distribution
 checks / one skip. Whole report and independent qualification QA are
-`4b6bd06f4f0b2869baad27145881faf5d551772bc96227b253a35a2daea3c344`
-and `9099588316b2644da953e083c8f7a8bbda55762b36373ea2d71b749e3a55ec32`.
+`4925a53609fa4cc912c2010df5ac51f2ee1c920b18c4661b1c0cec3edf43de55`
+and `51a05706d450ed705d8a4f62618e5a8723dae6c238d14a265fbecda9f8aacba2`.
 The private observer separately passes debug/release compilation and static
 ELF dependency review; compiler report is
-`7ee6e7053726ee895ba2777d5a4206f106ce34c4a73d04fd0b17649376b00a8a`.
+`7f8b86b0bc0d9233c224f5755f69bcca33a4f6ee1be8fc2f2c2369761679e686`.
+Current release runtime-software QA is
+`f1046e10064d4da6f9837d080d93d81617b6d8c1f42e5bb5212a68787c588d31`.
 
 The release caller runs the retained joined authored inventory in 58 serial
 calls: 56 successes and two exact Rust rejection cases. All startup lists,
@@ -36,22 +44,36 @@ outputs and distinct authentication facts. Both negative cases publish no
 completed output. All 58 child network traces are empty; source, work, output,
 receipt and physical inventories close, with all child groups absent.
 Terminal report and root closing are
-`94110f0134418cdca31db7a1141cca7a87a1cdc248e63feed067d89bc48499d6`
-and `df5bd1db3eea78ad29523509db0a15659afb8138f9ad568550236ab113e25888`.
+`7e6a6a43c97fff5da82357d310a120e9bd031eb06586374d6bacffe548887ba2`
+and `95f1d6cd115e6cfe5ebd480931ab8bf2c1dd4e21b0ec63ae0528d5be9324c4e3`.
 Independent terminal review passes with no findings:
-`5bd7d9bab2489b68a8d7ab93c22e48015a2e1385ffb1a2b9a1dcb033107ea725`.
-A separate
-two-case authored repeated-model campaign is failed: the 4,097-row case
-completed, while the 71,428-row case reached the unchanged 660-second wall
+`ff7d1abf2a8c50f6693b4f231cb764e5e7b9abbc1a5219a7bbca1f2cb421173b`.
+Accepted root closing is
+`473a4cc4f934e510a18d8bc23c098e15b063b02bb272d305a750cfecc021a820`.
+
+A separate current-release campaign passes both authored repeated-model cases
+under the unchanged 660-second wall / 600-second CPU / 4 GiB address-space
+limits. The 4,097-row case completes in 30.787 seconds with five files /
+393,632 bytes; the 71,428-row case completes in 473.487 seconds with five files /
+6,857,408 bytes. All bytes and scalar results match the authored expectations;
+both child network traces are empty and both groups close. Scale report,
+independent QA and accepted root closing are respectively
+`d1e9f2fd9e3ad18db2a81d1c4edea07581f4c27fbfe3ac2e1b33d715de008905`,
+`f7285ccde98a308b9e5cb6bcd651aafb906ffd69e6b744f384c7045839bd6cd2`
+and `f47d982c88b484485658b5335a389b5bd0514c898699e8d408b14d1874d507c0`.
+These two cases repeat one model with empty Map/liquid sources and no world
+placements; they establish neither full-world scale nor real-client acceptance.
+
+The earlier functional `ce5d0bf` / V6 qualification and C4 caller reports remain
+historical. Their separate two-case campaign remains failed: its 4,097-row case
+completed, while its 71,428-row case reached the unchanged 660-second wall
 limit under tracing. The latter exits by SIGTERM with `TimeoutExpired`; its
 cleanup confirms the child group absent. No terminal success report or partial
-campaign is accepted. Source and input guards remain unchanged. Processing
-cost must be diagnosed before this scale claim can be accepted. Failed whole
+campaign is accepted. Source and input guards remain unchanged. Failed whole
 campaign closing is
 `fa53c5a488209632be35802e9b42844044a7497ecbbcfecb8b481ebfb3cde6a2`.
-Source inspection identifies repeated mount-ID queries through proc fdinfo
-in the unchanged guard cadence; a descriptor-based query optimization is being
-prepared separately and has no runtime or timing acceptance yet.
+The current caller has its own source/compiler/runtime-software qualification;
+comparison with the earlier campaign does not isolate statx timing causality.
 
 This campaign executes no new native producer, client acquisition or fixture
 generator. Its oracle remains the previously executed original serial producer

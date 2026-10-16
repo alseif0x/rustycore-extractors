@@ -43,14 +43,17 @@ runtime remain gates; this bounded local package does not complete Linux.
 
 Issue #84 supplies explicit available-section disk startup/world owners while
 preserving one collector/cache/handle sequence/payload repository and resource
-ledger. Functional `ce5d0bf` passes frozen debug/release qualification (3,258
+ledger. Functional `ab5e796` passes frozen debug/release qualification (3,269
 workspace tests per profile), focused startup/world checks and 56 authored
 world byte comparisons plus two expected Rust rejections. Root closing accepts
 396 files / 41,863 bytes against retained original output; independent terminal
-QA passes with no findings. The separate two-case scale campaign fails at the
-71,428-row case's unchanged 660-second wall limit; its earlier 4,097-row result
-does not grant partial campaign acceptance. Repeated-row processing cost still
-requires diagnosis. See the precise scope in
+QA passes with no findings. The current release also passes both authored
+repeated-model scale cases under the unchanged 660-second wall limit: 4,097
+rows in 30.787 seconds and 71,428 rows in 473.487 seconds. All ten files /
+7,251,040 bytes and scalar expectations match. Independent scale QA passes;
+the earlier caller's failed campaign remains failed historical evidence.
+These runs do not isolate the mount-query optimization's timing contribution.
+See the precise scope in
 [the disk collision checkpoint](forever-collision.md#linux70374-available-leased-disk-startupworld--2026-10-16).
 
 This closes no real acquisition or final-package gate. Compatible missing-file

@@ -77,23 +77,30 @@ collector, cache, model handles and cumulative ledger through startup, liquid
 lookup changes and world processing. Available DB2 TableFacts remain distinct
 from complete SourceFacts. Model, liquid, WDT and object dependencies stay strict;
 existing resident APIs, product profiles and resource ceilings are unchanged.
-Functional commit `ce5d0bf0c8afd6d2b2b43380613564f8732b2f5e` matches the frozen
-source. Focused acceptance passes 38 methods per profile; whole qualification
-passes eight commands, including 3,258 workspace tests / 26 historical ignores
-per debug/release profile, Clippy/format, 424 source contracts / two skips and
-165 distribution checks / one skip.
+Functional commit `ab5e7966c1e7c827d5710b236c1b1467a2bcf397` matches the frozen
+806-file V7 source, including all 765 selected Git files. Focused startup/world
+acceptance passes 38 methods per profile; the eleven new mount-query methods
+pass in both whole-workspace profiles. Whole qualification passes eight
+commands, including 3,269 workspace tests /
+26 historical ignores per debug/release profile, Clippy/format, 424 source
+contracts / two skips and 165 distribution checks / one skip. The Linux GNU
+x86_64 LP64 optimization queries a held descriptor's conventional mount ID
+through statx, retaining the proc-fdinfo fallback and existing guard cadence.
 
 The private disk-world caller completes 56 authored world comparisons against
 retained original C++ output and two exact Rust rejection cases. Root closing
 checks 396 complete files / 41,863 bytes, three complete/available twins, all
 58 empty child network traces and absent child groups. No new native or client
 execution occurs. Independent terminal QA passes with no findings:
-`5bd7d9bab2489b68a8d7ab93c22e48015a2e1385ffb1a2b9a1dcb033107ea725`.
-A separate two-case
-scale campaign is failed: the 4,097-row case completed, but the 71,428-row case
-timed out at the unchanged 660-second limit. No partial campaign is accepted;
-repeated-row processing cost remains unresolved. This is startup/world library
-evidence;
+`ff7d1abf2a8c50f6693b4f231cb764e5e7b9abbc1a5219a7bbca1f2cb421173b`.
+The current release separately passes both authored repeated-model scale cases:
+4,097 rows in 30.787 seconds and 71,428 rows in 473.487 seconds, each under the
+unchanged 660-second limit. All ten files / 7,251,040 bytes and scalar results
+match the authored expectations. Independent scale QA is
+`f7285ccde98a308b9e5cb6bcd651aafb906ffd69e6b744f384c7045839bd6cd2`.
+The earlier caller's failed 660-second campaign remains historical; no partial
+acceptance or isolated timing attribution is inferred. This is startup/world
+library evidence;
 final disk VMap assembly, compatible missing-dependency policy, current-client
 acquisition, product integration, navigation, runtime and Linux distribution
 remain goal gates. See docs/forever-collision.md and docs/forever-completion.md.
