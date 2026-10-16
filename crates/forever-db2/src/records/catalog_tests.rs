@@ -1168,3 +1168,221 @@ fn build_70374_high_volume_profile_selection_does_not_widen_other_tables() {
         .is_none()
     );
 }
+
+// Authored build-70425 catalog-registration cases. Not executed at proposal time;
+// synthetic schema checks do not establish client, component or product admission.
+#[test]
+fn build_70425_catalog_has_distinct_provenance_and_explicit_handles() {
+    let source = provenance(WOWDBDEFS_70425_CATALOG_ID).unwrap();
+    assert_eq!(source.id, "wowdbdefs-70425-v1");
+    assert_eq!(
+        source.source_commit,
+        "996e53f029c0213b223aecb94d754f6b4b9efb49"
+    );
+    assert_eq!(
+        source.source_blob,
+        "f95528066d44e1b70ea6cd124a35a5a63685d384"
+    );
+    assert_eq!(
+        source.source_sha256,
+        "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a"
+    );
+    assert_eq!(
+        source.facts_sha256,
+        "2150cbfc6a431931d410c3368e5e7b8de2c66b6b6a798d0052886f948624488a"
+    );
+    assert_ne!(source, provenance(WOWDBDEFS_70374_CATALOG_ID).unwrap());
+    let current = tables_for(WOWDBDEFS_70425_CATALOG_ID).unwrap();
+    let previous = tables_for(WOWDBDEFS_70374_CATALOG_ID).unwrap();
+    assert_eq!(current.len(), 1161);
+    assert_eq!(previous.len(), current.len());
+    assert!(current.windows(2).all(|pair| pair[0].name < pair[1].name));
+    let mut ids = BTreeSet::new();
+    // These separately pinned targets currently have equal schema facts. This
+    // assertion neither aliases their handles nor transfers acquisition evidence.
+    for (old, new) in previous.iter().zip(current) {
+        assert!(ids.insert(new.file_data_id));
+        assert_eq!(old.name, new.name);
+        assert_eq!(old.file_data_id, new.file_data_id);
+        assert_eq!(old.table_hash, new.table_hash);
+        assert_eq!(old.layout_hash, new.layout_hash);
+        assert_eq!(old.other_layout_hashes, new.other_layout_hashes);
+        assert_eq!(old.index, new.index);
+        assert_eq!(old.parent_index, new.parent_index);
+        assert_eq!(old.field_count, new.field_count);
+        assert_eq!(old.file_field_count, new.file_field_count);
+        assert_eq!(old.fields, new.fields);
+        assert_eq!(old.blockers, new.blockers);
+        assert_eq!(old.decode_fields, new.decode_fields);
+        assert!(new.shape_compatible());
+        let old_handle = resolve_for(WOWDBDEFS_70374_CATALOG_ID, new.name)
+            .unwrap()
+            .unwrap();
+        let new_handle = resolve_for(WOWDBDEFS_70425_CATALOG_ID, new.name)
+            .unwrap()
+            .unwrap();
+        assert_ne!(old_handle, new_handle);
+        assert_eq!(new_handle.catalog_id(), WOWDBDEFS_70425_CATALOG_ID);
+        assert!(std::ptr::eq(new_handle.metadata(), new));
+        assert_eq!(new_handle.schema().hash, new.table_hash);
+        assert_eq!(new_handle.schema().layout, new.layout_hash);
+    }
+}
+
+#[test]
+fn build_70425_explicit_registration_preserves_default_reviewed_lookup() {
+    assert_eq!(tables().len(), 1126);
+    assert!(std::ptr::eq(tables(), tables_for(CATALOG_ID).unwrap()));
+    assert_eq!(CharacterTable::named("TactKey"), None);
+    assert_eq!(CharacterTable::named("TactKeyLookup"), None);
+    for name in ["Map", "TactKey", "TactKeyLookup"] {
+        let default = CharacterTable::named(name)
+            .unwrap_or_else(|| CharacterTable::Catalog(resolve(name).unwrap().unwrap()));
+        assert_eq!(CharacterTable::from_catalog(name).unwrap(), Some(default));
+        assert_eq!(
+            CharacterTable::from_catalog_id(CATALOG_ID, name).unwrap(),
+            Some(default)
+        );
+        let explicit = CharacterTable::from_catalog_id(WOWDBDEFS_70425_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        assert_ne!(explicit, default);
+    }
+    assert!(supports(WOWDBDEFS_70425_CATALOG_ID));
+    assert_eq!(
+        resolve_for(WOWDBDEFS_70425_CATALOG_ID, "UnknownSyntheticTable"),
+        Ok(None)
+    );
+    assert!(!supports("wowdbdefs-70425-v2"));
+    assert_eq!(provenance("wowdbdefs-70425-v2"), None);
+    assert_eq!(
+        CharacterTable::from_catalog_id("wowdbdefs-70425-v2", "Map")
+            .unwrap_err()
+            .name,
+        "unknown_catalog"
+    );
+}
+
+fn fixture_70425(
+    metadata: &TableMetadata,
+    table: CharacterTable,
+) -> (Vec<u8>, Vec<Vec<Value>>, bool) {
+    // Use this target's declarations and normalized primitive widths. No older
+    // target lookup supplies the physical fixture or its schema identity.
+    let mut fields = metadata.fields.to_vec();
+    for (field, kind) in fields.iter_mut().zip(metadata.decode_fields.unwrap()) {
+        field.kind = match kind {
+            Kind::Unsigned(8, _) | Kind::Signed(8, _) => FieldType::Byte,
+            Kind::Unsigned(16, _) | Kind::Signed(16, _) => FieldType::Short,
+            Kind::Unsigned(64, _) | Kind::Signed(64, _) => FieldType::Long,
+            _ => field.kind,
+        };
+    }
+    fixture_for_fields(metadata, &fields, table, false)
+}
+
+#[test]
+fn build_70425_selected_schema_identity_field_and_eof_gates_remain_strict() {
+    for name in ["Map", "GameObjectDisplayInfo", "TactKey", "TactKeyLookup"] {
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70425_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        let metadata = resolve_for(WOWDBDEFS_70425_CATALOG_ID, name)
+            .unwrap()
+            .unwrap()
+            .metadata();
+        let (data, expected, _) = fixture_70425(metadata, table);
+        assert_eq!(
+            DecodedTable::read(&data, table).unwrap().rows()[&7],
+            expected
+        );
+        for offset in [140, 152, 156, 176] {
+            let mut bad = data.clone();
+            let old = u32::from_le_bytes(bad[offset..offset + 4].try_into().unwrap());
+            put32(&mut bad, offset, old ^ 1);
+            assert_eq!(
+                DecodedTable::read(&bad, table).err(),
+                Some(RecordError::Schema),
+                "{name}@{offset}"
+            );
+        }
+        let mut trailing = data.clone();
+        trailing.push(0);
+        assert_eq!(
+            DecodedTable::read(&trailing, table).err(),
+            Some(RecordError::Bounds)
+        );
+        let mut encrypted = data;
+        put32(&mut encrypted, 204, 1);
+        assert_eq!(
+            DecodedTable::read(&encrypted, table).err(),
+            Some(RecordError::Unsupported)
+        );
+    }
+}
+
+#[test]
+fn build_70425_registration_does_not_inherit_sparse_parent_raw_allowlist() {
+    for name in [
+        "CollectableSourceEncounterSparse",
+        "CollectableSourceQuestSparse",
+        "CollectableSourceVendorSparse",
+    ] {
+        // These authored inputs have the same separately pinned schema facts;
+        // their equality is covered by the independent registration case.
+        let data = if name == "CollectableSourceVendorSparse" {
+            vendor_sparse_parent_fixture()
+        } else {
+            empty_sparse_parent_fixture(name)
+        };
+        let table = CharacterTable::from_catalog_id(WOWDBDEFS_70425_CATALOG_ID, name)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            DecodedTable::read(&data, table).err(),
+            Some(RecordError::Unsupported)
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(
+                &data,
+                WOWDBDEFS_70425_CATALOG_ID,
+                name
+            ),
+            Err(RecordError::Unsupported)
+        );
+    }
+}
+
+#[test]
+fn build_70425_registration_keeps_ordinary_raw_limits_and_closed_high_volume_profile() {
+    for name in [
+        "ManifestInterfaceData",
+        "ModelFileData",
+        "WMOMinimapTexture",
+    ] {
+        assert!(
+            DecodedTable::read_target_high_volume_from_catalog(
+                &[],
+                WOWDBDEFS_70425_CATALOG_ID,
+                name
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+    // Exact same-schema authored numeric input crosses only the ordinary 100k
+    // direct-row ceiling. Catalog registration must not grant the 160k profile.
+    let data = target_high_volume_numeric_fixture(100_001);
+    let name = "WMOMinimapTexture";
+    let table = CharacterTable::from_catalog_id(WOWDBDEFS_70425_CATALOG_ID, name)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        DecodedTable::read(&data, table).err(),
+        Some(RecordError::Limit)
+    );
+    assert_eq!(
+        DecodedTable::validate_catalog_raw_source_bytes(&data, WOWDBDEFS_70425_CATALOG_ID, name),
+        Err(RecordError::Limit)
+    );
+}
