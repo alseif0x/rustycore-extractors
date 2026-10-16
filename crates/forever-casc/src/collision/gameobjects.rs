@@ -181,6 +181,7 @@ pub struct RowOutcome {
     outcome: Outcome,
 }
 impl RowOutcome {
+    #[cfg(target_os = "linux")]
     pub(in crate::collision) fn new(
         ordinal: usize,
         display_id: u32,
