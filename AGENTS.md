@@ -50,6 +50,43 @@ acceptance. This is bootstrap/catalog software evidence, not real70425 acquisiti
 available-section readers, terrain/collision/navigation/product or runtime support.
 See `docs/forever-70425.md`; full Linux extraction remains the goal.
 
+### Explicit Linux70425 available source and readers — 2026-10-16
+
+Issue #88 adds separately selected available-source methods for build 70425 with keys disabled
+and terrain Map, VMap Map and GODI readers pinned to `wowdbdefs-70425-v1`.
+The 70374/generic/older selectors and component/product profiles retain their
+existing gates. Functional `157a32e5d23b1afcd24624a609b8eb0b724c666a` matches all
+771 selected Git inputs in frozen C3 (812 files / 208 directories, 41 offline inputs).
+Eight software commands pass, including 3,318 tests / 26 historical ignores /
+52 targets per debug/release profile, all 49 explicit 70425 methods (21 earlier,
+12 new CASC, 16 new DB2), both product builds, 424 contracts / two skips,
+165 distribution tests / one skip, Clippy and format. Software QA is
+`491d55811a9be92088a93ff39b8eb9f4c531d052aa576ebe936883e2c2552892`.
+
+The external-only C4 caller passes five qualification commands (eight authored
+unit methods per profile, release build, example Clippy/format); static review
+covers four ELF objects/eight edges. The actual two-request/three-view Rust
+probe and post-metadata closing pass independent final QA
+`2de2624726ab2b8212303f68e00ffdcc82a21fba312b09e68030698e9a8d14d2`,
+without findings or extra client reads/stat. Both parents/children exit zero,
+strict traces are empty, and numeric terminal/UUID/empty-group evidence precedes
+unit stop. Original Rust/metadata guards (4,010/6,830), 48 aliases per role and
+319 input directories close unchanged; installed-software roles remain separate.
+Observed Map aggregates: 73 direct records, zero copies, 71 terrain-materialized
+and 73 VMap-materialized records; one admitted and three omitted sections.
+GODI has 3,223 direct records and 20 unreplayed copies, with one admitted and
+two omitted sections. Omitted sections stay unknown; encoded EKey proof
+does not become full plaintext CKey verification.
+
+Accepted-scope metadata controls have four fresh pre-probe content reads and
+two closing reads. A preceding four-read invocation remains failed because
+missing Python `-S` caused two AF_UNIX socket/two nscd ENOENT connect calls,
+with no INET calls. Its distinct corrected `-I -S -B` version closes with an
+empty trace; no automatic retry or policy waiver applies. Campaign content reads
+total ten, including those four unaccepted reads. No model/placement/collision,
+navigation/package/runtime acceptance follows. Issue #86 remains historical;
+full Linux extraction remains the goal. See `docs/forever-70425.md`.
+
 ### Linux70374 available collision checkpoint — 2026-10-16
 
 Issue #82 adds separate available GameObjectDisplayInfo/Map startup, world and

@@ -84,3 +84,98 @@ No fresh70425 client acquisition, available Map/GameObjectDisplayInfo projection
 complete geometry package, pathfinding/runtime use or reproducible full-suite
 Linux distribution is accepted here. Those are subsequent gates of
 [the complete extractor goal](forever-completion.md).
+
+## Issue #88 — explicit available source and readers
+
+This is a separate checkpoint from issue #86 above. Functional commit
+`157a32e5d23b1afcd24624a609b8eb0b724c666a` matches all 771 selected Git inputs
+in frozen C3: 812 files / 208 directories, including 41 unchanged offline
+build inputs. Later documentation is not rebuilt into these functional binaries.
+
+### API and software evidence
+
+Issue #88 adds separate availability methods for build 70425:
+`LocalStore::read_file_data_id_available_70425_with_limit` and its internal
+external-budget counterpart, plus `read_map_70425`, `read_vmap_maps_70425` and
+`read_gameobject_display_info_70425`. The source profile is
+`linux70425-disabled-key-available-source-v1`; the reader profile is
+`wowdbdefs-70425-available-sections-disabled-v1`. Closed target dispatch selects
+`WOWDBDEFS_70425_CATALOG_ID` through the shared bounded parser. Existing 70374
+methods/profiles, generic and older selectors, component/product admissions and
+reader allowlists retain their contracts. Equal physical table layouts do not
+transfer client-build admission or earlier acceptance.
+
+All eight C3 software commands pass:
+
+| Check | Observed result |
+| --- | --- |
+| Workspace debug | 3,318 passed, 26 historical ignores, 52 target summaries |
+| Workspace release | 3,318 passed, 26 historical ignores, 52 target summaries |
+| Explicit 70425 methods in each profile | 49: issue #86's 21 plus 28 new methods (12 CASC, 16 DB2) |
+| Product debug/release builds | Both pass |
+| Source contracts/oracle subset | 424 passed, two skips |
+| Distribution tests | 165 passed, one skip |
+| Clippy and workspace format | Both pass |
+
+Software report SHA256 is
+`ef292078faaf0ee7a73b0ed9701b8ac721b8f64179decca28c83590235308717`;
+independent software QA is
+`491d55811a9be92088a93ff39b8eb9f4c531d052aa576ebe936883e2c2552892`.
+The functional/source binding is
+`7d92470e61a1577ecb7b8a7f1bb463d137f3911e5837064f846a4b10975bcf73`.
+
+A separate external C4 caller adds one example to C3; it is not a Git example
+or a product CLI. Its five qualification commands pass: eight authored unit
+methods in debug and release, release build, example Clippy and formatting.
+Qualification QA is
+`03cb63917e33e5af2a396096e7ae2c65bfd545eb30e4d99cdae1853fcf88d1ef`.
+Static software review qualifies four ELF objects/eight dependency edges:
+`5bfb19bda123806cc160f8a31c4b52f992190160cef58ba0e3a46b2bf65df8ff`.
+These software facts do not themselves establish real reader acceptance.
+
+### Actual available-reader acceptance
+
+The single actual Rust invocation passes two fixed source requests and three
+reader views: terrain Map, VMap Map and direct GODI. Post-probe metadata closing
+also passes. Independent final QA passes without findings:
+`2de2624726ab2b8212303f68e00ffdcc82a21fba312b09e68030698e9a8d14d2`.
+It checks the retained producer aggregates, private identity binding, original
+source/software facts and complete invocation namespaces; it performs no
+additional client reads or stat calls.
+
+| Source | Direct records | Copy pairs | Terrain materialized | VMap materialized | Admitted sections | Omitted sections |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Map | 73 | 0 | 71 | 73 | 1 | 3 |
+| GameObjectDisplayInfo | 3,223 | 20, unreplayed | — | — | 1 | 2 |
+
+Both actual Rust and post-metadata parents and children exit zero, with empty
+strict network traces and numeric terminal/UUID/owned-group closure captured
+before stopping their units. The original 4,010 Rust guard facts, 6,830 closing
+metadata guard facts, 48 aliases in each role and 319 input directories remain
+unchanged. The original 3,167 installed-software facts are also checked, including
+13 resources checked separately from the metadata runner's original 3,154.
+This is bounded available-reader acceptance, without a new native value/parity
+comparison or full source completeness claim.
+
+Omitted sections remain unknown. Available encoded sources authenticate their
+EKey/encoded frames; holes do not establish full plaintext CKey verification.
+No missing bytes, omitted rows or unknown sections become a complete table.
+VMap materialization retains WDT-zero rows and its existing source-direct copy
+and parent semantics; this diagnostic does not validate the parent graph.
+No model, placement, collision, navigation, package or runtime acceptance follows.
+
+The accepted metadata controls have four content reads across two new
+observations and two post-probe closing reads: six accepted-scope content reads.
+An earlier metadata invocation completed four reads but failed strict network
+trace closing after Python startup made two AF_UNIX socket calls and two nscd
+connect attempts returning ENOENT; no INET calls were observed. That invocation
+remains failed and unaccepted. Its omitted Python `-S` flag was corrected in a
+separate explicit `-I -S -B` version, whose strict trace is empty. There is no
+automatic retry or IPC policy waiver. The campaign retains ten external metadata
+content reads in total, including the four failed-attempt reads; it does not
+relabel them as accepted observations.
+
+Full catalog coverage, compatible missing-file handling, final disk collision
+and product integration, navigation, RustyCore runtime and a reproducible full
+Linux suite remain gates. The issue #86 evidence and historical failures above
+retain their original scopes.
