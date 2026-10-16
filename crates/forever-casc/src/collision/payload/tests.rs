@@ -1322,3 +1322,6 @@ fn compact_callback_error_still_runs_both_changed_guards_independently() {
     );
     assert!(e.finish().is_err());
 }
+
+#[path = "compatible_cases.rs"]
+mod compatible_cases;

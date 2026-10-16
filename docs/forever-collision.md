@@ -1,5 +1,126 @@
 # Forever collision foundation
 
+## Compatible spooled startup for 70374/70425 — 2026-10-16
+
+Issue #90 introduces separate compatible startup and model owners for explicitly
+selected Linux builds 70374 and 70425, with supplied keys disabled. These owners
+retain the leased payload repository, collector, negative cache, handles and
+cumulative counters across startup, lookup transitions, later explicit requests
+and finish. Required GODI acquisition remains fatal. Available TableFacts describe
+admitted sections; they do not become complete SourceFacts or prove omitted data.
+The existing strict APIs and product profiles keep their original contracts.
+
+The startup inventory enumerates every indexed committed model. A committed child
+of an omitted parent therefore remains observable without an additional child
+request. Borrowed descriptors expose the exact typed origin separately from
+source identity. Before publication, the caller checks startup/final identities,
+RAW size/digest, physical-row outcomes, lists and cumulative counters. A fatal
+failure does not accept a partial collection.
+
+### Qualified software
+
+Functional commit `bb60e2b418d24c32a7a5c9b71874f28eec61c011` matches the accepted
+C8 implementation. All eight software commands pass:
+
+| Check | Observed result |
+| --- | --- |
+| Debug and release workspace profiles | 3,357 tests, 26 historical ignores and 52 targets each |
+| Explicit compatible cases | All 39 methods in each profile |
+| Explicit70425 methods | All 49 methods in each profile |
+| Source contracts | 424 passed, two skipped |
+| Distribution checks | 165 passed, one skipped |
+| Product builds, Clippy and formatting | Passed |
+
+Earlier failed qualification attempts remain failed; their passed prefixes do not
+become whole-run acceptance. The later source gate
+`629cd27f1a5476d8c74c5d4f46e3734313718992` restricts a constructor to Linux.
+It does not qualify a Windows extractor. The README refresh
+`d0f4735998e6b0135dd9aa320f84c6d8727606ef` changes presentation only.
+
+### Accepted finite startup comparison
+
+A separately qualified external caller completes one finite synthetic campaign
+with 47 children, all exit0:
+
+| Actor | Calls | Scope |
+| --- | ---: | --- |
+| Rust | 14 | Complete finite startup comparisons |
+| Original native reference | 14 | Matching complete finite cases |
+| Rust | 2 | Orphan-child retention with no later child request |
+| Independent identity constructor | 16 | Independently derived synthetic input identity |
+| Generator | 1 | Finite authored inputs |
+
+The fourteen full comparisons match 88 files / 9,608 bytes. The two Rust-only
+orphan cases retain four child files / 592 bytes. Independent review checks the
+actual physical rows, all indexed handles, source/RAW metadata, cumulative
+counters, startup prefix and complete output namespaces. It does not claim native
+malformed/missing-group behavior, read-count parity or error-category parity.
+The child traces and separate controller trace are empty, child groups are absent,
+and numeric/UUID/initial-group evidence precedes unit stop. Original software,
+source and synthetic-input guards close unchanged.
+
+Public finite aggregate QA SHA-256:
+`c7582b4e2b832b54b6b0f2c5f214c55450d5efd095d38eedd89f4a4dcae081a5`.
+Its accepted scope is `passed-finite-startup-only`.
+
+Three separate Rust-only rejection controls additionally pass:
+
+| Control | Exact code | Exit |
+| --- | --- | ---: |
+| Envelope trailing bytes | `qa_envelope_tail` | 4 |
+| Unlisted later request | `qa_fixture_unlisted_route` | 4 |
+| Existing output namespace | `qa_output_exists` | 4 |
+
+There are zero native calls, all child traces are empty, all child groups are
+absent and the pre-existing sentinel is preserved. Public negative aggregate QA
+SHA-256: `f1e011f73cf2f5374b2f8238669f011e763fa5c263832eaff6a7875ba7d9b086`.
+Its accepted scope is `passed-three-Rust-only-rejection-controls`.
+Neither finite campaign accepts a real collection, world, product or runtime.
+
+### Single real70425 startup remains failed
+
+The subsequent one-child real70425/esES attempt uses disabled keys and startup
+only. The controller ends numeric1/4; its sole Rust child exits4 with
+`local_store_policy_limit`. This code is outside the original two-code allowlist,
+so the controller rejects the observation. Its retained namespace evidence records
+no output directory. Startup completion is unknown and no prefix is accepted.
+There is no retry, allowlist expansion or retroactive acceptance.
+
+The separate failed-run root observer executes once and closes preservation with
+no findings, retaining controller1/4 and target4. It observes the initial owned
+group empty before one cleanup stop and performs zero extra client metadata or
+identity closing accesses. The unit is stopped and must not be queried or retried.
+Independent failed-terminal QA passes with no findings in the exact scope
+`passed-preservation-of-failed-real-observation-only`. Public aggregate SHA-256:
+`799c57e3264f7966cbe0461e7b8cdb0a68b7b3fd150c647213250cb767c9369c`.
+The root proof is `preserved-failed-real-observation-only`; it accepts neither
+real startup nor acquisition. Successful preservation of this failed run does
+not change its producer/controller result.
+
+Source review maps the reported code to `local_store::Error::Limit`. Possible
+branches include path/metadata counts, file/archive limits, candidate attempts,
+allocation/arithmetic and resident/scratch/combined memory accounting. It does
+not identify one particular check, acquisition stage, encryption cause or a
+256MiB cumulative limit. The collector has a separate `collision_policy_limit`
+code. `DiskWorldV1` increases selected cumulative collision/spool/world budgets;
+it leaves LocalStore, per-file and parser/memory ceilings unchanged.
+
+The next source work adds closed phase labels and bounded public usage counters,
+then reviews caller memory ownership across each phase. In real mode, the authored
+fixture envelope is absent; the current blanket reservation nevertheless includes
+its maximum. The output byte ceiling counts published disk bytes, including
+copies, and does not prove that all those bytes are held simultaneously. Any
+revised accounting must still charge snapshots, reports, lists, row ledgers,
+publication metadata and active payload/readback buffers. A newly qualified
+software diagnostic and fresh admission are required before a later real probe.
+
+Existing strict supplied-input world, placement and assembly APIs retain their
+recorded evidence. This increment leaves integration of the compatible startup
+path with world/placements and final VMap assembly open. Full real startup/world
+resources, complete real navigation, product/runtime acceptance and the complete
+Linux extractor also remain open. Windows
+remains deferred. See [completion gates](forever-completion.md).
+
 ## Linux70374 available leased-disk startup/world — 2026-10-16
 
 Issue #84 extends the explicit available-section owner through the existing

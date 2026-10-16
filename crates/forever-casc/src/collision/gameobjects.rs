@@ -181,6 +181,21 @@ pub struct RowOutcome {
     outcome: Outcome,
 }
 impl RowOutcome {
+    #[cfg(target_os = "linux")]
+    pub(in crate::collision) fn new(
+        ordinal: usize,
+        display_id: u32,
+        file_data_id: u32,
+        outcome: Outcome,
+    ) -> Self {
+        Self {
+            ordinal,
+            display_id,
+            file_data_id,
+            outcome,
+        }
+    }
+
     pub const fn ordinal(&self) -> usize {
         self.ordinal
     }

@@ -524,7 +524,7 @@ fn prepare_available<A: AvailableAccess>(
         retained,
     })
 }
-fn allowance(bytes: u64, text: bool, cap: usize) -> Result<usize, Error> {
+pub(in crate::collision) fn allowance(bytes: u64, text: bool, cap: usize) -> Result<usize, Error> {
     let value = usize::try_from(bytes)
         .map_err(|_| Error::Limit)?
         .checked_mul(32)
@@ -536,7 +536,7 @@ fn allowance(bytes: u64, text: bool, cap: usize) -> Result<usize, Error> {
     }
     Ok(value)
 }
-fn table_facts(
+pub(in crate::collision) fn table_facts(
     file: &acquired::AvailableSource,
     sections: &[db2::SectionCoverage],
     direct_rows: usize,
@@ -582,7 +582,7 @@ fn capacity<T>(rows: &Vec<T>) -> Result<usize, Error> {
 
 // Early downward policy admission only; the decoder still validates the whole
 // header, column metadata, known section/text extents and declared relationships.
-fn header_policy(
+pub(in crate::collision) fn header_policy(
     file: &acquired::AvailableSource,
     max_rows: usize,
     max_copies: usize,

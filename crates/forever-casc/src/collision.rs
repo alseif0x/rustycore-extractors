@@ -15,6 +15,8 @@
 pub mod assemble;
 #[cfg(target_os = "linux")]
 pub mod available_70374;
+#[cfg(target_os = "linux")]
+pub mod compatible;
 pub mod gameobjects;
 #[cfg(target_os = "linux")]
 pub mod inventory_spool;
@@ -28,6 +30,8 @@ pub mod resources;
 pub mod run;
 #[cfg(target_os = "linux")]
 pub mod spool;
+#[cfg(target_os = "linux")]
+mod target;
 #[cfg(test)]
 mod tests;
 pub mod world;
@@ -424,6 +428,10 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
     failed: Option<Error>,
     #[cfg(target_os = "linux")]
     payloads: Option<payload::Repository>,
+    // Compatible cache lives in its separate owner but participates in this
+    // exact descriptor partition and external residency ledger.
+    #[cfg(target_os = "linux")]
+    compatible_descriptors: usize,
 }
 impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub fn new(store: &'s mut LocalStore, lookup: &'l L, limits: Limits) -> Result<Self, Error> {
@@ -457,6 +465,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             failed: None,
             #[cfg(target_os = "linux")]
             payloads: None,
+            #[cfg(target_os = "linux")]
+            compatible_descriptors: 0,
         })
     }
     /// Acquire and convert now, retaining everything internally. After any
@@ -509,7 +519,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         self.requests.push(handle);
         #[cfg(target_os = "linux")]
         if self.payloads.is_some() {
-            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let compact = self.compact_descriptors()?;
             self.payloads
                 .as_mut()
                 .ok_or(Error::State)?
@@ -553,6 +563,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             failed: self.failed,
             #[cfg(target_os = "linux")]
             payloads: self.payloads,
+            #[cfg(target_os = "linux")]
+            compatible_descriptors: self.compatible_descriptors,
         })
     }
     /// Recheck the store snapshot and transfer all retained results together.
@@ -711,6 +723,15 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         id: u32,
         requested_cap: usize,
     ) -> Result<local_store::availability::AvailableSource, Error> {
+        self.read_available_source_target(id, requested_cap, target::Target::Build70374)
+    }
+    #[cfg(target_os = "linux")]
+    fn read_available_source_target(
+        &mut self,
+        id: u32,
+        requested_cap: usize,
+        target: target::Target,
+    ) -> Result<local_store::availability::AvailableSource, Error> {
         let result = (|| {
             self.ready()?;
             names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
@@ -728,15 +749,25 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             }
             let memory_limit = add(self.store.stats().resident_bytes, self.available_total()?)?;
             self.reads += 1;
-            let file = self
-                .store
-                .read_file_data_id_available_with_external_budget(
-                    id,
-                    cap as u64,
-                    self.live,
-                    memory_limit,
-                )
-                .map_err(Error::from_available)?;
+            let file = match target {
+                target::Target::Build70374 => {
+                    self.store.read_file_data_id_available_with_external_budget(
+                        id,
+                        cap as u64,
+                        self.live,
+                        memory_limit,
+                    )
+                }
+                target::Target::Build70425 => self
+                    .store
+                    .read_file_data_id_available_70425_with_external_budget(
+                        id,
+                        cap as u64,
+                        self.live,
+                        memory_limit,
+                    ),
+            }
+            .map_err(Error::from_available)?;
             let declared = usize::try_from(file.declared_bytes()).map_err(|_| Error::Limit)?;
             if declared > cap {
                 return Err(Error::Limit);
@@ -784,7 +815,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             };
             cap = cap.checked_sub(old).ok_or(Error::Limit)?;
             if compact_vector {
-                let compact = payload::compact_bytes(&self.models, &self.requests)?;
+                let compact = self.compact_descriptors()?;
                 let remaining = repository
                     .descriptor_limit()
                     .checked_sub(repository.resident_bytes())
@@ -802,6 +833,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         let _ = (values, additional, compact_vector);
         Ok(cap)
     }
+    #[cfg(target_os = "linux")]
+    fn compact_descriptors(&self) -> Result<usize, Error> {
+        add(
+            payload::compact_bytes(&self.models, &self.requests)?,
+            self.compatible_descriptors,
+        )
+    }
     fn available_total(&self) -> Result<usize, Error> {
         let total = self
             .limits
@@ -810,7 +848,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             .ok_or(Error::Limit)?;
         #[cfg(target_os = "linux")]
         if let Some(repository) = &self.payloads {
-            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let compact = self.compact_descriptors()?;
             repository
                 .check_descriptors(compact)
                 .map_err(|_| Error::Aborted)?;
@@ -878,7 +916,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         let cap = self.available_total()?;
         #[cfg(target_os = "linux")]
         let cap = if let Some(repository) = &self.payloads {
-            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let compact = self.compact_descriptors()?;
             let remaining = repository
                 .descriptor_limit()
                 .checked_sub(repository.resident_bytes())
@@ -922,7 +960,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         });
         #[cfg(target_os = "linux")]
         if self.payloads.is_some() {
-            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let compact = self.compact_descriptors()?;
             let repository_bytes = self.payloads.as_ref().ok_or(Error::State)?.resident_bytes();
             let budget = self
                 .limits
@@ -954,7 +992,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         self.models[handle.0].pending = false;
         #[cfg(target_os = "linux")]
         if self.payloads.is_some() {
-            let compact = payload::compact_bytes(&self.models, &self.requests)?;
+            let compact = self.compact_descriptors()?;
             let repository = self.payloads.as_mut().ok_or(Error::State)?;
             // Persist each completed child/model at its conversion boundary.
             // No successful RAW/root/selection accumulates behind the wrapper.
@@ -1034,6 +1072,17 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         input: InputRef<'_>,
         requested_cap: usize,
     ) -> Result<(Vec<u8>, SourceFacts), Error> {
+        self.read_capped_policy(input, requested_cap, false)?
+            .ok_or(Error::Store(local_store::Error::MissingFile))
+    }
+    // Only compatible's already-normalized model requests select allow_missing.
+    // Required sources keep the strict adapter and its sticky error handling.
+    fn read_capped_policy(
+        &mut self,
+        input: InputRef<'_>,
+        requested_cap: usize,
+        allow_missing: bool,
+    ) -> Result<Option<(Vec<u8>, SourceFacts)>, Error> {
         if self.reads >= self.limits.max_reads {
             return Err(Error::Limit);
         }
@@ -1061,8 +1110,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 self.store
                     .read_name_with_external_budget(name, cap as u64, self.live, memory_limit)
             }
-        }
-        .map_err(Error::Store)?;
+        };
+        let file = match file {
+            Err(local_store::Error::MissingFile) if allow_missing => {
+                self.store.verify_unchanged().map_err(Error::Store)?;
+                return Ok(None);
+            }
+            result => result.map_err(Error::Store)?,
+        };
         if file.bytes.len() > cap {
             return Err(Error::Limit);
         }
@@ -1074,10 +1129,18 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             bytes: file.bytes.len(),
             first_magic: file.bytes.get(..4).and_then(|b| b.try_into().ok()),
         };
-        Ok((file.bytes, facts))
+        Ok(Some((file.bytes, facts)))
     }
     fn convert_m2(&mut self, handle: ModelHandle, bytes: Vec<u8>) -> Result<(), Error> {
-        if let Some(parsed) = M2Collision::parse(&bytes, self.limits.m2).map_err(Error::M2)? {
+        if let Some(output) = self.convert_m2_bytes(&bytes)? {
+            self.models[handle.0].status = Status::Collision;
+            self.models[handle.0].raw = Some(output);
+        }
+        self.release(bytes.capacity());
+        Ok(())
+    }
+    fn convert_m2_bytes(&mut self, bytes: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+        if let Some(parsed) = M2Collision::parse(bytes, self.limits.m2).map_err(Error::M2)? {
             let cap = self.free()?.min(forever_vmap::MAX_RAW_BYTES).min(
                 self.limits
                     .max_raw_bytes
@@ -1088,11 +1151,10 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             self.charge(output.capacity())?;
             RawM2::parse(&output, forever_vmap::Limits::default()).map_err(Error::M2)?;
             self.raw_bytes = add(self.raw_bytes, output.len())?;
-            self.models[handle.0].status = Status::Collision;
-            self.models[handle.0].raw = Some(output);
+            Ok(Some(output))
+        } else {
+            Ok(None)
         }
-        self.release(bytes.capacity());
-        Ok(())
     }
     fn convert_wmo(&mut self, handle: ModelHandle, bytes: Vec<u8>) -> Result<(), Error> {
         let root = wmo::Root::parse(&bytes, self.limits.wmo).map_err(Error::Wmo)?;
@@ -1133,65 +1195,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             reserve(&mut group_facts, 1, &mut self.live, reservation)?;
             group_facts.push(facts);
         }
-        let mut groups = Vec::new();
-        let mut inputs = Vec::new();
-        let cap = self.available_total()?;
-        let reservation =
-            cap.min(self.vector_reservation_cap(&groups, group_bytes.len(), false)?);
-        reserve(&mut groups, group_bytes.len(), &mut self.live, reservation)?;
-        for source in &group_bytes {
-            groups.push(wmo::Group::parse(source, self.limits.wmo).map_err(Error::Wmo)?);
-        }
-        let reservation = cap.min(self.vector_reservation_cap(&inputs, groups.len(), false)?);
-        reserve(&mut inputs, groups.len(), &mut self.live, reservation)?;
-        for (source, group) in group_facts.iter().zip(&groups) {
-            inputs.push(wmo::GroupInput {
-                file_data_id: source.id,
-                group,
-            });
-        }
-        let selection = doodads::resolve(
-            &root,
-            &inputs,
-            &valid,
-            wmo::Limits {
-                max_projection_bytes: self.limits.wmo.max_projection_bytes.min(self.free()?),
-                ..self.limits.wmo
-            },
-        )
-        .map_err(Error::Wmo)?;
-        self.charge(selection.resident_bytes())?;
-        let converted = raw::convert(
-            &root,
-            &inputs,
-            self.lookup,
-            raw::ConversionLimits {
-                source: self.limits.wmo,
-                max_raw_bytes: raw::MAX_RAW_BYTES.min(
-                    self.limits
-                        .max_raw_bytes
-                        .checked_sub(self.raw_bytes)
-                        .ok_or(Error::Limit)?,
-                ),
-                max_memory_bytes: raw::MAX_MEMORY_BYTES.min(self.free()?),
-            },
-        )
-        .map_err(Error::Wmo)?;
-        let status = match selection.outcome(converted.is_some()) {
+        let (selection, output, _) =
+            self.convert_wmo_geometry(&root, &group_bytes, &group_facts, &valid, &[])?;
+        let status = match selection.outcome(output.is_some()) {
             doodads::Outcome::Ok => Status::Collision,
             doodads::Outcome::OkNoCollision => Status::DoodadOnly,
             doodads::Outcome::FailedNoCollision => return Err(Error::NoCollision),
         };
-        if let Some(converted) = converted {
-            let output = converted.into_bytes();
-            self.charge(output.capacity())?;
-            self.raw_bytes = add(self.raw_bytes, output.len())?;
-            self.models[handle.0].raw = Some(output);
-        }
-        self.release(capacity(&inputs)?);
-        drop(inputs);
-        self.release(capacity(&groups)?);
-        drop(groups);
+        self.models[handle.0].raw = output;
         for source in &group_bytes {
             self.release(source.capacity());
         }
@@ -1207,6 +1218,105 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             limits: self.limits.wmo,
         });
         Ok(())
+    }
+    // Shared parser/selection/RAW kernel. Compatible acquisition must supply
+    // every required group before entering this function.
+    fn convert_wmo_geometry(
+        &mut self,
+        root: &wmo::Root<'_>,
+        group_bytes: &[Vec<u8>],
+        group_facts: &[SourceFacts],
+        valid: &[u32],
+        omitted: &[u32],
+    ) -> Result<(doodads::Selection, Option<Vec<u8>>, bool), Error> {
+        let mut groups = Vec::new();
+        let mut inputs = Vec::new();
+        let cap = self.available_total()?;
+        let reservation =
+            cap.min(self.vector_reservation_cap(&groups, group_bytes.len(), false)?);
+        reserve(&mut groups, group_bytes.len(), &mut self.live, reservation)?;
+        for source in group_bytes {
+            groups.push(wmo::Group::parse(source, self.limits.wmo).map_err(Error::Wmo)?);
+        }
+        let reservation = cap.min(self.vector_reservation_cap(&inputs, groups.len(), false)?);
+        reserve(&mut inputs, groups.len(), &mut self.live, reservation)?;
+        for (source, group) in group_facts.iter().zip(&groups) {
+            inputs.push(wmo::GroupInput {
+                file_data_id: source.id,
+                group,
+            });
+        }
+        let selection = doodads::resolve(
+            root,
+            &inputs,
+            valid,
+            wmo::Limits {
+                max_projection_bytes: self.limits.wmo.max_projection_bytes.min(self.free()?),
+                ..self.limits.wmo
+            },
+        )
+        .map_err(Error::Wmo)?;
+        self.charge(selection.resident_bytes())?;
+        // Missing dependencies are never supplied as successful valid M2s to
+        // resolve(). Inspect only actual non-skipped group references to tell
+        // omission-derived emptiness from an intrinsically empty model. This
+        // makes no claim about geometry in an unavailable dependency.
+        let omitted_usable = if omitted.is_empty() || root.doodad_set_count() == 0 {
+            false
+        } else {
+            let contexts = wmo::resolve_contexts(
+                root,
+                &inputs,
+                wmo::Limits {
+                    max_projection_bytes: self.limits.wmo.max_projection_bytes.min(self.free()?),
+                    ..self.limits.wmo
+                },
+            )
+            .map_err(Error::Wmo)?;
+            let context_bytes = capacity(&contexts)?;
+            self.charge(context_bytes)?;
+            let referenced = contexts
+                .iter()
+                .filter(|c| c.skip_reason().is_none())
+                .any(|context| {
+                    let group = context.group();
+                    (0..group.doodad_reference_count()).any(|i| {
+                        group
+                            .doodad_reference(i)
+                            .and_then(|r| root.doodad_spawn(usize::from(r)))
+                            .is_some_and(|spawn| omitted.binary_search(&spawn.name_index).is_ok())
+                    })
+                });
+            drop(contexts);
+            self.release(context_bytes);
+            referenced
+        };
+        let converted = raw::convert(
+            root,
+            &inputs,
+            self.lookup,
+            raw::ConversionLimits {
+                source: self.limits.wmo,
+                max_raw_bytes: raw::MAX_RAW_BYTES.min(
+                    self.limits
+                        .max_raw_bytes
+                        .checked_sub(self.raw_bytes)
+                        .ok_or(Error::Limit)?,
+                ),
+                max_memory_bytes: raw::MAX_MEMORY_BYTES.min(self.free()?),
+            },
+        )
+        .map_err(Error::Wmo)?;
+        let output = converted.map(|v| v.into_bytes());
+        if let Some(output) = &output {
+            self.charge(output.capacity())?;
+            self.raw_bytes = add(self.raw_bytes, output.len())?;
+        }
+        self.release(capacity(&inputs)?);
+        drop(inputs);
+        self.release(capacity(&groups)?);
+        drop(groups);
+        Ok((selection, output, omitted_usable))
     }
 }
 
