@@ -1014,3 +1014,7 @@ fn scoped70374_keeps_bootstrap_source_identity_guards() {
         Error::InputChanged
     );
 }
+
+#[cfg(target_os = "linux")]
+#[path = "bootstrap_70425_tests.rs"]
+mod bootstrap_70425_tests;

@@ -31,6 +31,25 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Explicit Linux70425 bootstrap and catalog — 2026-10-16
+
+Issue #86 adds `admit_db2_70425`, disabled-key `LocalStore::open_db2_70425`
+and the separate 1,161-table `wowdbdefs-70425-v1` catalog. Public WoWDBDefs
+commit `996e53f029c0213b223aecb94d754f6b4b9efb49` pins its source; independent
+artifact validation checks every generated declaration. Generic/older selectors,
+reviewed schemas, hash gates and component/product profiles stay unchanged.
+Functional `7c744d5` matches all 769 selected Git sources in the immutable
+810-file candidate; 41 additional inputs are the retained offline build closure.
+The corrected whole software run passes all eight commands, including 3,290
+tests / 26 historical ignores per debug/release profile, all 21 new methods in
+each, 424 source contracts / two skips, 165 distribution tests / one skip,
+product builds, Clippy and formatting. Independent terminal closing passes
+without findings (`b7279b991d2f4543d6ffb37648a3bcac6f1719958b36ed2fa4afd031748d8587`).
+Earlier failed test/observer/metadata-guard attempts remain failed, with no prefix
+acceptance. This is bootstrap/catalog software evidence, not real70425 acquisition,
+available-section readers, terrain/collision/navigation/product or runtime support.
+See `docs/forever-70425.md`; full Linux extraction remains the goal.
+
 ### Linux70374 available collision checkpoint — 2026-10-16
 
 Issue #82 adds separate available GameObjectDisplayInfo/Map startup, world and

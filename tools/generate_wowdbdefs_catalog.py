@@ -28,21 +28,39 @@ CATALOG_ID = "wowdbdefs-70205-v1"
 TARGETS = {
     70205: {
         "pin": PIN,
+        "manifest_blob": MANIFEST_BLOB,
+        "manifest_sha256": MANIFEST_SHA256,
+        "expected_tables": EXPECTED_TABLES,
         "catalog_id": "wowdbdefs-70205-v1",
         "facts_path": FACTS_PATH,
         "rust_path": RUST_PATH,
     },
     70338: {
         "pin": "d6f50d4f351193e84226aa62a36faa0f58528afa",
+        "manifest_blob": MANIFEST_BLOB,
+        "manifest_sha256": MANIFEST_SHA256,
+        "expected_tables": EXPECTED_TABLES,
         "catalog_id": "wowdbdefs-70338-v1",
         "facts_path": ROOT / "contracts/wowdbdefs-70338-v1.json",
         "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70338_generated.rs",
     },
     70374: {
         "pin": "464a25b3a7c02b0c74726be7a53a0b0ccf1a2d10",
+        "manifest_blob": MANIFEST_BLOB,
+        "manifest_sha256": MANIFEST_SHA256,
+        "expected_tables": EXPECTED_TABLES,
         "catalog_id": "wowdbdefs-70374-v1",
         "facts_path": ROOT / "contracts/wowdbdefs-70374-v1.json",
         "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70374_generated.rs",
+    },
+    70425: {
+        "pin": "996e53f029c0213b223aecb94d754f6b4b9efb49",
+        "manifest_blob": "f95528066d44e1b70ea6cd124a35a5a63685d384",
+        "manifest_sha256": "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a",
+        "expected_tables": 1161,
+        "catalog_id": "wowdbdefs-70425-v1",
+        "facts_path": ROOT / "contracts/wowdbdefs-70425-v1.json",
+        "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70425_generated.rs",
     },
 }
 
@@ -436,8 +454,12 @@ def main(argv=None):
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     global PIN, TARGET_BUILD, CATALOG_ID, FACTS_PATH, RUST_PATH
+    global MANIFEST_BLOB, MANIFEST_SHA256, EXPECTED_TABLES
     config = TARGETS[args.build]
     PIN = config["pin"]
+    MANIFEST_BLOB = config["manifest_blob"]
+    MANIFEST_SHA256 = config["manifest_sha256"]
+    EXPECTED_TABLES = config["expected_tables"]
     TARGET_BUILD = (1, 60, 1, args.build)
     CATALOG_ID = config["catalog_id"]
     FACTS_PATH = config["facts_path"]

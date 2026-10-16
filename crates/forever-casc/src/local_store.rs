@@ -234,6 +234,15 @@ pub struct LocalStore {
     keys: Option<crate::keys::Keyring>,
 }
 
+#[derive(Clone, Copy)]
+enum BootstrapTarget {
+    Legacy,
+    #[cfg(target_os = "linux")]
+    Db2Build70374,
+    #[cfg(target_os = "linux")]
+    Db2Build70425,
+}
+
 impl LocalStore {
     /// Versioned logical collection identity, not physical availability or a
     /// complete archive snapshot. Build/config and central content keys bind
@@ -250,7 +259,7 @@ impl LocalStore {
     }
 
     pub fn open(client: &Path, options: OpenOptions) -> Result<Self, Error> {
-        Self::open_inner(client, options, None, false)
+        Self::open_inner(client, options, None, BootstrapTarget::Legacy)
     }
 
     /// Explicit opt-in Salsa20/128-bit keys. Keys are consumed and kept private;
@@ -264,7 +273,7 @@ impl LocalStore {
         options: OpenOptions,
         keys: crate::keys::Keyring,
     ) -> Result<Self, Error> {
-        Self::open_inner(client, options, Some(keys), false)
+        Self::open_inner(client, options, Some(keys), BootstrapTarget::Legacy)
     }
 
     /// Narrow Linux product-v10/v11 bootstrap admission for exact build70374.
@@ -272,7 +281,7 @@ impl LocalStore {
     /// acceptance claim. The product caller must enforce its target catalog.
     #[cfg(target_os = "linux")]
     pub fn open_db2_70374(client: &Path, options: OpenOptions) -> Result<Self, Error> {
-        Self::open_inner(client, options, None, true)
+        Self::open_inner(client, options, None, BootstrapTarget::Db2Build70374)
     }
 
     /// Explicit supplied keys with the same narrow70374 bootstrap admission.
@@ -282,14 +291,21 @@ impl LocalStore {
         options: OpenOptions,
         keys: crate::keys::Keyring,
     ) -> Result<Self, Error> {
-        Self::open_inner(client, options, Some(keys), true)
+        Self::open_inner(client, options, Some(keys), BootstrapTarget::Db2Build70374)
+    }
+
+    /// Explicit Linux70425 bootstrap with disabled supplied keys. Raw reads
+    /// authenticate bytes; this does not admit a DB2/component/product profile.
+    #[cfg(target_os = "linux")]
+    pub fn open_db2_70425(client: &Path, options: OpenOptions) -> Result<Self, Error> {
+        Self::open_inner(client, options, None, BootstrapTarget::Db2Build70425)
     }
 
     fn open_inner(
         client: &Path,
         options: OpenOptions,
         keys: Option<crate::keys::Keyring>,
-        db2_70374: bool,
+        bootstrap: BootstrapTarget,
     ) -> Result<Self, Error> {
         let limits = options.limits;
         if add(client.as_os_str().len(), 48)? > limits.max_path_bytes {
@@ -316,17 +332,16 @@ impl LocalStore {
             &budget,
         )?;
         budget.phase(add(build_bytes.len(), build_bytes.len())?)?;
-        let mut build = if db2_70374 {
+        let mut build = match bootstrap {
+            BootstrapTarget::Legacy => build_info::parse(&build_bytes, limits.max_build_info_rows)?,
             #[cfg(target_os = "linux")]
-            {
+            BootstrapTarget::Db2Build70374 => {
                 build_info::parse_db2_70374(&build_bytes, limits.max_build_info_rows)?
             }
-            #[cfg(not(target_os = "linux"))]
-            {
-                return Err(Error::UnsupportedClient);
+            #[cfg(target_os = "linux")]
+            BootstrapTarget::Db2Build70425 => {
+                build_info::parse_db2_70425(&build_bytes, limits.max_build_info_rows)?
             }
-        } else {
-            build_info::parse(&build_bytes, limits.max_build_info_rows)?
         };
         budget.retain(build.tags.capacity())?;
         budget.retain(build_bytes.capacity())?;

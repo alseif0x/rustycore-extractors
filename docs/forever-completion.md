@@ -39,6 +39,25 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Explicit70425 bootstrap and catalog checkpoint — 2026-10-16
+
+Issue #86 adds a separate Linux70425 disabled-key LocalStore bootstrap and the
+public 1,161-table `wowdbdefs-70425-v1` catalog. Functional `7c744d5` matches the
+immutable candidate's 769 selected Git inputs, with 41 retained offline inputs.
+The corrected eight-command software run passes 3,290 workspace tests / 26
+historical ignores in each profile, including all 21 new methods, both product
+builds, 424 source contracts / two skips, 165 distribution tests / one skip,
+Clippy and formatting. Independent terminal closing passes without findings
+(`b7279b991d2f4543d6ffb37648a3bcac6f1719958b36ed2fa4afd031748d8587`).
+The earlier failed test and metadata-guard campaigns retain their failed status.
+
+Existing selectors, catalogs and component/product gates remain intact. This
+does not admit real70425 extraction or its available-section readers. Fresh
+collection admission, actual source/reader acceptance, compatible missing-file
+handling, final disk collision/product integration, navigation, runtime and a
+reproducible full Linux suite remain required. See
+[the exact70425 scope](forever-70425.md).
+
 ## Available leased-disk collision checkpoint — 2026-10-16
 
 Issue #84 supplies explicit available-section disk startup/world owners while

@@ -21,9 +21,9 @@ pub mod root;
 mod sha256;
 pub mod terrain;
 pub mod verify;
-#[cfg(target_os = "linux")]
-pub use admission::admit_db2_70374;
 pub use admission::{PRODUCT, SUPPORTED_CLIENTS, admit};
+#[cfg(target_os = "linux")]
+pub use admission::{admit_db2_70374, admit_db2_70425};
 
 #[cfg(feature = "native")]
 #[allow(unsafe_code)]
