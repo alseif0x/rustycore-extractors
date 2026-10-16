@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Explicit build-70374 available-section projections. This module performs no
+//! Explicit build-70374/70425 available-section projections. This module performs no
 //! acquisition or cryptographic authentication. Its caller must bind a stable,
 //! authenticated source whose `range` never returns synthesized hole bytes.
 //! Ordinary complete-file readers and their policies are unchanged.
 use crate::{RecordError, records::available_sections, terrain_sources as source};
 
 pub const PROFILE: &str = "wowdbdefs-70374-available-sections-disabled-v1";
+pub const PROFILE_70425: &str = "wowdbdefs-70425-available-sections-disabled-v1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Unavailable;
@@ -173,7 +174,7 @@ impl AvailableRecords<source::VMapFields> {
 pub fn read_map_70374(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::MapFields>, RecordError> {
-    available_sections::read_map(input)
+    available_sections::read_map(input, available_sections::Target::Build70374)
 }
 /// Explicit current-catalog available VMap Map projection. Omitted sections
 /// stay omitted with attached coverage; required known bytes/text are fatal.
@@ -181,14 +182,36 @@ pub fn read_map_70374(
 pub fn read_vmap_maps_70374(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::VMapFields>, RecordError> {
-    available_sections::read_vmap_maps(input)
+    available_sections::read_vmap_maps(input, available_sections::Target::Build70374)
 }
 /// Original GODI consumer reads physical direct rows only. Copies are retained
 /// inspection facts, never replayed or implicitly used for model acquisition.
 pub fn read_gameobject_display_info_70374(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
-    available_sections::read_gameobjects(input)
+    available_sections::read_gameobjects(input, available_sections::Target::Build70374)
+}
+
+/// Explicit70425 terrain Map projection pinned to the70425 catalog. Sources
+/// carry no build number; this binds decoder metadata, not client admission.
+pub fn read_map_70425(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::MapFields>, RecordError> {
+    available_sections::read_map(input, available_sections::Target::Build70425)
+}
+/// Explicit70425 VMap Map projection with unchanged source-direct copy,
+/// signed-parent, WDT-zero and attached section-coverage semantics.
+pub fn read_vmap_maps_70425(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::VMapFields>, RecordError> {
+    available_sections::read_vmap_maps(input, available_sections::Target::Build70425)
+}
+/// Explicit70425 GODI projection. Copies remain inspection-only facts;
+/// no model acquisition, component or product admission is performed here.
+pub fn read_gameobject_display_info_70425(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
+    available_sections::read_gameobjects(input, available_sections::Target::Build70425)
 }
 
 #[cfg(test)]

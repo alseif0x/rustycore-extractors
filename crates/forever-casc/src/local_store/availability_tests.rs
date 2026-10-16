@@ -175,3 +175,6 @@ fn external_live_budget_constrains_strict_and_partial_before_allocation() {
         );
     }
 }
+
+#[path = "availability_70425_tests.rs"]
+mod target_70425_tests;

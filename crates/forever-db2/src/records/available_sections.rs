@@ -13,6 +13,22 @@ use crate::{
 };
 use std::io::Cursor;
 
+/// Closed crate-private decoder choice. Callers cannot supply an arbitrary
+/// catalog string or inherit another target's component admission.
+#[derive(Clone, Copy)]
+pub(crate) enum Target {
+    Build70374,
+    Build70425,
+}
+impl Target {
+    const fn catalog_id(self) -> &'static str {
+        match self {
+            Self::Build70374 => super::catalog::WOWDBDEFS_70374_CATALOG_ID,
+            Self::Build70425 => super::catalog::WOWDBDEFS_70425_CATALOG_ID,
+        }
+    }
+}
+
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const MAX_SECTIONS: usize = 16;
 const MAX_ROWS: usize = 100_000;
@@ -32,8 +48,9 @@ struct SectionRange {
 
 pub(crate) fn read_map(
     input: &impl Source,
+    target: Target,
 ) -> Result<AvailableRecords<terrain::MapFields>, RecordError> {
-    let (rows, sections) = read(input, "Map", Collector::Map(Vec::new()))?;
+    let (rows, sections) = read(input, "Map", Collector::Map(Vec::new()), target)?;
     match rows {
         Collected::Map(records) => Ok(AvailableRecords { records, sections }),
         _ => Err(RecordError::Schema),
@@ -41,8 +58,9 @@ pub(crate) fn read_map(
 }
 pub(crate) fn read_vmap_maps(
     input: &impl Source,
+    target: Target,
 ) -> Result<AvailableRecords<terrain::VMapFields>, RecordError> {
-    let (rows, sections) = read(input, "Map", Collector::VMap(Vec::new()))?;
+    let (rows, sections) = read(input, "Map", Collector::VMap(Vec::new()), target)?;
     match rows {
         Collected::VMap(records) => Ok(AvailableRecords { records, sections }),
         _ => Err(RecordError::Schema),
@@ -50,11 +68,13 @@ pub(crate) fn read_vmap_maps(
 }
 pub(crate) fn read_gameobjects(
     input: &impl Source,
+    target: Target,
 ) -> Result<AvailableRecords<terrain::GameObjectFields>, RecordError> {
     let (rows, sections) = read(
         input,
         "GameObjectDisplayInfo",
         Collector::GameObject(Vec::new()),
+        target,
     )?;
     match rows {
         Collected::GameObject(records) => Ok(AvailableRecords { records, sections }),
@@ -97,6 +117,7 @@ fn read(
     input: &impl Source,
     name: &str,
     mut collector: Collector,
+    target: Target,
 ) -> Result<(Collected, Vec<SectionCoverage>), RecordError> {
     let len = usize::try_from(input.declared_bytes()).map_err(|_| RecordError::Limit)?;
     if len > MAX_BYTES {
@@ -104,7 +125,7 @@ fn read(
     }
     let raw: &[u8; HEADER_SIZE] = bytes(input, 0, HEADER_SIZE)?.try_into().unwrap();
     let h = Header::parse(raw).map_err(|_| RecordError::Metadata)?;
-    let table = CharacterTable::from_catalog_id(super::catalog::WOWDBDEFS_70374_CATALOG_ID, name)
+    let table = CharacterTable::from_catalog_id(target.catalog_id(), name)
         .map_err(|_| RecordError::Schema)?
         .ok_or(RecordError::Schema)?;
     let schema = table.schema();
