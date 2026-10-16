@@ -58,6 +58,48 @@ handling, final disk collision/product integration, navigation, runtime and a
 reproducible full Linux suite remain required. See
 [the exact70425 scope](forever-70425.md).
 
+## Explicit70425 available-source/reader checkpoint — 2026-10-16
+
+Issue #88 separately adds available acquisition on build 70425 with keys disabled and explicit
+terrain Map, VMap Map and GODI readers bound to the 70425 catalog. Older/generic
+selectors, 70374 profiles and component/product gates remain unchanged. Functional
+`157a32e5d23b1afcd24624a609b8eb0b724c666a` matches frozen C3's 771 selected Git
+inputs; 41 offline inputs give 812 files / 208 directories. All eight software
+commands pass: 3,318 tests / 26 historical ignores / 52 target summaries in each
+workspace profile, all 49 explicit 70425 methods (21 earlier plus 12 new CASC and
+16 new DB2 methods), both product builds, 424 contracts / two skips, 165
+distribution tests / one skip, Clippy and formatting. Independent software QA is
+`491d55811a9be92088a93ff39b8eb9f4c531d052aa576ebe936883e2c2552892`;
+functional binding is
+`7d92470e61a1577ecb7b8a7f1bb463d137f3911e5837064f846a4b10975bcf73`.
+
+The separately qualified external C4 caller is not added to Git. Its five
+commands pass eight unit methods in each profile, release build, example Clippy
+and format; static review covers four ELF objects/eight dependency edges.
+The actual two-request/three-view Rust diagnostic and post-metadata closing pass,
+with independent final QA
+`2de2624726ab2b8212303f68e00ffdcc82a21fba312b09e68030698e9a8d14d2`
+passing without findings or additional client reads/stat. Observed Map aggregates are
+73 direct / zero copies / 71 terrain-materialized / 73 VMap-materialized records,
+with one admitted and three omitted sections. GODI has 3,223 direct records and
+20 unreplayed copy pairs, with one admitted and two omitted sections. Holes remain
+unknown; encoded EKey authentication does not imply full plaintext CKey proof.
+Both actual parents and children exit zero, strict traces are empty, and numeric
+terminal/UUID/owned-group closure is captured before stopping the units. Original
+Rust/metadata guards (4,010/6,830), 48 aliases per role and 319 input directories
+close unchanged; installed-software facts retain their separately checked roles.
+No native actual-value comparison is added by this bounded reader acceptance.
+
+Fresh metadata controls use four pre-probe and two closing content reads. The
+prior four-read metadata attempt remains failed/unaccepted: omitted Python `-S`
+caused two AF_UNIX sockets/two nscd ENOENT connects, with no INET calls. Its
+separate corrected `-I -S -B` version has an empty trace; there is no automatic
+retry or policy waiver. Ten campaign content reads include those four failures.
+These bounded observations do not accept models, placements, collision,
+navigation, package or runtime. Full Linux gates remain required. See
+[the issue #88 scope and software receipts](forever-70425.md#issue-88--explicit-available-source-and-readers).
+The preceding issue #86 checkpoint retains its historical gates and evidence.
+
 ## Available leased-disk collision checkpoint — 2026-10-16
 
 Issue #84 supplies explicit available-section disk startup/world owners while

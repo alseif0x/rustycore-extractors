@@ -955,3 +955,6 @@ fn available_vmap_section_size_and_successful_short_ranges_reject() {
         Some(RecordError::Bounds)
     );
 }
+
+#[path = "target_70425_tests.rs"]
+mod target_70425_tests;

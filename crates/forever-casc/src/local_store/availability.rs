@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Authored 2026-10-15: explicit Linux70374 disabled-key availability only.
+// Authored 2026-10-15: explicit Linux70374 disabled-key availability.
+// Authored 2026-10-16: separately selected Linux70425 availability.
 //! Complete CKey reads retain their original API/policy. This separate source
 //! exposes only authenticated available spans and explicit encrypted holes.
 //! No conversion to VerifiedFile or complete Vec exists. Initial partial routing
@@ -18,6 +19,21 @@ use std::{
 
 pub use blte::available::{CoverageRange, RangeError, RangeState};
 pub const PROFILE: &str = "linux70374-disabled-key-available-source-v1";
+pub const PROFILE_70425: &str = "linux70425-disabled-key-available-source-v1";
+
+#[derive(Clone, Copy)]
+enum Target {
+    Build70374,
+    Build70425,
+}
+impl Target {
+    const fn build(self) -> u32 {
+        match self {
+            Self::Build70374 => 70374,
+            Self::Build70425 => 70425,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -144,7 +160,56 @@ impl LocalStore {
         external_live_bytes: usize,
         combined_cap: usize,
     ) -> Result<AvailableSource, Error> {
-        if self.build.build != 70374 {
+        self.read_file_data_id_available_for_target(
+            Target::Build70374,
+            file_data_id,
+            max_decoded_bytes,
+            external_live_bytes,
+            combined_cap,
+        )
+    }
+
+    /// Separate explicit Linux70425 disabled-key capability. This does not
+    /// admit70425 through the existing70374 method or any component owner.
+    pub fn read_file_data_id_available_70425_with_limit(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+    ) -> Result<AvailableSource, Error> {
+        self.read_file_data_id_available_70425_with_external_budget(
+            file_data_id,
+            max_decoded_bytes,
+            0,
+            self.limits.max_memory_bytes,
+        )
+    }
+
+    /// Same strict/partial external-budget accounting, separately70425 gated.
+    pub(crate) fn read_file_data_id_available_70425_with_external_budget(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+        external_live_bytes: usize,
+        combined_cap: usize,
+    ) -> Result<AvailableSource, Error> {
+        self.read_file_data_id_available_for_target(
+            Target::Build70425,
+            file_data_id,
+            max_decoded_bytes,
+            external_live_bytes,
+            combined_cap,
+        )
+    }
+
+    fn read_file_data_id_available_for_target(
+        &mut self,
+        target: Target,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+        external_live_bytes: usize,
+        combined_cap: usize,
+    ) -> Result<AvailableSource, Error> {
+        if self.build.build != target.build() {
             return Err(Error::Build);
         }
         if self.keys.is_some() {
