@@ -1256,3 +1256,7 @@ fn partition_preserves_first_failure_and_checks_store_identity() {
         Some(Error::Store(local_store::Error::InputChanged))
     );
 }
+
+#[cfg(target_os = "linux")]
+#[path = "compatible_cases.rs"]
+mod compatible_cases;

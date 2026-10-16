@@ -226,6 +226,23 @@ impl LocalStore {
         result
     }
 
+    pub(crate) fn check_available_70374(&self) -> Result<(), Error> {
+        self.check_available_target(Target::Build70374)
+    }
+    pub(crate) fn check_available_70425(&self) -> Result<(), Error> {
+        self.check_available_target(Target::Build70425)
+    }
+    fn check_available_target(&self, target: Target) -> Result<(), Error> {
+        if self.build.build != target.build() {
+            return Err(Error::Build);
+        }
+        if self.keys.is_some() {
+            return Err(Error::KeysPresent);
+        }
+        io::check_guards(&self.guards)?;
+        Ok(())
+    }
+
     fn available_inner(
         &mut self,
         id: u32,

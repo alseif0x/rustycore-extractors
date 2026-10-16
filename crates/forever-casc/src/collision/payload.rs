@@ -19,6 +19,9 @@ use forever_vmap::wmo::{self, doodads, liquid::LiquidLookup};
 
 pub const PROFILE: &str = "linux-private-collision-payload-spool-v1";
 const MAGIC: &[u8; 8] = b"RCEPLD1\0";
+pub const COMPATIBLE_PROFILE: &str = "linux-private-compatible-collision-payload-spool-v1";
+const COMPATIBLE_MAGIC: &[u8; 8] = b"RCEPLC1\0";
+const COMPATIBLE_BINDING: usize = 16;
 const HEADER: usize = 52;
 const BINDING: usize = 12;
 const GROUP: usize = 33;
@@ -151,10 +154,22 @@ pub(crate) struct Repository {
     spool: Spool,
     mapping: Vec<Mapping>,
     wmo: wmo::Limits,
+    compatible: bool,
     observed_active: usize,
     failed: Option<Error>,
 }
 impl Repository {
+    pub(super) fn identity_limit(&self) -> usize {
+        self.spool.limits().max_records
+    }
+    pub(super) fn enable_compatible(&mut self) -> Result<(), Error> {
+        if !self.mapping.is_empty() {
+            return Err(Error::State);
+        }
+        self.compatible = true;
+        Ok(())
+    }
+
     pub(crate) fn resident_bytes(&self) -> usize {
         // Each term was checked before admission. Overflow is rejected at every
         // mutation; this accessor cannot introduce a new allocation.
@@ -240,7 +255,21 @@ impl Repository {
         compact: usize,
         live: usize,
     ) -> Result<usize, Error> {
-        let result = self.store_inner(handle, model, compact, live);
+        let result = self.store_inner(handle, model, compact, live, None);
+        self.remember(result)
+    }
+    pub(super) fn store_compatible(
+        &mut self,
+        handle: ModelHandle,
+        model: &mut Model,
+        compact: usize,
+        live: usize,
+        bindings: Option<&[super::compatible::Binding]>,
+    ) -> Result<usize, Error> {
+        if !self.compatible {
+            return Err(Error::State);
+        }
+        let result = self.store_inner(handle, model, compact, live, bindings);
         self.remember(result)
     }
     fn store_inner(
@@ -249,6 +278,7 @@ impl Repository {
         model: &mut Model,
         compact: usize,
         live: usize,
+        compatible_bindings: Option<&[super::compatible::Binding]>,
     ) -> Result<usize, Error> {
         if self.mapping.iter().any(|m| m.model == handle) {
             return Err(Error::State);
@@ -272,10 +302,19 @@ impl Repository {
                 &[][..],
             ),
         };
+        if model.wmo.is_some() && self.compatible != compatible_bindings.is_some() {
+            return Err(Error::State);
+        }
+        let binding_count = compatible_bindings.map_or(bindings.len(), <[_]>::len);
+        let binding_width = if self.compatible {
+            COMPATIBLE_BINDING
+        } else {
+            BINDING
+        };
         let size = [
             raw.len(),
             root.len(),
-            times(bindings.len(), BINDING)?,
+            times(binding_count, binding_width)?,
             times(refs.len(), 2)?,
             times(groups.len(), GROUP)?,
         ]
@@ -286,13 +325,17 @@ impl Repository {
         }
         self.check_descriptors(compact)?;
         let mut header = [0; HEADER];
-        header[..8].copy_from_slice(MAGIC);
+        header[..8].copy_from_slice(if self.compatible {
+            COMPATIBLE_MAGIC
+        } else {
+            MAGIC
+        });
         let flags = u32::from(model.raw.is_some()) | (u32::from(model.wmo.is_some()) << 1);
         header[8..12].copy_from_slice(&flags.to_le_bytes());
         for (part, n) in header[12..].as_chunks_mut::<8>().0.iter_mut().zip([
             raw.len(),
             root.len(),
-            bindings.len(),
+            binding_count,
             refs.len(),
             groups.len(),
         ]) {
@@ -302,9 +345,21 @@ impl Repository {
             out.bytes(&header)?;
             out.bytes(raw)?;
             out.bytes(root)?;
-            for b in bindings {
-                out.bytes(&b.name_index.to_le_bytes())?;
-                out.bytes(&(b.model.index() as u64).to_le_bytes())?;
+            if let Some(bindings) = compatible_bindings {
+                for b in bindings {
+                    out.bytes(&b.name_index.to_le_bytes())?;
+                    let (tag, handle) = match b.disposition {
+                        super::compatible::Disposition::Present(h) => (0u32, h.index() as u64),
+                        super::compatible::Disposition::Missing => (1u32, 0),
+                    };
+                    out.bytes(&tag.to_le_bytes())?;
+                    out.bytes(&handle.to_le_bytes())?;
+                }
+            } else {
+                for b in bindings {
+                    out.bytes(&b.name_index.to_le_bytes())?;
+                    out.bytes(&(b.model.index() as u64).to_le_bytes())?;
+                }
             }
             for r in refs {
                 out.bytes(&r.to_le_bytes())?;
@@ -348,6 +403,18 @@ impl Repository {
         budget: usize,
         call: impl FnOnce(Payload<'_>) -> Result<T, Error>,
     ) -> Result<T, Error> {
+        if self.compatible {
+            return Err(Error::Format);
+        }
+        self.with_record_payload(handle, budget, false, call)
+    }
+    fn with_record_payload<T>(
+        &mut self,
+        handle: ModelHandle,
+        budget: usize,
+        compatible: bool,
+        call: impl FnOnce(Payload<'_>) -> Result<T, Error>,
+    ) -> Result<T, Error> {
         let result = (|| {
             if let Some(e) = self.failure() {
                 return Err(e);
@@ -359,8 +426,16 @@ impl Repository {
                 .ok_or(Error::State)?;
             let (record, shape) = (mapping.record, mapping.shape);
             let limits = self.wmo;
+            let actual_compatible = self.compatible;
             self.spool.with_record(record, budget, |bytes| {
-                let payload = Payload::parse(bytes, limits)?;
+                if actual_compatible != compatible {
+                    return Err(Error::Format);
+                }
+                let payload = if compatible {
+                    Payload::parse_profile(bytes, limits, true)?
+                } else {
+                    Payload::parse(bytes, limits)?
+                };
                 if bytes.len() != shape.record_bytes
                     || payload.raw().map(<[u8]>::len) != shape.raw_bytes
                     || payload.wmo().is_some() != (shape.class == Class::Wmo)
@@ -388,7 +463,20 @@ pub struct Payload<'a> {
 }
 impl<'a> Payload<'a> {
     fn parse(bytes: &'a [u8], limits: wmo::Limits) -> Result<Self, Error> {
-        if bytes.len() < HEADER || &bytes[..8] != MAGIC {
+        Self::parse_profile(bytes, limits, false)
+    }
+    fn parse_profile(
+        bytes: &'a [u8],
+        limits: wmo::Limits,
+        compatible: bool,
+    ) -> Result<Self, Error> {
+        let magic = if compatible { COMPATIBLE_MAGIC } else { MAGIC };
+        let binding_width = if compatible {
+            COMPATIBLE_BINDING
+        } else {
+            BINDING
+        };
+        if bytes.len() < HEADER || &bytes[..8] != magic {
             return Err(Error::Format);
         }
         let flags = u32_at(&bytes[8..12]);
@@ -406,7 +494,7 @@ impl<'a> Payload<'a> {
         let lengths = [
             raw_len,
             root_len,
-            times(bindings_len, BINDING)?,
+            times(bindings_len, binding_width)?,
             times(refs_len, 2)?,
             times(groups_len, GROUP)?,
         ];
@@ -438,8 +526,14 @@ impl<'a> Payload<'a> {
                     .ok_or(Error::Format)?;
             }
             let mut previous = None;
-            for b in parts[2].as_chunks::<BINDING>().0.iter() {
-                if count(&b[4..])? > 4095 {
+            for b in parts[2].chunks_exact(binding_width) {
+                if compatible {
+                    let tag = u32_at(&b[4..8]);
+                    let h = count(&b[8..16])?;
+                    if tag > 1 || tag == 0 && h > 4095 || tag == 1 && h != 0 {
+                        return Err(Error::Format);
+                    }
+                } else if count(&b[4..])? > 4095 {
                     return Err(Error::Format);
                 }
             }
@@ -554,6 +648,114 @@ impl<'a> Wmo<'a> {
             })
     }
 }
+/// Distinct wire/profile view; never passes compatible bytes to strict Wmo.
+pub struct CompatiblePayload<'a> {
+    payload: Payload<'a>,
+}
+impl<'a> CompatiblePayload<'a> {
+    fn validate(payload: Payload<'a>, models: &[Model]) -> Result<Self, Error> {
+        if let Some(w) = payload.wmo() {
+            let view = CompactView {
+                models,
+                requests: &[],
+            };
+            let (binding_records, remainder) = w.bindings.as_chunks::<COMPATIBLE_BINDING>();
+            if !remainder.is_empty() {
+                return Err(Error::Format);
+            }
+            let mut bindings = binding_records.iter();
+            let mut previous = None;
+            for request in doodads::requests(w.root()) {
+                let b = bindings.next().ok_or(Error::Format)?;
+                let name_index = u32_at(&b[..4]);
+                if name_index != request.name_index || previous.is_some_and(|p| p >= name_index) {
+                    return Err(Error::Format);
+                }
+                previous = Some(name_index);
+                let input = match request.target {
+                    doodads::Target::FileDataId(id) => super::InputRef::FileDataId(id),
+                    doodads::Target::Name(n) => super::InputRef::LogicalName(n),
+                };
+                super::names::Prepared::new(input, Class::M2).map_err(|_| Error::Format)?;
+                if u32_at(&b[4..8]) == 0 {
+                    let handle = ModelHandle(count(&b[8..16])?);
+                    view.check_identity(handle, Class::M2, input)
+                        .map_err(|_| Error::Format)?;
+                }
+            }
+            if bindings.next().is_some() {
+                return Err(Error::Format);
+            }
+            let mut groups = w.group_sources();
+            for id in w.root().detailed_group_ids() {
+                super::names::Prepared::new(super::InputRef::FileDataId(id), Class::M2)
+                    .map_err(|_| Error::Format)?;
+                let group = groups.next().ok_or(Error::Format)?;
+                if group.file_data_id() != id {
+                    return Err(Error::Format);
+                }
+            }
+            if groups.next().is_some() {
+                return Err(Error::Format);
+            }
+            // Every selected MODD reference must resolve to a real collision M2.
+            for reference in w.references() {
+                let spawn = w
+                    .root()
+                    .doodad_spawn(usize::from(reference))
+                    .ok_or(Error::Format)?;
+                let values = w.bindings.as_chunks::<COMPATIBLE_BINDING>().0;
+                let at = values
+                    .binary_search_by_key(&spawn.name_index, |b| u32_at(&b[..4]))
+                    .map_err(|_| Error::Format)?;
+                let b = values[at];
+                if u32_at(&b[4..8]) != 0 {
+                    return Err(Error::Format);
+                }
+                let model = models.get(count(&b[8..16])?).ok_or(Error::Format)?;
+                if model.class != Class::M2 || model.status != Status::Collision || model.pending {
+                    return Err(Error::Format);
+                }
+            }
+        }
+        Ok(Self { payload })
+    }
+    pub const fn raw(&self) -> Option<&'a [u8]> {
+        self.payload.raw
+    }
+    pub fn wmo(&self) -> Option<CompatibleWmo<'_, 'a>> {
+        self.payload.wmo.as_ref().map(|wmo| CompatibleWmo { wmo })
+    }
+}
+pub struct CompatibleWmo<'v, 'a> {
+    wmo: &'v Wmo<'a>,
+}
+impl<'v, 'a> CompatibleWmo<'v, 'a> {
+    pub fn root(&self) -> &wmo::Root<'a> {
+        self.wmo.root()
+    }
+    pub fn bindings(&self) -> impl ExactSizeIterator<Item = super::compatible::Binding> + '_ {
+        self.wmo
+            .bindings
+            .as_chunks::<COMPATIBLE_BINDING>()
+            .0
+            .iter()
+            .map(|b| super::compatible::Binding {
+                name_index: u32_at(&b[..4]),
+                disposition: if u32_at(&b[4..8]) == 0 {
+                    super::compatible::Disposition::Present(ModelHandle(u64_at(&b[8..16]) as usize))
+                } else {
+                    super::compatible::Disposition::Missing
+                },
+            })
+    }
+    pub fn references(&self) -> impl ExactSizeIterator<Item = u16> + '_ {
+        self.wmo.references()
+    }
+    pub fn group_sources(&self) -> impl ExactSizeIterator<Item = SourceFacts> + '_ {
+        self.wmo.group_sources()
+    }
+}
 /// Compact facts borrow the collector and never expose an unloaded raw as if it
 /// were absent. To inspect presence/content, use with_payload explicitly.
 pub struct Descriptor<'a> {
@@ -568,6 +770,14 @@ impl<'a> Descriptor<'a> {
     }
     pub fn output_basename(&self) -> &'a [u8] {
         &self.model.name
+    }
+    /// Original typed route; logical names borrow the retained canonical name.
+    /// This metadata accessor performs no acquisition or payload verification.
+    pub fn origin(&self) -> super::InputRef<'a> {
+        match &self.model.origin {
+            super::Origin::Id(id) => super::InputRef::FileDataId(*id),
+            super::Origin::Name(name) => super::InputRef::LogicalName(name),
+        }
     }
     pub fn source(&self) -> Option<&'a SourceFacts> {
         self.model.source.as_ref()
@@ -638,7 +848,7 @@ pub(crate) enum LookupTransition<T, O> {
     Failed(O, CollectorError),
 }
 pub struct SpoolingExtractor<'s, 'l, L: LiquidLookup + ?Sized> {
-    inner: Extractor<'s, 'l, L>,
+    pub(super) inner: Extractor<'s, 'l, L>,
     failed: Option<CollectorError>,
 }
 impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
@@ -655,6 +865,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             spool,
             mapping: Vec::new(),
             wmo: limits.wmo,
+            compatible: false,
             observed_active: 0,
             failed: None,
         });
@@ -687,7 +898,10 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         }
         self.inner.ready().map_err(CollectorError::Collision)
     }
-    fn checked<T>(&mut self, result: Result<T, CollisionError>) -> Result<T, CollectorError> {
+    pub(super) fn checked<T>(
+        &mut self,
+        result: Result<T, CollisionError>,
+    ) -> Result<T, CollectorError> {
         // Both guards execute even after failure. Changed invalidates all data.
         let source = self
             .inner
@@ -772,6 +986,56 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
                 .map_err(|_| CollisionError::Aborted)
         })();
         self.checked(result)
+    }
+    pub(super) fn with_compatible_payload<T>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(CompatiblePayload<'_>) -> Result<T, Error>,
+    ) -> Result<T, CollectorError> {
+        let result = (|| {
+            self.inner.ready()?;
+            let budget = self.inner.free()?;
+            let models = &self.inner.models;
+            self.inner
+                .payloads
+                .as_mut()
+                .ok_or(CollisionError::State)?
+                .with_record_payload(handle, budget, true, |p| {
+                    call(CompatiblePayload::validate(p, models)?)
+                })
+                .map_err(|_| CollisionError::Aborted)
+        })();
+        self.checked(result)
+    }
+    pub(crate) fn with_raw_result<T, E>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(Option<&[u8]>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let compatible = self.inner.payloads.as_ref().is_some_and(|r| r.compatible);
+        if !compatible {
+            return self.with_payload_result(handle, |p| call(p.raw()));
+        }
+        let mut cause = None;
+        let result = self.with_compatible_payload(handle, |p| match call(p.raw()) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                cause = Some(e);
+                Err(Error::Callback)
+            }
+        });
+        match (result, cause) {
+            (Ok(v), None) => Ok(v),
+            (Err(e), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: (e != CollectorError::Payload(Error::Callback)).then_some(e),
+            }),
+            (Err(e), None) => Err(CallbackFailure::Collector(e)),
+            (Ok(_), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: Some(CollisionError::State.into()),
+            }),
+        }
     }
     pub fn payload_shape(&self, handle: ModelHandle) -> Result<PayloadShape, CollectorError> {
         self.ready()?;
@@ -1057,6 +1321,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             raw_bytes: old.raw_bytes,
             failed: old.failed,
             payloads: old.payloads,
+            compatible_descriptors: old.compatible_descriptors,
         };
         LookupTransition::Ready(SpoolingExtractor {
             inner,
@@ -1079,7 +1344,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         let facts = self.inner.facts();
         let compact = compact_bytes(&self.inner.models, &self.inner.requests)?;
         let repository = self.inner.payloads.take().ok_or(CollisionError::State)?;
-        repository.check_descriptors(compact)?;
+        repository.check_descriptors(add(compact, self.inner.compatible_descriptors)?)?;
         let store_resident = self.inner.store.stats().resident_bytes;
         let memory = self.inner.limits.max_memory_bytes;
         Ok(SpoolingExtraction {
@@ -1090,6 +1355,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             store_resident,
             memory,
             external_resident: bytes,
+            compatible_descriptors: self.inner.compatible_descriptors,
             failed: None,
         })
     }
@@ -1121,6 +1387,7 @@ pub struct SpoolingExtraction {
     store_resident: usize,
     memory: usize,
     external_resident: usize,
+    compatible_descriptors: usize,
     failed: Option<CollectorError>,
 }
 impl SpoolingExtraction {
@@ -1195,7 +1462,11 @@ impl SpoolingExtraction {
             let active = self
                 .repository
                 .active_limit()
-                .checked_sub(self.external_resident)
+                .checked_sub(
+                    self.external_resident
+                        .checked_sub(self.compatible_descriptors)
+                        .ok_or(CollisionError::State)?,
+                )
                 .ok_or(CollisionError::Limit)?;
             let budget = memory.min(active).min(source_allowance);
             if shape.record_bytes > budget {
@@ -1311,11 +1582,50 @@ impl SpoolingExtraction {
             let active = self
                 .repository
                 .active_limit()
-                .checked_sub(self.external_resident)
+                .checked_sub(
+                    self.external_resident
+                        .checked_sub(self.compatible_descriptors)
+                        .ok_or(CollisionError::State)?,
+                )
                 .ok_or(CollisionError::Limit)?;
             Ok(self
                 .repository
                 .with_payload(handle, budget.min(active), call)?)
+        })();
+        if let Err(e) = result {
+            self.failed = Some(e);
+        }
+        result
+    }
+    pub(super) fn with_compatible_payload<T>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(CompatiblePayload<'_>) -> Result<T, Error>,
+    ) -> Result<T, CollectorError> {
+        let result = (|| {
+            self.verify_unchanged()?;
+            let compact = compact_bytes(&self.models, &self.requests)?;
+            let budget = self
+                .memory
+                .checked_sub(self.store_resident)
+                .and_then(|n| n.checked_sub(compact))
+                .and_then(|n| n.checked_sub(self.repository.resident_bytes()))
+                .and_then(|n| n.checked_sub(self.external_resident))
+                .ok_or(CollisionError::Limit)?;
+            let active = self
+                .repository
+                .active_limit()
+                .checked_sub(
+                    self.external_resident
+                        .checked_sub(self.compatible_descriptors)
+                        .ok_or(CollisionError::State)?,
+                )
+                .ok_or(CollisionError::Limit)?;
+            Ok(self
+                .repository
+                .with_record_payload(handle, budget.min(active), true, |p| {
+                    call(CompatiblePayload::validate(p, &self.models)?)
+                })?)
         })();
         if let Err(e) = result {
             self.failed = Some(e);

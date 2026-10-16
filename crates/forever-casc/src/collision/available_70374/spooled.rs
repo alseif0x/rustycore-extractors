@@ -63,7 +63,7 @@ impl Error {
             Cause::Collector(e) => e.code(),
         }
     }
-    fn with_guard(mut self, guard: Option<CollectorError>) -> Self {
+    pub(in crate::collision) fn with_guard(mut self, guard: Option<CollectorError>) -> Self {
         if let Some(e) = guard
             && (changed(e) || !self.guard.is_some_and(changed))
         {

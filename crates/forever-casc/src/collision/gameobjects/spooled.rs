@@ -301,29 +301,7 @@ pub(in crate::collision) fn collect_direct<L: LiquidLookup + ?Sized>(
                     stats.textures += 1;
                     Outcome::Texture
                 }
-                GameObjectOutcome::Model(handle) => {
-                    let descriptor = collector.descriptor(handle)?;
-                    let shape = collector.payload_shape(handle)?;
-                    match (
-                        descriptor.class(),
-                        descriptor.status(),
-                        shape.raw_bytes.is_some(),
-                    ) {
-                        (_, Status::Collision, true) => {
-                            stats.collision_rows += 1;
-                            Outcome::Collision(handle)
-                        }
-                        (Class::M2, Status::NoCollision, false) => {
-                            stats.m2_no_collision += 1;
-                            Outcome::M2NoCollision(handle)
-                        }
-                        (Class::Wmo, Status::DoodadOnly, false) => {
-                            stats.wmo_doodad_only += 1;
-                            Outcome::WmoDoodadOnly(handle)
-                        }
-                        _ => return Err(super::Error::State.into()),
-                    }
-                }
+                GameObjectOutcome::Model(handle) => model_outcome(collector, handle, &mut stats)?,
             }
         };
         outcomes.push(RowOutcome {
@@ -334,6 +312,37 @@ pub(in crate::collision) fn collect_direct<L: LiquidLookup + ?Sized>(
         });
     }
     Ok((outcomes, stats))
+}
+// Shared successful-model row projection; acquisition policy is supplied by
+// the owner. Strict and compatible startup use identical class/shape checks.
+pub(in crate::collision) fn model_outcome<L: LiquidLookup + ?Sized>(
+    collector: &SpoolingExtractor<'_, '_, L>,
+    handle: crate::collision::ModelHandle,
+    stats: &mut Stats,
+) -> Result<Outcome, Error> {
+    let descriptor = collector.descriptor(handle)?;
+    let shape = collector.payload_shape(handle)?;
+    Ok(
+        match (
+            descriptor.class(),
+            descriptor.status(),
+            shape.raw_bytes.is_some(),
+        ) {
+            (_, Status::Collision, true) => {
+                stats.collision_rows += 1;
+                Outcome::Collision(handle)
+            }
+            (Class::M2, Status::NoCollision, false) => {
+                stats.m2_no_collision += 1;
+                Outcome::M2NoCollision(handle)
+            }
+            (Class::Wmo, Status::DoodadOnly, false) => {
+                stats.wmo_doodad_only += 1;
+                Outcome::WmoDoodadOnly(handle)
+            }
+            _ => return Err(super::Error::State.into()),
+        },
+    )
 }
 pub(in crate::collision) fn finish_lists<L: LiquidLookup + ?Sized>(
     collector: &mut SpoolingExtractor<'_, '_, L>,
@@ -421,8 +430,8 @@ fn build_lists<L: LiquidLookup + ?Sized>(
         if let Outcome::Collision(handle) = row.outcome {
             let shape = collector.payload_shape(handle)?;
             collector
-                .with_payload_result(handle, |p| {
-                    let raw = p.raw().ok_or(super::Error::State)?;
+                .with_raw_result(handle, |raw| {
+                    let raw = raw.ok_or(super::Error::State)?;
                     if Some(raw.len()) != shape.raw_bytes {
                         return Err(super::Error::State.into());
                     }

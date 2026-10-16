@@ -35,6 +35,7 @@ impl CollisionFixture {
             70170 => "1.60.1.70170",
             70205 => "1.60.1.70205",
             70374 => "1.60.1.70374",
+            70425 => "1.60.1.70425",
             _ => panic!("unsupported synthetic fixture build"),
         };
         builder.routes.clear();
