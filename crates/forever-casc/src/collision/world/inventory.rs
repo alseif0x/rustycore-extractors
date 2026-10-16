@@ -15,6 +15,14 @@ use forever_vmap::wmo::liquid::LiquidLookup;
 #[cfg(test)]
 mod tests;
 pub const PROFILE: &str = "linux-private-authenticated-disk-world-v1";
+// Private validation seam for the distinct available disk-world owner.
+pub(in crate::collision) fn validate_resources(
+    limits: super::Limits,
+    profile: crate::collision::resources::Profile,
+) -> Result<(), super::Error> {
+    limits.validate_resources(profile)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause<E> {
     World(super::Error),

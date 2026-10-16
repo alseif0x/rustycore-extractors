@@ -890,6 +890,16 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         let r = self.inner.read_source(id, cap);
         self.checked(r)
     }
+    // Same collector/source ledger and sticky source/repository guards as the
+    // complete source bridge; no complete SourceFacts are manufactured.
+    pub(crate) fn read_available_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<crate::local_store::availability::AvailableSource, CollectorError> {
+        let result = self.inner.read_available_source(id, cap);
+        self.checked(result)
+    }
     pub(crate) fn read_source_ref(
         &mut self,
         input: super::InputRef<'_>,
