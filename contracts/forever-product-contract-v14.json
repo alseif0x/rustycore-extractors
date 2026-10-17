@@ -1,0 +1,121 @@
+{
+  "contract": "forever-product-v14",
+  "version": 14,
+  "publication_profile": "Build70425CompatibleCollisionV1",
+  "builds": [
+    70425
+  ],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify",
+    "verify-links"
+  ],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70425-v1",
+    "component_mask": 16,
+    "components": [
+      "vmaps"
+    ],
+    "collision_storage": "linux-leased-append-disk-world-v1",
+    "collision_budget_keys": [
+      "collision-raw-bytes",
+      "collision-wdt-bytes",
+      "collision-cache-bytes",
+      "collision-placement-bytes",
+      "collision-vmo-bytes",
+      "collision-map-bytes",
+      "collision-output-bytes"
+    ],
+    "collision_profile": "linux70425-compatible-gnu15-vmap-product-v1",
+    "collision_domain": [
+      "all-available-maps",
+      "map:<canonical-u32>"
+    ],
+    "collision_coverage": "compatible-collision-coverage-v1",
+    "decryption": "disabled",
+    "terrain": "none",
+    "navigation": "none",
+    "db2_output_entries": 0,
+    "db2_max_entries": 1161
+  },
+  "source_profile": "linux70425-compatible-gnu15-v2",
+  "source_policy": {
+    "map": "Map and GameObjectDisplayInfo startup sources and the required liquid material/type sources are mandatory. An unavailable mandatory source is fatal.",
+    "dependencies": "A present WDT whose required ADT is malformed or otherwise fails acquisition, conversion, integrity, resource, or publication checks is fatal; only an explicitly missing WDT is recorded as unknown.",
+    "failure": "A missing WDT has unknown coverage and emits no tree or placement proof. A selected map:<id> whose WDT is missing is rejected without falling back to another map or the all-available-maps selection.",
+    "native_failure_parity": false
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2,
+    "coverage": "vmaps/compatible-collision-coverage-v1.bin",
+    "proof": "vmaps/coverage/<map-width4>.placements",
+    "tree": "vmaps/<map-width4>/<map-width4>.vmtree",
+    "tile": "vmaps/<map-width4>/<map-width4>_<x-width2>_<y-width2>.vmtile"
+  },
+  "verification": {
+    "profile": "linux70425-compatible-gnu15-vmap-product-v1",
+    "scope": "artifact_integrity_complete_declared_vmap_associations_and_producer_reported_available_source_coverage",
+    "source_authentication": "Offline verification checks producer-reported source coverage, not an independent client snapshot."
+  },
+  "coverage": {
+    "authentication": "producer_reported",
+    "binds": [
+      "source",
+      "plan",
+      "producer",
+      "build",
+      "locale",
+      "selection",
+      "pack"
+    ],
+    "facts": [
+      "Map and GameObjectDisplayInfo source availability, declared and available bytes, full-checksum and encoded-key authentication flags, row counts, and section admission states",
+      "Liquid material/type source identities, byte counts, first-magic tags, and direct/copy/materialized row counts",
+      "Ordered startup rows with display IDs, file IDs, and collision disposition or omission reason",
+      "Map topology and per-map WDT/global status; each present WDT map records all 4096 cells with distinct own and parent-replay states",
+      "Complete ID-ordered placement proofs for present-WDT maps and size/SHA-256 bindings for every authenticated published VMap artifact"
+    ],
+    "complete_global_map_coverage_claim": false
+  },
+  "resume": "A sealed resume rebuilds the genuine six-owner result and compares every artifact against the immutable published component. A complete output refuses writes.",
+  "limits": {
+    "coverage_bytes": 134217728,
+    "coverage_maps": 4096,
+    "coverage_files": 262144,
+    "package_files": 262144,
+    "collision_record_bytes_min": 32,
+    "collision_record_bytes_max": 137438953472,
+    "collision_output_bytes_min": 1,
+    "collision_output_bytes_max": 68719476736,
+    "disk_world_combined_bytes": 1860173824,
+    "disk_world_run_allowance_bytes": 270532608,
+    "disk_world_guard_allowance_bytes": 16777216,
+    "coverage_heap_bytes": 134238208,
+    "compatible_phase_logical_memory_ceiling_bytes": 1725935616,
+    "disk_headroom_bytes": 67108864,
+    "meaning": "These are downward-only API budgets. The combined logical ceiling and coverage reservation are enforced before production; capacity headroom is reserved separately. Cap failures never truncate output."
+  },
+  "excluded": [
+    "native backend",
+    "Windows execution",
+    "provided keys",
+    "DB2/GT/camera output",
+    "terrain output",
+    "navigation output",
+    "resident collision storage",
+    "full encrypted Map coverage",
+    "real full-world acceptance",
+    "RustyCore runtime",
+    "release acceptance"
+  ],
+  "legacy_preservation": "v13 keeps its terminal MissingFile terrain behavior; no older-build acceptance transfers to 70425.",
+  "full_extractor_complete": false
+}

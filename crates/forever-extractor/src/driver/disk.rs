@@ -21,6 +21,7 @@ use std::{
 };
 mod anchors;
 mod capacity;
+mod compatible;
 #[cfg(all(
     test,
     target_arch = "x86_64",
@@ -225,6 +226,48 @@ impl Preflight {
         )
         .map_err(|e| Error::from(e.code()))
     }
+    fn repositories(&self) -> Result<Repositories, Error> {
+        self.verify_unchanged()?;
+        let ordinal = NEXT
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+            .map_err(|_| Error::from("product_disk_limit"))?;
+        let name = format!(".forever-collision-{}-{ordinal}", std::process::id());
+        let path = self.scratch.path().join(&name);
+        anchors::validate(&path)?;
+        DirBuilder::new()
+            .mode(0o700)
+            .create(anchors::anchor(self.scratch.file()).join(&name))
+            .map_err(|e| {
+                Error::from(if e.kind() == std::io::ErrorKind::AlreadyExists {
+                    "product_disk_exists"
+                } else {
+                    "product_disk_io"
+                })
+            })?;
+        // Retain even a partially constructed namespace; no path cleanup occurs.
+        let namespace = Chain::open(&path, true)?;
+        if !namespace.private()
+            || namespace.uid() != self.scratch.uid()
+            || namespace.mount() != self.scratch.mount()
+        {
+            return Err("product_disk_changed".into());
+        }
+        let raw = self.repository(&namespace, "raw", self.budget.raw_bytes)?;
+        let wdt = self.repository(&namespace, "wdt", self.budget.wdt_bytes)?;
+        let cache = self.repository(&namespace, "cache", self.budget.cache_bytes)?;
+        let placements = self.repository(&namespace, "placements", self.budget.placement_bytes)?;
+        let vmo = self.repository(&namespace, "vmo", self.budget.vmo_bytes)?;
+        let maps = self.repository(&namespace, "maps", self.budget.map_bytes)?;
+        Ok(Repositories {
+            namespace,
+            raw,
+            wdt,
+            cache,
+            placements,
+            vmo,
+            maps,
+        })
+    }
     /// Build the complete closed inventory before the first common-package put.
     /// Common Run replay remains authoritative; retained scratch is never used
     /// for recovery. Startup, world and all six owners carry the same explicit
@@ -260,38 +303,16 @@ impl Preflight {
         run: &mut Run,
         domain: Option<&crate::map_domain::Domain>,
     ) -> Result<(), Error> {
-        self.verify_unchanged()?;
-        let ordinal = NEXT
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-            .map_err(|_| Error::from("product_disk_limit"))?;
-        let name = format!(".forever-collision-{}-{ordinal}", std::process::id());
-        let path = self.scratch.path().join(&name);
-        anchors::validate(&path)?;
-        DirBuilder::new()
-            .mode(0o700)
-            .create(anchors::anchor(self.scratch.file()).join(&name))
-            .map_err(|e| {
-                Error::from(if e.kind() == std::io::ErrorKind::AlreadyExists {
-                    "product_disk_exists"
-                } else {
-                    "product_disk_io"
-                })
-            })?;
-        // Retain even a partially constructed namespace; no path cleanup occurs.
-        let namespace = Chain::open(&path, true)?;
-        if !namespace.private()
-            || namespace.uid() != self.scratch.uid()
-            || namespace.mount() != self.scratch.mount()
-        {
-            return Err("product_disk_changed".into());
-        }
+        let Repositories {
+            namespace,
+            raw,
+            wdt,
+            cache,
+            placements,
+            vmo,
+            maps,
+        } = self.repositories()?;
         let resources = resources::Profile::DiskWorldV1;
-        let raw = self.repository(&namespace, "raw", self.budget.raw_bytes)?;
-        let wdt = self.repository(&namespace, "wdt", self.budget.wdt_bytes)?;
-        let cache = self.repository(&namespace, "cache", self.budget.cache_bytes)?;
-        let placements = self.repository(&namespace, "placements", self.budget.placement_bytes)?;
-        let vmo = self.repository(&namespace, "vmo", self.budget.vmo_bytes)?;
-        let maps = self.repository(&namespace, "maps", self.budget.map_bytes)?;
         let wdts = inventory_spool::Inventory::new(wdt, resources.inventory_limits())
             .map_err(|e| Error::from(e.code()))?;
         let caches = inventory_spool::Inventory::new(cache, resources.inventory_limits())
@@ -369,4 +390,14 @@ impl Preflight {
         namespace.check()?;
         self.verify_unchanged()
     }
+}
+
+struct Repositories {
+    namespace: Chain,
+    raw: spool::Spool,
+    wdt: spool::Spool,
+    cache: spool::Spool,
+    placements: spool::Spool,
+    vmo: spool::Spool,
+    maps: spool::Spool,
 }

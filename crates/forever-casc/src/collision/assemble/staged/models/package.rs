@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-12: closed supplied-world disk package assembly.
 //! Consume the actual Prepared owner; no caller placements/models/proofs enter.
 //! Complete maps and ordered proofs live in immutable bound private bundles.
@@ -12,7 +13,9 @@
 //! allowances are admitted before IO. Counters are logical, not RSS/all CPU.
 //! Artifact visitation batches each complete map to avoid rereading a bundle for
 //! every tile. No publication, resume, cleanup or live-client snapshot is added.
+use super::Phase as _;
 use super::{Prepared, payload, spool};
+pub mod compatible;
 use crate::collision::{Class, assemble as resident, run};
 use forever_vmap::{assembly, placement};
 use std::mem::size_of;
@@ -165,16 +168,6 @@ impl<E: Copy> From<super::Error<E>> for Error<E> {
                 maps: None,
             },
         }
-    }
-}
-fn cast<E: Copy>(e: Error) -> Error<E> {
-    Error {
-        cause: match e.cause {
-            Cause::Models(c) => Cause::Models(c),
-            Cause::Kind(k) => Cause::Kind(k),
-            Cause::Callback(()) => Cause::Kind(Kind::Callback),
-        },
-        guards: e.guards,
     }
 }
 impl<E: Copy> std::fmt::Display for Error<E> {
@@ -367,8 +360,8 @@ impl Map {
             .map(|at| self.tiles[at])
     }
 }
-/// Borrowed complete checked map bundle. The ordered proof remains private;
-/// callers receive only the exact native tree/payload/index artifact inventory.
+/// Borrowed complete checked map bundle, with its ordered association witness
+/// and exact native tree/payload/index artifact inventory.
 pub struct MapView<'a> {
     map: &'a Map,
     bytes: &'a [u8],
@@ -442,6 +435,12 @@ impl<'a> MapView<'a> {
         }
         Ok(Self { map, bytes })
     }
+    /// Ordered association witness from this already checked map bundle. The
+    /// borrow cannot outlive with_map; no repository/descriptor or IO is exposed.
+    pub fn ordered_dir_bin(&self) -> &'a [u8] {
+        let proof = self.map.bound.proof;
+        &self.bytes[proof.start..proof.start + proof.len]
+    }
     pub const fn map_id(&self) -> u32 {
         self.map.bound.id
     }
@@ -513,7 +512,290 @@ pub struct Completed {
     stats: Stats,
     failed: Option<Kind>,
 }
+// Private, closed owner seam. Exactly strict Prepared and genuine compatible
+// Prepared implement it. A view only borrows existing allocations/authorities.
+pub(super) struct ModelView<'a, P: super::Phase> {
+    pub(super) phase: &'a P,
+    pub(super) repository: &'a spool::Spool,
+    pub(super) index: &'a [super::Entry],
+    pub(super) index_capacity: usize,
+    pub(super) limits: super::Limits,
+    pub(super) base: usize,
+    pub(super) stats: super::Stats,
+    pub(super) failed: Option<super::Kind>,
+    pub(super) topology: &'a crate::collision::world::Topology,
+}
+impl<P: super::Phase> ModelView<'_, P> {
+    fn live(&self) -> Result<usize, super::Kind> {
+        super::add(
+            self.base,
+            super::mul(self.index_capacity, size_of::<super::Entry>())?,
+        )
+    }
+    fn stats(&self) -> Result<super::Stats, super::WorkError<P::Cause>> {
+        self.failed.map_or(Ok(self.stats), |e| Err(e.into()))
+    }
+    fn binding(&self, name: &[u8]) -> Result<usize, super::Kind> {
+        super::binding(self.phase, self.index, name)
+    }
+}
+pub(super) trait Owner: Sized {
+    type Phase: super::Phase;
+    fn view(&self) -> ModelView<'_, Self::Phase>;
+    fn model_work(&mut self) -> super::ModelWork<'_, Self::Phase>;
+    fn stage_stats(
+        &self,
+    ) -> Result<super::super::Stats, super::WorkError<<Self::Phase as super::Phase>::Cause>>;
+    fn read_placement_map(
+        &mut self,
+        id: u32,
+    ) -> Result<Vec<u8>, super::WorkError<<Self::Phase as super::Phase>::Cause>> {
+        self.model_work()
+            .stage
+            .archive_mut()
+            .read_map(id, 0)
+            .map_err(|e| {
+                super::phase::<Self::Phase, ()>(<Self::Phase as super::Phase>::stage_error(e))
+            })
+    }
+}
+type OwnerCause<P> = <<P as Owner>::Phase as super::Phase>::Cause;
+#[derive(Clone, Copy)]
+enum WorkCause<C, E = ()> {
+    Models(super::WorkCause<C>),
+    Kind(Kind),
+    Callback(E),
+}
+#[derive(Clone, Copy)]
+struct WorkError<C, E = ()> {
+    cause: WorkCause<C, E>,
+    guards: Guards,
+}
+impl<C, E> From<Kind> for WorkError<C, E> {
+    fn from(e: Kind) -> Self {
+        Self {
+            cause: WorkCause::Kind(e),
+            guards: Guards::default(),
+        }
+    }
+}
+impl<C, E> From<payload::CollectorError> for WorkError<C, E> {
+    fn from(e: payload::CollectorError) -> Self {
+        Self {
+            cause: WorkCause::Models(super::WorkCause::Collector(e)),
+            guards: Guards::default(),
+        }
+    }
+}
+impl<C, E> From<super::WorkError<C, E>> for WorkError<C, E> {
+    fn from(e: super::WorkError<C, E>) -> Self {
+        let cause = match e.cause {
+            super::WorkCause::Callback(e) => WorkCause::Callback(e),
+            super::WorkCause::Phase(e) => WorkCause::Models(super::WorkCause::Phase(e)),
+            super::WorkCause::Kind(e) => WorkCause::Models(super::WorkCause::Kind(e)),
+            super::WorkCause::Collector(e) => WorkCause::Models(super::WorkCause::Collector(e)),
+        };
+        Self {
+            cause,
+            guards: Guards {
+                models: e.guards,
+                maps: None,
+            },
+        }
+    }
+}
+fn strict_error<E>(e: WorkError<super::super::Cause, E>) -> Error<E> {
+    Error {
+        cause: match e.cause {
+            WorkCause::Models(c) => Cause::Models(match c {
+                super::WorkCause::Phase(e) => super::Cause::Phase(e),
+                super::WorkCause::Kind(e) => super::Cause::Kind(e),
+                super::WorkCause::Collector(e) => super::Cause::Collector(e),
+                super::WorkCause::Callback(()) => super::Cause::Callback(()),
+            }),
+            WorkCause::Kind(e) => Cause::Kind(e),
+            WorkCause::Callback(e) => Cause::Callback(e),
+        },
+        guards: e.guards,
+    }
+}
+fn work_cast<C, E: Copy>(e: WorkError<C>) -> WorkError<C, E> {
+    WorkError {
+        cause: match e.cause {
+            WorkCause::Models(c) => WorkCause::Models(c),
+            WorkCause::Kind(k) => WorkCause::Kind(k),
+            WorkCause::Callback(()) => WorkCause::Kind(Kind::Callback),
+        },
+        guards: e.guards,
+    }
+}
+impl<C> WorkError<C> {
+    fn into_generic<E: Copy>(self) -> WorkError<C, E> {
+        work_cast(self)
+    }
+}
+// Inert move storage: no second allocation/index/repository/ledger. The strict
+// public Completed below retains its exact original seven fields/layout.
+struct PackageState<P: Owner> {
+    models: P,
+    repository: spool::Spool,
+    maps: Vec<Map>,
+    limits: Limits,
+    base: usize,
+    stats: Stats,
+    failed: Option<Kind>,
+}
+struct PackageWork<'a, P: Owner> {
+    models: &'a mut P,
+    repository: &'a mut spool::Spool,
+    maps: &'a mut Vec<Map>,
+    limits: Limits,
+    base: usize,
+    stats: &'a mut Stats,
+    failed: &'a mut Option<Kind>,
+}
+impl<P: Owner> PackageState<P> {
+    fn work(&mut self) -> PackageWork<'_, P> {
+        PackageWork {
+            models: &mut self.models,
+            repository: &mut self.repository,
+            maps: &mut self.maps,
+            limits: self.limits,
+            base: self.base,
+            stats: &mut self.stats,
+            failed: &mut self.failed,
+        }
+    }
+}
+fn phase_stats<P: Owner>(
+    models: &P,
+    failed: Option<Kind>,
+    stats: Stats,
+) -> Result<Stats, WorkError<OwnerCause<P>>> {
+    failed.map_or(Ok(()), |e| Err(WorkError::from(e)))?;
+    models.view().stats()?;
+    Ok(stats)
+}
+
+/// Stable complete inventory; no file reads or public private-file ordinal.
+fn artifact_inventory<'a, P: Owner>(
+    models: &'a P,
+    maps: &'a [Map],
+    failed: Option<Kind>,
+    stats: Stats,
+) -> Result<impl Iterator<Item = (resident::ArtifactName<'a>, usize)> + 'a, WorkError<OwnerCause<P>>>
+{
+    phase_stats(models, failed, stats)?;
+    let compact = models.view().phase.compact()?;
+    let data = models.view().phase.lists().map_err(|_| Kind::State)?;
+    let dtree = std::iter::once((resident::ArtifactName::Dtree, data.dtree_bytes().len()));
+    let models = models
+        .view()
+        .index
+        .iter()
+        .filter(|e| e.selected)
+        .map(move |e| {
+            let d = compact
+                .descriptor(e.handle)
+                .expect("closed selected identity");
+            (resident::ArtifactName::Model(d.output_basename()), e.bytes)
+        });
+    let maps = maps.iter().flat_map(|m| {
+        std::iter::once((resident::ArtifactName::Tree(m.bound.id), m.bound.tree.len)).chain(
+            m.tiles.iter().flat_map(move |t| {
+                (t.payload.len != 0)
+                    .then_some((
+                        resident::ArtifactName::Tile {
+                            map: m.bound.id,
+                            x: t.x,
+                            y: t.y,
+                            index: false,
+                        },
+                        t.payload.len,
+                    ))
+                    .into_iter()
+                    .chain(std::iter::once((
+                        resident::ArtifactName::Tile {
+                            map: m.bound.id,
+                            x: t.x,
+                            y: t.y,
+                            index: true,
+                        },
+                        t.index.len,
+                    )))
+            }),
+        )
+    });
+    Ok(dtree.chain(models).chain(maps))
+}
+
 impl Completed {
+    fn work(&mut self) -> PackageWork<'_, Prepared> {
+        PackageWork {
+            models: &mut self.models,
+            repository: &mut self.repository,
+            maps: &mut self.maps,
+            limits: self.limits,
+            base: self.base,
+            stats: &mut self.stats,
+            failed: &mut self.failed,
+        }
+    }
+    pub fn verify_unchanged(&mut self) -> Result<(), Error> {
+        self.work().verify_unchanged().map_err(strict_error)
+    }
+    pub const fn prepared(&self) -> &Prepared {
+        &self.models
+    }
+    pub fn stats(&self) -> Result<Stats, Error> {
+        phase_stats(&self.models, self.failed, self.stats).map_err(strict_error)
+    }
+    /// Stable complete inventory; no file reads or public private-file ordinal.
+    pub fn artifacts(
+        &self,
+    ) -> Result<impl Iterator<Item = (resident::ArtifactName<'_>, usize)> + '_, Error> {
+        artifact_inventory(&self.models, &self.maps, self.failed, self.stats).map_err(strict_error)
+    }
+    pub fn with_map<T, E: Copy>(
+        &mut self,
+        id: u32,
+        callback_heap_allowance: usize,
+        call: impl FnOnce(&MapView<'_>) -> Result<T, E>,
+    ) -> Result<T, Error<E>> {
+        self.work()
+            .with_map(id, callback_heap_allowance, call)
+            .map_err(strict_error)
+    }
+    pub fn with_model<T, E: Copy>(
+        &mut self,
+        name: &[u8],
+        callback_heap_allowance: usize,
+        call: impl FnOnce(&[u8]) -> Result<T, E>,
+    ) -> Result<T, Error<E>> {
+        self.work()
+            .with_model(name, callback_heap_allowance, call)
+            .map_err(strict_error)
+    }
+    pub fn visit<E: Copy>(
+        &mut self,
+        callback_heap_allowance: usize,
+        call: impl FnMut(resident::Artifact<'_>) -> Result<(), E>,
+    ) -> Result<(), Error<E>> {
+        self.work()
+            .visit(callback_heap_allowance, call)
+            .map_err(strict_error)
+    }
+    #[cfg(test)]
+    fn write_map(&mut self, built: &assembly::AssembledMap, held: usize) -> Result<(), Error> {
+        self.work().write_map(built, held).map_err(strict_error)
+    }
+    #[cfg(test)]
+    fn verify_parents(&mut self) -> Result<(), Error> {
+        self.work().verify_parents().map_err(strict_error)
+    }
+}
+
+impl<P: Owner> PackageWork<'_, P> {
     fn live(&self) -> Result<usize, Kind> {
         self.maps.iter().try_fold(
             add(self.base, mul(self.maps.capacity(), size_of::<Map>())?)?,
@@ -530,11 +812,14 @@ impl Completed {
     }
     fn guards(&mut self) -> Guards {
         Guards {
-            models: self.models.guards(),
+            models: self.models.model_work().guards(),
             maps: self.repository.verify_unchanged().err(),
         }
     }
-    fn guarded<T, E: Copy>(&mut self, result: Result<T, Error<E>>) -> Result<T, Error<E>> {
+    fn guarded<T, E: Copy>(
+        &mut self,
+        result: Result<T, WorkError<OwnerCause<P>, E>>,
+    ) -> Result<T, WorkError<OwnerCause<P>, E>> {
         let mut guards = self.guards();
         let mut error = match result {
             Err(e) => e,
@@ -544,7 +829,7 @@ impl Completed {
                 }
                 drop(value);
                 guards = self.guards();
-                Error::from(self.failed.unwrap_or(Kind::State))
+                WorkError::from(self.failed.unwrap_or(Kind::State))
             }
         };
         if guards.models.collector.is_some() {
@@ -562,17 +847,9 @@ impl Completed {
         self.failed.get_or_insert(Kind::State);
         Err(error)
     }
-    pub fn verify_unchanged(&mut self) -> Result<(), Error> {
+    pub fn verify_unchanged(&mut self) -> Result<(), WorkError<OwnerCause<P>>> {
         let r = self.failed.map_or(Ok(()), |e| Err(e.into()));
         self.guarded(r)
-    }
-    pub const fn prepared(&self) -> &Prepared {
-        &self.models
-    }
-    pub fn stats(&self) -> Result<Stats, Error> {
-        self.failed.map_or(Ok(()), |e| Err(Error::from(e)))?;
-        self.models.stats()?;
-        Ok(self.stats)
     }
     fn map(&self, id: u32) -> Result<usize, Kind> {
         self.maps
@@ -593,71 +870,16 @@ impl Completed {
         *n = n.checked_add(bytes as u64).ok_or(Kind::Limit)?;
         Ok(())
     }
-    /// Stable complete inventory; no file reads or public private-file ordinal.
-    pub fn artifacts(
+    fn artifacts(
         &self,
-    ) -> Result<impl Iterator<Item = (resident::ArtifactName<'_>, usize)> + '_, Error> {
-        self.stats()?;
-        let compact = self
-            .models
-            .stage
-            .world
-            .startup()
-            .extraction()
-            .phase_compact()
-            .map_err(super::Error::from)?;
-        let data = self
-            .models
-            .stage
-            .world
-            .startup()
-            .data()
-            .map_err(|_| Kind::State)?;
-        let dtree = std::iter::once((
-            resident::ArtifactName::Dtree,
-            data.lists().dtree_bytes().len(),
-        ));
-        let models = self
-            .models
-            .index
-            .iter()
-            .filter(|e| e.selected)
-            .map(move |e| {
-                let d = compact
-                    .descriptor(e.handle)
-                    .expect("closed selected identity");
-                (resident::ArtifactName::Model(d.output_basename()), e.bytes)
-            });
-        let maps = self.maps.iter().flat_map(|m| {
-            std::iter::once((resident::ArtifactName::Tree(m.bound.id), m.bound.tree.len)).chain(
-                m.tiles.iter().flat_map(move |t| {
-                    (t.payload.len != 0)
-                        .then_some((
-                            resident::ArtifactName::Tile {
-                                map: m.bound.id,
-                                x: t.x,
-                                y: t.y,
-                                index: false,
-                            },
-                            t.payload.len,
-                        ))
-                        .into_iter()
-                        .chain(std::iter::once((
-                            resident::ArtifactName::Tile {
-                                map: m.bound.id,
-                                x: t.x,
-                                y: t.y,
-                                index: true,
-                            },
-                            t.index.len,
-                        )))
-                }),
-            )
-        });
-        Ok(dtree.chain(models).chain(maps))
+    ) -> Result<
+        impl Iterator<Item = (resident::ArtifactName<'_>, usize)> + '_,
+        WorkError<OwnerCause<P>>,
+    > {
+        artifact_inventory(&*self.models, &*self.maps, *self.failed, *self.stats)
     }
-    fn build_maps(&mut self) -> Result<(), Error> {
-        let count = self.models.stage.stats().map_err(super::Error::from)?.maps;
+    fn build_maps(&mut self) -> Result<(), WorkError<OwnerCause<P>>> {
+        let count = self.models.stage_stats()?.maps;
         if count > self.limits.max_maps {
             return Err(Kind::Limit.into());
         }
@@ -666,21 +888,17 @@ impl Completed {
             .try_reserve_exact(count)
             .map_err(|_| Kind::Allocation)?;
         self.admit(0)?;
-        for at in 0..self.models.stage.stage.entries.len() {
-            let e = self.models.stage.stage.entries[at];
+        for at in 0..self.models.view().phase.archive().entries.len() {
+            let e = self.models.view().phase.archive().entries[at];
             if !matches!(e.context.kind, run::Kind::Global) {
                 continue;
             }
             self.verify_unchanged()?;
             let id = e.context.map_id;
-            let raw = self
-                .models
-                .stage
-                .stage
-                .read_map(id, 0)
-                .map_err(|e| Error::from(super::Error::from(super::super::Error::from(e))))?;
-            let view = placement::DirBin::parse(&raw, self.models.stage.stage.limits.records)
-                .map_err(Kind::Placement)?;
+            let raw = self.models.read_placement_map(id)?;
+            let view =
+                placement::DirBin::parse(&raw, self.models.view().phase.archive().limits.records)
+                    .map_err(Kind::Placement)?;
             let mut placements = Vec::new();
             self.admit(mul(
                 view.record_count(),
@@ -693,24 +911,27 @@ impl Completed {
             self.admit(pbytes)?;
             let compact = self
                 .models
-                .stage
-                .world
-                .startup()
-                .extraction()
-                .phase_compact()
-                .map_err(super::Error::from)?;
+                .view()
+                .phase
+                .compact()
+                .map_err(super::WorkError::<OwnerCause<P>>::from)?;
             for row in view.records() {
                 let at = self
                     .models
+                    .view()
                     .binding(row.name())
-                    .map_err(|e| Error::from(super::Error::from(e)))?;
-                let item = self.models.index[at];
+                    .map_err(|e| WorkError::from(super::WorkError::<OwnerCause<P>>::from(e)))?;
+                let item = self.models.view().index[at];
                 if !item.selected {
                     return Err(Kind::Binding.into());
                 }
                 if compact
                     .descriptor(item.handle)
-                    .map_err(|e| super::Error::from(payload::CollectorError::Collision(e)))?
+                    .map_err(|e| {
+                        super::WorkError::<OwnerCause<P>>::from(payload::CollectorError::Collision(
+                            e,
+                        ))
+                    })?
                     .class()
                     == Class::Wmo
                     && row.bounds_bits().is_none()
@@ -721,7 +942,7 @@ impl Completed {
                     placement::bounds::complete(
                         row,
                         item.bounds,
-                        self.models.stage.stage.limits.records,
+                        self.models.view().phase.archive().limits.records,
                     )
                     .map_err(Kind::Bounds)?,
                 );
@@ -768,7 +989,11 @@ impl Completed {
         }
         Ok(())
     }
-    fn write_map(&mut self, built: &assembly::AssembledMap, held: usize) -> Result<(), Error> {
+    fn write_map(
+        &mut self,
+        built: &assembly::AssembledMap,
+        held: usize,
+    ) -> Result<(), WorkError<OwnerCause<P>>> {
         let id = built.map_id();
         let s = built.stats();
         if self.maps.len() >= self.maps.capacity() || self.maps.len() >= self.limits.max_maps {
@@ -776,11 +1001,10 @@ impl Completed {
         }
         if !self
             .models
-            .stage
-            .world
-            .topology()
+            .view()
+            .topology
             .get(id)
-            .is_some_and(|m| m.active() && self.models.stage.world.topology().contains_selected(id))
+            .is_some_and(|m| m.active() && self.models.view().topology.contains_selected(id))
         {
             return Err(Kind::Binding.into());
         }
@@ -825,9 +1049,8 @@ impl Completed {
         }
         let parent = self
             .models
-            .stage
-            .world
-            .topology()
+            .view()
+            .topology
             .get(id)
             .ok_or(Kind::Binding)?
             .parent_map_id();
@@ -896,9 +1119,9 @@ impl Completed {
         retained: usize,
         callback_heap: usize,
         call: impl FnOnce(&MapView<'_>) -> Result<T, E>,
-    ) -> Result<T, Error<E>> {
-        let setup: Result<assembly::Limits, Error<E>> = (|| {
-            self.verify_unchanged().map_err(cast)?;
+    ) -> Result<T, WorkError<OwnerCause<P>, E>> {
+        let setup: Result<assembly::Limits, WorkError<OwnerCause<P>, E>> = (|| {
+            self.verify_unchanged().map_err(work_cast)?;
             let m = self.maps.get(at).ok_or(Kind::Missing)?;
             let extent = m.bound.extent;
             let scratch = m.scratch()?;
@@ -922,8 +1145,8 @@ impl Completed {
             .repository
             .with_record(m.record, m.bound.extent, |b| {
                 outcome = Some(match MapView::check(m, b, limits) {
-                    Ok(view) => call(&view).map_err(|e| Error {
-                        cause: Cause::Callback(e),
+                    Ok(view) => call(&view).map_err(|e| WorkError {
+                        cause: WorkCause::Callback(e),
                         guards: Guards::default(),
                     }),
                     Err(e) => Err(e.into()),
@@ -950,7 +1173,7 @@ impl Completed {
         id: u32,
         callback_heap_allowance: usize,
         call: impl FnOnce(&MapView<'_>) -> Result<T, E>,
-    ) -> Result<T, Error<E>> {
+    ) -> Result<T, WorkError<OwnerCause<P>, E>> {
         let at = match self.map(id) {
             Ok(at) => at,
             Err(e) => {
@@ -960,7 +1183,7 @@ impl Completed {
         };
         self.load(at, 0, callback_heap_allowance, call)
     }
-    fn copy_map(&mut self, at: usize) -> Result<Vec<u8>, Error> {
+    fn copy_map(&mut self, at: usize) -> Result<Vec<u8>, WorkError<OwnerCause<P>>> {
         let extent = self.maps[at].bound.extent;
         self.load(at, 0, extent, |v| {
             let mut bytes = Vec::new();
@@ -973,16 +1196,16 @@ impl Completed {
             bytes.extend_from_slice(v.bytes);
             Ok::<_, Kind>(bytes)
         })
-        .map_err(|e| Error {
+        .map_err(|e| WorkError {
             cause: match e.cause {
-                Cause::Callback(k) => Cause::Kind(k),
-                Cause::Models(c) => Cause::Models(c),
-                Cause::Kind(k) => Cause::Kind(k),
+                WorkCause::Callback(k) => WorkCause::Kind(k),
+                WorkCause::Models(c) => WorkCause::Models(c),
+                WorkCause::Kind(k) => WorkCause::Kind(k),
             },
             guards: e.guards,
         })
     }
-    fn verify_parents(&mut self) -> Result<(), Error> {
+    fn verify_parents(&mut self) -> Result<(), WorkError<OwnerCause<P>>> {
         for at in 0..self.maps.len() {
             if self.maps[at].tiles.iter().all(|t| t.payload.len != 0) {
                 continue;
@@ -1001,13 +1224,7 @@ impl Completed {
                         1,
                         self.limits.max_ancestor_steps,
                     )?;
-                    let entry = self
-                        .models
-                        .stage
-                        .world
-                        .topology()
-                        .get(id)
-                        .ok_or(Kind::Binding)?;
+                    let entry = self.models.view().topology.get(id).ok_or(Kind::Binding)?;
                     if let Ok(p) = self.map(id)
                         && let Some(tile) = self.maps[p].tile(t.x, t.y)
                         && tile.payload.len != 0
@@ -1031,11 +1248,11 @@ impl Completed {
                     )
                     .map_err(Kind::Assembly)
                 });
-                result.map_err(|e| Error {
+                result.map_err(|e| WorkError {
                     cause: match e.cause {
-                        Cause::Callback(k) => Cause::Kind(k),
-                        Cause::Models(c) => Cause::Models(c),
-                        Cause::Kind(k) => Cause::Kind(k),
+                        WorkCause::Callback(k) => WorkCause::Kind(k),
+                        WorkCause::Models(c) => WorkCause::Models(c),
+                        WorkCause::Kind(k) => WorkCause::Kind(k),
                     },
                     guards: e.guards,
                 })?;
@@ -1050,26 +1267,26 @@ impl Completed {
         name: &[u8],
         callback_heap_allowance: usize,
         call: impl FnOnce(&[u8]) -> Result<T, E>,
-    ) -> Result<T, Error<E>> {
-        let setup: Result<usize, Error<E>> = (|| {
-            self.verify_unchanged().map_err(cast)?;
-            let at = self
-                .models
-                .binding(name)
-                .map_err(|e| Error::from(super::Error::from(e)).into_generic())?;
-            let e = self.models.index[at];
+    ) -> Result<T, WorkError<OwnerCause<P>, E>> {
+        let setup: Result<usize, WorkError<OwnerCause<P>, E>> = (|| {
+            self.verify_unchanged().map_err(work_cast)?;
+            let at = self.models.view().binding(name).map_err(|e| {
+                WorkError::from(super::WorkError::<OwnerCause<P>>::from(e)).into_generic()
+            })?;
+            let e = self.models.view().index[at];
             if !e.selected {
                 return Err(Kind::Missing.into());
             }
             let extra = self
                 .live()?
-                .checked_sub(self.models.live().map_err(|_| Kind::Limit)?)
+                .checked_sub(self.models.view().live().map_err(|_| Kind::Limit)?)
                 .ok_or(Kind::State)?;
             // Reserve any gap between the older Prepared cap and a smaller
             // package cap, in addition to actual newly retained package memory.
             // This forces its reader to obey BOTH ledgers before any IO.
             let gap = self
                 .models
+                .view()
                 .limits
                 .max_memory_bytes
                 .saturating_sub(self.limits.max_memory_bytes);
@@ -1077,13 +1294,20 @@ impl Completed {
             let extent = add(add(super::HEADER, name.len())?, e.bytes)?;
             let free = self
                 .models
+                .view()
                 .limits
                 .max_memory_bytes
-                .checked_sub(self.models.live().map_err(|_| Kind::Limit)?)
+                .checked_sub(self.models.view().live().map_err(|_| Kind::Limit)?)
                 .and_then(|n| n.checked_sub(extent))
                 .and_then(|n| n.checked_sub(callback))
                 .ok_or(Kind::Limit)?;
-            let reader = self.models.limits.conversion.max_memory_bytes.min(free);
+            let reader = self
+                .models
+                .view()
+                .limits
+                .conversion
+                .max_memory_bytes
+                .min(free);
             self.admit(add(add(extent, reader)?, callback_heap_allowance)?)?;
             bump64(
                 &mut self.stats.validation_bytes,
@@ -1106,8 +1330,9 @@ impl Completed {
         };
         let result = self
             .models
+            .model_work()
             .with_model(name, callback, |v| call(v.bytes()))
-            .map_err(Error::from);
+            .map_err(WorkError::from);
         self.guarded(result)
     }
     /// Visit the complete native inventory in stable order. Each selected VMO
@@ -1117,47 +1342,42 @@ impl Completed {
         &mut self,
         callback_heap_allowance: usize,
         mut call: impl FnMut(resident::Artifact<'_>) -> Result<(), E>,
-    ) -> Result<(), Error<E>> {
+    ) -> Result<(), WorkError<OwnerCause<P>, E>> {
         let result = (|| {
-            self.verify_unchanged().map_err(cast)?;
+            self.verify_unchanged().map_err(work_cast)?;
             self.admit(callback_heap_allowance)?;
             let bytes = self
                 .models
-                .stage
-                .world
-                .startup()
-                .data()
-                .map_err(|_| Kind::State)?
+                .view()
+                .phase
                 .lists()
+                .map_err(|_| Kind::State)?
                 .dtree_bytes();
             call(resident::Artifact {
                 name: resident::ArtifactName::Dtree,
                 bytes,
             })
-            .map_err(|e| Error {
-                cause: Cause::Callback(e),
+            .map_err(|e| WorkError {
+                cause: WorkCause::Callback(e),
                 guards: Guards::default(),
             })?;
-            self.verify_unchanged().map_err(cast)?;
-            for at in 0..self.models.index.len() {
-                let entry = self.models.index[at];
+            self.verify_unchanged().map_err(work_cast)?;
+            for at in 0..self.models.view().index.len() {
+                let entry = self.models.view().index[at];
                 if !entry.selected {
                     continue;
                 }
                 // Copy the bounded source name to stack, avoiding a mutable
                 // owner borrow while descriptor metadata is borrowed.
                 let mut name = [0u8; super::NAME_BYTES];
-                let compact = self
-                    .models
-                    .stage
-                    .world
-                    .startup()
-                    .extraction()
-                    .phase_compact()
-                    .map_err(|e| Error::from(super::Error::from(e)).into_generic())?;
+                let compact = self.models.view().phase.compact().map_err(|e| {
+                    WorkError::from(super::WorkError::<OwnerCause<P>>::from(e)).into_generic()
+                })?;
                 let d = compact.descriptor(entry.handle).map_err(|e| {
-                    Error::from(super::Error::from(payload::CollectorError::Collision(e)))
-                        .into_generic()
+                    WorkError::from(super::WorkError::<OwnerCause<P>>::from(
+                        payload::CollectorError::Collision(e),
+                    ))
+                    .into_generic()
                 })?;
                 let len = d.output_basename().len();
                 if len > name.len() {
@@ -1186,33 +1406,25 @@ impl Completed {
         self.guarded(result)
     }
 }
-impl Error {
-    fn into_generic<E: Copy>(self) -> Error<E> {
-        cast(self)
-    }
-}
-/// Sole constructor of a complete private artifact inventory. The supplied map
-/// repository must be fresh. Failed assembly consumes all owners, never exposes
-/// a usable prefix and may leave private files for caller-controlled retention.
-pub fn assemble(
-    mut models: Prepared,
+fn assemble_state<P: Owner>(
+    mut models: P,
     mut repository: spool::Spool,
     limits: Limits,
-) -> Result<Completed, Error> {
-    let admission: Result<(usize, Stats), Error> = (|| {
-        if repository.resources() != models.repository.resources()
-            || repository.backend() != models.repository.backend()
+) -> Result<PackageState<P>, WorkError<OwnerCause<P>>> {
+    let admission: Result<(usize, Stats), WorkError<OwnerCause<P>>> = (|| {
+        if repository.resources() != models.view().repository.resources()
+            || repository.backend() != models.view().repository.backend()
         {
             return Err(Kind::InvalidLimits.into());
         }
         limits.validate_resources(repository.resources())?;
-        models.verify_unchanged()?;
+        models.model_work().verify_unchanged()?;
         repository.verify_unchanged().map_err(Kind::Spool)?;
         if repository.stats().map_err(Kind::Spool)?.records != 0 {
             return Err(Kind::State.into());
         }
-        let m = models.stats()?;
-        let p = models.stage.stats().map_err(super::Error::from)?;
+        let m = models.view().stats()?;
+        let p = models.stage_stats()?;
         if m.selected_models > limits.max_models
             || m.vertices > limits.max_vertices
             || m.triangles > limits.max_triangles
@@ -1225,7 +1437,7 @@ pub fn assemble(
             return Err(Kind::Limit.into());
         }
         let base = add(
-            models.live().map_err(|_| Kind::Limit)?,
+            models.view().live().map_err(|_| Kind::Limit)?,
             add(
                 mul(repository.limits().max_descriptor_bytes, 2)?,
                 GUARD_BYTES,
@@ -1235,12 +1447,10 @@ pub fn assemble(
             return Err(Kind::Limit.into());
         }
         let dtree = models
-            .stage
-            .world
-            .startup()
-            .data()
-            .map_err(|_| Kind::State)?
+            .view()
+            .phase
             .lists()
+            .map_err(|_| Kind::State)?
             .dtree_bytes()
             .len();
         let files = add(1, m.selected_models)?;
@@ -1271,13 +1481,13 @@ pub fn assemble(
         Ok(v) => v,
         Err(mut e) => {
             e.guards = Guards {
-                models: models.guards(),
+                models: models.model_work().guards(),
                 maps: repository.verify_unchanged().err(),
             };
             return Err(e);
         }
     };
-    let mut out = Completed {
+    let mut out = PackageState {
         models,
         repository,
         maps: Vec::new(),
@@ -1286,18 +1496,51 @@ pub fn assemble(
         stats,
         failed: None,
     };
-    let result = out.build_maps().and_then(|()| out.verify_parents());
-    out.guarded(result)?;
-    out.stats.reserved_bytes = out.live()?;
+    let result = out
+        .work()
+        .build_maps()
+        .and_then(|()| out.work().verify_parents());
+    out.work().guarded(result)?;
+    out.stats.reserved_bytes = out.work().live()?;
     let mut files = 0;
     let mut bytes = 0;
-    for (_, len) in out.artifacts()? {
-        files = add(files, 1)?;
-        bytes = add(bytes, len)?;
+    {
+        let work = out.work();
+        for (_, len) in work.artifacts()? {
+            files = add(files, 1)?;
+            bytes = add(bytes, len)?;
+        }
     }
     if files != out.stats.files || bytes != out.stats.output_bytes {
-        return out.guarded(Err(Kind::Binding.into()));
+        return out.work().guarded(Err(Kind::Binding.into()));
     }
-    out.verify_unchanged()?;
+    out.work().verify_unchanged()?;
     Ok(out)
+}
+
+/// Sole strict constructor. The shared work consumes the same genuine owner;
+/// successful restoration of the original seven fields is infallible moves.
+pub fn assemble(
+    models: Prepared,
+    repository: spool::Spool,
+    limits: Limits,
+) -> Result<Completed, Error> {
+    let PackageState {
+        models,
+        repository,
+        maps,
+        limits,
+        base,
+        stats,
+        failed,
+    } = assemble_state(models, repository, limits).map_err(strict_error)?;
+    Ok(Completed {
+        models,
+        repository,
+        maps,
+        limits,
+        base,
+        stats,
+        failed,
+    })
 }

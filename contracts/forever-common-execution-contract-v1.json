@@ -57,7 +57,8 @@
     "final_verification_failure_prevents_package_seal",
     "component_seal_failure_prevents_later_producers_and_package_seal",
     "final_seal_error_is_returned_without_component_relabeling",
-    "v12_replays_sealed_terrain_and_older_profiles_keep_skips"
+    "v12_replays_sealed_terrain_and_older_profiles_keep_skips",
+    "v14_collision_resume_replays_sealed_component_with_fresh_owner"
   ],
   "unchanged_gates": [
     "build and locale admission",

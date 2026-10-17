@@ -57,7 +57,7 @@ class CommonExecutionContract(unittest.TestCase):
                      'super::game_tables(self.plan, self.store, &mut self.run)',
                      'super::cameras(self.plan, self.store, &mut self.run)',
                      'self.adapter.extract_terrain(self.plan, self.store, &mut self.run)',
-                     'self.adapter.extract_collision(self.store, &mut self.run)',
+                     'self.adapter.extract_collision(self.plan, self.store, &mut self.run)',
                      'super::mmaps(self.plan, self.store, self.output, &mut self.run, self.adapter.map_domain())'):
             self.assertIn(compact(call), compact(s))
         self.assertEqual(s.count('self.adapter.map_domain()'), 2)
@@ -108,7 +108,7 @@ class CommonExecutionContract(unittest.TestCase):
 
     def test_exact_lifecycle_unit_inventory(self):
         names = re.findall(r'#\[test\]\s*fn (\w+)\(', self.s['execution'])
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 13)
         self.assertEqual(names, self.c['unit_test_names'])
         self.assertNotIn('#[ignore', self.s['execution'])
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-12: original closed authenticated world placement disk phase.
 //! This is a private intermediate phase, not a final VMap package. The sole
 //! constructor consumes the authenticated startup; no caller placements or
@@ -19,6 +20,7 @@ use crate::collision::{
 };
 use forever_vmap::placement::{self, DirBin};
 use std::mem::size_of;
+pub mod compatible;
 pub mod models;
 pub use models::package;
 #[cfg(test)]

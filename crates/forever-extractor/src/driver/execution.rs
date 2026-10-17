@@ -24,7 +24,12 @@ pub(super) trait Adapter {
         Ok(())
     }
     fn verify_inputs(&self) -> Result<(), Error>;
-    fn extract_collision(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error>;
+    fn extract_collision(
+        &self,
+        plan: &Plan,
+        store: &mut LocalStore,
+        run: &mut Run,
+    ) -> Result<(), Error>;
 }
 
 pub(super) fn execute(
@@ -47,7 +52,11 @@ pub(super) fn execute(
 }
 
 fn replay_mask(plan: &Plan, completed: u8) -> u8 {
-    if plan.is_available_terrain() {
+    if plan.is_v14() {
+        // Rebuild with a fresh six-owner scratch namespace even when sealed:
+        // Run::put replays coverage and every actual final artifact.
+        completed & !Component::Collision.bit()
+    } else if plan.is_available_terrain() {
         completed & !Component::Terrain.bit()
     } else {
         completed
@@ -108,7 +117,8 @@ impl<A: Adapter> Work for Production<'_, A> {
             .extract_terrain(self.plan, self.store, &mut self.run)
     }
     fn collision(&mut self) -> Result<(), Error> {
-        self.adapter.extract_collision(self.store, &mut self.run)
+        self.adapter
+            .extract_collision(self.plan, self.store, &mut self.run)
     }
     fn navigation(&mut self) -> Result<(), Error> {
         super::mmaps(
@@ -412,5 +422,12 @@ mod v12_replay_tests {
         compatible.validate().unwrap();
         assert_eq!(replay_mask(&compatible, 8), 0);
         assert_eq!(replay_mask(&compatible, 63), 55);
+    }
+    #[test]
+    fn v14_collision_resume_replays_sealed_component_with_fresh_owner() {
+        let p = Plan::parse(crate::plan::v14_tests::V14).unwrap();
+        assert_eq!(replay_mask(&p, 63), 63 & !Component::Collision.bit());
+        assert_eq!(replay_mask(&p, Component::Collision.bit()), 0);
+        assert_eq!(replay_mask(&p, 0), 0);
     }
 }

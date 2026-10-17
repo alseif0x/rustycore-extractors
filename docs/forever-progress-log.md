@@ -3021,3 +3021,107 @@ This accepts the declared available-map terrain domain and explicit omissions;
 coverage is producer-reported. Full-client, collision/navigation for 70374,
 runtime and reproducible stable distribution remain gates. See
 docs/forever-terrain-v13.md.
+
+## 2026-10-17 — compatible VMaps coverage and product v14
+
+The private lineage is N05 → C5 → C6 → coverage → product-v14; this work had
+never been committed. C5's eight-gate qualification stopped at gate 5 (clippy);
+the retained summary `../evidence/recovery-and-gate-status-v1.json`
+(`gates_observed.C6_frozen.clippy_D_warnings.why_c5_missed`) records that C5
+Clippy aborted at the forever-casc lib target with 22 `dead_code`/`result_large_err`
+errors, before test-target lints. Gates 6–8 (source contracts, distribution and
+format) never ran. This is distinct from the failed `../clippy.stderr` capture,
+whose compiler paths identify the earlier `priv-product-v14-check-20261017` tree
+and whose five errors are four `possible_missing_else` findings in
+`collision_coverage.rs` and one `manual_contains` in `verify/compatible_vmaps.rs`.
+The current integration Clippy run succeeded; its snapshot log is
+`../evidence/acceptance-20261017T2049Z/logs/clippy.stderr` (the run-local
+`../logs/` paths are overwritten by later runs). C6 did not run the C5 gate set.
+The historical-unknown-version contract
+regression therefore escaped those qualifications. A later separate source-
+contract attempt is retained at `../logs/early-source-contracts.stderr`: 426
+ran, 2 failed and 2 were skipped because v12/v13 still pinned the old version-14
+sentinel. That was corrected: the historical-unknown-version control moved
+from plan version 14 to 99 because product plan version 14 now exists; v12 and
+v13 contract pins were updated to the same 99 value, matching
+`product_v11_cli.rs` and keeping the control pinned. The initial v14-only test
+failures (3 passed, 2 failed) are retained in
+`../logs/v14-contract-initial-failure.txt`; the initial distribution failure
+(166 tests, 2 failures, 1 skipped) is retained in
+`../logs/v14-contract-acceptance.txt`.
+
+The retained CI-equivalent Linux run was reproduced from
+`.github/workflows/forever-rust.yml`, job `linux`, with debug and release
+profiles. Its authoritative retained copy is `../evidence/acceptance-20261017T2049Z/`:
+`acceptance-result.tsv` records exit 0 for each of its 12 steps, `logs/` contains
+the captured outputs, and `rust-source-sha256.txt` records the source-file hashes.
+The run-local paths under `../logs/` are rewritten by each run; the snapshot is
+the cited record. Its aggregate Rust-source hash is
+`39e7202a6fa95f00a0119d6f37fe26e9124991dc703ea235b5a3f82380327c4e`, identifying
+the source revision to which these gates apply. This run predates the v14
+admission-contract/test/fixtures/CI-line/capability-documentation artifacts,
+added later the same day; the Rust v14 implementation and its unit tests
+(`plan::v14_tests`, `verify::compatible_vmaps::tests`, and v14 replay tests) were
+already present and passing. It is not v14 admission acceptance. Its exact
+results are: format and clippy both exit 0
+(`../evidence/acceptance-20261017T2049Z/logs/fmt.stdout`/`fmt.stderr`,
+`../evidence/acceptance-20261017T2049Z/logs/clippy.stdout`/`clippy.stderr`);
+workspace tests in debug and release each exit 0 with 3,624 passed, 0 failed
+and 26 ignored (`../evidence/acceptance-20261017T2049Z/logs/test-debug.stdout`/
+`test-debug.stderr`, `../evidence/acceptance-20261017T2049Z/logs/test-rel.stdout`/
+`test-rel.stderr`); debug and release binary builds exit 0
+(`../evidence/acceptance-20261017T2049Z/logs/bins-debug.stderr`,
+`../evidence/acceptance-20261017T2049Z/logs/bins-rel.stderr`); source contracts
+exit 0 with 426 tests OK and 2 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/contracts.stderr`); all contracts
+exit 0 with 373 OK (`../evidence/acceptance-20261017T2049Z/logs/allctr.stderr`);
+distribution exits 0 with 166 OK and 1 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/distrib.stderr`); DB2 inspect
+build exits 0 (`../evidence/acceptance-20261017T2049Z/logs/inspect.stderr`);
+metadata CLI exits 0 with 5 OK
+(`../evidence/acceptance-20261017T2049Z/logs/metacli.stderr`); and the synthetic
+Python suite exits 0 with 389 OK and 156 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/synth.stderr`). The complete
+per-step commands and exit codes are in
+`../evidence/acceptance-20261017T2049Z/acceptance-result.tsv`.
+
+Reviewed fixes in this increment include `Coverage::matches` searching by
+ASCII-folded path order while rechecking exact equality (`a.path != e.path`);
+sealed resume recomputing artifacts and verifying each against the immutable
+receipt instead of rewriting it; and correcting two stale test expectations:
+the resume test restores the `INCOMPLETE` marker, and the M2 placement ID is
+`u32::MAX - 1`.
+
+The product-v14 admission contract for build 70425, canonical plan fixtures,
+contract test, Linux CI command and capability documentation were added. The
+source-contract harness `CHECKS` now exactly matches the workflow's 22 command
+lines. The two exact distribution optional-input pins were deliberately
+extended for `docs/forever-product-v14.md`; the expected combined optional
+input count is 6, and negative coverage rejects
+`source/docs/forever-product-v14-extra.md`. The v14 contract test was strengthened
+after the independent mutation audit finding in this integration handoff showed
+that 18 of the 26 fixture field values and several contract numbers were unpinned.
+
+Current closeout used Rust/Cargo 1.98.0, `CARGO_TARGET_DIR=../target` and
+`PYTHONDONTWRITEBYTECODE=1`. Exact commands and observed results:
+(a) `cargo fmt --all -- --check`: exit 0, no output;
+(b) `python3 -B -m unittest discover -s tests/distribution -p 'test*.py'`:
+exit 0, `Ran 166 tests in 13.800s`, `OK (skipped=1)`;
+(c) `python3 -B -m unittest discover -s tests/contracts -p 'test*.py'`:
+exit 0, `Ran 378 tests in 6.843s`, `OK`;
+(d) `python3 -B -m unittest discover -s tests/contracts -p 'test_forever_product_v14_contract.py' -v`:
+exit 0, `Ran 5 tests in 0.039s`, `OK`;
+(e) `python3 -B -m unittest discover -s tests/contracts -p 'test_forever_ci_contract.py' -v`:
+exit 0, `Ran 21 tests in 0.005s`, `OK`;
+(f) `python3 -S -B /home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/source_contracts.py`:
+exit 0, `Ran 431 tests in 2.267s`, `OK (skipped=2)`. The distribution exact-pin
+correction was re-run in the full distribution suite. No fresh current v14
+clippy, workspace debug/release, or binary-build run was made in this closeout;
+the earlier pre-v14 run above does not transfer acceptance to this target.
+
+## Unqualified status
+
+No real-client extraction, RustyCore runtime verification, release acceptance,
+or real full-world geometry/world acceptance has been established. Windows is
+deferred. No older-build acceptance transfers to build 70425; full extractor
+completion remains false.

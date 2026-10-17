@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-17: consuming compatible world and authentic retained facts.
 //! Owns the prepared compatible collector, one serial run, and genuine startup
 //! completion plus available Map/complete liquid facts and owned topology.
@@ -16,6 +17,12 @@ pub const PROFILE_70374: &str = "linux70374-compatible-disk-world-v1";
 pub const PROFILE_70425: &str = "linux70425-compatible-disk-world-v1";
 pub const PROFILE_GNU15_70374: &str = "linux70374-compatible-disk-world-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70425: &str = "linux70425-compatible-disk-world-gnu15-native-order-v2";
+pub const COVERAGE_PROFILE_70374: &str = "linux70374-compatible-disk-world-coverage-v1";
+pub const COVERAGE_PROFILE_70425: &str = "linux70425-compatible-disk-world-coverage-v1";
+pub const COVERAGE_PROFILE_GNU15_70374: &str =
+    "linux70374-compatible-disk-world-gnu15-native-order-coverage-v1";
+pub const COVERAGE_PROFILE_GNU15_70425: &str =
+    "linux70425-compatible-disk-world-gnu15-native-order-coverage-v1";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause<E> {
     World(strict_world::Error),
@@ -224,6 +231,7 @@ fn guarded<T, L: LiquidLookup + ?Sized, S: run::Sink>(
 pub struct Completed {
     startup: startup::CompletedStartup,
     report: run::Report,
+    coverage: Option<run::coverage::Retained>,
     map: available::TableFacts,
     liquids: [strict_world::TableFacts; 2],
     lookups: strict_world::LookupStats,
@@ -233,8 +241,50 @@ pub struct Completed {
     profile: &'static str,
 }
 impl Completed {
+    /// Authenticated metadata from this exact traversal; no second acquisition.
+    /// Captures/result heap must fit the unchanged completed collector ledger.
+    pub fn with_coverage<T, E: Copy>(
+        &mut self,
+        callback_heap: usize,
+        call: impl FnOnce(run::coverage::View<'_>) -> Result<T, E>,
+    ) -> Result<T, run::coverage::Error<E>> {
+        let Some(coverage) = &self.coverage else {
+            drop(call);
+            let error = CollectorError::Collision(crate::collision::Error::State);
+            let guard = self.verify_unchanged().err();
+            return Err(run::coverage::Error {
+                cause: run::coverage::Cause::Collector(error),
+                guard,
+            });
+        };
+        let map = &self.map;
+        let liquids = &self.liquids;
+        let topology = &self.topology;
+        let maps = coverage.maps();
+        let report = &self.report;
+        let profile = self.profile;
+        self.startup
+            .with_metadata(callback_heap, |startup| {
+                call(run::coverage::View {
+                    startup,
+                    map,
+                    liquids,
+                    topology,
+                    maps,
+                    report,
+                    profile,
+                })
+            })
+            .map_err(run::coverage::Error::from_failure)
+    }
+    pub const fn has_coverage(&self) -> bool {
+        self.coverage.is_some()
+    }
     pub const fn profile(&self) -> &'static str {
         self.profile
+    }
+    pub(in crate::collision) const fn startup_view(&self) -> &startup::CompletedStartup {
+        &self.startup
     }
     pub fn startup_mut(&mut self) -> &mut startup::CompletedStartup {
         &mut self.startup
@@ -265,10 +315,25 @@ impl Completed {
         self.startup.extraction_mut()
     }
     pub fn verify_unchanged(&mut self) -> Result<(), CollectorError> {
-        self.startup.extraction_mut().verify_unchanged()
+        if self.has_coverage() {
+            // The opt-in metadata phase keeps an already observed SourceChanged
+            // even when a later independent spool guard also changes.
+            self.startup.extraction_mut().verify_metadata_unchanged()
+        } else {
+            self.startup.extraction_mut().verify_unchanged()
+        }
     }
 }
-fn profile(target: crate::collision::target::Target, native: bool) -> &'static str {
+fn profile(target: crate::collision::target::Target, native: bool, coverage: bool) -> &'static str {
+    if coverage {
+        return match (target, native) {
+            (crate::collision::target::Target::Build70374, false) => COVERAGE_PROFILE_70374,
+            (crate::collision::target::Target::Build70425, false) => COVERAGE_PROFILE_70425,
+            (crate::collision::target::Target::Build70374, true) => COVERAGE_PROFILE_GNU15_70374,
+            (crate::collision::target::Target::Build70425, true) => COVERAGE_PROFILE_GNU15_70425,
+        };
+    }
+
     match (target, native) {
         (crate::collision::target::Target::Build70374, false) => PROFILE_70374,
         (crate::collision::target::Target::Build70425, false) => PROFILE_70425,
@@ -298,6 +363,113 @@ pub fn extract<S: run::Sink>(
 }
 #[allow(clippy::too_many_arguments)]
 pub fn extract_selected<S: run::Sink>(
+    startup: startup::Startup<'_>,
+    wdts: Inventory,
+    caches: Inventory,
+    sink: S,
+    sink_heap_allowance: usize,
+    selection: plan::MapSelection,
+    limits: Limits,
+) -> Result<Completed, Error<S::Error>> {
+    extract_selected_inner(
+        startup,
+        wdts,
+        caches,
+        sink,
+        sink_heap_allowance,
+        selection,
+        limits,
+        None,
+        false,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(in crate::collision) fn extract_selected_sealed<S: run::Sink>(
+    startup: startup::Startup<'_>,
+    wdts: Inventory,
+    caches: Inventory,
+    sink: S,
+    sink_heap_allowance: usize,
+    selection: plan::MapSelection,
+    limits: Limits,
+    seal: run::Seal<S>,
+) -> Result<Completed, Error<S::Error>> {
+    extract_selected_inner(
+        startup,
+        wdts,
+        caches,
+        sink,
+        sink_heap_allowance,
+        selection,
+        limits,
+        Some(seal),
+        false,
+    )
+}
+/// Explicit coverage selection; old entrypoints retain their original charges.
+#[allow(clippy::too_many_arguments)]
+pub fn extract_selected_with_coverage<S: run::Sink>(
+    startup: startup::Startup<'_>,
+    wdts: Inventory,
+    caches: Inventory,
+    sink: S,
+    sink_heap_allowance: usize,
+    selection: plan::MapSelection,
+    limits: Limits,
+) -> Result<Completed, Error<S::Error>> {
+    extract_selected_inner(
+        startup,
+        wdts,
+        caches,
+        sink,
+        sink_heap_allowance,
+        selection,
+        limits,
+        None,
+        true,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(in crate::collision) fn extract_selected_sealed_with_coverage<S: run::Sink>(
+    startup: startup::Startup<'_>,
+    wdts: Inventory,
+    caches: Inventory,
+    sink: S,
+    sink_heap_allowance: usize,
+    selection: plan::MapSelection,
+    limits: Limits,
+    seal: run::Seal<S>,
+) -> Result<Completed, Error<S::Error>> {
+    extract_selected_inner(
+        startup,
+        wdts,
+        caches,
+        sink,
+        sink_heap_allowance,
+        selection,
+        limits,
+        Some(seal),
+        true,
+    )
+}
+/// Consume one fresh Prepared with explicit new coverage admission.
+pub fn extract_prepared_with_coverage<S: run::Sink>(
+    prepared: Prepared<'_, S>,
+    wdts: Inventory,
+    caches: Inventory,
+    max_combined_memory_bytes: usize,
+) -> Result<Completed, Error<S::Error>> {
+    extract_prepared_inner(
+        prepared,
+        wdts,
+        caches,
+        max_combined_memory_bytes,
+        None,
+        true,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn extract_selected_inner<S: run::Sink>(
     mut startup: startup::Startup<'_>,
     wdts: Inventory,
     caches: Inventory,
@@ -305,6 +477,8 @@ pub fn extract_selected<S: run::Sink>(
     sink_heap_allowance: usize,
     selection: plan::MapSelection,
     limits: Limits,
+    seal: Option<run::Seal<S>>,
+    capture_coverage: bool,
 ) -> Result<Completed, Error<S::Error>> {
     let mut owners = Inventories { wdts, caches };
     let mut sink = Some(sink);
@@ -333,11 +507,13 @@ pub fn extract_selected<S: run::Sink>(
         super::prepare_selected(startup, sink, sink_heap_allowance, selection, limits.world)
             .map_err(Error::from);
     match prepared {
-        Ok(prepared) => extract_prepared(
+        Ok(prepared) => extract_prepared_inner(
             prepared,
             owners.wdts,
             owners.caches,
             limits.max_combined_memory_bytes,
+            seal,
+            capture_coverage,
         ),
         Err(e) => check_inventories(&mut owners, Err(e)),
     }
@@ -345,10 +521,27 @@ pub fn extract_selected<S: run::Sink>(
 /// Consume a fresh authenticated preparation (no prior borrowed callback), without reacquiring DB2,
 /// releasing its Sink reservation, or beginning a second shared run.
 pub fn extract_prepared<S: run::Sink>(
+    prepared: Prepared<'_, S>,
+    wdts: Inventory,
+    caches: Inventory,
+    max_combined_memory_bytes: usize,
+) -> Result<Completed, Error<S::Error>> {
+    extract_prepared_inner(
+        prepared,
+        wdts,
+        caches,
+        max_combined_memory_bytes,
+        None,
+        false,
+    )
+}
+fn extract_prepared_inner<S: run::Sink>(
     mut prepared: Prepared<'_, S>,
     wdts: Inventory,
     caches: Inventory,
     max_combined_memory_bytes: usize,
+    seal: Option<run::Seal<S>>,
+    capture_coverage: bool,
 ) -> Result<Completed, Error<S::Error>> {
     let mut owners = Inventories { wdts, caches };
     let Some(mut original) = prepared.context.take() else {
@@ -437,7 +630,7 @@ pub fn extract_prepared<S: run::Sink>(
         }
     };
     let result = match sink.take() {
-        Some(sink) => run::extract_precharged(
+        Some(sink) => run::extract_precharged_sealed(
             &mut context,
             &maps,
             &mut owners.wdts,
@@ -451,6 +644,8 @@ pub fn extract_prepared<S: run::Sink>(
                 run: prepared.limits.run,
                 max_combined_memory_bytes,
             },
+            seal,
+            capture_coverage,
         )
         .map_err(Error::from),
         None => Err(strict_world::Error::State.into()),
@@ -468,6 +663,7 @@ pub fn extract_prepared<S: run::Sink>(
                 .map_err(finish_error);
         }
     };
+    let run::Captured { report, coverage } = report;
     let mut context = match context.try_with_lookup(&startup::EMPTY) {
         payload::LookupTransition::Ready(context) => context,
         payload::LookupTransition::Failed(mut original, e) => {
@@ -498,18 +694,24 @@ pub fn extract_prepared<S: run::Sink>(
         .map_err(finish_error)?;
     let resident_bytes = context.collector_mut().retained_bytes()?;
     let topology = prepared.topology.take().ok_or(strict_world::Error::State)?;
-    let (startup, topology) = context.finish_with_topology(topology)?;
+    let coverage_bytes = coverage
+        .as_ref()
+        .map_or(Ok(0), run::coverage::Retained::resident_bytes)
+        .map_err(strict_world::Error::Run)?;
+    let (startup, topology) =
+        context.finish_with_topology_and_external(topology, coverage_bytes)?;
     let map = prepared.map.take().ok_or(strict_world::Error::State)?;
     let liquids = prepared.liquids.take().ok_or(strict_world::Error::State)?;
     Ok(Completed {
         startup,
         report,
+        coverage,
         map,
         liquids,
         lookups: prepared.lookup_stats,
         maps: prepared.map_stats,
         topology,
         resident_bytes,
-        profile: profile(target, native),
+        profile: profile(target, native, capture_coverage),
     })
 }

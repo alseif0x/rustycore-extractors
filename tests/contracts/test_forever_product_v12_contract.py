@@ -54,7 +54,7 @@ class ProductV12Contract(unittest.TestCase):
 
     def test_historical_unknown_version_control_stays_unknown(self):
         source = (ROOT / "crates/forever-extractor/tests/product_v11_cli.rs").read_text()
-        self.assertIn('PLAN.replace("forever-product\\t11", "forever-product\\t14")', source)
+        self.assertIn('PLAN.replace("forever-product\\t11", "forever-product\\t99")', source)
 
     def test_existing_source_recipe_carries_new_compile_inputs(self):
         spec = importlib.util.spec_from_file_location(

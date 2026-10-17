@@ -446,7 +446,7 @@ class DistributionTests(unittest.TestCase):
 
     def test_current_ci_optional_inputs_are_shipped_and_moved(self):
         names = m.OPTIONAL_CI_DOCS + m.OPTIONAL_CI_SOURCE
-        self.assertEqual(len(names), 5)
+        self.assertEqual(len(names), 6)
         self.assertTrue(set(names).issubset(m.selected_paths(REPO)))
         for name in names:
             path = self.source / name
@@ -480,10 +480,12 @@ class DistributionTests(unittest.TestCase):
     def test_current_ci_optional_allowlist_is_exact(self):
         self.assertEqual(m.OPTIONAL_CI_DOCS, (
             "docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md",
-            "docs/forever-windows-membership.md", "docs/forever-windows-output.md"))
+            "docs/forever-product-v14.md", "docs/forever-windows-membership.md",
+            "docs/forever-windows-output.md"))
         self.assertEqual(m.OPTIONAL_CI_SOURCE, ("tools/generate_forever_catalog.py",))
         for name in ("source/docs/forever-linux-compatibility-extra.md",
                      "source/docs/forever-terrain-v12-extra.md",
+                     "source/docs/forever-product-v14-extra.md",
                      "source/docs/forever-windows-membership-extra.md",
                      "source/docs/forever-windows-output-extra.md",
                      "source/tools/generate_forever_catalog_extra.py"):

@@ -86,6 +86,12 @@ source of truth; the table below summarizes the boundaries.
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
 
+The 70425 row above preserves its earlier checkpoint. Since then, product v14
+adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
+software/profile addition does not establish real extraction or runtime support.
+Its coverage is producer-reported and does not claim full encrypted-Map coverage.
+See the [v14 scope](docs/forever-product-v14.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.
@@ -134,6 +140,45 @@ The current implementation is tracked in
 | Current workspace: `6912551` | All eight software checks pass, including 3,490 tests and all 76 new controls in each debug/release profile. Independent review closes without findings. |
 | Updated comparison tools: `6912551` | All seven software checks pass, with independent review. Separate static inspection passes seven ELF objects and twenty dependencies. Fresh comparison directories and the complete C++ output comparison remain pending. |
 | Fresh-directory comparison tools | All seven software checks pass: 58 and 110 Python tests, eight Rust tests per profile, release build, Clippy and formatting. Independent review passes; inspection of these new binaries and the complete C++ comparison remain pending. |
+| Compatible-VMaps coverage + product v14 (70425) | The current checkout passes its reproduced Linux debug/release software gates; this does not establish real extraction, complete world output or runtime acceptance. Evidence and exact scope follow. |
+
+The compatible-VMaps coverage/product line was recovered from a private working
+tree (N05 → C5 → C6 → coverage → product v14) and, until this increment, had
+never been committed. The earlier C5 eight-gate qualification aborted at gate 5
+(Clippy), so gates 6–8 (source contracts, distribution and formatting) did not
+run; the historical-plan-version contract regression consequently went
+undetected. This is the first run of those gates against this code. The retained
+evidence is in
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/`
+(`repologs/`, `repo-acceptance-result.tsv`, and `evidence/`).
+
+The CI-equivalent `.github/workflows/forever-rust.yml` `linux` job was reproduced
+with `--no-default-features`: formatting and Clippy with `-D warnings` are clean;
+workspace tests pass 3,624 / 0 failed / 26 ignored in both debug and release;
+`--workspace --bins` builds pass in both profiles. Source contracts plus the
+synthetic oracle report 431 OK / 2 skipped; `tests/contracts` reports 378 OK;
+`tests/distribution` 166 OK / 1 skipped; synthetic CLI 389 OK / 156
+environment-gated skips; metadata CLI 5 OK; conformance 9 OK; and provenance
+verifies 355 imported paths. The run is software evidence only.
+
+The v14 admission contract was added for build 70425 because v9–v13 each had a
+contract and v14 had none. It adds
+`contracts/forever-product-contract-v14.json`, the contract test and canonical
+plan fixtures, a Linux CI command, and [the product guide](docs/forever-product-v14.md).
+Because plan v14 now exists, the historical-unknown-plan-version control moved
+from 14 to 99 in `product_v11_cli.rs` and the v12/v13 contract pins. The coverage
+file is producer-reported and makes no claim of full encrypted-Map coverage.
+This increment also carries its own independent audit conclusions: no gate was
+weakened and no assertion was removed.
+
+**Unqualified status:** No real-client extraction for this compatible-VMaps /
+product-v14 scope has been performed for build 70374 or 70425. The only real
+client on this workstation activates
+`wow_classic_beta 1.60.1.70450`, which matches no implemented profile; the
+bounded live helper admits only 70170/70205. There is no RustyCore runtime
+verification, release acceptance, or real full-world geometry/world acceptance.
+Windows is deferred; older-build acceptance does not transfer to build 70425;
+`full_extractor_complete` remains false.
 
 </details>
 

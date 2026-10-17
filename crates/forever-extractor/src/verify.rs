@@ -20,6 +20,8 @@ use std::{
     path::Path,
 };
 
+#[cfg(target_os = "linux")]
+mod compatible_vmaps;
 #[cfg(test)]
 mod tests;
 #[cfg(target_os = "linux")]
@@ -68,6 +70,10 @@ fn verify_inner(
     scope: Scope,
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
+    #[cfg(target_os = "linux")]
+    if plan.is_v14() {
+        return compatible_vmaps::verify(plan, output, expected);
+    }
     let mut limits = package::Limits::default();
     if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
         limits.total_bytes = budget.output_bytes;

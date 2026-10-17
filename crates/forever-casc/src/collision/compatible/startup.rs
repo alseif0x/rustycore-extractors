@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-16: available-table startup with explicit model omissions.
 //! Required GODI reads remain fatal. Available TableFacts never become complete
 //! SourceFacts. One same compatible collector survives lookup and later calls.
@@ -100,9 +101,16 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Context<'s, 'l, L> {
         self,
         topology: crate::collision::world::Topology,
     ) -> Result<(CompletedStartup, crate::collision::world::Topology), Error> {
+        self.finish_with_topology_and_external(topology, 0)
+    }
+    pub(in crate::collision) fn finish_with_topology_and_external(
+        self,
+        topology: crate::collision::world::Topology,
+        extra: usize,
+    ) -> Result<(CompletedStartup, crate::collision::world::Topology), Error> {
         let retained = add(
             self.data.engine.stats.resident_bytes,
-            topology.resident_bytes(),
+            add(topology.resident_bytes(), extra).map_err(available::Error::Collision)?,
         )
         .map_err(available::Error::Collision)?;
         let extraction = self.collector.finish_with_external(retained)?;
@@ -129,6 +137,26 @@ pub struct CompletedStartup {
     extraction: Completed,
 }
 impl CompletedStartup {
+    pub(in crate::collision) fn with_metadata<T, E: Copy>(
+        &mut self,
+        callback_heap: usize,
+        call: impl FnOnce(&Data) -> Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        let data = &self.data;
+        self.extraction
+            .with_metadata_phase(callback_heap, || call(data))
+    }
+    // Modified 2026-10-17: readonly genuine metadata owner for model assembly.
+    pub(in crate::collision) fn model_view(&self) -> Result<&Completed, payload::CollectorError> {
+        self.extraction.metadata_ready()?;
+        Ok(&self.extraction)
+    }
+
+    /// Closed phase metadata view, deliberately not a source/spool verification claim.
+    pub(in crate::collision) fn data_view(&self) -> Result<&Data, Error> {
+        self.extraction.metadata_ready()?;
+        Ok(&self.data)
+    }
     pub fn profile(&self) -> &'static str {
         profile(self.extraction.target, self.extraction.state.native_order)
     }

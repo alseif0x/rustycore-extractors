@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-16: opt-in staged complete-model acquisition.
 // Modified 2026-10-17: GNU15-only complete no-collision WMO omission.
 //! Typed source absence becomes an omission. The explicit GNU15-v2 profile also
@@ -855,6 +856,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     pub(crate) fn memory_ceiling(&self) -> usize {
         self.inner.memory_ceiling()
     }
+    // Closed placement stage owns this disjoint reservation for its full lifetime.
+    // This forwards the existing checked clamp and cannot increase any ceiling.
+    pub(in crate::collision) fn constrain_memory_for_stage(
+        &mut self,
+        ceiling: usize,
+    ) -> Result<(), payload::CollectorError> {
+        self.inner.constrain_memory_for_stage(ceiling)
+    }
     pub(crate) fn retained_bytes(&self) -> Result<usize, payload::CollectorError> {
         self.inner.retained_bytes()
     }
@@ -968,6 +977,42 @@ pub struct Completed {
     target: Target,
 }
 impl Completed {
+    // Modified 2026-10-17: private genuine compatible VMO phase facade. No
+    // mutable extraction, caller metadata or unvalidated RAW mode is exposed.
+    pub(crate) fn phase_compact(
+        &self,
+    ) -> Result<payload::CompactView<'_>, payload::CollectorError> {
+        self.extraction.phase_compact()
+    }
+    pub(crate) fn phase_resident_bytes(&self) -> Result<usize, payload::CollectorError> {
+        self.extraction.phase_resident_bytes()
+    }
+    pub(crate) fn with_payload_phase<T, E: Copy>(
+        &mut self,
+        handle: ModelHandle,
+        source_allowance: usize,
+        callback_heap: usize,
+        call: impl FnOnce(payload::CompatiblePayload<'_>) -> Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        self.extraction
+            .with_compatible_payload_phase(handle, source_allowance, callback_heap, call)
+    }
+
+    pub(crate) fn verify_metadata_unchanged(&mut self) -> Result<(), payload::CollectorError> {
+        self.extraction.metadata_guard()
+    }
+    pub(crate) fn with_metadata_phase<T, E: Copy>(
+        &mut self,
+        callback_heap: usize,
+        call: impl FnOnce() -> Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        self.extraction.with_metadata_phase(callback_heap, call)
+    }
+
+    /// Metadata readiness only; phase owners separately authenticate source/spool IO.
+    pub(in crate::collision) fn metadata_ready(&self) -> Result<(), payload::CollectorError> {
+        self.extraction.ready()
+    }
     pub const fn backend(&self) -> super::spool::BackendProfile {
         self.extraction.backend()
     }

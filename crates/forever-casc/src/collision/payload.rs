@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-11: original explicit per-model spooling collector.
 //! The old owned Extractor remains unchanged in behavior. This route persists
 //! every completed model immediately (including recursive M2 children), drops
@@ -1589,6 +1590,60 @@ impl SpoolingExtraction {
         }
         Ok(shape)
     }
+    /// Borrow metadata from a genuine compatible owner without any payload IO.
+    /// The declared heap covers captures, callback work and a returned owned T.
+    /// An uncalled capture or rejected T drops before the LAST spool guard.
+    pub(crate) fn with_metadata_phase<T, E: Copy>(
+        &mut self,
+        callback_heap: usize,
+        call: impl FnOnce() -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let setup = (|| {
+            self.metadata_guard()?;
+            self.ready()?;
+            self.memory
+                .checked_sub(self.phase_resident_bytes()?)
+                .and_then(|n| n.checked_sub(callback_heap))
+                .ok_or(CollisionError::Limit)?;
+            Ok::<(), CollectorError>(())
+        })();
+        if let Err(e) = setup {
+            drop(call);
+            let e = self.metadata_guard().err().unwrap_or(e);
+            self.failed = Some(e);
+            return Err(CallbackFailure::Collector(e));
+        }
+        let outcome = call();
+        match outcome {
+            Err(cause) => {
+                let guard = self.metadata_guard().err();
+                self.failed = Some(guard.unwrap_or(CollectorError::Payload(Error::Callback)));
+                Err(CallbackFailure::Callback { cause, guard })
+            }
+            Ok(value) => match self.metadata_guard() {
+                Ok(()) => Ok(value),
+                Err(e) => {
+                    drop(value);
+                    let e = self.metadata_guard().err().unwrap_or(e);
+                    self.failed = Some(e);
+                    Err(CallbackFailure::Collector(e))
+                }
+            },
+        }
+    }
+    pub(crate) fn metadata_guard(&mut self) -> Result<(), CollectorError> {
+        let source = CollectorError::Collision(CollisionError::Store(
+            crate::local_store::Error::InputChanged,
+        ));
+        let previous = self.failed;
+        let current = self.verify_unchanged();
+        if previous == Some(source) {
+            self.failed = Some(source);
+            Err(source)
+        } else {
+            current
+        }
+    }
     /// Closed phases admit caller conversion/retained allowance before reload.
     /// This reduces only the remaining collector memory budget; the repository
     /// active ceiling continues to cover the source record, not caller geometry.
@@ -1639,6 +1694,89 @@ impl SpoolingExtraction {
             .repository
             .with_payload(handle, budget, |payload| {
                 outcome = Some(call(payload));
+                Ok(())
+            })
+            .map_err(CollectorError::Payload);
+        match outcome {
+            Some(Err(cause)) => {
+                let guard = self.verify_unchanged().err().or(io.err());
+                self.failed = Some(guard.unwrap_or(CollectorError::Payload(Error::Callback)));
+                Err(CallbackFailure::Callback { cause, guard })
+            }
+            Some(Ok(value)) => {
+                let guard = self.verify_unchanged();
+                match io.and(guard) {
+                    Ok(()) => Ok(value),
+                    Err(e) => {
+                        drop(value);
+                        let final_error = self.verify_unchanged().err().unwrap_or(e);
+                        self.failed = Some(final_error);
+                        Err(CallbackFailure::Collector(final_error))
+                    }
+                }
+            }
+            None => {
+                let e = self
+                    .verify_unchanged()
+                    .err()
+                    .or(io.err())
+                    .unwrap_or(CollectorError::Payload(Error::State));
+                self.failed = Some(e);
+                Err(CallbackFailure::Collector(e))
+            }
+        }
+    }
+    /// Compatible final phases retain the same closed memory and guard contract.
+    /// MAGIC2/bindings/native order are validated against this genuine collection.
+    /// This reduces only the remaining collector memory budget; the repository
+    /// active ceiling continues to cover the source record, not caller geometry.
+    /// Both must also fit the enclosing phase ledger enforced by the caller.
+    pub(crate) fn with_compatible_payload_phase<T, E: Copy>(
+        &mut self,
+        handle: ModelHandle,
+        source_allowance: usize,
+        callback_heap_allowance: usize,
+        call: impl FnOnce(CompatiblePayload<'_>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let setup = (|| {
+            self.verify_unchanged()?;
+            self.ready()?;
+            let shape = self.phase_shape(handle)?;
+            let memory = self
+                .memory
+                .checked_sub(self.phase_resident_bytes()?)
+                .and_then(|n| n.checked_sub(callback_heap_allowance))
+                .ok_or(CollisionError::Limit)?;
+            let active = self
+                .repository
+                .active_limit()
+                .checked_sub(
+                    self.external_resident
+                        .checked_sub(self.compatible_descriptors)
+                        .ok_or(CollisionError::State)?,
+                )
+                .ok_or(CollisionError::Limit)?;
+            let budget = memory.min(active).min(source_allowance);
+            if shape.record_bytes > budget {
+                return Err(CollisionError::Limit.into());
+            }
+            Ok(budget)
+        })();
+        let budget = match setup {
+            Ok(n) => n,
+            Err(e) => {
+                // A refused callback may own a mutating Drop. Check after it.
+                drop(call);
+                let final_error = self.verify_unchanged().err().unwrap_or(e);
+                self.failed = Some(final_error);
+                return Err(CallbackFailure::Collector(final_error));
+            }
+        };
+        let mut outcome = None;
+        let io = self
+            .repository
+            .with_record_payload(handle, budget, true, |payload| {
+                outcome = Some(call(CompatiblePayload::validate(payload, &self.models)?));
                 Ok(())
             })
             .map_err(CollectorError::Payload);

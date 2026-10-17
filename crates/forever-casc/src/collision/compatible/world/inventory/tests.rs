@@ -933,3 +933,177 @@ fn prepare_rejection_preserves_source_changed_over_simultaneous_inventory_change
         assert_eq!(drops.get(), 1);
     }
 }
+
+fn run_case_with_coverage<'s>(
+    c: startup::Startup<'s>,
+    f: &CollisionFixture,
+    p: &Private,
+    sink: Sink,
+    profile: Profile,
+    l: Limits,
+) -> Result<Completed, Error<u8>> {
+    let (w, k) = p.inventories(f, profile, BackendProfile::LeasedAppendV1, l);
+    extract_selected_with_coverage(c, w, k, sink, 65536, plan::MapSelection::All, l)
+}
+// Authored 2026-10-17: real coverage belongs to the same successful traversal.
+#[test]
+fn coverage_same_run_both_builds_distinguishes_missing_empty_output_and_replay() {
+    use run::coverage::{Own, Replay, Wdt};
+    for build in [70374, 70425] {
+        let mut rows = files(
+            build,
+            &[(1, 100, -1), (2, 200, 1), (3, 300, 2), (4, 400, -1)],
+        );
+        rows.extend([
+            (100, None, wdt(Some(101))),
+            (101, None, m2_adt(90, 17)),
+            (200, None, wdt(Some(201))),
+            (201, None, empty_adt()),
+            (300, None, wdt(Some(301))),
+            (90, None, fixture::m2(true)),
+        ]);
+        let f = CollisionFixture::for_build(&rows, build);
+        let p = Private::new();
+        let mut store = open(&f, build);
+        let (sink, _, drops) = Sink::new();
+        let c = start(&mut store, &f, &p, build, Profile::BoundedV1, true);
+        let mut done =
+            run_case_with_coverage(c, &f, &p, sink, Profile::BoundedV1, Limits::default()).unwrap();
+        let before = *done.report();
+        done.with_coverage(0, |v| {
+            assert_eq!(v.report(), &before);
+            assert_eq!(v.maps().len(), 4);
+            assert_eq!(v.map_table().file_data_id(), world::MAP_FILE_DATA_ID);
+            assert_eq!(
+                v.startup().table().file_data_id(),
+                gameobjects::TABLE_FILE_DATA_ID
+            );
+            assert_eq!(v.liquids()[0].source().id, world::MATERIAL_FILE_DATA_ID);
+            let m = &v.maps()[3];
+            assert_eq!(m.id(), 4);
+            assert_eq!(m.wdt_file_data_id(), 400);
+            assert_eq!(m.wdt(), Wdt::Missing);
+            assert_eq!(m.tile(0, 0), None);
+            // Fixture WDT advertises x=0,y=0. Parent OWN empty is a barrier:
+            // grandchild's missing own request replays ONLY that empty parent.
+            assert_eq!(v.maps()[0].tile(0, 0).unwrap().own(), Own::Output);
+            assert_eq!(v.maps()[1].tile(0, 0).unwrap().own(), Own::Empty);
+            let t = v.maps()[2].tile(0, 0).unwrap();
+            assert_eq!(t.own(), Own::Missing);
+            assert_eq!(t.replay(), Replay::Empty);
+            assert_eq!(t.replay_parent(), Some(2));
+            Ok::<_, u8>(())
+        })
+        .unwrap();
+        assert_eq!(*done.report(), before);
+        assert_eq!(drops.get(), 1);
+        done.verify_unchanged().unwrap();
+    }
+}
+#[test]
+fn coverage_repeated_view_has_no_new_reads_ids_or_retained_growth() {
+    let build = 70425;
+    let mut rows = files(build, &[(1, 100, -1)]);
+    rows.push((100, None, wdt(None)));
+    let f = CollisionFixture::for_build(&rows, build);
+    let p = Private::new();
+    let mut store = open(&f, build);
+    let (sink, _, _) = Sink::new();
+    let c = start(&mut store, &f, &p, build, Profile::BoundedV1, true);
+    let mut done =
+        run_case_with_coverage(c, &f, &p, sink, Profile::BoundedV1, Limits::default()).unwrap();
+    let before = *done.report();
+    let resident = done.resident_bytes();
+    for _ in 0..3 {
+        done.with_coverage(0, |v| {
+            assert_eq!(v.maps()[0].global_records(), Some(0));
+            Ok::<_, u8>(())
+        })
+        .unwrap();
+    }
+    assert_eq!(*done.report(), before);
+    assert_eq!(done.resident_bytes(), resident);
+}
+#[test]
+fn coverage_refused_heap_drops_capture_before_last_payload_guard() {
+    struct Change(PathBuf, Rc<Cell<usize>>);
+    impl Drop for Change {
+        fn drop(&mut self) {
+            self.1.set(self.1.get() + 1);
+            fs::set_permissions(&self.0, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+    }
+    let build = 70425;
+    let mut rows = files(build, &[(1, 100, -1)]);
+    rows.push((100, None, wdt(None)));
+    let f = CollisionFixture::for_build(&rows, build);
+    let p = Private::new();
+    let mut store = open(&f, build);
+    let (sink, _, _) = Sink::new();
+    let c = start(&mut store, &f, &p, build, Profile::BoundedV1, true);
+    let mut done =
+        run_case_with_coverage(c, &f, &p, sink, Profile::BoundedV1, Limits::default()).unwrap();
+    let count = Rc::new(Cell::new(0));
+    let invoked = Rc::new(Cell::new(0));
+    let called = invoked.clone();
+    let action = Change(p.0.join("payload"), count.clone());
+    let error = done
+        .with_coverage(usize::MAX, move |_| {
+            called.set(called.get() + 1);
+            drop(action);
+            Ok::<_, u8>(())
+        })
+        .unwrap_err();
+    assert_eq!(invoked.get(), 0);
+    assert_eq!(count.get(), 1);
+    assert_eq!(error.code(), payload::Error::Changed.code());
+}
+#[test]
+fn original_world_selector_retains_no_coverage_allocation_or_profile_change() {
+    let build = 70425;
+    let mut rows = files(build, &[(1, 100, -1)]);
+    rows.push((100, None, wdt(None)));
+    let f = CollisionFixture::for_build(&rows, build);
+    let p = Private::new();
+    let mut store = open(&f, build);
+    let (sink, _, _) = Sink::new();
+    let c = start(&mut store, &f, &p, build, Profile::BoundedV1, true);
+    let mut done = run_case(c, &f, &p, sink, Profile::BoundedV1, Limits::default()).unwrap();
+    assert!(!done.has_coverage());
+    assert_eq!(done.profile(), PROFILE_GNU15_70425);
+    assert!(done.coverage.is_none());
+    let invoked = Cell::new(0);
+    let e = done
+        .with_coverage(0, |_| {
+            invoked.set(1);
+            Ok::<_, u8>(())
+        })
+        .unwrap_err();
+    assert_eq!(invoked.get(), 0);
+    assert_eq!(e.code(), crate::collision::Error::State.code());
+    done.verify_unchanged().unwrap();
+}
+#[test]
+fn coverage_actual_capacity_remains_charged_through_completed_owner() {
+    for build in [70374, 70425] {
+        let mut rows = files(build, &[(1, 100, -1)]);
+        rows.push((100, None, wdt(None)));
+        let f = CollisionFixture::for_build(&rows, build);
+        let p = Private::new();
+        let mut store = open(&f, build);
+        let (sink, _, _) = Sink::new();
+        let c = start(&mut store, &f, &p, build, Profile::BoundedV1, true);
+        let done =
+            run_case_with_coverage(c, &f, &p, sink, Profile::BoundedV1, Limits::default()).unwrap();
+        let coverage = done.coverage.as_ref().unwrap().resident_bytes().unwrap();
+        assert!(coverage >= 4096);
+        let startup = done.startup.data_view().unwrap().stats().resident_bytes;
+        let model = done.startup.model_view().unwrap();
+        assert_eq!(
+            model.extraction.retained_external_for_test(),
+            model.state.resident + startup + done.topology().resident_bytes() + coverage
+        );
+        assert!(done.has_coverage());
+        assert!(done.profile().contains("coverage"));
+    }
+}

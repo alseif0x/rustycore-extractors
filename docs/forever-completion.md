@@ -39,6 +39,48 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible-VMaps coverage and product v14 software checkpoint — 2026-10-17
+
+The compatible-VMaps coverage/product line was recovered from its private
+working-tree lineage (N05 → C5 → C6 → coverage → product v14); it had never
+been committed. The earlier C5 eight-gate qualification aborted at gate 5
+(Clippy), so gates 6–8 (source contracts, distribution and formatting) never
+ran, and the historical-plan-version contract regression went undetected. This
+increment is the first time those gates have been run against this code.
+
+The checkout's CI-equivalent `.github/workflows/forever-rust.yml` `linux` job,
+with `--no-default-features`, passes formatting and Clippy with `-D warnings`;
+workspace tests pass 3,624 / 0 failed / 26 ignored in both debug and release;
+and `--workspace --bins` builds pass in both profiles. Source contracts plus
+the synthetic oracle report 431 OK / 2 skipped; `tests/contracts` reports 378
+OK; `tests/distribution` 166 OK / 1 skipped; synthetic CLI 389 OK / 156
+environment-gated skips; metadata CLI 5 OK; conformance 9 OK; provenance
+verifies 355 imported paths. These are software gates, not extraction/runtime
+acceptance. Retained evidence is at
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/`
+(`repologs/`, `repo-acceptance-result.tsv`, and `evidence/`).
+
+The product v14 admission contract was added for build 70425: v9–v13 each had
+one, while v14 had none. The increment adds
+`contracts/forever-product-contract-v14.json`, its contract test and canonical
+plan fixtures, a Linux CI command, and
+[`docs/forever-product-v14.md`](forever-product-v14.md). The historical
+unknown-plan-version control moved from 14 to 99 in
+`product_v11_cli.rs` and the v12/v13 contract pins because v14 now exists. Its
+coverage file is producer-reported;
+it makes no claim of full encrypted-Map coverage. This increment also carries
+its own independent audit conclusions: no gate was weakened and no assertion
+was removed.
+
+**Unqualified status:** No real-client extraction for this compatible-VMaps /
+product-v14 scope has been performed for build 70374 or 70425. The only real
+client on this workstation activates
+`wow_classic_beta 1.60.1.70450`, which matches no implemented profile; the
+bounded live helper admits only 70170/70205. There is no RustyCore runtime
+verification, release acceptance, or real full-world geometry/world acceptance.
+Windows remains deferred; no older-build acceptance transfers to build 70425;
+`full_extractor_complete` remains false.
+
 ## GNU15 empty-WMO correction prerequisite — 2026-10-17
 
 The explicit GNU15-v2 collector now omits a successfully parsed WMO without

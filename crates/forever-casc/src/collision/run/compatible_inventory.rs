@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-17: compatible traversal derived from the strict disk runner.
 //! Compatible same-owner serial world traversal with typed missing WDT/ADT.
 //! One placement Session acquires physical requests, retains GNU15 order and
@@ -6,6 +7,11 @@
 //! immediate parent's OWN cache can replay; inherited tiles are never cached.
 //! Every non-MissingFile error is fatal. No publication/final VMap is implied.
 pub use super::spooled::Sink;
+pub mod coverage;
+pub(crate) struct Captured {
+    pub report: Report,
+    pub coverage: Option<coverage::Retained>,
+}
 use super::{Context, Kind, SharedLimits};
 use crate::collision::{
     Facts, InputRef,
@@ -205,6 +211,7 @@ struct Stage<'a, S: Sink> {
     output_limit: u64,
     raw: usize,
     work: Work,
+    coverage: Option<coverage::Retained>,
 }
 impl<S: Sink> Stage<'_, S> {
     fn check_output(&self, additional: u64) -> Result<(), StageError<S::Error>> {
@@ -247,6 +254,20 @@ impl<S: Sink> bridge::Sink for Stage<'_, S> {
         }
         self.emit(context, batch.bytes, batch.records)?;
         if let Kind::Tile { x, y } = context.kind {
+            if let Some(coverage) = &mut self.coverage {
+                coverage
+                    .own(
+                        context.map_id,
+                        x,
+                        y,
+                        if batch.records == 0 {
+                            coverage::Own::Empty
+                        } else {
+                            coverage::Own::Output
+                        },
+                    )
+                    .map_err(StageError::Run)?;
+            }
             super::bump(&mut self.work.own, 1).map_err(StageError::Run)?;
             if self.save_to {
                 self.cache
@@ -261,8 +282,15 @@ impl<S: Sink> bridge::Sink for Stage<'_, S> {
                     .map_err(StageError::Inventory)?;
                 super::bump(&mut self.work.cached, 1).map_err(StageError::Run)?;
             }
-        } else if self.save_to {
-            return Err(StageError::Run(super::Error::State));
+        } else {
+            if self.save_to {
+                return Err(StageError::Run(super::Error::State));
+            }
+            if let Some(coverage) = &mut self.coverage {
+                coverage
+                    .global(context.map_id, batch.records)
+                    .map_err(StageError::Run)?;
+            }
         }
         self.save_to = false;
         Ok(())
@@ -275,6 +303,34 @@ pub(crate) struct ReservedSink<S> {
     pub heap_allowance: usize,
     pub precharged: usize,
 }
+/// Closed stage sealing only, over the already charged active WDT index.
+/// No public caller implementation/captured closure or additional allocation.
+pub(crate) type Seal<S> = fn(&mut S, &mut [u32]) -> Result<(), <S as Sink>::Error>;
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn extract_precharged_sealed<L: LiquidLookup + ?Sized, S: Sink>(
+    context: &mut startup::Context<'_, '_, L>,
+    maps: &plan::Maps<'_>,
+    wdts: &mut Inventory,
+    caches: &mut Inventory,
+    sink: ReservedSink<S>,
+    limits: Limits,
+    seal: Option<Seal<S>>,
+    capture_coverage: bool,
+) -> Result<Captured, Error<S::Error>> {
+    if seal.is_none() && !capture_coverage {
+        return extract_precharged(context, maps, wdts, caches, sink, limits);
+    }
+    extract_collector_precharged_sealed(
+        context.collector_mut(),
+        maps,
+        wdts,
+        caches,
+        sink,
+        limits,
+        seal,
+        capture_coverage,
+    )
+}
 pub(crate) fn extract_precharged<L: LiquidLookup + ?Sized, S: Sink>(
     context: &mut startup::Context<'_, '_, L>,
     maps: &plan::Maps<'_>,
@@ -282,7 +338,7 @@ pub(crate) fn extract_precharged<L: LiquidLookup + ?Sized, S: Sink>(
     caches: &mut Inventory,
     sink: ReservedSink<S>,
     limits: Limits,
-) -> Result<Report, Error<S::Error>> {
+) -> Result<Captured, Error<S::Error>> {
     extract_collector_precharged(context.collector_mut(), maps, wdts, caches, sink, limits)
 }
 // Same execute/final inventory/source guards; no Context/source-fact cast.
@@ -293,8 +349,30 @@ fn extract_collector_precharged<L: LiquidLookup + ?Sized, S: Sink>(
     caches: &mut Inventory,
     sink: ReservedSink<S>,
     limits: Limits,
-) -> Result<Report, Error<S::Error>> {
-    let result = execute(collector, maps, wdts, caches, sink, limits);
+) -> Result<Captured, Error<S::Error>> {
+    extract_collector_precharged_sealed(collector, maps, wdts, caches, sink, limits, None, false)
+}
+#[allow(clippy::too_many_arguments)]
+fn extract_collector_precharged_sealed<L: LiquidLookup + ?Sized, S: Sink>(
+    collector: &mut Collector<'_, '_, L>,
+    maps: &plan::Maps<'_>,
+    wdts: &mut Inventory,
+    caches: &mut Inventory,
+    sink: ReservedSink<S>,
+    limits: Limits,
+    seal: Option<Seal<S>>,
+    capture_coverage: bool,
+) -> Result<Captured, Error<S::Error>> {
+    let result = execute(
+        collector,
+        maps,
+        wdts,
+        caches,
+        sink,
+        limits,
+        seal,
+        capture_coverage,
+    );
     // execute has destroyed the owned Sink, including every early-error path.
     // Evaluate each independent inventory guard even when another already failed.
     let wdt_guard = wdts.verify_unchanged().err();
@@ -325,6 +403,7 @@ fn extract_collector_precharged<L: LiquidLookup + ?Sized, S: Sink>(
         .finish_external_operation(result)
         .map_err(finish_error)
 }
+#[allow(clippy::too_many_arguments)]
 fn execute<L: LiquidLookup + ?Sized, S: Sink>(
     collector: &mut Collector<'_, '_, L>,
     maps: &plan::Maps<'_>,
@@ -332,7 +411,9 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
     caches: &mut Inventory,
     reservation: ReservedSink<S>,
     limits: Limits,
-) -> Result<Report, Error<S::Error>> {
+    seal: Option<Seal<S>>,
+    capture_coverage: bool,
+) -> Result<Captured, Error<S::Error>> {
     // Preparation already admitted the one shared run; never begin/reset here.
     let ReservedSink {
         sink,
@@ -353,6 +434,19 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
     }
     let before = collector.facts()?;
     let calls_before = collector.request_calls();
+    let coverage = if capture_coverage {
+        let allowance = collector.free_bytes()?;
+        collector.reserve_external(allowance)?;
+        let coverage = coverage::Retained::allocate(maps, allowance)?;
+        collector.release_external(
+            allowance
+                .checked_sub(coverage.resident_bytes()?)
+                .ok_or(super::Error::State)?,
+        )?;
+        Some(coverage)
+    } else {
+        None
+    };
     let stage = Stage {
         sink,
         cache: caches,
@@ -361,6 +455,7 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
         output_limit: limits.max_output_bytes,
         raw: before.raw_bytes,
         work: Work::default(),
+        coverage,
     };
     let mut session = bridge::Session::new_precharged(
         collector,
@@ -393,8 +488,20 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
             limits.max_file_bytes.min(limits.wdt.max_wdt_bytes),
         )?
         else {
+            if capture_coverage {
+                session.run_with_sink(|stage| match &mut stage.coverage {
+                    Some(c) => c.wdt(map.id(), false).map_err(StageError::Run),
+                    None => Ok(()),
+                })?;
+            }
             continue;
         };
+        if capture_coverage {
+            session.run_with_sink(|stage| match &mut stage.coverage {
+                Some(c) => c.wdt(map.id(), true).map_err(StageError::Run),
+                None => Ok(()),
+            })?;
+        }
         wdts.insert_wdt(map.id(), map.wdt_file_data_id(), &bytes)?;
         if active.len() == active.capacity() {
             return Err(super::Error::Limit.into());
@@ -451,6 +558,14 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
                 )?
                 else {
                     super::bump(&mut missing_object_adts, 1)?;
+                    if capture_coverage {
+                        session.run_with_sink(|stage| match &mut stage.coverage {
+                            Some(c) => c
+                                .own(map.id(), tile.x, tile.y, coverage::Own::Missing)
+                                .map_err(StageError::Run),
+                            None => Ok(()),
+                        })?;
+                    }
                     // Typed own absence permits only this exact parent's OWN
                     // cache; no inherited cache and no recursive ancestor search.
                     replay_range(&mut session, maps, map.id(), cell, cell + 1, limits)?;
@@ -488,6 +603,11 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
         })
         .map_err(wdt_error)?;
     }
+    if let Some(seal) = seal {
+        // active is still alive and charged; no duplicate coverage Vec or ID run.
+        session
+            .run_with_sink(|stage| seal(&mut stage.sink, &mut active).map_err(StageError::Sink))?;
+    }
     session.verify_unchanged()?;
     let work = session.sink().work;
     let cache_stats = session.sink().cache.stats()?;
@@ -495,40 +615,53 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
     let wdt_files = active.len();
     drop(active);
     session.run_release(active_bytes_actual)?;
+    let coverage = if capture_coverage {
+        session.run_with_sink(|stage| {
+            if let Some(c) = &stage.coverage {
+                c.finish().map_err(StageError::Run)?;
+            }
+            Ok(stage.coverage.take())
+        })?
+    } else {
+        None
+    };
     let placements_profile = session.profile();
     let placements = session.finish()?;
     let ids = placements.ids;
     let after = collector.facts()?;
-    Ok(Report {
-        maps: count,
-        tile_positions: positions,
-        object_adts,
-        wdt_files,
-        missing_wdts: count.checked_sub(wdt_files).ok_or(super::Error::State)?,
-        missing_object_adts,
-        placements,
-        placements_profile,
-        own_tiles: work.own,
-        replayed_tiles: work.replays,
-        empty_replays: work.empty_replays,
-        cached_tiles: work.cached,
-        placement_callbacks: work.placements,
-        placement_records: work.records,
-        placement_bytes: work.bytes,
-        model_reads,
-        model_source_bytes,
-        model_raw_bytes: after.raw_bytes,
-        wdt_resident_bytes: wdt_stats.reserved_heap_bytes,
-        cache_resident_bytes: cache_stats.reserved_heap_bytes,
-        cache_peak_bytes: cache_stats.peak_admitted_heap_bytes,
-        wdt: wdt_stats,
-        cache: cache_stats,
-        combined_reserved_bytes: combined,
-        ids,
-        collector_before: before,
-        collector_after: after,
-        request_calls_before: calls_before,
-        request_calls_after: collector.request_calls(),
+    Ok(Captured {
+        coverage,
+        report: Report {
+            maps: count,
+            tile_positions: positions,
+            object_adts,
+            wdt_files,
+            missing_wdts: count.checked_sub(wdt_files).ok_or(super::Error::State)?,
+            missing_object_adts,
+            placements,
+            placements_profile,
+            own_tiles: work.own,
+            replayed_tiles: work.replays,
+            empty_replays: work.empty_replays,
+            cached_tiles: work.cached,
+            placement_callbacks: work.placements,
+            placement_records: work.records,
+            placement_bytes: work.bytes,
+            model_reads,
+            model_source_bytes,
+            model_raw_bytes: after.raw_bytes,
+            wdt_resident_bytes: wdt_stats.reserved_heap_bytes,
+            cache_resident_bytes: cache_stats.reserved_heap_bytes,
+            cache_peak_bytes: cache_stats.peak_admitted_heap_bytes,
+            wdt: wdt_stats,
+            cache: cache_stats,
+            combined_reserved_bytes: combined,
+            ids,
+            collector_before: before,
+            collector_after: after,
+            request_calls_before: calls_before,
+            request_calls_after: collector.request_calls(),
+        },
     })
 }
 fn parse_objects<'b, L: LiquidLookup + ?Sized, S: Sink>(
@@ -657,6 +790,10 @@ fn replay_range<L: LiquidLookup + ?Sized, S: Sink>(
                 &bytes,
                 records,
             )?;
+            if let Some(c) = &mut stage.coverage {
+                c.replay(map_id, parent.id(), tile.x, tile.y, records)
+                    .map_err(StageError::Run)?;
+            }
             drop(bytes);
             super::bump(&mut stage.work.replays, 1).map_err(StageError::Run)?;
             if records == 0 {

@@ -30,6 +30,9 @@ pub const MAX_DB2_ENTRIES: usize = 1126;
 pub const MAX_70205_DB2_ENTRIES: usize = 1161;
 pub const MAX_70338_DB2_ENTRIES: usize = 1161;
 pub const MAX_70374_DB2_ENTRIES: usize = 1161;
+pub const MAX_70425_DB2_ENTRIES: usize = 1161;
+pub const COMPATIBLE_COLLISION_VERIFY_PROFILE: &str = "linux70425-compatible-gnu15-vmap-product-v1";
+pub const COMPATIBLE_COLLISION_VERIFY_SCOPE: &str = "artifact_integrity_complete_declared_vmap_associations_and_producer_reported_available_source_coverage";
 
 /// Explicit DB2 schema source. Existing product plans retain their legacy
 /// pinned schema; builds 70205 and 70338 plans opt into separately pinned
@@ -41,6 +44,7 @@ pub enum SchemaCatalog {
     WowDbDefs70205V1,
     WowDbDefs70338V1,
     WowDbDefs70374V1,
+    WowDbDefs70425V1,
 }
 
 impl SchemaCatalog {
@@ -50,6 +54,7 @@ impl SchemaCatalog {
             Self::WowDbDefs70205V1 => catalog::WOWDBDEFS_70205_CATALOG_ID,
             Self::WowDbDefs70338V1 => catalog::WOWDBDEFS_70338_CATALOG_ID,
             Self::WowDbDefs70374V1 => catalog::WOWDBDEFS_70374_CATALOG_ID,
+            Self::WowDbDefs70425V1 => catalog::WOWDBDEFS_70425_CATALOG_ID,
         }
     }
 
@@ -59,6 +64,7 @@ impl SchemaCatalog {
             Self::WowDbDefs70205V1 => MAX_70205_DB2_ENTRIES,
             Self::WowDbDefs70338V1 => MAX_70338_DB2_ENTRIES,
             Self::WowDbDefs70374V1 => MAX_70374_DB2_ENTRIES,
+            Self::WowDbDefs70425V1 => MAX_70425_DB2_ENTRIES,
         }
     }
 }
@@ -178,6 +184,7 @@ impl Plan {
             "11" => 11,
             "12" => 12,
             "13" => 13,
+            "14" => 14,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -207,6 +214,10 @@ impl Plan {
                 "wowdbdefs-70338-v1" => SchemaCatalog::WowDbDefs70338V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
+            14 => match field(&mut lines, "schema-catalog")? {
+                "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
+                _ => return Err("product_plan_schema_catalog"),
+            },
             10..=13 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70374-v1" => SchemaCatalog::WowDbDefs70374V1,
                 _ => return Err("product_plan_schema_catalog"),
@@ -219,14 +230,14 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=13 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=14 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if matches!(version, 3 | 8)
+        let collision_storage = if matches!(version, 3 | 8 | 14)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
@@ -237,7 +248,22 @@ impl Plan {
         } else {
             CollisionStorage::Resident
         };
-        let map_domain = if version == 8 {
+        let map_domain = if version == 14 {
+            if field(&mut lines, "collision-profile")? != COMPATIBLE_COLLISION_VERIFY_PROFILE {
+                return Err("product_plan_collision_profile");
+            }
+            let domain = match field(&mut lines, "collision-domain")? {
+                "all-available-maps" => None,
+                text => Some(decimal(
+                    text.strip_prefix("map:")
+                        .ok_or("product_plan_collision_domain")?,
+                )?),
+            };
+            if field(&mut lines, "collision-coverage")? != "compatible-collision-coverage-v1" {
+                return Err("product_plan_collision_coverage");
+            }
+            domain
+        } else if version == 8 {
             Some(map_domain::parse(&mut lines)?)
         } else {
             None
@@ -305,7 +331,9 @@ impl Plan {
             });
         }
         let plan = Self {
-            publication_profile: if version == 13 {
+            publication_profile: if version == 14 {
+                PublicationProfile::Build70425CompatibleCollisionV1
+            } else if version == 13 {
                 PublicationProfile::Build70374CompatibleTerrainV1
             } else if version == 12 {
                 PublicationProfile::Build70374AvailableTerrainV1
@@ -347,7 +375,9 @@ impl Plan {
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.publication_profile.validate(self)?;
-        map_domain::validate(self)?;
+        if !self.is_v14() {
+            map_domain::validate(self)?;
+        }
         if let Some(connections) = &self.offmesh {
             if self.schema_catalog != SchemaCatalog::PinnedMetadataV1
                 || ![70170, 70205].contains(&self.build)
@@ -366,6 +396,7 @@ impl Plan {
             && !self.is_v10()
             && !self.is_v11()
             && !self.is_available_terrain()
+            && !self.is_v14()
         {
             return Err("product_plan_build");
         }
@@ -381,6 +412,11 @@ impl Plan {
             && !self.is_v10()
             && !self.is_v11()
             && !self.is_available_terrain()
+        {
+            return Err("product_plan_schema_catalog");
+        }
+        if (self.schema_catalog == SchemaCatalog::WowDbDefs70425V1 || self.build == 70425)
+            && !self.is_v14()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -415,7 +451,9 @@ impl Plan {
                         .ok_or("product_plan_schema")?
                         .metadata()
                 }
-                SchemaCatalog::WowDbDefs70338V1 | SchemaCatalog::WowDbDefs70374V1 => {
+                SchemaCatalog::WowDbDefs70338V1
+                | SchemaCatalog::WowDbDefs70374V1
+                | SchemaCatalog::WowDbDefs70425V1 => {
                     catalog::resolve_for(self.schema_catalog.id(), &entry.name)
                         .map_err(|_| "product_plan_schema")?
                         .ok_or("product_plan_schema")?
@@ -477,6 +515,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v14() {
+            return 14;
+        }
         if self.is_v13() {
             return 13;
         }
@@ -501,7 +542,7 @@ impl Plan {
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return 4,
             SchemaCatalog::WowDbDefs70338V1 => return 5,
-            SchemaCatalog::WowDbDefs70374V1 => {}
+            SchemaCatalog::WowDbDefs70374V1 | SchemaCatalog::WowDbDefs70425V1 => {}
             SchemaCatalog::PinnedMetadataV1 => {}
         }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
@@ -514,6 +555,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v14() {
+            return "forever-product-v14";
+        }
         if self.is_v13() {
             return "forever-product-v13";
         }
@@ -538,7 +582,7 @@ impl Plan {
         match self.schema_catalog {
             SchemaCatalog::WowDbDefs70205V1 => return "forever-product-v4",
             SchemaCatalog::WowDbDefs70338V1 => return "forever-product-v5",
-            SchemaCatalog::WowDbDefs70374V1 => {}
+            SchemaCatalog::WowDbDefs70374V1 | SchemaCatalog::WowDbDefs70425V1 => {}
             SchemaCatalog::PinnedMetadataV1 => {}
         }
         if matches!(self.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
@@ -568,6 +612,14 @@ impl Plan {
         matches!(
             self.publication_profile,
             PublicationProfile::Build70374AvailableTerrainV1
+        )
+    }
+
+    /// Explicit Linux70425 disabled-key compatible GNU15-v2 collision publication.
+    pub const fn is_v14(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70425CompatibleCollisionV1
         )
     }
 
@@ -621,14 +673,24 @@ impl Plan {
             SchemaCatalog::WowDbDefs70205V1 => "schema-catalog\twowdbdefs-70205-v1\n",
             SchemaCatalog::WowDbDefs70338V1 => "schema-catalog\twowdbdefs-70338-v1\n",
             SchemaCatalog::WowDbDefs70374V1 => "schema-catalog\twowdbdefs-70374-v1\n",
+            SchemaCatalog::WowDbDefs70425V1 => "schema-catalog\twowdbdefs-70425-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=13, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=14, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
         let collision_storage = self.collision_storage.render();
-        let map_domain = map_domain::render(self.map_domain);
+        let map_domain = if self.is_v14() {
+            let selected = self
+                .map_domain
+                .map_or_else(|| "all-available-maps".to_owned(), |id| format!("map:{id}"));
+            format!(
+                "collision-profile\t{COMPATIBLE_COLLISION_VERIFY_PROFILE}\ncollision-domain\t{selected}\ncollision-coverage\tcompatible-collision-coverage-v1\n"
+            )
+        } else {
+            map_domain::render(self.map_domain)
+        };
         let mut output = format!(
             "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{collision_storage}{map_domain}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
             self.version(),
@@ -713,3 +775,6 @@ mod v12_tests;
 
 #[cfg(test)]
 mod v13_tests;
+
+#[cfg(test)]
+pub(crate) mod v14_tests;
