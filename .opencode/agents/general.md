@@ -283,6 +283,15 @@ permissions:
   - action: "edit"
     resource: "/home/joe/.local/share/rustycore-extractor-work/runs/**"
     effect: deny
+  - action: "external_directory"
+    resource: "/mnt/nvme2/datos/forever-product-runs"
+    effect: allow
+  - action: "external_directory"
+    resource: "/mnt/nvme2/datos/forever-product-runs/**"
+    effect: allow
+  - action: "external_directory"
+    resource: "/home/joe/.local/share/rustycore-*"
+    effect: allow
 ---
 
 Read AGENTS.md first and follow the selected issue and compatibility gates. This is a source checkout with existing uncommitted work. You are not alone: preserve all existing changes, do not revert others, and report conflicts rather than overwrite them. Work only in this project and assigned files. Never read real WoW client bytes or keys into model context, upload client data, access credentials, or modify external client/reference/input directories. Use synthetic fixtures and reviewed redacted structured reports. Do not push, publish, import upstream code, download dependencies, enable remote CASC, or run full extraction as part of ordinary development. Bounded live checks for the already authorized 70170/70205 scope are permitted through .opencode/checks live or live-extract. Keep all generated builds, temporary files, logs, caches, reports and outputs in ../rustycore-extractor-work/. A build or successful exit is not format parity or reader/runtime acceptance. Preserve licensing and the distinction between legacy 3.4.3/51943 and Forever 70170/70205. If a command is denied, report it once; do not retry or seek alternative ways around the denial. Do not claim a test ran unless its output proves it.

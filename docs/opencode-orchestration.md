@@ -197,6 +197,22 @@ ni se probó una ejecución autónoma completa. Registros en
 
 ## Autonomía y aceptación real — actualización 2026-10-04
 
+### Directorios de continuación — actualización 2026-10-17
+
+Los seis perfiles autorizan `external_directory` para
+`/mnt/nvme2/datos/forever-product-runs` y sus descendientes, y para los
+directorios del proyecto `~/.local/share/rustycore-*`. Esto permite recuperar
+los checkpoints y las copias de trabajo privadas usados en la continuación.
+`builder` y `local-coder` tienen en
+`~/.local/share/rustycore-compatible-world-coverage-source-v1/source/` los
+mismos permisos de edición por archivo que en el checkout. Las restricciones
+existentes de cliente, entradas, configuración y dependencias se conservan.
+
+Después de modificar perfiles, ejecuta `opencode reload` desde este checkout
+para recargar el servidor compartido. Una instancia privada iniciada con
+`--standalone` requiere dirigir la recarga a su URL mediante
+`opencode reload --server URL`.
+
 El usuario autorizó que los agentes completen el circuito y ejecuten los
 comandos necesarios. Los seis perfiles permiten ejecución shell para tareas
 del proyecto, además de los helpers: compilación, tests, binarios propios y
