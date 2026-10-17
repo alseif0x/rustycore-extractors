@@ -1,5 +1,43 @@
 # Forever collision foundation
 
+## Compatible serial placement software checkpoint — 2026-10-17
+
+[Issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92) adds the
+Linux `collision::compatible::placements::Session` library bridge. It derives
+physical placement order and model outcomes from the supplied batches, retains
+one collector/ID/sink owner, and applies the existing resource and mutation
+guards. Omitted and no-collision models consume no placement IDs; a doodad-only
+WMO emits its surviving children without consuming a parent ID. Successful
+cached M2 placements still consume the serial counter. Strict APIs, product
+profiles and resource ceilings retain their existing contracts.
+
+Functional commit `c5267371f827e42bd94ff3824f6d97336ca821c0` matches all 778
+selected Git inputs in frozen candidate C9: 819 files / 210 directories,
+including 41 retained offline build inputs. Qualification ran before the commit;
+the subsequent Git binding compares every selected blob with that frozen source.
+All eight software commands pass. Debug and release each pass 3,388 tests with
+26 historical ignores / 52 targets, including all 31 new placement methods.
+Both product builds, Clippy and formatting pass; source contracts pass 424
+checks / two skips and distribution tests pass 165 checks / one skip.
+
+Independent terminal software QA passes without findings:
+`0183b7402e560c5d58917c2cc7b5e7e03949885912f8fca74b0a361aa2296e64`.
+The parent exits zero and its initial owned group is empty before the unit is
+stopped. This accepts software qualification only. Original C++ placement
+comparison is still unexecuted; its reviewed source and independent constructor
+proposal do not establish compatibility acceptance.
+
+The bridge does not implement world traversal, parent replay or the owned empty
+cache barrier. Final compatible VMap assembly, complete required real resources,
+navigation, product integration, RustyCore runtime acceptance and reproducible
+Linux delivery remain open. The separate corrected diagnostic controller is
+source-reviewed only; the preceding attempt failed before launching Rust and
+provides no new telemetry about the earlier policy-limit failure.
+
+This Markdown/README annex follows qualification and is not rebuilt into the
+qualified binaries. Pending implementations remain on the active branch until
+their compatibility gates pass; full extraction remains the goal.
+
 ## Compatible spooled startup for 70374/70425 — 2026-10-16
 
 Issue #90 introduces separate compatible startup and model owners for explicitly

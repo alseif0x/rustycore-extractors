@@ -76,6 +76,22 @@ See [product scope](docs/forever-product.md),
 [70425 source-reader scope](docs/forever-70425.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
 
+### Active milestone: collision placement compatibility
+
+The current implementation is tracked in
+[issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92).
+
+- [x] Implement serial placements over the compatible model collector.
+- [x] Pass the eight software qualification commands, including 3,388 tests
+  in each debug/release profile and 31 new placement tests per profile.
+- [ ] Complete comparison with the original C++ extractor.
+- [ ] Integrate world traversal, parent replay and final VMap output.
+- [ ] Validate real resources, product integration and RustyCore runtime use.
+
+This checkpoint covers library software. The
+[collision guide](docs/forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17)
+records the tested source and remaining acceptance gates.
+
 ## Build the Rust product
 
 The workspace pins **Rust 1.98.0** in [rust-toolchain.toml](rust-toolchain.toml).

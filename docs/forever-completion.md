@@ -39,6 +39,28 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible placement software checkpoint — 2026-10-17
+
+Issue #92's compatible serial placement bridge passes all eight software
+qualification commands: 3,388 workspace tests / 26 historical ignores per
+debug/release profile, all 31 new placement methods in each, both product
+builds, 424 source contracts / two skips, 165 distribution tests / one skip,
+Clippy and formatting. Independent terminal software QA is
+`0183b7402e560c5d58917c2cc7b5e7e03949885912f8fca74b0a361aa2296e64`.
+Functional `c5267371f827e42bd94ff3824f6d97336ca821c0` binds all 778 selected
+Git inputs to frozen C9; 41 additional inputs retain its offline build closure.
+The source was uncommitted at qualification, then bound byte for byte.
+
+Native placement comparison remains unexecuted. World traversal, parent replay,
+the owned empty cache barrier and final compatible VMap assembly remain open,
+alongside required real resources, navigation, product/runtime integration and
+reproducible Linux delivery. The latest diagnostic attempt fails before any Rust
+target call; the first actual exception remains unknown. A separately reviewed
+source correction binds the historical controller helper to its original source
+owner. Neither that source review nor the failed attempt accepts acquisition or
+diagnostic telemetry. This later documentation annex is not rebuilt into the
+qualified binaries. See the [collision checkpoint](forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17).
+
 ## Compatible startup checkpoint — 2026-10-16
 
 Issue #90 qualifies separate Linux compatible spooled startup/model owners for
