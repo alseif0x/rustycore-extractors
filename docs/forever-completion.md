@@ -39,6 +39,18 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Explicit70425 liquid reader prerequisite — 2026-10-17
+
+Two fixed-catalog complete liquid reader APIs now have seventeen passing
+synthetic methods in each profile and full DB2 library regression checks
+(441 passed / one historical ignore per profile), package all-target Clippy
+and focused formatting. Generic readers and limits retain their contracts.
+See the [reader scope](forever-70425.md#complete-liquid-reader-apis--2026-10-17).
+This supplies a reader prerequisite for compatible world integration; real
+liquid acquisition, the world owner, final VMaps, product/runtime and complete
+Linux delivery remain open. The frozen GNU15 comparison candidate does not
+contain this later source delta.
+
 ## GNU15-compatible placement software checkpoint — 2026-10-17
 
 C11 passes all eight software commands for the separately selected GNU15-v2

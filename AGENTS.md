@@ -31,6 +31,21 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Explicit70425 complete liquid reader library — 2026-10-17
+
+Fixed `read_liquid_materials_70425` and `read_liquid_types_70425` APIs select
+the existing `wowdbdefs-70425-v1` catalog and reuse complete-source decoding
+and copy semantics. Generic selectors and resource limits retain their behavior.
+Seventeen new synthetic methods pass in each debug/release profile; each full
+DB2 library run passes 441 tests / one historical ignore. Package all-target
+Clippy and formatting of the three changed Rust files pass. The initial focused
+run's incorrect parent-count error expectation remains a failed invocation;
+the corrected test matches existing parser precedence without changing production.
+This is library software evidence only, separate from frozen C11 and the updated
+comparison caller. Real liquid acquisition, compatible world integration, final
+VMaps, product/runtime and complete Linux delivery remain open. See
+`docs/forever-70425.md`.
+
 ### GNU15-compatible placement software — 2026-10-17
 
 Issue #92's separately selected GNU15-compatible v2 path passes all eight C11

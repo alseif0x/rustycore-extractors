@@ -28,6 +28,33 @@ That review is `4f82ddfca8c186f1d9640abb6f6604acda6f7a9323b85782e18f17ba908a10ca
 
 ## Software evidence
 
+### Complete liquid reader APIs — 2026-10-17
+
+`forever_db2::terrain_sources::read_liquid_materials_70425` and
+`read_liquid_types_70425` select the fixed `wowdbdefs-70425-v1` catalog,
+including its table-hash and layout gates. They reuse the complete-source
+decoder, numeric projections and ordered copy replay. Existing generic readers
+keep their original selection and behavior. Identical wire schemas cannot
+identify a client build; acquisition must still admit the intended collection.
+
+Seventeen new synthetic tests pass in both debug and release. Each full DB2
+library run passes 441 tests with one historical ignore; all seventeen new
+methods execute with no ignores. Package all-target Clippy and formatting of
+the three changed Rust files also pass. Checks cover catalog identity, numeric
+extremes, duplicate and repaired IDs, copy semantics, complete empty sources,
+hash/layout rejection, malformed extents, unselected fields and existing limits.
+The first focused run failed an incorrect test expectation for an invalid
+parent-count header. The corrected expectation matches the existing parser
+and legacy test; production rejection behavior was unchanged.
+
+This is library software evidence. No new client read or native comparison was
+performed. Complete liquid acquisition, same-owner compatible world traversal,
+final VMaps, a 70425 product profile and runtime acceptance remain pending.
+These source changes are separate from the frozen GNU15 comparison candidate
+and earlier whole-workspace qualifications below.
+
+### Foundation qualification
+
 Functional commit `7c744d5ec8e61d3b02867d68b69a3256ec378bc9` matches all 769
 selected Git sources in the frozen810-file/208-directory candidate. The other
 41 inputs are the unchanged offline build closure. Commit binding is

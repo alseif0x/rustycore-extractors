@@ -81,7 +81,7 @@ source of truth; the table below summarizes the boundaries.
 | Build | What the evidence establishes | Boundary |
 | --- | --- | --- |
 | **70374** | Linux product v10 selects DB2; v11 selects DB2, game tables and raw cameras. Bounded real lifecycle and local packaging evidence exist. Separate available-source collision and terrain work is documented. | Full catalog, complete world resources and runtime support remain open. |
-| **70425** | Explicit disabled-key bootstrap, a separate catalog and available-section Map/GameObjectDisplayInfo readers; a bounded real source-reader probe is recorded. | No 70425 product profile, full component extraction or runtime acceptance follows. |
+| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section Map/GameObjectDisplayInfo readers and complete LiquidMaterial/LiquidType reader APIs. A bounded real Map/GameObject probe is recorded; the new liquid APIs have synthetic library checks. | World integration, real liquid acquisition, a 70425 product profile and runtime acceptance remain open. |
 
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
