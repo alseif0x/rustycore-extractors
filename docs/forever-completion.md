@@ -39,6 +39,31 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## GNU15-compatible placement software checkpoint — 2026-10-17
+
+C11 passes all eight software commands for the separately selected GNU15-v2
+placement path. Debug/release each pass 3,414 tests / 26 historical ignores /
+52 targets, including 26 GNU15 checks and the retained 31 placement, 39 compatible
+collision, 49 explicit70425, 38 disk, eleven mount and four helper methods.
+Both product builds, Clippy and formatting pass, alongside 424 source contracts /
+two skips and 165 distribution checks / one skip. Independent terminal QA passes
+155,908 checks without findings; software-only receipt:
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+
+Functional `dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6` matches all 781 selected
+Git inputs in the 822-file / 211-directory frozen C11 candidate; its 41 offline
+inputs remain unchanged. The snapshot's original uncommitted claim remains
+historical. Original guards close, and matched terminal/initial-empty-group
+evidence precedes one stop. C10 remains failed at Clippy with formatting unrun.
+The earlier N03 joined comparison remains failed without an accepted prefix.
+
+Fresh joined C++ comparison is pending. World traversal, parent replay, the
+owned empty-cache barrier and final compatible VMap remain open, together with
+required real resources, product integration, navigation, RustyCore runtime and
+stable Linux delivery. Windows remains deferred. This documentation delta is not
+rebuilt into the qualified binaries. See the
+[collision checkpoint](forever-collision.md#gnu15-compatible-placement-software-checkpoint--2026-10-17).
+
 ## Compatible placement software checkpoint — 2026-10-17
 
 Issue #92's compatible serial placement bridge passes all eight software
@@ -63,8 +88,9 @@ The first joined comparison campaign stops after ten successful child exits
 because case `70374/N03` produces different WMO child-to-ID ordering. The
 105-child plan remains incomplete, with no accepted prefix. Source diagnosis
 points to native GNU libstdc++ 15 unordered-set traversal versus the sorted Rust
-selection; an explicit compatibility mode is being implemented and is not yet
-qualified. Native placement compatibility remains open. World traversal, parent replay,
+selection. The separately selected GNU15-v2 mode subsequently passes C11
+software qualification, as recorded above. Native placement compatibility remains
+open. World traversal, parent replay,
 the owned empty cache barrier and final compatible VMap assembly remain open,
 alongside required real resources, navigation, product/runtime integration and
 reproducible Linux delivery. The latest diagnostic attempt fails before any Rust

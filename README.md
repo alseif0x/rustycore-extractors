@@ -82,25 +82,24 @@ The current implementation is tracked in
 [issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92).
 
 - [x] Implement serial placements over the compatible model collector.
-- [x] Pass the eight software qualification commands, including 3,388 tests
-  in each debug/release profile and 31 new placement tests per profile.
-- [x] Qualify the Rust and Python comparison harness.
+- [x] Pass the eight software qualification commands, including 3,414 tests
+  in each debug/release profile, 31 placement tests and 26 GNU15 order checks.
+- [x] Qualify the initial Rust and Python comparison harness.
 - [x] Build and independently qualify the original C++ comparison harness
   (71 compilation and link commands).
-- [x] Inspect the Rust/native binaries and their loader dependencies.
-- [ ] Complete comparison with the original C++ extractor.
+- [x] Inspect the original comparison harness binaries and loader dependencies.
+- [ ] Qualify the updated GNU15 harness and complete the C++ comparison.
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-**Current work:** match the original C++ ordering of WMO child placement IDs.
-The correction has passed 3,414 tests in each debug/release profile, including
-26 new checks. Its software campaign then stopped at Clippy on a complex type
-in a test helper. That helper has been simplified; a fresh complete validation
-and the joined C++ comparison are pending. Both failed campaigns remain failed,
-with no accepted partial output.
+**Current work:** compare the separately selected GNU15-compatible WMO child
+ordering with the original C++ extractor. C11 passes all eight software commands,
+including Clippy and formatting. The fresh joined comparison is pending; the
+previous ordering mismatch and C10 Clippy failure remain failed, with no accepted
+partial output.
 
 This checkpoint covers library software. The
-[collision guide](docs/forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17)
+[collision guide](docs/forever-collision.md#gnu15-compatible-placement-software-checkpoint--2026-10-17)
 records the tested source and remaining acceptance gates.
 
 ## Build the Rust product

@@ -1,5 +1,41 @@
 # Forever collision foundation
 
+## GNU15-compatible placement software checkpoint — 2026-10-17
+
+Issue #92 now separately selects GNU15-compatible v2 WMO reference ordering.
+It retains the existing strict and compatible-v1 APIs, sorted selection, payload
+format gates and resource ceilings. The new mode reproduces the pinned GNU15
+bucket traversal and rehash algorithm in bounded Rust software; native output
+compatibility still requires a fresh joined comparison.
+
+Frozen C11 contains 822 files / 211 directories: 781 selected Git files and 41
+retained offline inputs. Every selected source byte matches functional commit
+`dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6`. The snapshot was uncommitted when
+created; its later commit binding does not rewrite that historical source claim.
+
+All eight software commands pass. Debug and release each pass 3,414 tests /
+26 historical ignores / 52 targets, including all 26 GNU15 methods, 31 compatible
+placement methods, 39 compatible collision methods, 49 explicit70425 methods,
+38 disk methods, eleven mount methods and four helper methods. Both product
+builds, Clippy and formatting pass; source contracts pass 424 checks / two skips,
+and distribution checks pass 165 checks / one skip. Independent terminal QA
+passes 155,908 checks without findings; its software-only receipt is
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+Original software guards and source namespaces close unchanged. Two matching
+terminal observations and an empty initial owned group precede the sole stop;
+root progress queries are recorded separately from those observer checks.
+
+C10 remains failed after seven executed commands: Clippy rejects a complex type
+in a test helper, and formatting is not executed. C11 qualifies the helper type-alias
+correction. The earlier joined comparison still fails at N03, with no accepted
+prefix or native placement parity. C11 software acceptance does not repair that
+historical comparison; a fresh joined C++ comparison is pending.
+
+World traversal, parent replay, the owned empty-cache barrier, final compatible
+VMap assembly, required real resources, product integration, navigation,
+RustyCore runtime acceptance and stable Linux delivery remain open. Windows is
+deferred. This documentation delta is not rebuilt into the qualified binaries.
+
 ## Compatible serial placement software checkpoint — 2026-10-17
 
 [Issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92) adds the
@@ -57,12 +93,13 @@ form an accepted prefix.
 
 Source inspection identifies the relevant ordering difference: the pinned
 native reference collects surviving WMO references in GNU libstdc++ 15's
-`unordered_set<uint16>` traversal order, while the current Rust selection is
+`unordered_set<uint16>` traversal order, while the compatible-v1 Rust selection is
 sorted. Missing and no-collision children are excluded before native insertion.
-A separately selected GNU15-compatible mode is in development. It still needs
-fresh software qualification and native comparisons; reversing all references
-would not reproduce bucket collisions and rehashing. Failed-run preservation
-and its terminal cleanup remain separate from compatibility acceptance.
+The separately selected GNU15-compatible v2 mode subsequently passes C11
+software qualification, recorded above. Its fresh native comparison remains
+pending; reversing all references would not reproduce bucket collisions and
+rehashing. Failed-run preservation and terminal cleanup remain separate from
+compatibility acceptance.
 
 The bridge does not implement world traversal, parent replay or the owned empty
 cache barrier. Final compatible VMap assembly, complete required real resources,

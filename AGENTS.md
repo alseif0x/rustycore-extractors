@@ -31,6 +31,30 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### GNU15-compatible placement software — 2026-10-17
+
+Issue #92's separately selected GNU15-compatible v2 path passes all eight C11
+software commands. Functional `dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6` matches
+all 781 selected Git files in frozen C11 (822 files / 211 directories, including
+41 unchanged offline inputs). Its snapshot-time uncommitted claim remains
+historical. Debug/release each pass 3,414 tests / 26 historical ignores /
+52 targets, all 26 GNU15 checks and retained 31 placement, 39 compatible collision,
+49 explicit70425, 38 disk, eleven mount and four helper methods. Both product
+builds, Clippy/format, 424 source contracts / two skips and 165 distribution
+checks / one skip pass. Independent terminal software QA passes 155,908 checks
+without findings; receipt:
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+Original software/source guards close; two matching terminal observations and
+the initial group empty precede one stop, with root progress queries separate.
+Strict/v1 APIs, payload format gates, product defaults and resource caps remain
+unchanged. C10 remains failed at Clippy with formatting unexecuted. The first
+N03 joined comparison remains failed with no accepted prefix; fresh joined C++
+comparison is pending. World traversal, parent replay, the owned empty-cache
+barrier, final compatible VMaps, real resources, product/navigation/runtime and
+stable Linux delivery remain open; Windows is deferred. This documentation delta
+is not rebuilt into qualified binaries. See `docs/forever-collision.md` and
+`docs/forever-completion.md`.
+
 ### Compatible serial placement software — 2026-10-17
 
 Issue #92 adds separately selected Linux compatible placement sessions over one
@@ -46,10 +70,11 @@ profile). The native harness subsequently passes 71 compilation/link commands;
 static inspection accepts seven ELF objects / twenty loader edges. The first
 joined campaign stops after ten successful child exits at `70374/N03`, whose WMO
 child-to-ID order differs. No prefix is accepted. Source diagnosis identifies
-GNU libstdc++ 15 unordered-set traversal versus sorted Rust references; a new
-explicit mode is in development and remains unqualified. Native placement
-compatibility, world traversal, parent replay, the owned
-empty-cache barrier and final compatible VMaps remain unaccepted. This later
+GNU libstdc++ 15 unordered-set traversal versus sorted Rust references. The later
+separately selected GNU15-v2 mode passes C11 software qualification above;
+native comparison remains pending. Native placement compatibility, world
+traversal, parent replay, the owned empty-cache barrier and final compatible
+VMaps remain unaccepted. This later
 documentation annex is not rebuilt into the qualified binaries. See
 `docs/forever-collision.md` and `docs/forever-completion.md`; full Linux extraction
 remains the goal.
