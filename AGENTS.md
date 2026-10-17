@@ -31,7 +31,6 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
-
 ## Progress and evidence log
 
 Dated implementation checkpoints, acceptance evidence, receipt hashes and
