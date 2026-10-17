@@ -1,5 +1,24 @@
 # Forever collision foundation
 
+## Fresh-directory comparison caller — 2026-10-17
+
+The comparison tools now select fresh working directories through an explicit
+path binding. On the qualified `6912551` base, this revision passes all seven
+software commands: 58 and 110 Python methods, eight Rust methods per
+debug/release profile with no ignores, release build, example Clippy and
+formatting. The Rust caller changes four path literals; its eight test methods
+remain unchanged. Independent terminal QA passes 338,432 checks without
+findings (`b9dbada1aa57a0e770c19bbcf77144178c14e22fb841150350615da851689742`).
+
+All 7,490 original software guards, 1,186 directories and 48 aliases close
+unchanged. The copied release executable matches the compiler output in full. Two numeric
+terminal observations and the empty initial owned group precede the sole
+successful stop. Python traces are empty; compiler traces retain their existing
+classification. Rust test, parent and pre-execution networking remain
+unobserved. This accepts the comparison tools' software qualification. Static
+inspection of these newly built binaries and the fresh complete joined C++
+comparison remain pending; the earlier failed comparison stays failed.
+
 ## GNU15 complete no-collision WMO correction — 2026-10-17
 
 The explicit GNU15-v2 collector now omits a WMO whose complete root and required
