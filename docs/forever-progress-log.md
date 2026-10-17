@@ -3119,6 +3119,16 @@ correction was re-run in the full distribution suite. No fresh current v14
 clippy, workspace debug/release, or binary-build run was made in this closeout;
 the earlier pre-v14 run above does not transfer acceptance to this target.
 
+Both debug and release logs list 19 phase-1 tests and execute them: 7
+`product70425_*` driver cases, 7 `v14_verify_*`, and 5 `plan::v14_tests::*`.
+Resume with six fresh owner repositories is tested by
+`driver::disk::compatible::tests::product70425_resume_recomputes_with_fresh_six_repositories`;
+startup assembly, publication and offline link verification by
+`driver::disk::compatible::tests::product70425_genuine_startup_world_models_package_and_offline_links`.
+Coverage/admission cases are `verify::compatible_vmaps::tests::v14_verify_*` and
+`plan::v14_tests::*`. Synthetic tests only: no real-client extraction,
+full-world resources or runtime acceptance.
+
 ## Unqualified status
 
 No real-client extraction, RustyCore runtime verification, release acceptance,
