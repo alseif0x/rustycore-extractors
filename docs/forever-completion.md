@@ -51,6 +51,12 @@ Functional `c5267371f827e42bd94ff3824f6d97336ca821c0` binds all 778 selected
 Git inputs to frozen C9; 41 additional inputs retain its offline build closure.
 The source was uncommitted at qualification, then bound byte for byte.
 
+The separate comparison harness now passes all seven software commands:
+42 comparator tests, 73 independent constructor tests, eight Rust methods in
+each profile, release compilation, Clippy and formatting. Independent terminal
+QA passes without findings. This qualifies the harness; it does not execute
+the original C++ placement comparison or generate its authored fixtures.
+
 Native placement comparison remains unexecuted. World traversal, parent replay,
 the owned empty cache barrier and final compatible VMap assembly remain open,
 alongside required real resources, navigation, product/runtime integration and

@@ -84,6 +84,7 @@ The current implementation is tracked in
 - [x] Implement serial placements over the compatible model collector.
 - [x] Pass the eight software qualification commands, including 3,388 tests
   in each debug/release profile and 31 new placement tests per profile.
+- [x] Qualify the Rust and Python comparison harness.
 - [ ] Complete comparison with the original C++ extractor.
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.

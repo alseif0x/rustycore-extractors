@@ -27,6 +27,19 @@ stopped. This accepts software qualification only. Original C++ placement
 comparison is still unexecuted; its reviewed source and independent constructor
 proposal do not establish compatibility acceptance.
 
+The separate Rust/Python comparison harness subsequently passes seven software
+commands: 42 comparator methods, 73 independent constructor methods and eight
+private Rust example methods per debug/release profile, plus release build,
+Clippy and formatting. Independent terminal QA passes 32,296 checks without
+findings. Root software acceptance is
+`c0527d2dd0609ca73b4b39f64a3b89b721be86f6b1232183c64b024abbc3a6ca`.
+The formatted example retains the original authored-case and constructor
+authority. Qualification does not run the fixture generator, constructor CLI,
+native targets, real client or joined comparison campaign. The root terminal
+closing used an inline driver without saved original source/streams; QA binds
+its saved terminal and stop evidence, with a later attestation labelled as
+testimony only. Runtime ELF inspection and native comparison remain separate.
+
 The bridge does not implement world traversal, parent replay or the owned empty
 cache barrier. Final compatible VMap assembly, complete required real resources,
 navigation, product integration, RustyCore runtime acceptance and reproducible
