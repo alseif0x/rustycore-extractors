@@ -3183,16 +3183,32 @@ reports `rebuilt` and reproduces the original binary byte-for-byte. `attempt1`,
 the extracted `moved-source` directory and `rebuild1` are retained under
 `/home/joe/.local/share/rustycore-distribution-v14-20261017/`.
 
-Real extraction for target profiles 70374/70425 remains unperformed: no client for
-either profile is installed here; the installed client is 1.60.1.70450, not an
-implemented target, and the bounded live helper admits only 70170/70205. No older
-or other build acceptance transfers. No RustyCore server binary is built; the
-runtime declares 1.60.1 build 70170, so target-profile runtime acceptance is
-absent. C++ generations A and B were rejected. R4 has static inspection (seven
-objects / twenty edges) and software QA, but independent terminal ELF-lifecycle QA
-is pending. The finite-105 role-rebind plan is source-plan-only pending explicit
-root GO; its 105 real processes were not launched. No full extraction, runtime,
-release or publication acceptance follows.
+Real extraction for target profiles 70374/70425 remains unperformed: neither
+profile is installed. The only active product/version rows in the local
+`.build.info` are `wow_classic_era 1.15.9.70003` and `wow_classic_beta
+1.60.1.70450` (metadata fields only; no client payload was read; the local path
+is selected by `.opencode/environment.sh:25`). The bounded live helper admits
+only 70170/70205 (`.opencode/live-check.py:35`). No older or other build
+acceptance transfers.
+
+Correction (2026-10-17): the earlier wording that no RustyCore server binary
+existed was inaccurate: the local integration checkout contains built binaries.
+`stat -c '%n %y' target/release/world-server target/debug/forever-world-server`
+reported `target/release/world-server` dated 2026-09-20 and
+`target/debug/forever-world-server` dated 2026-10-03. The runtime targets
+`1.60.1.70170` (`/home/joe/projects/dream/wow/rustycore/AGENTS.md:13`;
+`README.md:210`); `grep -R -n -E '70374|70425' crates` returned no matches.
+Target-profile runtime acceptance is absent because of that version mismatch,
+not because no binary exists. The runtime was not executed; this remains an
+unperformed gate.
+
+C++ generations A and B were rejected. R4 retains its static inspection (seven
+objects / twenty edges) and software QA; its independent terminal review is
+recorded later in this same entry as closed, static software-only, with the
+closing record's own `independent_terminal_QA` field left as historical
+`pending`. The finite-105 role-rebind plan remains source-plan-only pending
+explicit root GO; its 105 real processes were not launched. No full extraction,
+runtime, release or publication acceptance follows.
 
 ## 2026-10-17 — combined-static terminal QA, clean-HEAD package, and the 105-process block
 
@@ -3240,3 +3256,24 @@ unmodified `pending`. This does not establish runtime, product, full-goal,
 source-plan-only; the 105 real processes were not launched and require explicit
 authorization from the root. C++ generations A and B remain rejected. The C++
 comparison remains open and unaccepted.
+
+Publication record: PR #93 merged into `forever` with merge commit
+`7308c4436b52fa25f91c40ccdadd7709992d110d`; `forever` now heads there, and
+`codex/compatible-spooled-placements` is deleted locally and remotely. The only
+pre-merge conflicts were `AGENTS.md` and this log: `AGENTS.md` took the upstream
+version (the sole local difference was one blank line), while this log took the
+branch version, a strict superset of the upstream log, so no entry was lost.
+Conflict-resolution merge commit `7881de976413c33ed8b1946c4240b9e4748f776e`
+changed no product source, test or contract. At that commit the merged tree
+re-passed the full 14-step local acceptance (`…/repologs/repo-acceptance-result-v4-merged.tsv`,
+console `…/repologs/console4.txt`); after the final documentation change, Python
+gates were green: contracts 378 OK, distribution 166 OK with one skip, and
+source contracts 431 OK with two skips.
+
+Repository CI, which produced no runs for feature-branch pushes, ran for the
+merged state: Linux workspace jobs passed in debug and release, and the
+standalone Ubuntu build passed. Windows jobs and the Windows C++ build were
+still running when recorded; Windows remains deferred. The `3.4.3` branch and
+preserved Windows draft `codex/forever-windows-disk-world` are untouched. A merge
+to the default branch is not release authorization and establishes no real
+extraction, full-world resources or runtime acceptance.
