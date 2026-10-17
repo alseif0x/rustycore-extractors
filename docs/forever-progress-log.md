@@ -3231,6 +3231,14 @@ file. All six directories (attempt1, moved-source, rebuild1, attempt2,
 moved-source2 and rebuild2) are retained. Packaging establishes archive integrity
 and reproducibility only, not real extraction, runtime or release acceptance.
 
+`python3 .opencode/live-check.py live`, run after sourcing
+`.opencode/environment.sh`, returned `{"status": "error", "code": "unsupported_client"}`
+with exit status 3. The refusal occurs at the `.build.info` admission check, which
+uses its `Product`, `Active` and `Version` fields (lines 28–39), before run-directory
+creation (lines 40–46); no client payload was read and extraction was not attempted,
+so live acceptance cannot run on this workstation for either target profile or for
+the authorized 70170/70205 task.
+
 R4 `pathv2` combined-static root-observer terminal QA is closed under static
 analysis. Review files are
 `…/forever-product-runs/linux-functional-db2-20261015-39o2hd2n/qa/compatible-committed691-pathv2-combined-static-terminal-independent-v1/review-v1.json`
@@ -3270,10 +3278,20 @@ console `…/repologs/console4.txt`); after the final documentation change, Pyth
 gates were green: contracts 378 OK, distribution 166 OK with one skip, and
 source contracts 431 OK with two skips.
 
-Repository CI, which produced no runs for feature-branch pushes, ran for the
-merged state: Linux workspace jobs passed in debug and release, and the
-standalone Ubuntu build passed. Windows jobs and the Windows C++ build were
-still running when recorded; Windows remains deferred. The `3.4.3` branch and
+Run 39066276935 (`Forever Rust synthetic checks`, `pull_request`, head `fbbac923`):
+`Linux workspace (debug)`, `Linux workspace (release)`, and
+`Windows workspace read consumers and output guards` succeeded;
+`Windows resident product and package recovery` was still running when recorded.
+Run 39066276876 (`Standalone C++ build`, `pull_request`, head `fbbac923`) succeeded;
+both `build (ubuntu-24.04, Ninja)` and
+`build (windows-2022, Visual Studio 17 2022)` succeeded. Run 39066300924
+(`Forever Rust synthetic checks`, `push`, head `7308c443`, the merge commit) was
+cancelled when a later documentation commit was pushed to `forever` and superseded
+it in the workflow's concurrency group. Run 39067172341 is a fresh `Forever Rust
+synthetic checks` run for documentation commit `0cae2061`, in progress when
+recorded. Windows job results do not change the deferred Windows scope, and CI on
+the pull-request head does not establish real extraction, full-world resources or
+runtime acceptance. The `3.4.3` branch and
 preserved Windows draft `codex/forever-windows-disk-world` are untouched. A merge
 to the default branch is not release authorization and establishes no real
 extraction, full-world resources or runtime acceptance.
