@@ -92,10 +92,12 @@ The current implementation is tracked in
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-**Current blocker:** the first joined comparison stopped at a WMO case where
-Rust assigned the child placement IDs in a different order from the original
-C++ tool. The correction is in development; that failed campaign establishes
-no placement compatibility or accepted partial output.
+**Current work:** match the original C++ ordering of WMO child placement IDs.
+The correction has passed 3,414 tests in each debug/release profile, including
+26 new checks. Its software campaign then stopped at Clippy on a complex type
+in a test helper. That helper has been simplified; a fresh complete validation
+and the joined C++ comparison are pending. Both failed campaigns remain failed,
+with no accepted partial output.
 
 This checkpoint covers library software. The
 [collision guide](docs/forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17)
