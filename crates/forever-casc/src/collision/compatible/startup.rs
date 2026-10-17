@@ -7,7 +7,7 @@ use crate::collision::{
     Facts, add,
     available_70374::{self as available, TableFacts},
     gameobjects,
-    payload::CallbackFailure,
+    payload::{self, CallbackFailure},
     spool::Spool,
 };
 use crate::local_store::LocalStore;
@@ -15,9 +15,13 @@ use forever_db2::availability as db2;
 use forever_vmap::{gameobject_models, wmo::liquid::LiquidLookup};
 
 pub type Error = available::spooled::Error;
-static EMPTY: gameobjects::EmptyLookup = gameobjects::EmptyLookup;
+pub(super) static EMPTY: gameobjects::EmptyLookup = gameobjects::EmptyLookup;
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-spooled-startup-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-spooled-startup-v1";
+pub const PROFILE_GNU15_70374: &str =
+    "linux70374-disabled-key-compatible-spooled-startup-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70425: &str =
+    "linux70425-disabled-key-compatible-spooled-startup-gnu15-native-order-v2";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Disposition {
     Normal(gameobjects::Outcome),
@@ -58,6 +62,10 @@ pub struct Context<'s, 'l, L: LiquidLookup + ?Sized> {
     collector: Collector<'s, 'l, L>,
 }
 impl<'s, 'l, L: LiquidLookup + ?Sized> Context<'s, 'l, L> {
+    pub fn profile(&self) -> &'static str {
+        profile(self.collector.target(), self.collector.native_order())
+    }
+
     pub fn data(&self) -> Result<&Data, Error> {
         self.collector.facts()?;
         Ok(&self.data)
@@ -74,6 +82,38 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Context<'s, 'l, L> {
             collector: self.collector.with_lookup(lookup)?,
         })
     }
+    pub(in crate::collision) fn try_with_lookup<'n, N: LiquidLookup + ?Sized>(
+        self,
+        lookup: &'n N,
+    ) -> payload::LookupTransition<Context<'s, 'n, N>, Self> {
+        let Self { data, collector } = self;
+        match collector.try_with_lookup(lookup) {
+            payload::LookupTransition::Ready(collector) => {
+                payload::LookupTransition::Ready(Context { data, collector })
+            }
+            payload::LookupTransition::Failed(collector, error) => {
+                payload::LookupTransition::Failed(Context { data, collector }, error)
+            }
+        }
+    }
+    pub(in crate::collision) fn finish_with_topology(
+        self,
+        topology: crate::collision::world::Topology,
+    ) -> Result<(CompletedStartup, crate::collision::world::Topology), Error> {
+        let retained = add(
+            self.data.engine.stats.resident_bytes,
+            topology.resident_bytes(),
+        )
+        .map_err(available::Error::Collision)?;
+        let extraction = self.collector.finish_with_external(retained)?;
+        Ok((
+            CompletedStartup {
+                data: self.data,
+                extraction,
+            },
+            topology,
+        ))
+    }
     pub fn finish(self) -> Result<CompletedStartup, Error> {
         let extraction = self
             .collector
@@ -89,6 +129,10 @@ pub struct CompletedStartup {
     extraction: Completed,
 }
 impl CompletedStartup {
+    pub fn profile(&self) -> &'static str {
+        profile(self.extraction.target, self.extraction.state.native_order)
+    }
+
     pub fn data(&mut self) -> Result<&Data, Error> {
         self.extraction.verify_unchanged()?;
         Ok(&self.data)
@@ -102,14 +146,36 @@ pub fn extract_startup_fdid_70374(
     limits: gameobjects::Limits,
     spool: Spool,
 ) -> Result<Startup<'_>, Error> {
-    extract(store, limits, spool, Target::Build70374)
+    extract(store, limits, spool, Target::Build70374, false)
 }
 pub fn extract_startup_fdid_70425(
     store: &mut LocalStore,
     limits: gameobjects::Limits,
     spool: Spool,
 ) -> Result<Startup<'_>, Error> {
-    extract(store, limits, spool, Target::Build70425)
+    extract(store, limits, spool, Target::Build70425, false)
+}
+pub fn extract_startup_fdid_native_gnu15_70374(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+    spool: Spool,
+) -> Result<Startup<'_>, Error> {
+    extract(store, limits, spool, Target::Build70374, true)
+}
+pub fn extract_startup_fdid_native_gnu15_70425(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+    spool: Spool,
+) -> Result<Startup<'_>, Error> {
+    extract(store, limits, spool, Target::Build70425, true)
+}
+fn profile(target: Target, native_order: bool) -> &'static str {
+    match (target, native_order) {
+        (Target::Build70374, false) => PROFILE_70374,
+        (Target::Build70425, false) => PROFILE_70425,
+        (Target::Build70374, true) => PROFILE_GNU15_70374,
+        (Target::Build70425, true) => PROFILE_GNU15_70425,
+    }
 }
 fn bridge(e: CallbackFailure<Error>) -> Error {
     match e {
@@ -122,9 +188,17 @@ fn extract(
     limits: gameobjects::Limits,
     spool: Spool,
     target: Target,
+    native_order: bool,
 ) -> Result<Startup<'_>, Error> {
     gameobjects::spooled::validate_resources(limits, spool.resources())?;
-    let mut collector = Collector::new(store, &EMPTY, target, limits.collision, spool)?;
+    let mut collector = Collector::new_with_native_order(
+        store,
+        &EMPTY,
+        target,
+        limits.collision,
+        spool,
+        native_order,
+    )?;
     let result = extract_data(&mut collector, limits, target);
     let data = collector
         .inner

@@ -28,6 +28,22 @@ That review is `4f82ddfca8c186f1d9640abb6f6604acda6f7a9323b85782e18f17ba908a10ca
 
 ## Software evidence
 
+### Same-owner compatible preparation — 2026-10-17
+
+The separate `collision::compatible::world` API now connects available 70425
+Map materialization and the complete liquid readers below to authentic startup.
+It preserves the collector, model and negative caches, handles, native ordering
+and cumulative resources through guarded lookup changes. It returns completed
+startup and topology only; WDT/ADT traversal and final VMaps remain separate.
+
+Focused debug/release each pass 43 compatible methods, including all 24 new
+preparation controls across both target builds. All-target CASC Clippy and
+focused formatting pass. Initial fixture failures remain preserved. No real
+liquid acquisition, new client/native execution, 70425 product profile or runtime
+acceptance follows. See the [collision scope](forever-collision.md#compatible-world-preparation-library--2026-10-17).
+Each full CASC library profile also passes 1,586 methods / five historical
+ignores, including all 24 new methods.
+
 ### Complete liquid reader APIs — 2026-10-17
 
 `forever_db2::terrain_sources::read_liquid_materials_70425` and

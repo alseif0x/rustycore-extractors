@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Modified 2026-10-12: shared original world preparation with typed ledgers.
+// Modified 2026-10-17: explicit70425 complete liquid selector; prior 2026-10-12: shared original world preparation with typed ledgers.
 //! Identical closed readers, source order, copy replay and capacity admission
 //! for the native resident and private spooled world owners.
 use super::{
@@ -161,14 +161,53 @@ pub(super) fn prepare<A: Access>(
 pub(in crate::collision) fn prepare_liquids<A: Access>(
     access: &mut A,
     limits: Limits,
+    retained: usize,
+) -> Result<(super::Lookups, [TableFacts; 2], usize), Failure<A::Error>> {
+    prepare_liquids_with_readers(
+        access,
+        limits,
+        retained,
+        source::read_liquid_materials,
+        source::read_liquid_types,
+    )
+}
+
+// Closed compatible target only; legacy entry points keep their reader policy.
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn prepare_liquids_target<A: Access>(
+    access: &mut A,
+    limits: Limits,
+    retained: usize,
+    target: crate::collision::target::Target,
+) -> Result<(super::Lookups, [TableFacts; 2], usize), Failure<A::Error>> {
+    match target {
+        crate::collision::target::Target::Build70374 => prepare_liquids(access, limits, retained),
+        crate::collision::target::Target::Build70425 => prepare_liquids_with_readers(
+            access,
+            limits,
+            retained,
+            source::read_liquid_materials_70425,
+            source::read_liquid_types_70425,
+        ),
+    }
+}
+
+fn prepare_liquids_with_readers<A: Access>(
+    access: &mut A,
+    limits: Limits,
     mut retained: usize,
+    material_reader: fn(
+        &[u8],
+    )
+        -> Result<source::SourceRecords<source::LiquidMaterialFields>, RecordError>,
+    type_reader: fn(&[u8]) -> Result<source::SourceRecords<source::LiquidTypeFields>, RecordError>,
 ) -> Result<(super::Lookups, [TableFacts; 2], usize), Failure<A::Error>> {
     let (snapshot, mut material_facts) = decode(
         access,
         MATERIAL_FILE_DATA_ID,
         false,
         limits,
-        source::read_liquid_materials,
+        material_reader,
     )?;
     let materials = replay(access, &snapshot, limits, retained)?;
     material_facts.materialized_rows = materials.len();
@@ -179,13 +218,7 @@ pub(in crate::collision) fn prepare_liquids<A: Access>(
         .release_external(material_facts.decode_allowance_bytes)
         .map_err(Failure::Collector)?;
 
-    let (snapshot, mut type_facts) = decode(
-        access,
-        TYPE_FILE_DATA_ID,
-        true,
-        limits,
-        source::read_liquid_types,
-    )?;
+    let (snapshot, mut type_facts) = decode(access, TYPE_FILE_DATA_ID, true, limits, type_reader)?;
     let types = replay(access, &snapshot, limits, retained)?;
     type_facts.materialized_rows = types.len();
     type_facts.retained_bytes = capacity(&types)?;

@@ -1,5 +1,57 @@
 # Forever collision foundation
 
+## Compatible world preparation library — 2026-10-17
+
+`collision::compatible::world::{prepare, prepare_selected}` consumes authentic
+compatible startup for build 70374 or 70425. It acquires available Map rows and
+complete LiquidMaterial/LiquidType sources, validates the selected topology,
+and retains the same collector, payload repository, model handles, negative
+cache and cumulative ledger. New explicit GNU15 startup selectors retain the
+reference ordering through lookup changes; existing v1 selectors remain separate.
+
+The prepared owner exposes guarded facts and a whole-run `with_context`
+callback. A serial placement session can span that callback without resetting
+IDs or model state. Map, lookup, topology and declared sink capacities remain
+charged while live. Uninvoked callback captures and the sink drop before final
+failure guards; source or spool changes retain priority over the original error.
+These accounting limits do not bound arbitrary callback allocations or RSS.
+
+`finish_preparation` returns genuine completed startup and its authenticated
+topology. It does not return a completed world or declare traversal successful.
+This increment performs no WDT/ADT traversal, immediate-parent cache replay,
+final VMap assembly or product publication. Complete real resources, navigation,
+runtime acceptance and stable Linux distribution remain open.
+
+Focused debug/release checks each pass 43 compatible methods, including all 24
+new preparation controls, with no ignores. Each complete CASC library profile
+also passes 1,586 methods / five historical ignores, with all 24 new methods
+executed. Package all-target Clippy and focused formatting pass. The initial
+run remains failed at 22 passed / two failed: one
+WMO fixture omitted the startup-required MVER prefix, and one cache test assumed
+an unclassified missing GODI input created a typed model identity. Test-only
+corrections preserve production classification and explicitly exercise a typed
+M2 missing-cache entry across lookup transitions. No new client or original
+native execution supplies this library evidence. Frozen C11 and its comparison
+caller do not contain this later preparation delta.
+
+## Updated GNU15 comparison harness software — 2026-10-17
+
+The corrected formatted caller passes all seven software commands: 42 comparator
+methods, 94 constructor/admission methods, eight private Rust methods in each
+profile, release build, Clippy and formatting. Independent terminal review passes
+201,600 checks without findings; software-only receipt:
+`6b34054339bd4dda52f075ae59f775d1321f3da64c50a92b3a37c69041ef633c`.
+The authored and formatted caller identities remain distinct. Original source,
+guard, copied-binary and current compiler-output facts close; two matching
+terminal observations and an empty initial group precede one stop. One separate
+root progress query is recorded. The preceding seven-command attempt remains
+failed at formatting, with no accepted prefix.
+
+This qualifies the updated Rust/Python software harness only. The original C++
+71-command build remains separately qualified; fresh combined static inspection
+and the complete joined comparison are still pending. No world, real acquisition,
+product or runtime acceptance follows from these software checks.
+
 ## GNU15-compatible placement software checkpoint — 2026-10-17
 
 Issue #92 now separately selects GNU15-compatible v2 WMO reference ordering.

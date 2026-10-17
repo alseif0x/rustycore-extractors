@@ -31,6 +31,31 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Compatible world preparation library — 2026-10-17
+
+Separate `collision::compatible::world` preparation now acquires available
+70374/70425 Map rows and complete liquids on authentic compatible startup,
+retaining one collector/cache/payload owner, handles, target/order and ledger.
+Guarded callbacks retain topology/lookups; uninvoked captures and sink drop
+before final error guards. Finishing yields genuine completed startup and
+topology, not a completed world. Focused debug/release each pass 43 compatible
+methods, including all 24 new controls; package all-target Clippy and focused
+formatting pass. Full CASC library regression passes 1,586 methods / five
+historical ignores per profile, including all 24 new methods. Initial
+22-pass/two-failure fixture checks remain failed;
+test-only corrections preserve production classification and typed cache policy.
+No new client/native execution follows. Traversal, parent own-cache replay,
+empty barriers, final VMaps, product/navigation/runtime and Linux delivery remain
+open. This later source is outside frozen C11 and its comparison caller.
+
+The updated GNU15 comparison harness separately passes seven software commands:
+42 comparator, 94 constructor/admission and eight Rust methods per profile,
+release build, Clippy and formatting. Independent terminal QA passes 201,600
+checks without findings (`6b34054339bd4dda52f075ae59f775d1321f3da64c50a92b3a37c69041ef633c`).
+The preceding formatting failure retains no accepted prefix. Fresh combined
+static inspection and complete joined comparison remain pending. See
+`docs/forever-collision.md`; no real acquisition/product/runtime acceptance follows.
+
 ### Explicit70425 complete liquid reader library — 2026-10-17
 
 Fixed `read_liquid_materials_70425` and `read_liquid_types_70425` APIs select

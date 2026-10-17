@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-16: opt-in staged complete-model acquisition.
 //! Only an exact complete-read MissingFile becomes an omission. This owner is
-//! separate from strict APIs; it implements neither world nor final packaging.
+//! separate from strict APIs; world traversal and final packaging remain separate.
 use super::{
     Class, Error, Extractor, Facts, InputRef, Limits, Model, ModelHandle, ModelRequest, Origin,
     SourceFacts, Status, WmoMetadata, add, capacity, classify, names, payload, reserve,
@@ -14,6 +14,8 @@ mod native_order;
 pub mod startup;
 #[cfg(test)]
 mod tests;
+/// Same-owner available Map/complete liquid world preparation; no traversal.
+pub mod world;
 /// Separately selected serial projection using this compatible collector.
 pub use super::placements::compatible as placements;
 
@@ -770,6 +772,45 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     ) -> Result<T, payload::CollectorError> {
         self.inner.with_compatible_payload(handle, call)
     }
+    pub(in crate::collision) const fn target(&self) -> Target {
+        self.target
+    }
+    pub(in crate::collision) const fn native_order(&self) -> bool {
+        self.state.native_order
+    }
+    pub(crate) fn read_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<(Vec<u8>, SourceFacts), payload::CollectorError> {
+        self.inner.read_source(id, cap)
+    }
+    pub(in crate::collision) fn read_available_source(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<crate::local_store::availability::AvailableSource, payload::CollectorError> {
+        let result = self
+            .inner
+            .inner
+            .read_available_source_target(id, cap, self.target);
+        self.inner.checked(result)
+    }
+    pub(crate) fn release_source(&mut self, bytes: usize) -> Result<(), payload::CollectorError> {
+        self.inner.release_source(bytes)
+    }
+    pub(crate) fn begin_shared_run(&mut self) -> Result<(), payload::CollectorError> {
+        self.inner.begin_shared_run()
+    }
+    pub fn backend(&self) -> super::spool::BackendProfile {
+        self.inner.backend()
+    }
+    pub(crate) fn memory_ceiling(&self) -> usize {
+        self.inner.memory_ceiling()
+    }
+    pub(crate) fn retained_bytes(&self) -> Result<usize, payload::CollectorError> {
+        self.inner.retained_bytes()
+    }
     pub(crate) fn resources(&self) -> super::resources::Profile {
         self.inner.resources()
     }
@@ -828,6 +869,35 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
             target: self.target,
         })
     }
+    // Recover the original owner on failed guard admission so owned user state
+    // can drop before final guards; cache/handles/target/order move unchanged.
+    pub(in crate::collision) fn try_with_lookup<'n, N: LiquidLookup + ?Sized>(
+        self,
+        lookup: &'n N,
+    ) -> payload::LookupTransition<Collector<'s, 'n, N>, Self> {
+        let Self {
+            inner,
+            state,
+            target,
+        } = self;
+        match inner.try_with_lookup(lookup) {
+            payload::LookupTransition::Ready(inner) => {
+                payload::LookupTransition::Ready(Collector {
+                    inner,
+                    state,
+                    target,
+                })
+            }
+            payload::LookupTransition::Failed(inner, error) => payload::LookupTransition::Failed(
+                Collector {
+                    inner,
+                    state,
+                    target,
+                },
+                error,
+            ),
+        }
+    }
     pub fn finish(self) -> Result<Completed, payload::CollectorError> {
         self.finish_with_external(0)
     }
@@ -851,6 +921,18 @@ pub struct Completed {
     target: Target,
 }
 impl Completed {
+    pub const fn backend(&self) -> super::spool::BackendProfile {
+        self.extraction.backend()
+    }
+    pub const fn resources(&self) -> super::resources::Profile {
+        self.extraction.resources()
+    }
+    pub fn payload_shape(
+        &self,
+        handle: ModelHandle,
+    ) -> Result<payload::PayloadShape, payload::CollectorError> {
+        self.extraction.phase_shape(handle)
+    }
     pub fn facts(&self) -> Facts {
         self.extraction.facts()
     }

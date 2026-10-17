@@ -39,6 +39,25 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible world preparation prerequisite — 2026-10-17
+
+The separate 70374/70425 compatible preparation owner now retains authentic
+startup, available Map coverage, complete liquid lookups and selected topology
+on one collector/cache/ledger. Focused debug/release each pass 43 compatible
+methods, including all 24 new controls; package all-target Clippy and focused
+formatting pass. Initial fixture failures remain recorded. The finishing API
+returns completed startup and topology, without claiming a completed world.
+Full CASC library regression separately passes 1,586 methods / five historical
+ignores per profile; all 24 new methods execute.
+
+Traversal, immediate-parent own-cache replay, the empty-cache barrier, final
+VMaps and product integration remain required. There is no new client/native
+execution or real acquisition acceptance. The updated comparison harness also
+passes its seven software commands and independent terminal review; combined
+static inspection and the full joined C++ comparison remain open. See the
+[library scope](forever-collision.md#compatible-world-preparation-library--2026-10-17).
+These source changes are outside frozen C11 and its comparison caller.
+
 ## Explicit70425 liquid reader prerequisite — 2026-10-17
 
 Two fixed-catalog complete liquid reader APIs now have seventeen passing
@@ -47,7 +66,7 @@ synthetic methods in each profile and full DB2 library regression checks
 and focused formatting. Generic readers and limits retain their contracts.
 See the [reader scope](forever-70425.md#complete-liquid-reader-apis--2026-10-17).
 This supplies a reader prerequisite for compatible world integration; real
-liquid acquisition, the world owner, final VMaps, product/runtime and complete
+liquid acquisition, complete world traversal, final VMaps, product/runtime and complete
 Linux delivery remain open. The frozen GNU15 comparison candidate does not
 contain this later source delta.
 

@@ -91,7 +91,7 @@ source of truth; the table below summarizes the boundaries.
 | Build | What the evidence establishes | Boundary |
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
-| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section Map/GameObjectDisplayInfo readers and complete LiquidMaterial/LiquidType reader APIs. A bounded real Map/GameObject probe is recorded; the new liquid APIs have synthetic library checks. | World integration, real liquid acquisition, a 70425 product profile and runtime acceptance remain open. |
+| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Shared collector preparation now connects Map/liquids to startup, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Complete world traversal, real liquid acquisition, a 70425 product profile and runtime acceptance remain open. |
 
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
@@ -119,17 +119,19 @@ The current implementation is tracked in
 - [x] Build and independently qualify the original C++ comparison harness
   (71 compilation and link commands).
 - [x] Inspect the original comparison harness binaries and loader dependencies.
-- [ ] Qualify the updated GNU15 harness and complete the C++ comparison.
+- [x] Qualify the updated GNU15 Rust/Python comparison harness.
+- [x] Prepare Map/liquids on the same collector, with synthetic library checks.
+- [ ] Inspect the updated harness binaries and complete the C++ comparison.
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-**Latest result:** the Rust correction passes all eight local software checks,
-including Clippy and formatting. It implements the GNU15 traversal used by the
-reference for WMO child models, which determines their collision identifiers.
+**Latest result:** the updated comparison harness passes its seven software
+checks and independent review. Shared collector preparation passes 43 compatible
+tests in each profile, including 24 new controls, plus Clippy and formatting.
 
-**Next:** qualify the updated comparison harness, then compare complete outputs
-with the original C++ extractor. World traversal, final VMaps and real runtime
-validation follow as separate gates.
+**Next:** inspect the updated comparison binaries and compare complete outputs
+with the original C++ extractor. Complete world traversal, final VMaps and real
+runtime validation remain separate gates.
 
 <details>
 <summary>Validation scope and retained failures</summary>
