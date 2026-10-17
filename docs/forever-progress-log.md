@@ -3183,3 +3183,50 @@ objects / twenty edges) and software QA, but independent terminal ELF-lifecycle 
 is pending. The finite-105 role-rebind plan is source-plan-only pending explicit
 root GO; its 105 real processes were not launched. No full extraction, runtime,
 release or publication acceptance follows.
+
+## 2026-10-17 — combined-static terminal QA, clean-HEAD package, and the 105-process block
+
+From clean committed HEAD `ab12d18de2ffc6e3a0e4ea93310c19946310628d`,
+`tools/package_forever.py build` created
+`/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt2`: 865 files,
+archive SHA-256 `8967d98c6484606907283df75737896f940ea05b5d181156667631ebd25c5992`,
+source SHA-256 `1b027a4103fb6be7e9e601b864e9aa4b85ace64adef9ef7ee7d7d9ff082a9c3c`,
+binary SHA-256 `9d35a107b3a5d93216c036d02039626e72e20b97f07c55b7199acc7c9ab90694`,
+and `full_extractor_complete: false`. `verify --archive` reported `verified` with
+the same binary digest and 865 files. Extracting to `moved-source2` and running
+`rebuild --bundle . --output …/rebuild2` reported `rebuilt`; its binary was
+byte-identical to the original. Unlike attempt1 (864 files, packaged from a tree
+with in-progress work and predating the new test), attempt2 includes
+`crates/forever-extractor/tests/product_v14_cli.rs` and is tied to the audited
+commit; attempt1's archive instead matches source `b69c86e`. The two archive builds
+and the offline rebuild of each extracted archive produced one binary digest.
+Archive and source digests differ because the packaged source sets differ by one
+file. All six directories (attempt1, moved-source, rebuild1, attempt2,
+moved-source2 and rebuild2) are retained. Packaging establishes archive integrity
+and reproducibility only, not real extraction, runtime or release acceptance.
+
+R4 `pathv2` combined-static root-observer terminal QA is closed under static
+analysis. Review files are
+`…/forever-product-runs/linux-functional-db2-20261015-39o2hd2n/qa/compatible-committed691-pathv2-combined-static-terminal-independent-v1/review-v1.json`
+(SHA-256 `817bb19c333f33bd7a3f0aafb36bf2d4f81d4983b2656d244b1dd2fc6c11d04e`)
+and `…/forever-product-runs/linux-functional-db2-20261015-39o2hd2n/qa/compatible-committed691-pathv2-combined-static-terminal-independent-v1/review-reference-v1.json`
+(SHA-256 `ecbf117686ea8e004ce13c1e5a491b2a35a100a4bb6bd6dc667b77559694a3e3`).
+The verdict is `passed-static-software-only`, with no findings, schema
+`independent-compatible-serial-placement-combined-static-terminal-QA-v1`. The
+reviewed closing is
+`~/.local/share/rustycore-caller691-work-v1/next-compatible-committed691-pathv2-combined-static-execution-v1/root-terminal-closing-v1.json`
+(SHA-256 `72838c9c32ceaf7f8fee379e0fcf8c2ff67dd4e2b4fa8b6792285493a6b16420`).
+The reviewer recomputed 39/39 path/digest citations, revalidated 140 recorded stat
+facts, confirmed the terminal facts (unit stopped, initial ownership group empty
+before the sole stop, no query after stop), re-derived the 7-object/20-edge
+closure counts and byte-equal binary copies, and corroborated non-execution of the
+qualified parser, process helper, Rust/native targets, readelf, ldd, loader and
+client from the frozen observer, trace and seccomp proof. The closing claims only
+static software QA; its own `independent_terminal_QA` remains historical,
+unmodified `pending`. This does not establish runtime, product, full-goal,
+105-process-campaign or release acceptance, and transfers no older ELF acceptance.
+
+`next-compatible-committed691-finite105-role-rebind-source-plan-v1` remains
+source-plan-only; the 105 real processes were not launched and require explicit
+authorization from the root. C++ generations A and B remain rejected. The C++
+comparison remains open and unaccepted.
