@@ -2,6 +2,54 @@
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode-go/deepseek-v4.1-flash",
   "default_agent": "orchestrator",
+  "providers": {
+    "opencode-go": {
+      "models": {
+        "deepseek-v4.1-flash": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        },
+        "deepseek-v4-pro": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        }
+      }
+    },
+    "deepseek": {
+      "models": {
+        "deepseek-flash": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        },
+        "deepseek-v4-pro": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        }
+      }
+    },
+    "openai": {
+      "models": {
+        "gpt-6-luna": {
+          "limit": {
+            "context": 272000,
+            "output": 64000
+          }
+        }
+      }
+    }
+  },
+  "tool_output": {
+    "max_lines": 400,
+    "max_bytes": 32000
+  },
   "agents": {
     "build": {
       "disabled": true
@@ -9,5 +57,152 @@
     "plan": {
       "disabled": true
     }
-  }
+  },
+  "mcp": {
+    "servers": {
+      "rea": {
+        "type": "local",
+        "command": [
+          "/home/joe/.local/bin/rea",
+          "mcp"
+        ],
+        "environment": {
+          "GHIDRA_INSTALL_DIR": "/mnt/nvme2/datos/tools/rea/native/ghidra_12.1.4_PUBLIC",
+          "JAVA_HOME": "/mnt/nvme2/datos/tools/rea/native/jdk-21.0.12.1+1",
+          "REA_GHIDRA_STARTUP_TIMEOUT_MS": "1800000",
+          "TMPDIR": "/mnt/nvme2/datos/tools/rea/runtime",
+          "GHIDRA_HEADLESS_MAXMEM": "4G"
+        },
+        "codemode": true,
+        "timeout": {
+          "startup": 30000,
+          "catalog": 30000,
+          "execution": 1860000
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "package": "@prevalentware/opencode-goal-plugin@0.1.64",
+      "options": {
+        "auto_continue": true,
+        "defer_while_tasks_active": true,
+        "max_auto_turns": 25,
+        "locale": "auto"
+      }
+    }
+  ],
+  "policies": [
+    {
+      "action": "tool.use",
+      "resource": "shell:git push --force*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push -f*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * --force*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * -f*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push --mirror*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git reset --hard*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git clean*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git stash drop*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git stash clear*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git worktree remove*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh release create*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh repo delete*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:cargo publish*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:npm publish*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft/**",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:**/.env",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:**/.env.*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:/home/joe/.config/opencode/*-api-key",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft/**",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:**/.env",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:**/.env.*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:/home/joe/.config/opencode/*-api-key",
+      "effect": "deny"
+    }
+  ]
 }
