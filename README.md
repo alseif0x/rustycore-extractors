@@ -122,7 +122,8 @@ The current implementation is tracked in
 - [x] Qualify the updated GNU15 Rust/Python comparison harness.
 - [x] Prepare Map/liquids on the same collector, with synthetic library checks.
 - [x] Add compatible world traversal and immediate-parent own-cache replay.
-- [ ] Inspect the harness binaries rebuilt after the empty-WMO correction.
+- [x] Inspect the harness binaries rebuilt after the empty-WMO correction.
+- [ ] Bind the comparison tools to fresh working directories and qualify that revision.
 - [ ] Complete the joined C++ output comparison.
 - [ ] Connect authentic staging, selected model conversion and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
@@ -136,10 +137,11 @@ The current implementation is tracked in
 | Joined C++ comparison | The preceding attempt failed at a valid WMO without collision geometry. Complete output compatibility remains pending. |
 | Empty-WMO correction | Eleven new controls pass in each profile. The full CASC library passes 1,621 tests per profile with five historical ignores; Clippy and scoped formatting pass. Applies to the explicit GNU15 v2 path. |
 | Current workspace: `6912551` | All eight software checks pass, including 3,490 tests and all 76 new controls in each debug/release profile. Independent review closes without findings. |
-| Updated comparison tools: `6912551` | All seven checks pass: 42 and 94 Python tests, eight Rust tests per profile, release build, Clippy and formatting. Independent review passes; fresh binary inspection and the complete C++ output comparison remain pending. |
+| Updated comparison tools: `6912551` | All seven software checks pass, with independent review. Separate static inspection passes seven ELF objects and twenty dependencies. Fresh comparison directories and the complete C++ output comparison remain pending. |
 
-**Next:** compare complete outputs with the original C++ extractor and connect
-the final VMap pipeline. Follow the active implementation in
+**Next:** bind the harness to fresh comparison directories, compare complete
+outputs with the original C++ extractor and connect the final VMap pipeline.
+Follow the active implementation in
 [PR #93](https://github.com/alseif0x/rustycore-extractors/pull/93).
 Real runtime validation remains a separate gate.
 

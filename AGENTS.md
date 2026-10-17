@@ -75,8 +75,23 @@ without findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba15
 Original 6,592 software guards, 969 directories and 48 aliases close unchanged.
 The rejected low-space preparation remains failed; its separate corrected
 preparation uses another local volume with the same 16 GiB reserve. This is
-caller software evidence only: new binary inspection, complete joined output
-comparison, final VMaps and product/runtime acceptance remain required.
+caller software evidence only; the subsequent static checkpoint follows.
+
+Separate current-caller ELF inspection passes seven objects / twenty dependency
+edges with independent terminal QA, 93,091 checks and no findings
+(`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`).
+Three authenticated original guard roles and a disjoint delta retain all 9,175
+file guards, 1,014 directories and 48 aliases without a flattened global table
+or original-fact rebasing. Per-role document and entry limits remain explicit;
+the aggregate is not claimed to fit the previous 8,192-entry representation.
+One pure parser child exits zero with an empty strict trace. Two numeric parent
+observations and the empty initial group precede one successful stop; parent
+and pre-execution networking remain unobserved. The earlier wrapper argument
+rejection occurred before observer invocation and remains preserved.
+Source review additionally identifies fixed comparison paths. Fresh campaign
+directories require a typed path bridge and new caller qualification before the
+complete joined comparison. Final VMaps, real resources, product/runtime and
+Linux delivery remain open. This documentation is not rebuilt into the binaries.
 
 ### Compatible world traversal library — 2026-10-17
 

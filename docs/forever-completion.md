@@ -61,7 +61,13 @@ The updated external comparison caller then passes all seven software checks:
 42 and 94 Python methods, eight Rust methods per profile without ignores,
 release build, Clippy and formatting. Independent terminal QA passes without
 findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`).
-Its new binary inspection and complete output comparison remain separate gates.
+Separate current-caller static inspection then passes seven ELF objects and
+twenty dependency edges, with independent terminal QA and no findings
+(`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`).
+Authenticated role transport preserves 9,175 original file guards, 1,014
+directories and 48 aliases without a flattened global table or rebasing. This
+accepts static software dependencies only. Fixed harness paths still require
+an explicit bridge and a newly qualified caller for fresh comparison directories.
 A complete joined comparison is still required. Final compatible VMaps, real resources, product integration,
 navigation, runtime and Linux delivery remain open. See the
 [correction scope](forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17).

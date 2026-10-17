@@ -60,8 +60,26 @@ the three compiler traces use their existing classifier. Rust test, parent and
 pre-execution networking remain unobserved. A preceding low-space preparation
 remains failed; a separately reviewed revision uses another local volume with
 the same 16 GiB reserve. No original native binary or full joined comparison runs
-in these software checks. Fresh binary inspection and the full joined
-comparison still need their own evidence.
+in these software checks.
+
+The subsequent current-caller static inspection passes seven ELF objects and
+twenty dependency edges. Independent terminal review passes 93,091 checks
+without findings:
+`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`.
+Its three authenticated original guard roles plus a disjoint delta preserve
+9,175 file guards, 1,014 directories and 48 aliases. The representation retains
+per-role limits and original facts; it does not claim an aggregate 8,192-entry
+limit. Runtime copies and compiler DATA retain separate identities and exact
+byte equality. One parser child exits zero, with an empty strict trace and
+absent child group. Two numeric parent observations and an empty initial group
+precede one stop. Parent/pre-execution networking remains unobserved; no target,
+native extractor or loader executes. A preceding wrapper argument rejection
+happens before the sole observer invocation and remains recorded.
+
+Source review finds fixed directories in the caller, fixture generator,
+comparer and constructor. Preserving failed outputs while using fresh campaign
+directories therefore requires a typed path bridge and a newly qualified caller;
+the static result above does not qualify that future revision.
 
 A new complete joined comparison remains required. Authentic staging, selected
 VMO conversion, final compatible VMaps,
