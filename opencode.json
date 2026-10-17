@@ -33,5 +33,16 @@
         }
       }
     }
-  }
+  },
+  "plugins": [
+    {
+      "package": "@prevalentware/opencode-goal-plugin@0.1.64",
+      "options": {
+        "auto_continue": true,
+        "defer_while_tasks_active": true,
+        "max_auto_turns": 25,
+        "locale": "auto"
+      }
+    }
+  ]
 }
