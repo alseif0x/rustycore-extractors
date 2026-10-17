@@ -241,6 +241,8 @@ enum BootstrapTarget {
     Db2Build70374,
     #[cfg(target_os = "linux")]
     Db2Build70425,
+    #[cfg(target_os = "linux")]
+    Db2Build70450,
 }
 
 impl LocalStore {
@@ -301,6 +303,13 @@ impl LocalStore {
         Self::open_inner(client, options, None, BootstrapTarget::Db2Build70425)
     }
 
+    /// Explicit Linux70450 bootstrap with disabled supplied keys. Raw reads
+    /// authenticate bytes; this does not admit a DB2/component/product profile.
+    #[cfg(target_os = "linux")]
+    pub fn open_db2_70450(client: &Path, options: OpenOptions) -> Result<Self, Error> {
+        Self::open_inner(client, options, None, BootstrapTarget::Db2Build70450)
+    }
+
     fn open_inner(
         client: &Path,
         options: OpenOptions,
@@ -341,6 +350,10 @@ impl LocalStore {
             #[cfg(target_os = "linux")]
             BootstrapTarget::Db2Build70425 => {
                 build_info::parse_db2_70425(&build_bytes, limits.max_build_info_rows)?
+            }
+            #[cfg(target_os = "linux")]
+            BootstrapTarget::Db2Build70450 => {
+                build_info::parse_db2_70450(&build_bytes, limits.max_build_info_rows)?
             }
         };
         budget.retain(build.tags.capacity())?;

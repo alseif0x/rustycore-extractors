@@ -62,6 +62,15 @@ TARGETS = {
         "facts_path": ROOT / "contracts/wowdbdefs-70425-v1.json",
         "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70425_generated.rs",
     },
+    70450: {
+        "pin": "bfebcbc5181f47b954e7886862f92c5577dbbe4a",
+        "manifest_blob": "f95528066d44e1b70ea6cd124a35a5a63685d384",
+        "manifest_sha256": "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a",
+        "expected_tables": 1161,
+        "catalog_id": "wowdbdefs-70450-v1",
+        "facts_path": ROOT / "contracts/wowdbdefs-70450-v1.json",
+        "rust_path": ROOT / "crates/forever-db2/src/records/wowdbdefs_70450_generated.rs",
+    },
 }
 
 COLUMN = re.compile(

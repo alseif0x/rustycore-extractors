@@ -20,17 +20,20 @@ use std::{
 pub use blte::available::{CoverageRange, RangeError, RangeState};
 pub const PROFILE: &str = "linux70374-disabled-key-available-source-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-available-source-v1";
+pub const PROFILE_70450: &str = "linux70450-disabled-key-available-source-v1";
 
 #[derive(Clone, Copy)]
 enum Target {
     Build70374,
     Build70425,
+    Build70450,
 }
 impl Target {
     const fn build(self) -> u32 {
         match self {
             Self::Build70374 => 70374,
             Self::Build70425 => 70425,
+            Self::Build70450 => 70450,
         }
     }
 }
@@ -194,6 +197,38 @@ impl LocalStore {
     ) -> Result<AvailableSource, Error> {
         self.read_file_data_id_available_for_target(
             Target::Build70425,
+            file_data_id,
+            max_decoded_bytes,
+            external_live_bytes,
+            combined_cap,
+        )
+    }
+
+    /// Separate explicit Linux70450 disabled-key capability; it does not inherit
+    /// 70425 metadata admission or establish component/runtime acceptance.
+    pub fn read_file_data_id_available_70450_with_limit(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+    ) -> Result<AvailableSource, Error> {
+        self.read_file_data_id_available_70450_with_external_budget(
+            file_data_id,
+            max_decoded_bytes,
+            0,
+            self.limits.max_memory_bytes,
+        )
+    }
+
+    /// Same strict/partial external-budget accounting, separately70450 gated.
+    pub(crate) fn read_file_data_id_available_70450_with_external_budget(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+        external_live_bytes: usize,
+        combined_cap: usize,
+    ) -> Result<AvailableSource, Error> {
+        self.read_file_data_id_available_for_target(
+            Target::Build70450,
             file_data_id,
             max_decoded_bytes,
             external_live_bytes,

@@ -33,6 +33,15 @@ pub fn admit_db2_70425(client: &Path) -> Result<u32, Error> {
 #[cfg(target_os = "linux")]
 pub(crate) const DB2_70425_CLIENTS: &[(&str, u32)] = &[("1.60.1.70425", 70425)];
 
+/// Separate opt-in Linux build70450 metadata admission; no component acceptance.
+#[cfg(target_os = "linux")]
+pub fn admit_db2_70450(client: &Path) -> Result<u32, Error> {
+    admit_selected(client, |info| parse_supported(info, DB2_70450_CLIENTS))
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) const DB2_70450_CLIENTS: &[(&str, u32)] = &[("1.60.1.70450", 70450)];
+
 fn admit_selected(client: &Path, select: fn(&str) -> Result<u32, Error>) -> Result<u32, Error> {
     #[cfg(windows)]
     let bytes = {
@@ -253,3 +262,7 @@ mod tests {
 #[cfg(all(test, target_os = "linux"))]
 #[path = "admission/bootstrap_70425_tests.rs"]
 mod bootstrap_70425_tests;
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "admission/bootstrap_70450_tests.rs"]
+mod bootstrap_70450_tests;

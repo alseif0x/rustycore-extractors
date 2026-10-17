@@ -958,3 +958,5 @@ fn available_vmap_section_size_and_successful_short_ranges_reject() {
 
 #[path = "target_70425_tests.rs"]
 mod target_70425_tests;
+#[path = "target_70450_tests.rs"]
+mod target_70450_tests;

@@ -23,6 +23,8 @@ mod wowdbdefs_70338_generated;
 mod wowdbdefs_70374_generated;
 #[path = "wowdbdefs_70425_generated.rs"]
 mod wowdbdefs_70425_generated;
+#[path = "wowdbdefs_70450_generated.rs"]
+mod wowdbdefs_70450_generated;
 
 pub const CATALOG_ID: &str = "pinned-metadata-v1";
 pub const SOURCE_COMMIT: &str = "02245dcd245e7433e524577656177723d3e4992e";
@@ -64,6 +66,15 @@ pub const WOWDBDEFS_70425_SOURCE_SHA256: &str =
     "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a";
 pub const WOWDBDEFS_70425_FACTS_SHA256: &str =
     "2150cbfc6a431931d410c3368e5e7b8de2c66b6b6a798d0052886f948624488a";
+
+// Separate build-70450 public schema facts; no acquisition or runtime acceptance.
+pub const WOWDBDEFS_70450_CATALOG_ID: &str = "wowdbdefs-70450-v1";
+pub const WOWDBDEFS_70450_SOURCE_COMMIT: &str = "bfebcbc5181f47b954e7886862f92c5577dbbe4a";
+pub const WOWDBDEFS_70450_SOURCE_BLOB: &str = "f95528066d44e1b70ea6cd124a35a5a63685d384";
+pub const WOWDBDEFS_70450_SOURCE_SHA256: &str =
+    "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a";
+pub const WOWDBDEFS_70450_FACTS_SHA256: &str =
+    "4589beb2e106f5bba4b8a1801b051f40915dca51dc0aafe85350b5b3c24b29c8";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CatalogProvenance {
@@ -110,6 +121,13 @@ pub fn provenance(catalog_id: &str) -> Option<CatalogProvenance> {
             source_blob: WOWDBDEFS_70425_SOURCE_BLOB,
             source_sha256: WOWDBDEFS_70425_SOURCE_SHA256,
             facts_sha256: WOWDBDEFS_70425_FACTS_SHA256,
+        }),
+        WOWDBDEFS_70450_CATALOG_ID => Some(CatalogProvenance {
+            id: WOWDBDEFS_70450_CATALOG_ID,
+            source_commit: WOWDBDEFS_70450_SOURCE_COMMIT,
+            source_blob: WOWDBDEFS_70450_SOURCE_BLOB,
+            source_sha256: WOWDBDEFS_70450_SOURCE_SHA256,
+            facts_sha256: WOWDBDEFS_70450_FACTS_SHA256,
         }),
         _ => None,
     }
@@ -217,6 +235,7 @@ enum CatalogSource {
     WowDbDefs70338,
     WowDbDefs70374,
     WowDbDefs70425,
+    WowDbDefs70450,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -237,6 +256,7 @@ impl CatalogTable {
             CatalogSource::WowDbDefs70338 => wowdbdefs_70338_generated::TABLES,
             CatalogSource::WowDbDefs70374 => wowdbdefs_70374_generated::TABLES,
             CatalogSource::WowDbDefs70425 => wowdbdefs_70425_generated::TABLES,
+            CatalogSource::WowDbDefs70450 => wowdbdefs_70450_generated::TABLES,
         }
     }
 
@@ -247,6 +267,7 @@ impl CatalogTable {
             CatalogSource::WowDbDefs70338 => WOWDBDEFS_70338_CATALOG_ID,
             CatalogSource::WowDbDefs70374 => WOWDBDEFS_70374_CATALOG_ID,
             CatalogSource::WowDbDefs70425 => WOWDBDEFS_70425_CATALOG_ID,
+            CatalogSource::WowDbDefs70450 => WOWDBDEFS_70450_CATALOG_ID,
         }
     }
 
@@ -289,6 +310,7 @@ pub fn tables_for(catalog_id: &str) -> Option<&'static [TableMetadata]> {
         WOWDBDEFS_70338_CATALOG_ID => Some(wowdbdefs_70338_generated::TABLES),
         WOWDBDEFS_70374_CATALOG_ID => Some(wowdbdefs_70374_generated::TABLES),
         WOWDBDEFS_70425_CATALOG_ID => Some(wowdbdefs_70425_generated::TABLES),
+        WOWDBDEFS_70450_CATALOG_ID => Some(wowdbdefs_70450_generated::TABLES),
         _ => None,
     }
 }
@@ -328,6 +350,10 @@ pub fn resolve_for(catalog_id: &str, name: &str) -> Result<Option<CatalogTable>,
         WOWDBDEFS_70425_CATALOG_ID => (
             CatalogSource::WowDbDefs70425,
             wowdbdefs_70425_generated::TABLES,
+        ),
+        WOWDBDEFS_70450_CATALOG_ID => (
+            CatalogSource::WowDbDefs70450,
+            wowdbdefs_70450_generated::TABLES,
         ),
         _ => return Ok(None),
     };

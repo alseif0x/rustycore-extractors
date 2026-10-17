@@ -7,6 +7,7 @@ use crate::{RecordError, records::available_sections, terrain_sources as source}
 
 pub const PROFILE: &str = "wowdbdefs-70374-available-sections-disabled-v1";
 pub const PROFILE_70425: &str = "wowdbdefs-70425-available-sections-disabled-v1";
+pub const PROFILE_70450: &str = "wowdbdefs-70450-available-sections-disabled-v1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Unavailable;
@@ -212,6 +213,27 @@ pub fn read_gameobject_display_info_70425(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
     available_sections::read_gameobjects(input, available_sections::Target::Build70425)
+}
+
+/// Explicit70450 terrain Map projection pinned to its independent catalog.
+/// Sources carry no build number; this binds decoder metadata, not admission.
+pub fn read_map_70450(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::MapFields>, RecordError> {
+    available_sections::read_map(input, available_sections::Target::Build70450)
+}
+/// Explicit70450 VMap Map projection with unchanged source-direct copy,
+/// signed-parent, WDT-zero and attached section-coverage semantics.
+pub fn read_vmap_maps_70450(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::VMapFields>, RecordError> {
+    available_sections::read_vmap_maps(input, available_sections::Target::Build70450)
+}
+/// Explicit70450 GODI projection; no acquisition or component admission.
+pub fn read_gameobject_display_info_70450(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
+    available_sections::read_gameobjects(input, available_sections::Target::Build70450)
 }
 
 #[cfg(test)]

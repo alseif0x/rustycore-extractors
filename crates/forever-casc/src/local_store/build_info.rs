@@ -27,6 +27,11 @@ pub(super) fn parse_db2_70425(bytes: &[u8], max_rows: usize) -> Result<AdmittedB
     parse_supported(bytes, max_rows, crate::admission::DB2_70425_CLIENTS)
 }
 
+#[cfg(target_os = "linux")]
+pub(super) fn parse_db2_70450(bytes: &[u8], max_rows: usize) -> Result<AdmittedBuild, Error> {
+    parse_supported(bytes, max_rows, crate::admission::DB2_70450_CLIENTS)
+}
+
 fn parse_supported(
     bytes: &[u8],
     max_rows: usize,

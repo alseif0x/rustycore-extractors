@@ -5,6 +5,8 @@ use crate::terrain_sources::{self as terrain, Collected, RecordCopy, Role};
 
 #[path = "target_70425_tests.rs"]
 mod target_70425_tests;
+#[path = "target_70450_tests.rs"]
+mod target_70450_tests;
 
 fn table(name: &str) -> CharacterTable {
     CharacterTable::from_catalog(name).unwrap().unwrap()

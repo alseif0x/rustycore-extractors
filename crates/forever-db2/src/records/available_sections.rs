@@ -19,12 +19,14 @@ use std::io::Cursor;
 pub(crate) enum Target {
     Build70374,
     Build70425,
+    Build70450,
 }
 impl Target {
     const fn catalog_id(self) -> &'static str {
         match self {
             Self::Build70374 => super::catalog::WOWDBDEFS_70374_CATALOG_ID,
             Self::Build70425 => super::catalog::WOWDBDEFS_70425_CATALOG_ID,
+            Self::Build70450 => super::catalog::WOWDBDEFS_70450_CATALOG_ID,
         }
     }
 }
