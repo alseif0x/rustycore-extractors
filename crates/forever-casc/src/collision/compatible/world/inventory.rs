@@ -15,14 +15,19 @@ use forever_vmap::wmo::liquid::LiquidLookup;
 mod tests;
 pub const PROFILE_70374: &str = "linux70374-compatible-disk-world-v1";
 pub const PROFILE_70425: &str = "linux70425-compatible-disk-world-v1";
+pub const PROFILE_70450: &str = "linux70450-compatible-disk-world-v1";
 pub const PROFILE_GNU15_70374: &str = "linux70374-compatible-disk-world-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70425: &str = "linux70425-compatible-disk-world-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70450: &str = "linux70450-compatible-disk-world-gnu15-native-order-v2";
 pub const COVERAGE_PROFILE_70374: &str = "linux70374-compatible-disk-world-coverage-v1";
 pub const COVERAGE_PROFILE_70425: &str = "linux70425-compatible-disk-world-coverage-v1";
+pub const COVERAGE_PROFILE_70450: &str = "linux70450-compatible-disk-world-coverage-v1";
 pub const COVERAGE_PROFILE_GNU15_70374: &str =
     "linux70374-compatible-disk-world-gnu15-native-order-coverage-v1";
 pub const COVERAGE_PROFILE_GNU15_70425: &str =
     "linux70425-compatible-disk-world-gnu15-native-order-coverage-v1";
+pub const COVERAGE_PROFILE_GNU15_70450: &str =
+    "linux70450-compatible-disk-world-gnu15-native-order-coverage-v1";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause<E> {
     World(strict_world::Error),
@@ -329,16 +334,20 @@ fn profile(target: crate::collision::target::Target, native: bool, coverage: boo
         return match (target, native) {
             (crate::collision::target::Target::Build70374, false) => COVERAGE_PROFILE_70374,
             (crate::collision::target::Target::Build70425, false) => COVERAGE_PROFILE_70425,
+            (crate::collision::target::Target::Build70450, false) => COVERAGE_PROFILE_70450,
             (crate::collision::target::Target::Build70374, true) => COVERAGE_PROFILE_GNU15_70374,
             (crate::collision::target::Target::Build70425, true) => COVERAGE_PROFILE_GNU15_70425,
+            (crate::collision::target::Target::Build70450, true) => COVERAGE_PROFILE_GNU15_70450,
         };
     }
 
     match (target, native) {
         (crate::collision::target::Target::Build70374, false) => PROFILE_70374,
         (crate::collision::target::Target::Build70425, false) => PROFILE_70425,
+        (crate::collision::target::Target::Build70450, false) => PROFILE_70450,
         (crate::collision::target::Target::Build70374, true) => PROFILE_GNU15_70374,
         (crate::collision::target::Target::Build70425, true) => PROFILE_GNU15_70425,
+        (crate::collision::target::Target::Build70450, true) => PROFILE_GNU15_70450,
     }
 }
 /// Consume genuine startup and two fresh inventories. All-map traversal and

@@ -68,7 +68,20 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v14() {
+    let mut store = if plan.is_v15() {
+        #[cfg(target_os = "linux")]
+        {
+            if forever_casc::admit_db2_70450(client).map_err(|e| Error::from(e.code()))? != 70450 {
+                return Err("product_build_mismatch".into());
+            }
+            // validate_keys rejects any supplied key before this branch.
+            LocalStore::open_db2_70450(client, options)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            return Err("product_platform".into());
+        }
+    } else if plan.is_v14() {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70425(client).map_err(|e| Error::from(e.code()))? != 70425 {
@@ -130,6 +143,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_v10()
         || plan.is_available_terrain()
         || plan.is_v14()
+        || plan.is_v15()
     {
         return Err("product_platform".into());
     }
@@ -314,7 +328,7 @@ fn prepare_domain(
 ) -> Result<Option<crate::map_domain::Domain>, Error> {
     // v14 derives its declared domain once from the genuine available Map owner.
     // Do not reopen a complete Map or manufacture strict SourceFacts here.
-    if plan.is_v14() {
+    if plan.is_v14() || plan.is_v15() {
         return Ok(None);
     }
     let Some(requested) = plan.map_domain else {
@@ -387,6 +401,13 @@ impl execution::Adapter for LinuxExecution {
                 .ok_or("product_scratch_required")?
                 .run_compatible_70425(store, run, plan.map_domain, self.context);
         }
+        if plan.is_v15() {
+            return self
+                .preflight
+                .as_ref()
+                .ok_or("product_scratch_required")?
+                .run_compatible_70450(store, run, plan.map_domain, self.context);
+        }
         match &self.preflight {
             Some(disk) => match &self.domain {
                 Some(domain) => disk.run_selected(store, run, domain),
@@ -425,6 +446,7 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
             | crate::plan::SchemaCatalog::WowDbDefs70338V1
             | crate::plan::SchemaCatalog::WowDbDefs70374V1
             | crate::plan::SchemaCatalog::WowDbDefs70425V1
+            | crate::plan::SchemaCatalog::WowDbDefs70450V1
     );
     let validation = (|| {
         if target_catalog && bytes.len() >= HEADER_SIZE {

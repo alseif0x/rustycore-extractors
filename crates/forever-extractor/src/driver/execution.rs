@@ -52,7 +52,7 @@ pub(super) fn execute(
 }
 
 fn replay_mask(plan: &Plan, completed: u8) -> u8 {
-    if plan.is_v14() {
+    if plan.is_v14() || plan.is_v15() {
         // Rebuild with a fresh six-owner scratch namespace even when sealed:
         // Run::put replays coverage and every actual final artifact.
         completed & !Component::Collision.bit()

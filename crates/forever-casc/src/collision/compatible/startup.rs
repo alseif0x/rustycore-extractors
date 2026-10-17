@@ -19,10 +19,13 @@ pub type Error = available::spooled::Error;
 pub(super) static EMPTY: gameobjects::EmptyLookup = gameobjects::EmptyLookup;
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-spooled-startup-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-spooled-startup-v1";
+pub const PROFILE_70450: &str = "linux70450-disabled-key-compatible-spooled-startup-v1";
 pub const PROFILE_GNU15_70374: &str =
     "linux70374-disabled-key-compatible-spooled-startup-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70425: &str =
     "linux70425-disabled-key-compatible-spooled-startup-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70450: &str =
+    "linux70450-disabled-key-compatible-spooled-startup-gnu15-native-order-v2";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Disposition {
     Normal(gameobjects::Outcome),
@@ -183,6 +186,13 @@ pub fn extract_startup_fdid_70425(
 ) -> Result<Startup<'_>, Error> {
     extract(store, limits, spool, Target::Build70425, false)
 }
+pub fn extract_startup_fdid_70450(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+    spool: Spool,
+) -> Result<Startup<'_>, Error> {
+    extract(store, limits, spool, Target::Build70450, false)
+}
 pub fn extract_startup_fdid_native_gnu15_70374(
     store: &mut LocalStore,
     limits: gameobjects::Limits,
@@ -197,12 +207,21 @@ pub fn extract_startup_fdid_native_gnu15_70425(
 ) -> Result<Startup<'_>, Error> {
     extract(store, limits, spool, Target::Build70425, true)
 }
+pub fn extract_startup_fdid_native_gnu15_70450(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+    spool: Spool,
+) -> Result<Startup<'_>, Error> {
+    extract(store, limits, spool, Target::Build70450, true)
+}
 fn profile(target: Target, native_order: bool) -> &'static str {
     match (target, native_order) {
         (Target::Build70374, false) => PROFILE_70374,
         (Target::Build70425, false) => PROFILE_70425,
+        (Target::Build70450, false) => PROFILE_70450,
         (Target::Build70374, true) => PROFILE_GNU15_70374,
         (Target::Build70425, true) => PROFILE_GNU15_70425,
+        (Target::Build70450, true) => PROFILE_GNU15_70450,
     }
 }
 fn bridge(e: CallbackFailure<Error>) -> Error {
@@ -280,6 +299,7 @@ fn extract_data(
     let snapshot = match target {
         Target::Build70374 => db2::read_gameobject_display_info_70374(&file),
         Target::Build70425 => db2::read_gameobject_display_info_70425(&file),
+        Target::Build70450 => db2::read_gameobject_display_info_70450(&file),
     }
     .map_err(available::Error::Db2)?;
     let mut table = available::table_facts(

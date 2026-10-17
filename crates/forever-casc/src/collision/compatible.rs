@@ -24,10 +24,13 @@ pub use super::placements::compatible as placements;
 
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-model-spool-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-model-spool-v1";
+pub const PROFILE_70450: &str = "linux70450-disabled-key-compatible-model-spool-v1";
 pub const PROFILE_GNU15_70374: &str =
     "linux70374-disabled-key-compatible-model-spool-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70425: &str =
     "linux70425-disabled-key-compatible-model-spool-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70450: &str =
+    "linux70450-disabled-key-compatible-model-spool-gnu15-native-order-v2";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Omission {
     MissingRoot,
@@ -707,6 +710,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     ) -> Result<Self, payload::CollectorError> {
         Self::new(store, lookup, Target::Build70425, limits, spool)
     }
+    pub fn new_70450(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        spool: Spool,
+    ) -> Result<Self, payload::CollectorError> {
+        Self::new(store, lookup, Target::Build70450, limits, spool)
+    }
     /// Explicit GNU libstdc++15 doodad order; existing v1 constructors stay sorted.
     pub fn new_native_gnu15_70374(
         store: &'s mut LocalStore,
@@ -724,12 +735,22 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     ) -> Result<Self, payload::CollectorError> {
         Self::new_with_native_order(store, lookup, Target::Build70425, limits, spool, true)
     }
+    pub fn new_native_gnu15_70450(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        spool: Spool,
+    ) -> Result<Self, payload::CollectorError> {
+        Self::new_with_native_order(store, lookup, Target::Build70450, limits, spool, true)
+    }
     pub fn profile(&self) -> &'static str {
         match (self.target, self.state.native_order) {
             (Target::Build70374, false) => PROFILE_70374,
             (Target::Build70425, false) => PROFILE_70425,
+            (Target::Build70450, false) => PROFILE_70450,
             (Target::Build70374, true) => PROFILE_GNU15_70374,
             (Target::Build70425, true) => PROFILE_GNU15_70425,
+            (Target::Build70450, true) => PROFILE_GNU15_70450,
         }
     }
     pub fn extract(
@@ -1032,8 +1053,10 @@ impl Completed {
         match (self.target, self.state.native_order) {
             (Target::Build70374, false) => PROFILE_70374,
             (Target::Build70425, false) => PROFILE_70425,
+            (Target::Build70450, false) => PROFILE_70450,
             (Target::Build70374, true) => PROFILE_GNU15_70374,
             (Target::Build70425, true) => PROFILE_GNU15_70425,
+            (Target::Build70450, true) => PROFILE_GNU15_70450,
         }
     }
     /// Enumerates the immutable completed collection, excluding negative/staged

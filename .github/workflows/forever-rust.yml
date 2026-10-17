@@ -116,6 +116,14 @@
           }
         },
         {
+          "name": "Check product v15 contract and synthetic CLI",
+          "if": "matrix.profile == 'debug'",
+          "run": "python -m unittest discover -s tests/contracts -p test_forever_product_v15_contract.py -v\ncargo test --offline --locked -p forever-extractor --test product_v15_cli --no-default-features -- --test-threads=1",
+          "env": {
+            "CARGO_TARGET_DIR": "${{ runner.temp }}/forever-rust-target"
+          }
+        },
+        {
           "name": "Exercise synthetic metadata CLI",
           "env": {
             "FOREVER_DB2_INSPECT": "${{ runner.temp }}/forever-rust-target/${{ matrix.profile }}/forever-db2-inspect",

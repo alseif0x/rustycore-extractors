@@ -485,6 +485,7 @@ pub(in crate::collision) fn prepare_available_target<A: AvailableAccess>(
     let snapshot = match target {
         super::target::Target::Build70374 => db2::read_vmap_maps_70374(&file),
         super::target::Target::Build70425 => db2::read_vmap_maps_70425(&file),
+        super::target::Target::Build70450 => db2::read_vmap_maps_70450(&file),
     }
     .map_err(Error::Db2)?;
     let mut map = table_facts(

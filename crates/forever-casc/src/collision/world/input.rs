@@ -189,6 +189,13 @@ pub(in crate::collision) fn prepare_liquids_target<A: Access>(
             source::read_liquid_materials_70425,
             source::read_liquid_types_70425,
         ),
+        crate::collision::target::Target::Build70450 => prepare_liquids_with_readers(
+            access,
+            limits,
+            retained,
+            source::read_liquid_materials_70450,
+            source::read_liquid_types_70450,
+        ),
     }
 }
 

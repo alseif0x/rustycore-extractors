@@ -25,10 +25,13 @@ pub type Error = startup::Error;
 pub type Limits = strict_world::Limits;
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-world-preparation-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-world-preparation-v1";
+pub const PROFILE_70450: &str = "linux70450-disabled-key-compatible-world-preparation-v1";
 pub const PROFILE_GNU15_70374: &str =
     "linux70374-disabled-key-compatible-world-preparation-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70425: &str =
     "linux70425-disabled-key-compatible-world-preparation-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70450: &str =
+    "linux70450-disabled-key-compatible-world-preparation-gnu15-native-order-v2";
 
 impl<L: LiquidLookup + ?Sized> input::Access for Collector<'_, '_, L> {
     type Error = CollectorError;
@@ -116,8 +119,10 @@ fn profile(target: Target, native: bool) -> &'static str {
     match (target, native) {
         (Target::Build70374, false) => PROFILE_70374,
         (Target::Build70425, false) => PROFILE_70425,
+        (Target::Build70450, false) => PROFILE_70450,
         (Target::Build70374, true) => PROFILE_GNU15_70374,
         (Target::Build70425, true) => PROFILE_GNU15_70425,
+        (Target::Build70450, true) => PROFILE_GNU15_70450,
     }
 }
 /// Owns authentic startup, available Map materialization, complete liquids,

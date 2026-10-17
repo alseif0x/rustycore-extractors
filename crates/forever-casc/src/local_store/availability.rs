@@ -267,6 +267,9 @@ impl LocalStore {
     pub(crate) fn check_available_70425(&self) -> Result<(), Error> {
         self.check_available_target(Target::Build70425)
     }
+    pub(crate) fn check_available_70450(&self) -> Result<(), Error> {
+        self.check_available_target(Target::Build70450)
+    }
     fn check_available_target(&self, target: Target) -> Result<(), Error> {
         if self.build.build != target.build() {
             return Err(Error::Build);

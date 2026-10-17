@@ -110,8 +110,14 @@ impl Encoder {
         selected: Option<u32>,
         v: coverage::View<'_>,
     ) -> Result<(), Error> {
+        let profile = match context.build {
+            70425 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425,
+            70450 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70450,
+            _ => return Err(SCHEMA.into()),
+        };
         if !self.bytes.is_empty()
-            || v.profile() != compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425
+            || context.components != Component::Collision.bit()
+            || v.profile() != profile
             || v.maps().len() > MAX_MAPS
         {
             return Err(SCHEMA.into());
@@ -119,7 +125,7 @@ impl Encoder {
         self.put(MAGIC)?;
         self.text(&context.json())?;
         self.opt(selected)?;
-        self.text(v.profile())?;
+        self.text(profile)?;
         self.available(v.map_table())?;
         self.available(v.startup().table())?;
         for f in v.liquids() {
@@ -503,11 +509,18 @@ impl<'a> Coverage<'a> {
             return Err(SCHEMA.into());
         }
         let context = Context::parse(r.text()?)?;
-        if context.build != 70425 || context.components != Component::Collision.bit() {
+        if ![70425, 70450].contains(&context.build)
+            || context.components != Component::Collision.bit()
+        {
             return Err(SCHEMA.into());
         }
         let selected = r.opt()?;
-        if r.text()? != compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425 {
+        let expected_profile = match context.build {
+            70425 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425,
+            70450 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70450,
+            _ => return Err(SCHEMA.into()),
+        };
+        if r.text()? != expected_profile {
             return Err(SCHEMA.into());
         }
         let (map_direct, map_rows) =
@@ -906,8 +919,12 @@ fn fixture_rows(
     e.put(MAGIC).unwrap();
     e.text(&context.json()).unwrap();
     e.opt(None).unwrap();
-    e.text(compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425)
-        .unwrap();
+    let profile = match context.build {
+        70425 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425,
+        70450 => compatible::world::inventory::COVERAGE_PROFILE_GNU15_70450,
+        _ => panic!("unsupported synthetic coverage build"),
+    };
+    e.text(profile).unwrap();
     for fdid in [
         forever_casc::collision::world::MAP_FILE_DATA_ID,
         gameobjects::TABLE_FILE_DATA_ID,
@@ -1068,6 +1085,37 @@ mod tests {
         let mut x = b;
         x[0] ^= 1;
         assert!(Coverage::parse(&x).is_err());
+    }
+    #[test]
+    fn coverage_v1_70450_build_and_profile_are_independent() {
+        let context = Context {
+            build: 70450,
+            ..context()
+        };
+        let mut e = fixture(context, &[]);
+        let bytes = e.finish().unwrap().to_vec();
+        let coverage = Coverage::parse(&bytes).unwrap();
+        assert_eq!(coverage.context.build, 70450);
+
+        let mut wrong_profile = bytes.clone();
+        let expected = compatible::world::inventory::COVERAGE_PROFILE_GNU15_70450;
+        let replacement = compatible::world::inventory::COVERAGE_PROFILE_GNU15_70425;
+        let at = wrong_profile
+            .windows(expected.len())
+            .position(|window| window == expected.as_bytes())
+            .unwrap();
+        wrong_profile[at..at + expected.len()].copy_from_slice(replacement.as_bytes());
+        assert!(Coverage::parse(&wrong_profile).is_err());
+
+        let mut wrong_build = bytes;
+        let build_field = b"\"build\":";
+        let at = wrong_build
+            .windows(build_field.len() + 5)
+            .position(|window| window.starts_with(build_field) && window.ends_with(b"70450"))
+            .unwrap()
+            + build_field.len();
+        wrong_build[at..at + 5].copy_from_slice(b"70374");
+        assert!(Coverage::parse(&wrong_build).is_err());
     }
     #[test]
     fn coverage_v1_duplicate_or_unordered_map_ids_reject() {

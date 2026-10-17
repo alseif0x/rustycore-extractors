@@ -92,6 +92,11 @@ software/profile addition does not establish real extraction or runtime support.
 Its coverage is producer-reported and does not claim full encrypted-Map coverage.
 See the [v14 scope](docs/forever-product-v14.md).
 
+Product v15 separately admits only `wow_classic_beta 1.60.1.70450` for the
+Linux compatible-VMaps scope. It does not claim real extraction, full-world
+resources, or runtime acceptance. See the
+[v15 scope](docs/forever-product-v15.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.

@@ -766,6 +766,14 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                         self.live,
                         memory_limit,
                     ),
+                target::Target::Build70450 => self
+                    .store
+                    .read_file_data_id_available_70450_with_external_budget(
+                        id,
+                        cap as u64,
+                        self.live,
+                        memory_limit,
+                    ),
             }
             .map_err(Error::from_available)?;
             let declared = usize::try_from(file.declared_bytes()).map_err(|_| Error::Limit)?;

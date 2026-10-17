@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored by RustyCore Extractors, 2026-10-17.
-//! Explicit70425 GNU15-v2: one genuine leased world through final publication.
+//! Explicit70425/70450 GNU15-v2: one genuine leased world through publication.
 use super::*;
 use crate::collision_coverage as coverage;
 use forever_casc::{
@@ -40,6 +40,28 @@ impl Preflight {
         selected: Option<u32>,
         context: Context,
     ) -> Result<(), Error> {
+        self.run_compatible(store, run, selected, context, 70425)
+    }
+    pub(in crate::driver) fn run_compatible_70450(
+        &self,
+        store: &mut LocalStore,
+        run: &mut Run,
+        selected: Option<u32>,
+        context: Context,
+    ) -> Result<(), Error> {
+        self.run_compatible(store, run, selected, context, 70450)
+    }
+    fn run_compatible(
+        &self,
+        store: &mut LocalStore,
+        run: &mut Run,
+        selected: Option<u32>,
+        context: Context,
+        expected_build: u32,
+    ) -> Result<(), Error> {
+        if context.build != expected_build {
+            return Err("product_build_mismatch".into());
+        }
         let result = self.compatible_inner(store, run, selected, context);
         // All transient/final compatible owners have dropped before these last
         // independent guards, including on allocation/setup/operation failure.
@@ -99,8 +121,12 @@ impl Preflight {
             .map_err(|e| Error::from(e.code()))?;
         let mut limits = resources.startup_limits();
         limits.collision.max_memory_bytes = limits.collision.max_memory_bytes.min(combined);
-        let startup = startup::extract_startup_fdid_native_gnu15_70425(store, limits, raw)
-            .map_err(|e| Error::from(e.code()))?;
+        let startup = match context.build {
+            70425 => startup::extract_startup_fdid_native_gnu15_70425(store, limits, raw),
+            70450 => startup::extract_startup_fdid_native_gnu15_70450(store, limits, raw),
+            _ => return Err("product_build_mismatch".into()),
+        }
+        .map_err(|e| Error::from(e.code()))?;
         let old = resources.stage_limits();
         let limits = placement::Limits {
             world: forever_casc::collision::compatible::world::inventory::Limits {

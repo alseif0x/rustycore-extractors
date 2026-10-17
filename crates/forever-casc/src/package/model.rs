@@ -54,17 +54,16 @@ pub struct Context {
 }
 impl Context {
     pub fn validate(self) -> Result<(), Error> {
-        if ![70170, 70205, 70338, 70374, 70425].contains(&self.build)
+        if ![70170, 70205, 70338, 70374, 70425, 70450].contains(&self.build)
             || self.components == 0
             || self.components & !63 != 0
             || [self.source_sha256, self.plan_sha256, self.producer_sha256].contains(&[0; 32])
         {
             return Err(Error::Context);
         }
-        // New explicit product plan v14 binds its profile through plan_sha256.
-        // Admit only the exact Linux collision mask for70425; all other masks
-        // and old build-specific admission rules remain unchanged.
-        if self.build == 70425
+        // Explicit product plans v14/v15 bind their independent profile through
+        // plan_sha256. Admit only the Linux collision mask for their own builds.
+        if [70425, 70450].contains(&self.build)
             && (self.components != Component::Collision.bit() || !cfg!(target_os = "linux"))
         {
             return Err(Error::Context);
@@ -453,6 +452,31 @@ mod product70425_context_tests {
     fn context70425_is_exact_linux_collision_mask_only() {
         let c = Context {
             build: 70425,
+            locale: crate::Locale::EsEs,
+            source_sha256: [1; 32],
+            plan_sha256: [2; 32],
+            producer_sha256: [3; 32],
+            components: Component::Collision.bit(),
+        };
+        assert_eq!(c.validate().is_ok(), cfg!(target_os = "linux"));
+        if cfg!(target_os = "linux") {
+            assert_eq!(Context::parse(&c.json()).unwrap(), c);
+        }
+        for components in 0..=255 {
+            if components != Component::Collision.bit() {
+                assert!(Context { components, ..c }.validate().is_err());
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod product70450_context_tests {
+    use super::*;
+    #[test]
+    fn context70450_is_exact_linux_collision_mask_only() {
+        let c = Context {
+            build: 70450,
             locale: crate::Locale::EsEs,
             source_sha256: [1; 32],
             plan_sha256: [2; 32],

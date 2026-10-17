@@ -71,7 +71,7 @@ fn verify_inner(
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
     #[cfg(target_os = "linux")]
-    if plan.is_v14() {
+    if plan.is_v14() || plan.is_v15() {
         return compatible_vmaps::verify(plan, output, expected);
     }
     let mut limits = package::Limits::default();

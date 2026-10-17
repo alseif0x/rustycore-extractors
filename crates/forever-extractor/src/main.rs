@@ -127,7 +127,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         }
         forever_extractor::plan::SchemaCatalog::WowDbDefs70338V1
         | forever_extractor::plan::SchemaCatalog::WowDbDefs70374V1
-        | forever_extractor::plan::SchemaCatalog::WowDbDefs70425V1 => {
+        | forever_extractor::plan::SchemaCatalog::WowDbDefs70425V1
+        | forever_extractor::plan::SchemaCatalog::WowDbDefs70450V1 => {
             format!(",\"schema_catalog\":\"{}\"", plan.schema_catalog.id())
         }
     };
@@ -141,7 +142,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 connections.len()
             )
         });
-    let map_domain_capability = if plan.is_v14() {
+    let map_domain_capability = if plan.is_v14() || plan.is_v15() {
         plan.map_domain.map_or_else(
             || ",\"collision_domain\":\"all-available-maps\"".to_owned(),
             |id| format!(",\"collision_domain\":\"map-and-ancestors\",\"requested_map\":{id}"),
@@ -156,7 +157,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         )
     })
     };
-    let terrain_capability = if plan.is_v14() {
+    let terrain_capability = if plan.is_v15() {
+        ",\"collision_source_profile\":\"linux70450-compatible-gnu15-v2\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
+    } else if plan.is_v14() {
         ",\"collision_source_profile\":\"linux70425-compatible-gnu15-v2\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
     } else if plan.is_v13() {
         ",\"terrain_source_profile\":\"linux70374-compatible-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"omission_policy\":\"missing-file-only\",\"whole_client_map_coverage\":false"
@@ -201,7 +204,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 return Ok(format!(
                     "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
                     plan.contract(),
-                    if plan.is_v14() {
+                    if plan.is_v15() || plan.is_v14() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
                     } else if plan.is_v13() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
@@ -212,7 +215,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     } else {
                         verify::links::SCOPE
                     },
-                    if plan.is_v14() {
+                    if plan.is_v15() {
+                        forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE_70450
+                    } else if plan.is_v14() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE
                     } else if plan.is_v13() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_PROFILE
@@ -227,7 +232,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 ));
             }
             let summary = verify::verify(&plan, path("--output")?, expected)?;
-            let scope = if plan.is_v14() {
+            let scope = if plan.is_v15() || plan.is_v14() {
                 forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
             } else if plan.is_v13() {
                 forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
