@@ -165,7 +165,32 @@ class LinuxMapDomainContract(unittest.TestCase):
         self.assertIn('topology.contains_selected(m.id())', staged)
         self.assertIn('world::inventory::', staged)
         self.assertIn('from_materialized_selection(', self.source['core_inventory'])
-        self.assertIn('topology().contains_selected(id)', self.source['core_package'])
+        # PackageWork borrows the genuine owner's existing Topology. Keep the
+        # selected AND active binding predicate, independent of accessor spelling.
+        package = compact(self.source['core_package'])
+        self.assertIn("pub(super)structModelView<'a,P:super::Phase>", package)
+        self.assertIn("pub(super)topology:&'acrate::collision::world::Topology", package)
+        self.assertIn('pub(super)traitOwner:Sized', package)
+        work = package.split("impl<P:Owner>PackageWork<'_,P>{", 1)[1]
+        write_map = work.split('fnwrite_map(', 1)[1].split('letmuttiles=Vec::new();', 1)[0]
+        self.assertIn(
+            'if!self.models.view().topology.get(id).is_some_and(|m|m.active()&&'
+            'self.models.view().topology.contains_selected(id))'
+            '{returnErr(Kind::Binding.into());}', write_map)
+        models_path = ROOT / 'crates/forever-casc/src/collision/assemble/staged/models.rs'
+        models = compact(models_path.read_text())
+        strict_owner = models.split('implpackage::OwnerforPrepared{', 1)[1]
+        self.assertEqual(models.count('implpackage::OwnerforPrepared{'), 1)
+        self.assertIn('typePhase=Staged;', strict_owner)
+        self.assertIn('phase:&self.stage,', strict_owner)
+        self.assertIn('topology:self.stage.world().topology()', strict_owner)
+        compatible_path = models_path.parent / 'models/compatible.rs'
+        compatible = compact(compatible_path.read_text())
+        compatible_owner = compatible.split('implsuper::package::OwnerforPrepared{', 1)[1]
+        self.assertEqual(compatible.count('implsuper::package::OwnerforPrepared{'), 1)
+        self.assertIn('typePhase=placement::Staged;', compatible_owner)
+        self.assertIn('phase:&self.state.stage,', compatible_owner)
+        self.assertIn('topology:self.state.stage.world().topology()', compatible_owner)
 
     def test_selected_consumers_reduce_existing_budgets(self):
         driver = self.source['driver']

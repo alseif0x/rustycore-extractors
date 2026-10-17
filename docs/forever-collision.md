@@ -1,5 +1,323 @@
 # Forever collision foundation
 
+## Fresh-directory comparison caller — 2026-10-17
+
+The comparison tools now select fresh working directories through an explicit
+path binding. On the qualified `6912551` base, this revision passes all seven
+software commands: 58 and 110 Python methods, eight Rust methods per
+debug/release profile with no ignores, release build, example Clippy and
+formatting. The Rust caller changes four path literals; its eight test methods
+remain unchanged. Independent terminal QA passes 338,432 checks without
+findings (`b9dbada1aa57a0e770c19bbcf77144178c14e22fb841150350615da851689742`).
+
+All 7,490 original software guards, 1,186 directories and 48 aliases close
+unchanged. The copied release executable matches the compiler output in full. Two numeric
+terminal observations and the empty initial owned group precede the sole
+successful stop. Python traces are empty; compiler traces retain their existing
+classification. Rust test, parent and pre-execution networking remain
+unobserved. This accepts the comparison tools' software qualification. Static
+inspection of these newly built binaries and the fresh complete joined C++
+comparison remain pending; the earlier failed comparison stays failed.
+
+## GNU15 complete no-collision WMO correction — 2026-10-17
+
+The explicit GNU15-v2 collector now omits a WMO whose complete root and required
+groups parse successfully but yield no usable collision. The typed
+`Omission::CompleteNoCollision` preserves its negative cache identity without
+creating a parent model handle, RAW, payload or placement ID. The same serial
+session continues to the following model. Previously committed child models,
+including orphan RAW, remain retained. Missing or unreferenced children are not
+declared complete. The existing omission-derived reason takes precedence;
+strict and compatible-v1 intrinsic-empty behavior remains fatal.
+
+This corrects a source-derived difference from the original C++ extractor,
+which skips that WMO and continues processing the ADT. The preceding joined
+comparison remains failed at Rust N05: fifteen children ran, the last exited
+four instead of zero, and native N05 did not execute. Four earlier comparison
+receipts do not form an accepted prefix. Independent preservation review passes
+126,036 checks without findings, including the original guards, saved numeric
+terminal observations and sole successful stop. It accepts failure preservation
+only, without native parity or full extraction acceptance.
+
+The corrected source passes six scoped software commands: eleven new methods
+in each focused debug/release profile, 1,621 complete CASC library tests / five
+historical ignores in each profile, all-target package Clippy and exact
+three-file formatting. All eleven methods run in both complete profiles too.
+Source and original software guards close, and all child groups are absent.
+Network activity is unobserved. Qualification receipt:
+`7cb3595b71f7f21362ef1e86c376f4978c68c36f20c48a65dccac22f776b56fe`.
+
+The first focused compilation remains failed with exit 101 and zero executed
+tests: three assertions called a cache-count API on Collector instead of its
+completed owner. Test-only corrections retain the fixtures and expectations.
+The formatter itself passed; its earlier whitespace-only validator remains
+failed because rustfmt also added standard braces and trailing commas. A separate
+full-diff source review admits that formatting delta without rerunning it.
+
+The subsequent immutable snapshot of functional commit
+`6912551855dff689fac3663acca98c0acd1dacba` passes all eight software commands:
+3,490 tests / 26 historical ignores / 52 targets per debug/release profile,
+all 76 new controls per profile, both product builds, 424 source contracts /
+two skips, 165 distribution tests / one skip, Clippy and formatting. The snapshot
+contains 787 selected Git inputs and 41 retained offline inputs; two documentation
+files from the commit are outside that selection. Independent terminal review
+passes 174,712 checks without findings:
+`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`.
+The first actual terminal auditor rejection remains recorded; its corrected
+revision reconstructs the original serialized launch order. No software command
+or stopped service is repeated by that metadata review.
+
+The updated external comparison caller on this same functional base also passes
+all seven software commands: 42 and 94 Python methods, eight Rust methods in each
+debug/release profile with no ignores, release build, example Clippy and formatting.
+Independent terminal QA passes 265,421 checks without findings:
+`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`.
+All 6,592 original software guards, 969 directories and 48 aliases close unchanged.
+The single persistent service closes with two numeric terminal observations,
+an empty initial owned group and one successful stop. Python traces are empty;
+the three compiler traces use their existing classifier. Rust test, parent and
+pre-execution networking remain unobserved. A preceding low-space preparation
+remains failed; a separately reviewed revision uses another local volume with
+the same 16 GiB reserve. No original native binary or full joined comparison runs
+in these software checks.
+
+The subsequent current-caller static inspection passes seven ELF objects and
+twenty dependency edges. Independent terminal review passes 93,091 checks
+without findings:
+`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`.
+Its three authenticated original guard roles plus a disjoint delta preserve
+9,175 file guards, 1,014 directories and 48 aliases. The representation retains
+per-role limits and original facts; it does not claim an aggregate 8,192-entry
+limit. Runtime copies and compiler DATA retain separate identities and exact
+byte equality. One parser child exits zero, with an empty strict trace and
+absent child group. Two numeric parent observations and an empty initial group
+precede one stop. Parent/pre-execution networking remains unobserved; no target,
+native extractor or loader executes. A preceding wrapper argument rejection
+happens before the sole observer invocation and remains recorded.
+
+Source review finds fixed directories in the caller, fixture generator,
+comparer and constructor. Preserving failed outputs while using fresh campaign
+directories therefore requires a typed path bridge and a newly qualified caller;
+the static result above does not qualify that future revision.
+
+A new complete joined comparison remains required. Authentic staging, selected
+VMO conversion, final compatible VMaps,
+real resources, product integration and runtime acceptance remain open.
+This later documentation update is not rebuilt into the qualified binaries.
+
+## Compatible world traversal library — 2026-10-17
+
+`collision::compatible::world::inventory::{extract, extract_selected,
+extract_prepared}` now consumes genuine compatible startup or a fresh prepared
+owner. A single collector, payload repository, negative cache, model handles,
+serial placement session and cumulative ledger span the selected world.
+Builds 70374/70425 and their explicit GNU15 order selectors remain separate.
+Available Map facts remain distinct from complete liquid source facts.
+
+For WDT/ADT acquisition, only a typed missing-file result permits omission: an
+unavailable WDT skips that map's global and tile work; an unavailable own object
+ADT can replay the exact cell from its immediate parent's own cache. A successful
+empty own tile blocks
+inheritance. Replayed inherited data never becomes an own-cache entry, and
+grandparent fallback is not introduced. Replay retains placement IDs and does
+not reacquire models. Committed child RAW models survive omission of their
+parent. Other source, parser and policy failures remain fatal.
+
+The returned `Completed` retains authentic startup, available Map and complete
+liquid facts, topology, lookup/map statistics and the traversal report. Its sink
+output is provisional: staging, selected VMO conversion, final VMap assembly,
+product publication and runtime acceptance remain separate gates. Traversal
+does not infer coverage of omitted Map sections or unavailable WDTs.
+
+Both focused profiles pass 67 compatible methods, including all 24 new traversal
+controls, with no ignores. Both complete CASC library profiles pass 1,610 methods /
+five historical ignores; all 24 new methods execute. Source review also closes
+a preparation-error precedence finding: an observed source change survives
+outer inventory changes while preserving both typed causes. Its deterministic
+dual-mutation control runs in both profiles. Package all-target Clippy and exact
+eight-file formatting pass. The corrected six-command qualification receipt is
+`e3edd8b60252597279f3ef9eee8cc1aedfd6d744f22d4a70b6800ea4d5e8b21d`.
+The first scoped attempt remains failed at Clippy's test-initializer style lint;
+the correction changes that initializer only. All six corrected checks run on
+the same source bytes, with source/software guards closed and owned child groups
+absent. Network activity is unobserved. These are synthetic library checks;
+there is no new client or original native execution, full joined comparison,
+product or runtime acceptance.
+
+## Compatible world preparation library — 2026-10-17
+
+`collision::compatible::world::{prepare, prepare_selected}` consumes authentic
+compatible startup for build 70374 or 70425. It acquires available Map rows and
+complete LiquidMaterial/LiquidType sources, validates the selected topology,
+and retains the same collector, payload repository, model handles, negative
+cache and cumulative ledger. New explicit GNU15 startup selectors retain the
+reference ordering through lookup changes; existing v1 selectors remain separate.
+
+The prepared owner exposes guarded facts and a whole-run `with_context`
+callback. A serial placement session can span that callback without resetting
+IDs or model state. Map, lookup, topology and declared sink capacities remain
+charged while live. Uninvoked callback captures and the sink drop before final
+failure guards; source or spool changes retain priority over the original error.
+These accounting limits do not bound arbitrary callback allocations or RSS.
+
+`finish_preparation` returns genuine completed startup and its authenticated
+topology. It does not return a completed world or declare traversal successful.
+This increment performs no WDT/ADT traversal, immediate-parent cache replay,
+final VMap assembly or product publication. Complete real resources, navigation,
+runtime acceptance and stable Linux distribution remain open.
+
+Focused debug/release checks each pass 43 compatible methods, including all 24
+new preparation controls, with no ignores. Each complete CASC library profile
+also passes 1,586 methods / five historical ignores, with all 24 new methods
+executed. Package all-target Clippy and focused formatting pass. The initial
+run remains failed at 22 passed / two failed: one
+WMO fixture omitted the startup-required MVER prefix, and one cache test assumed
+an unclassified missing GODI input created a typed model identity. Test-only
+corrections preserve production classification and explicitly exercise a typed
+M2 missing-cache entry across lookup transitions. No new client or original
+native execution supplies this library evidence. Frozen C11 and its comparison
+caller do not contain this later preparation delta.
+
+## Updated GNU15 comparison harness software — 2026-10-17
+
+The corrected formatted caller passes all seven software commands: 42 comparator
+methods, 94 constructor/admission methods, eight private Rust methods in each
+profile, release build, Clippy and formatting. Independent terminal review passes
+201,600 checks without findings; software-only receipt:
+`6b34054339bd4dda52f075ae59f775d1321f3da64c50a92b3a37c69041ef633c`.
+The authored and formatted caller identities remain distinct. Original source,
+guard, copied-binary and current compiler-output facts close; two matching
+terminal observations and an empty initial group precede one stop. One separate
+root progress query is recorded. The preceding seven-command attempt remains
+failed at formatting, with no accepted prefix.
+
+Fresh combined static inspection subsequently passes for the updated Rust binary
+and the separately qualified original C++ binary: seven ELF objects and twenty
+dependency edges. Independent terminal review passes 99,997 checks without
+findings; static-only receipt:
+`ed51ee08b67d586a5c468269c7993d9d87cca2064937fce5cb8cd45d58cb5f25`.
+The pure parser does not execute either target or the loader. Original software
+guards, source owners and binary/compiler-output equivalence close; two matching
+terminal observations and the empty initial group precede one successful stop.
+The parser child's strict network trace is empty; parent and preexec network
+activity are unobserved.
+
+This qualifies software and static dependencies only. The complete joined C++
+comparison remains pending. No world, real acquisition, product or runtime
+acceptance follows from these checks.
+
+## GNU15-compatible placement software checkpoint — 2026-10-17
+
+Issue #92 now separately selects GNU15-compatible v2 WMO reference ordering.
+It retains the existing strict and compatible-v1 APIs, sorted selection, payload
+format gates and resource ceilings. The new mode reproduces the pinned GNU15
+bucket traversal and rehash algorithm in bounded Rust software; native output
+compatibility still requires a fresh joined comparison.
+
+Frozen C11 contains 822 files / 211 directories: 781 selected Git files and 41
+retained offline inputs. Every selected source byte matches functional commit
+`dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6`. The snapshot was uncommitted when
+created; its later commit binding does not rewrite that historical source claim.
+
+All eight software commands pass. Debug and release each pass 3,414 tests /
+26 historical ignores / 52 targets, including all 26 GNU15 methods, 31 compatible
+placement methods, 39 compatible collision methods, 49 explicit70425 methods,
+38 disk methods, eleven mount methods and four helper methods. Both product
+builds, Clippy and formatting pass; source contracts pass 424 checks / two skips,
+and distribution checks pass 165 checks / one skip. Independent terminal QA
+passes 155,908 checks without findings; its software-only receipt is
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+Original software guards and source namespaces close unchanged. Two matching
+terminal observations and an empty initial owned group precede the sole stop;
+root progress queries are recorded separately from those observer checks.
+
+C10 remains failed after seven executed commands: Clippy rejects a complex type
+in a test helper, and formatting is not executed. C11 qualifies the helper type-alias
+correction. The earlier joined comparison still fails at N03, with no accepted
+prefix or native placement parity. C11 software acceptance does not repair that
+historical comparison; a fresh joined C++ comparison is pending.
+
+World traversal, parent replay, the owned empty-cache barrier, final compatible
+VMap assembly, required real resources, product integration, navigation,
+RustyCore runtime acceptance and stable Linux delivery remain open. Windows is
+deferred. This documentation delta is not rebuilt into the qualified binaries.
+
+## Compatible serial placement software checkpoint — 2026-10-17
+
+[Issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92) adds the
+Linux `collision::compatible::placements::Session` library bridge. It derives
+physical placement order and model outcomes from the supplied batches, retains
+one collector/ID/sink owner, and applies the existing resource and mutation
+guards. Omitted and no-collision models consume no placement IDs; a doodad-only
+WMO emits its surviving children without consuming a parent ID. Successful
+cached M2 placements still consume the serial counter. Strict APIs, product
+profiles and resource ceilings retain their existing contracts.
+
+Functional commit `c5267371f827e42bd94ff3824f6d97336ca821c0` matches all 778
+selected Git inputs in frozen candidate C9: 819 files / 210 directories,
+including 41 retained offline build inputs. Qualification ran before the commit;
+the subsequent Git binding compares every selected blob with that frozen source.
+All eight software commands pass. Debug and release each pass 3,388 tests with
+26 historical ignores / 52 targets, including all 31 new placement methods.
+Both product builds, Clippy and formatting pass; source contracts pass 424
+checks / two skips and distribution tests pass 165 checks / one skip.
+
+Independent terminal software QA passes without findings:
+`0183b7402e560c5d58917c2cc7b5e7e03949885912f8fca74b0a361aa2296e64`.
+The parent exits zero and its initial owned group is empty before the unit is
+stopped. This accepts software qualification only. The later comparison attempt
+and its failure are recorded below; software qualification does not establish
+placement compatibility acceptance.
+
+The separate Rust/Python comparison harness subsequently passes seven software
+commands: 42 comparator methods, 73 independent constructor methods and eight
+private Rust example methods per debug/release profile, plus release build,
+Clippy and formatting. Independent terminal QA passes 32,296 checks without
+findings. Root software acceptance is
+`c0527d2dd0609ca73b4b39f64a3b89b721be86f6b1232183c64b024abbc3a6ca`.
+The formatted example retains the original authored-case and constructor
+authority. Qualification does not run the fixture generator, constructor CLI,
+native targets, real client or joined comparison campaign. The root terminal
+closing used an inline driver without saved original source/streams; QA binds
+its saved terminal and stop evidence, with a later attestation labelled as
+testimony only.
+
+The original native harness subsequently passes all 71 compilation/link
+commands. Independent terminal QA passes 46,553 checks. Separate static
+inspection then accepts seven ELF objects and twenty loader edges, with
+independent terminal QA passing 69,921 checks. These are software/build and
+static inspection results, without client acquisition or runtime acceptance.
+
+The first joined campaign is planned for 105 children but stops after ten
+attempted children, all exit0: one generator, three constructors, three Rust
+calls and three native calls. The first two comparisons match; the third
+(`70374/N03`) rejects with `complete_placement_cache_replay_bytes`. Both
+placement files contain the same three records and have equal lengths, but two
+WMO child names are associated with the serial IDs in opposite order. The
+campaign fails as a whole; neither the earlier comparisons nor their output
+form an accepted prefix.
+
+Source inspection identifies the relevant ordering difference: the pinned
+native reference collects surviving WMO references in GNU libstdc++ 15's
+`unordered_set<uint16>` traversal order, while the compatible-v1 Rust selection is
+sorted. Missing and no-collision children are excluded before native insertion.
+The separately selected GNU15-compatible v2 mode subsequently passes C11
+software qualification, recorded above. Its fresh native comparison remains
+pending; reversing all references would not reproduce bucket collisions and
+rehashing. Failed-run preservation and terminal cleanup remain separate from
+compatibility acceptance.
+
+The bridge does not implement world traversal, parent replay or the owned empty
+cache barrier. Final compatible VMap assembly, complete required real resources,
+navigation, product integration, RustyCore runtime acceptance and reproducible
+Linux delivery remain open. The separate corrected diagnostic controller is
+source-reviewed only; the preceding attempt failed before launching Rust and
+provides no new telemetry about the earlier policy-limit failure.
+
+This Markdown/README annex follows qualification and is not rebuilt into the
+qualified binaries. Pending implementations remain on the active branch until
+their compatibility gates pass; full extraction remains the goal.
+
 ## Compatible spooled startup for 70374/70425 — 2026-10-16
 
 Issue #90 introduces separate compatible startup and model owners for explicitly

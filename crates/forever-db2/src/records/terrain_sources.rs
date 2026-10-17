@@ -2,6 +2,7 @@
 // Authored 2026-10-11: original typed source projections and terrain copy replay.
 // Modified 2026-10-11: independent VMap Map projection and source-only copy replay.
 // Modified 2026-10-11: direct GameObjectDisplayInfo projection, without copy replay.
+// Modified 2026-10-17: separately selected complete liquid readers for build70425.
 //! Pinned map_extractor/System.cpp:275-389 uses Load/GetRecordCopy, not
 //! AutoProduceData, as does vmap4_extractor/vmapexport.cpp:411-466. These
 //! closed projections validate all physical fields
@@ -189,6 +190,27 @@ pub fn read_liquid_materials(
     data: &[u8],
 ) -> Result<SourceRecords<LiquidMaterialFields>, RecordError> {
     match read(data, Role::LiquidMaterial, TEXT_POLICY_LIMIT)? {
+        Collected::LiquidMaterial(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
+/// Complete LiquidType projection using the separately pinned build70425 catalog.
+/// The caller must independently admit the client build; identical wire schemas
+/// do not identify a build. Existing complete-source profiles and limits apply.
+pub fn read_liquid_types_70425(
+    data: &[u8],
+) -> Result<SourceRecords<LiquidTypeFields>, RecordError> {
+    match read_liquids_70425(data, Role::LiquidType, TEXT_POLICY_LIMIT)? {
+        Collected::LiquidType(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
+/// Complete LiquidMaterial projection using the separately pinned build70425
+/// catalog, including its table-hash gate. This does not admit available sections.
+pub fn read_liquid_materials_70425(
+    data: &[u8],
+) -> Result<SourceRecords<LiquidMaterialFields>, RecordError> {
+    match read_liquids_70425(data, Role::LiquidMaterial, TEXT_POLICY_LIMIT)? {
         Collected::LiquidMaterial(rows) => Ok(rows),
         _ => Err(RecordError::Schema),
     }
@@ -400,6 +422,29 @@ pub(super) fn read(data: &[u8], role: Role, text_limit: usize) -> Result<Collect
             Collector::LiquidObject(Vec::new()),
         ),
     };
+    read_selected(data, table, collector, text_limit)
+}
+pub(super) fn read_liquids_70425(
+    data: &[u8],
+    role: Role,
+    text_limit: usize,
+) -> Result<Collected, RecordError> {
+    let (name, collector) = match role {
+        Role::LiquidType => ("LiquidType", Collector::LiquidType(Vec::new())),
+        Role::LiquidMaterial => ("LiquidMaterial", Collector::LiquidMaterial(Vec::new())),
+        _ => return Err(RecordError::Schema),
+    };
+    let table = CharacterTable::from_catalog_id(super::catalog::WOWDBDEFS_70425_CATALOG_ID, name)
+        .map_err(|_| RecordError::Schema)?
+        .ok_or(RecordError::Schema)?;
+    read_selected(data, table, collector, text_limit)
+}
+fn read_selected(
+    data: &[u8],
+    table: CharacterTable,
+    collector: Collector,
+    text_limit: usize,
+) -> Result<Collected, RecordError> {
     let result = DecodedTable::scan_regular_or_logical(
         data,
         table,

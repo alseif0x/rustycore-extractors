@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Authored 2026-10-15: separate Linux70374 available DB2 startup/world owner.
+// Modified 2026-10-17: closed target preparation seam; authored 2026-10-15: separate Linux70374 available DB2 startup/world owner.
 //! Available GODI/Map coverage stays distinct from complete source facts. Model,
 //! liquid, WDT and object dependencies retain strict complete acquisition. There
 //! is no missing-input omission policy, package publication or runtime claim.
@@ -403,16 +403,16 @@ pub fn extract(
         resident_bytes,
     })
 }
-struct Prepared {
-    owner: db2::MaterializedVMapMaps,
-    map: TableFacts,
-    lookup: world::Lookups,
-    liquids: [world::TableFacts; 2],
-    retained: usize,
+pub(in crate::collision) struct Prepared {
+    pub(in crate::collision) owner: db2::MaterializedVMapMaps,
+    pub(in crate::collision) map: TableFacts,
+    pub(in crate::collision) lookup: world::Lookups,
+    pub(in crate::collision) liquids: [world::TableFacts; 2],
+    pub(in crate::collision) retained: usize,
 }
 // Private shared Map preparation. Available facts stay distinct; complete
 // liquid reads still use the established world::input::Access contract.
-enum PrepareFailure<E> {
+pub(in crate::collision) enum PrepareFailure<E> {
     Available(Error),
     Collector(E),
 }
@@ -421,7 +421,7 @@ impl<E> From<Error> for PrepareFailure<E> {
         Self::Available(e)
     }
 }
-trait AvailableAccess: world::input::Access {
+pub(in crate::collision) trait AvailableAccess: world::input::Access {
     fn read_available_source(
         &mut self,
         id: u32,
@@ -459,6 +459,14 @@ fn prepare_available<A: AvailableAccess>(
     collector: &mut A,
     limits: world::Limits,
 ) -> Result<Prepared, PrepareFailure<A::Error>> {
+    prepare_available_target(collector, limits, super::target::Target::Build70374)
+}
+
+pub(in crate::collision) fn prepare_available_target<A: AvailableAccess>(
+    collector: &mut A,
+    limits: world::Limits,
+    target: super::target::Target,
+) -> Result<Prepared, PrepareFailure<A::Error>> {
     let file = collector
         .read_available_source(world::MAP_FILE_DATA_ID, limits.max_db2_bytes)
         .map_err(PrepareFailure::Collector)?;
@@ -474,7 +482,11 @@ fn prepare_available<A: AvailableAccess>(
     collector
         .reserve_external(allowance)
         .map_err(PrepareFailure::Collector)?;
-    let snapshot = db2::read_vmap_maps_70374(&file).map_err(Error::Db2)?;
+    let snapshot = match target {
+        super::target::Target::Build70374 => db2::read_vmap_maps_70374(&file),
+        super::target::Target::Build70425 => db2::read_vmap_maps_70425(&file),
+    }
+    .map_err(Error::Db2)?;
     let mut map = table_facts(
         &file,
         snapshot.sections(),
@@ -511,10 +523,12 @@ fn prepare_available<A: AvailableAccess>(
     collector
         .release_external(allowance - retained)
         .map_err(PrepareFailure::Collector)?;
-    let (lookup, liquids, retained) = world::input::prepare_liquids(collector, limits, retained)
-        .map_err(|e| match e {
-            world::input::Failure::World(e) => PrepareFailure::Available(Error::World(e)),
-            world::input::Failure::Collector(e) => PrepareFailure::Collector(e),
+    let (lookup, liquids, retained) =
+        world::input::prepare_liquids_target(collector, limits, retained, target).map_err(|e| {
+            match e {
+                world::input::Failure::World(e) => PrepareFailure::Available(Error::World(e)),
+                world::input::Failure::Collector(e) => PrepareFailure::Collector(e),
+            }
         })?;
     Ok(Prepared {
         owner,
@@ -571,10 +585,10 @@ pub(in crate::collision) fn table_facts(
         sections: slots,
     })
 }
-fn add(a: usize, b: usize) -> Result<usize, Error> {
+pub(in crate::collision) fn add(a: usize, b: usize) -> Result<usize, Error> {
     a.checked_add(b).ok_or(Error::Limit)
 }
-fn capacity<T>(rows: &Vec<T>) -> Result<usize, Error> {
+pub(in crate::collision) fn capacity<T>(rows: &Vec<T>) -> Result<usize, Error> {
     rows.capacity()
         .checked_mul(std::mem::size_of::<T>())
         .ok_or(Error::Limit)

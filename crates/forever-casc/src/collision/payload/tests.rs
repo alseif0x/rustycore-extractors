@@ -1325,3 +1325,35 @@ fn compact_callback_error_still_runs_both_changed_guards_independently() {
 
 #[path = "compatible_cases.rs"]
 mod compatible_cases;
+
+// Authored 2026-10-17: compatible coverage metadata-only callback seam.
+#[test]
+fn metadata_callback_preserves_already_observed_source_change_over_spool_change() {
+    use std::cell::Cell;
+    let files = [(10, None, m2(true))];
+    let f = CollisionFixture::new(&files);
+    let p = Private::new();
+    let mut store = f.open(false);
+    let mut e = SpoolingExtractor::new(
+        &mut store,
+        &Lookup,
+        CollisionLimits::default(),
+        p.spool(&f, SpoolLimits::default()),
+    )
+    .unwrap();
+    e.extract(request(10)).unwrap();
+    let mut done = e.finish().unwrap();
+    let source = CollectorError::Collision(CollisionError::Store(
+        crate::local_store::Error::InputChanged,
+    ));
+    done.failed = Some(source);
+    fs::set_permissions(&p.path, fs::Permissions::from_mode(0o755)).unwrap();
+    let invoked = Cell::new(0);
+    let error = done.with_metadata_phase(0, || {
+        invoked.set(1);
+        Ok::<_, u8>(())
+    });
+    assert!(matches!(error,Err(CallbackFailure::Collector(e)) if e==source));
+    assert_eq!(invoked.get(), 0);
+    assert_eq!(done.failed, Some(source));
+}

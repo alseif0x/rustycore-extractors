@@ -39,6 +39,197 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible-VMaps coverage and product v14 software checkpoint — 2026-10-17
+
+The compatible-VMaps coverage/product line was recovered from its private
+working-tree lineage (N05 → C5 → C6 → coverage → product v14); it had never
+been committed. The earlier C5 eight-gate qualification aborted at gate 5
+(Clippy), so gates 6–8 (source contracts, distribution and formatting) never
+ran, and the historical-plan-version contract regression went undetected. This
+increment is the first time those gates have been run against this code.
+
+The checkout's CI-equivalent `.github/workflows/forever-rust.yml` `linux` job,
+with `--no-default-features`, passes formatting and Clippy with `-D warnings`;
+workspace tests pass 3,624 / 0 failed / 26 ignored in both debug and release;
+and `--workspace --bins` builds pass in both profiles. Source contracts plus
+the synthetic oracle report 431 OK / 2 skipped; `tests/contracts` reports 378
+OK; `tests/distribution` 166 OK / 1 skipped; synthetic CLI 389 OK / 156
+environment-gated skips; metadata CLI 5 OK; conformance 9 OK; provenance
+verifies 355 imported paths. These are software gates, not extraction/runtime
+acceptance. Retained evidence is at
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/`
+(`repologs/`, `repo-acceptance-result.tsv`, and `evidence/`).
+
+The product v14 admission contract was added for build 70425: v9–v13 each had
+one, while v14 had none. The increment adds
+`contracts/forever-product-contract-v14.json`, its contract test and canonical
+plan fixtures, a Linux CI command, and
+[`docs/forever-product-v14.md`](forever-product-v14.md). The historical
+unknown-plan-version control moved from 14 to 99 in
+`product_v11_cli.rs` and the v12/v13 contract pins because v14 now exists. Its
+coverage file is producer-reported;
+it makes no claim of full encrypted-Map coverage. This increment also carries
+its own independent audit conclusions: no gate was weakened and no assertion
+was removed.
+
+**Unqualified status:** No real-client extraction for this compatible-VMaps /
+product-v14 scope has been performed for build 70374 or 70425. The only real
+client on this workstation activates
+`wow_classic_beta 1.60.1.70450`, which matches no implemented profile; the
+bounded live helper admits only 70170/70205. There is no RustyCore runtime
+verification, release acceptance, or real full-world geometry/world acceptance.
+Windows remains deferred; no older-build acceptance transfers to build 70425;
+`full_extractor_complete` remains false.
+
+## GNU15 empty-WMO correction prerequisite — 2026-10-17
+
+The explicit GNU15-v2 collector now omits a successfully parsed WMO without
+usable collision, preserving its negative identity and any committed children.
+The same placement session continues without allocating a parent ID. Strict and
+compatible-v1 intrinsic-empty behavior remains fatal. Eleven new controls pass
+in both focused profiles and in each complete CASC library run (1,621 passed /
+five historical ignores). All-target package Clippy and scoped formatting pass;
+the first test compilation and narrow formatter-validator failures remain recorded.
+
+The joined comparison that exposed this difference remains failed at Rust N05;
+its fifteen children and four earlier receipts provide no accepted prefix.
+Independent failure-preservation review passes, without native N05 or parity
+acceptance. Subsequent whole-source qualification of functional `6912551` passes
+all eight commands, with 3,490 tests / 26 historical ignores / 52 targets and all
+76 new controls in each profile. Both product builds, source contracts,
+distribution checks, Clippy and formatting pass. Independent terminal software
+QA closes without findings (`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`).
+The updated external comparison caller then passes all seven software checks:
+42 and 94 Python methods, eight Rust methods per profile without ignores,
+release build, Clippy and formatting. Independent terminal QA passes without
+findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`).
+Separate current-caller static inspection then passes seven ELF objects and
+twenty dependency edges, with independent terminal QA and no findings
+(`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`).
+Authenticated role transport preserves 9,175 original file guards, 1,014
+directories and 48 aliases without a flattened global table or rebasing. This
+accepts static software dependencies only. Fixed harness paths still require
+an explicit bridge and a newly qualified caller for fresh comparison directories.
+A complete joined comparison is still required. Final compatible VMaps, real resources, product integration,
+navigation, runtime and Linux delivery remain open. See the
+[correction scope](forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17).
+
+## Compatible world traversal prerequisite — 2026-10-17
+
+The separate consuming 70374/70425 compatible world owner now traverses WDTs and
+object ADTs on one collector/cache/ledger and serial placement session. Typed
+missing WDTs omit their map work; missing own ADTs may replay only the immediate
+parent's own cell. Successful empty own tiles block inheritance, and inherited
+data never becomes own cache. Available Map facts, complete liquid sources and
+topology retain their distinct authenticated scopes.
+
+Debug/release each pass 67 compatible methods, including 24 new traversal
+controls. Both full CASC library profiles pass 1,610 methods / five historical
+ignores, with all 24 new methods executed. Package all-target Clippy and scoped
+formatting also pass; the earlier
+test-initializer Clippy failure remains preserved. Outputs remain provisional.
+Authentic staging, selected VMO conversion and final VMaps remain required,
+followed by real resources, product integration, navigation, runtime and Linux
+distribution.
+No new client/native execution or joined world comparison is established by
+these synthetic checks. See the
+[traversal scope](forever-collision.md#compatible-world-traversal-library--2026-10-17).
+
+## Compatible world preparation prerequisite — 2026-10-17
+
+The separate 70374/70425 compatible preparation owner now retains authentic
+startup, available Map coverage, complete liquid lookups and selected topology
+on one collector/cache/ledger. Focused debug/release each pass 43 compatible
+methods, including all 24 new controls; package all-target Clippy and focused
+formatting pass. Initial fixture failures remain recorded. The finishing API
+returns completed startup and topology, without claiming a completed world.
+Full CASC library regression separately passes 1,586 methods / five historical
+ignores per profile; all 24 new methods execute.
+
+The consuming traversal above supplies the next library step, including
+immediate-parent own-cache replay and the empty-cache barrier. Final VMaps
+and product integration remain required. There is no new client/native
+execution or real acquisition acceptance. The updated comparison harness also
+passes its seven software commands and independent terminal review. Fresh combined
+static inspection separately passes for seven ELF objects / twenty dependency
+edges, with independent review and no target execution. The full joined C++
+comparison remains open. See the
+[library scope](forever-collision.md#compatible-world-preparation-library--2026-10-17).
+These source changes are outside frozen C11 and its comparison caller.
+
+## Explicit70425 liquid reader prerequisite — 2026-10-17
+
+Two fixed-catalog complete liquid reader APIs now have seventeen passing
+synthetic methods in each profile and full DB2 library regression checks
+(441 passed / one historical ignore per profile), package all-target Clippy
+and focused formatting. Generic readers and limits retain their contracts.
+See the [reader scope](forever-70425.md#complete-liquid-reader-apis--2026-10-17).
+This supplies a reader prerequisite for compatible world integration; real
+liquid acquisition, complete world traversal, final VMaps, product/runtime and complete
+Linux delivery remain open. The frozen GNU15 comparison candidate does not
+contain this later source delta.
+
+## GNU15-compatible placement software checkpoint — 2026-10-17
+
+C11 passes all eight software commands for the separately selected GNU15-v2
+placement path. Debug/release each pass 3,414 tests / 26 historical ignores /
+52 targets, including 26 GNU15 checks and the retained 31 placement, 39 compatible
+collision, 49 explicit70425, 38 disk, eleven mount and four helper methods.
+Both product builds, Clippy and formatting pass, alongside 424 source contracts /
+two skips and 165 distribution checks / one skip. Independent terminal QA passes
+155,908 checks without findings; software-only receipt:
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+
+Functional `dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6` matches all 781 selected
+Git inputs in the 822-file / 211-directory frozen C11 candidate; its 41 offline
+inputs remain unchanged. The snapshot's original uncommitted claim remains
+historical. Original guards close, and matched terminal/initial-empty-group
+evidence precedes one stop. C10 remains failed at Clippy with formatting unrun.
+The earlier N03 joined comparison remains failed without an accepted prefix.
+
+Fresh joined C++ comparison is pending. World traversal, parent replay, the
+owned empty-cache barrier and final compatible VMap remain open, together with
+required real resources, product integration, navigation, RustyCore runtime and
+stable Linux delivery. Windows remains deferred. This documentation delta is not
+rebuilt into the qualified binaries. See the
+[collision checkpoint](forever-collision.md#gnu15-compatible-placement-software-checkpoint--2026-10-17).
+
+## Compatible placement software checkpoint — 2026-10-17
+
+Issue #92's compatible serial placement bridge passes all eight software
+qualification commands: 3,388 workspace tests / 26 historical ignores per
+debug/release profile, all 31 new placement methods in each, both product
+builds, 424 source contracts / two skips, 165 distribution tests / one skip,
+Clippy and formatting. Independent terminal software QA is
+`0183b7402e560c5d58917c2cc7b5e7e03949885912f8fca74b0a361aa2296e64`.
+Functional `c5267371f827e42bd94ff3824f6d97336ca821c0` binds all 778 selected
+Git inputs to frozen C9; 41 additional inputs retain its offline build closure.
+The source was uncommitted at qualification, then bound byte for byte.
+
+The separate comparison harness now passes all seven software commands:
+42 comparator tests, 73 independent constructor tests, eight Rust methods in
+each profile, release compilation, Clippy and formatting. Independent terminal
+QA passes without findings. The native harness subsequently passes 71
+compilation/link commands, and separate static inspection accepts seven ELF
+objects / twenty loader edges. These results qualify software and static
+dependencies.
+
+The first joined comparison campaign stops after ten successful child exits
+because case `70374/N03` produces different WMO child-to-ID ordering. The
+105-child plan remains incomplete, with no accepted prefix. Source diagnosis
+points to native GNU libstdc++ 15 unordered-set traversal versus the sorted Rust
+selection. The separately selected GNU15-v2 mode subsequently passes C11
+software qualification, as recorded above. Native placement compatibility remains
+open. World traversal, parent replay,
+the owned empty cache barrier and final compatible VMap assembly remain open,
+alongside required real resources, navigation, product/runtime integration and
+reproducible Linux delivery. The latest diagnostic attempt fails before any Rust
+target call; the first actual exception remains unknown. A separately reviewed
+source correction binds the historical controller helper to its original source
+owner. Neither that source review nor the failed attempt accepts acquisition or
+diagnostic telemetry. This later documentation annex is not rebuilt into the
+qualified binaries. See the [collision checkpoint](forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17).
+
 ## Compatible startup checkpoint — 2026-10-16
 
 Issue #90 qualifies separate Linux compatible spooled startup/model owners for

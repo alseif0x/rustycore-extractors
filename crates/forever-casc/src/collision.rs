@@ -1075,8 +1075,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         self.read_capped_policy(input, requested_cap, false)?
             .ok_or(Error::Store(local_store::Error::MissingFile))
     }
-    // Only compatible's already-normalized model requests select allow_missing.
-    // Required sources keep the strict adapter and its sticky error handling.
+    // Only compatible model requests and its closed WDT/own-ADT world seam
+    // select allow_missing; required sources retain the strict sticky adapter.
     fn read_capped_policy(
         &mut self,
         input: InputRef<'_>,

@@ -51,7 +51,7 @@ TOOLCHAIN_NOTICES = {
 }
 TEST_SUFFIXES = {".py", ".rs", ".cpp", ".h", ".hpp", ".tsv", ".json", ".md"}
 DOCS = ("README.md", "docs/forever-product.md", "docs/forever-completion.md", "docs/forever-distribution.md", "docs/forever-ci.md", "docs/forever-windows-producer.md")
-OPTIONAL_CI_DOCS = ("docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md", "docs/forever-windows-membership.md", "docs/forever-windows-output.md")
+OPTIONAL_CI_DOCS = ("docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md", "docs/forever-product-v14.md", "docs/forever-windows-membership.md", "docs/forever-windows-output.md")
 OPTIONAL_CI_SOURCE = ("tools/generate_forever_catalog.py",)
 OPTIONAL_WINDOWS_QA_SOURCE = ("docs/forever-windows-product.md", "tools/check_forever_windows_product.ps1", "docs/forever-windows-producer-msvc-v2.md")
 WINDOWS_INPUT_SOURCE = ("crates/forever-platform/README.md", "crates/forever-platform/src/path.rs", "crates/forever-platform/src/windows.rs", "crates/forever-platform/src/windows/ffi.rs", "crates/forever-platform/src/windows/tests.rs", "crates/forever-casc/src/admission.rs", "crates/forever-casc/src/local_store.rs", "crates/forever-casc/src/local_store/io.rs", "crates/forever-casc/src/local_store/io/windows.rs", "crates/forever-casc/src/local_store/io/windows/tests.rs", "crates/forever-extractor/src/input.rs", "crates/forever-extractor/src/input/windows.rs", "crates/forever-extractor/src/input/windows_tests.rs", "contracts/forever-windows-consumers-contract-v1.json", "tests/contracts/test_forever_windows_consumers_contract.py")

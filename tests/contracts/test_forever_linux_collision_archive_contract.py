@@ -113,8 +113,8 @@ class LinuxCollisionArchiveContract(unittest.TestCase):
         for path,checks in {
             'run/inventory.rs':['wdts.backend() != collector.backend()', 'caches.backend() != collector.backend()'],
             'assemble/staged.rs':['repository.backend() != startup.collector_mut().backend()', 'wdts.backend() != repository.backend()', 'caches.backend() != repository.backend()'],
-            'assemble/staged/models.rs':['repository.backend() != stage.stage.repository.backend()'],
-            'assemble/staged/models/package.rs':['repository.backend() != models.repository.backend()'],
+            'assemble/staged/models.rs':['repository.backend() != stage.archive().repository.backend()'],
+            'assemble/staged/models/package.rs':['repository.backend() != models.view().repository.backend()'],
         }.items():
             source = read('crates/forever-casc/src/collision/' + path)
             for text in checks:

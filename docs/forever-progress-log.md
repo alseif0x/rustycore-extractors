@@ -8,6 +8,179 @@ the OpenCode section. Add new dated entries here.
 ## Part 1 — project-section checkpoints
 
 
+### GNU15 complete no-collision WMO correction — 2026-10-17
+
+Only the explicit GNU15-v2 collector emits `Omission::CompleteNoCollision` for
+a complete root/required-group WMO without usable collision. It retains negative
+identity and committed child models while omitting the parent handle, RAW,
+payload and placement ID; the same session continues to later models. Missing
+or unreferenced children are not declared complete. The existing
+`NoUsableCollisionAfterOmission` reason keeps precedence, and strict/compatible-v1
+intrinsic-empty behavior remains fatal. Owned temporaries drop before refunds
+and caching the omission.
+
+Six scoped software commands pass: eleven new methods per focused profile,
+1,621 complete CASC library tests / five historical ignores per debug/release
+profile, all-target package Clippy and exact three-file formatting. All eleven
+methods execute in both full profiles. Receipt is
+`7cb3595b71f7f21362ef1e86c376f4978c68c36f20c48a65dccac22f776b56fe`.
+The first compile failure and narrow formatter-validator failure remain preserved;
+only test API usage changed after the compile failure. The preceding joined
+comparison remains failed at Rust N05, with fifteen children and no accepted
+prefix; native N05 did not execute. Independent failure-preservation QA passes
+126,036 checks, without transferring parity or extraction acceptance. Fresh
+whole-source and joined comparison, final VMaps, real resources, product/runtime
+and full Linux delivery remain open. See `docs/forever-collision.md`.
+
+Subsequent immutable functional `6912551` qualification passes all eight software
+commands: 3,490 tests / 26 historical ignores / 52 targets per debug/release
+profile, all 76 new methods per profile, both product builds, 424 contracts /
+two skips, 165 distribution checks / one skip, Clippy and format. Independent
+terminal QA passes 174,712 checks without findings
+(`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`).
+The first actual terminal auditor rejection stays recorded; a distinct corrected
+metadata review passes without repeating software commands or querying the
+stopped service. This closes current whole-source software qualification only.
+The joined comparison and all extraction/product/runtime gates remain open.
+This documentation update is not rebuilt into the qualified binaries.
+
+The updated external comparison caller on the same functional `6912551` base
+subsequently passes all seven software commands: 42 and 94 Python methods,
+eight Rust methods per debug/release profile without ignores, release build,
+example Clippy and formatting. Independent terminal QA passes 265,421 checks
+without findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`).
+Original 6,592 software guards, 969 directories and 48 aliases close unchanged.
+The rejected low-space preparation remains failed; its separate corrected
+preparation uses another local volume with the same 16 GiB reserve. This is
+caller software evidence only; the subsequent static checkpoint follows.
+
+Separate current-caller ELF inspection passes seven objects / twenty dependency
+edges with independent terminal QA, 93,091 checks and no findings
+(`ef30ba3ca21a5686bd88d1dda4948650947951acb2ae8ade8fbdcfa47cfbe23b`).
+Three authenticated original guard roles and a disjoint delta retain all 9,175
+file guards, 1,014 directories and 48 aliases without a flattened global table
+or original-fact rebasing. Per-role document and entry limits remain explicit;
+the aggregate is not claimed to fit the previous 8,192-entry representation.
+One pure parser child exits zero with an empty strict trace. Two numeric parent
+observations and the empty initial group precede one successful stop; parent
+and pre-execution networking remain unobserved. The earlier wrapper argument
+rejection occurred before observer invocation and remains preserved.
+Source review additionally identifies fixed comparison paths. Fresh campaign
+directories require a typed path bridge and new caller qualification before the
+complete joined comparison. Final VMaps, real resources, product/runtime and
+Linux delivery remain open. This documentation is not rebuilt into the binaries.
+
+### Compatible world traversal library — 2026-10-17
+
+The consuming compatible world inventory path now traverses authentic startup
+or fresh preparation on one collector/cache/payload owner and serial placement
+session. Only typed missing-file results omit WDT work or permit immediate-parent
+own-cell replay; successful empty own tiles block inheritance and replay never
+becomes own cache. Available Map/complete liquid facts and topology survive in
+genuine compatible `Completed`, with provisional sink output. Debug/release each
+pass 67 compatible methods / 24 new traversal controls; full CASC library
+regression passes 1,610 methods / five historical ignores per profile, including
+all 24 new methods. A source-review finding preserves observed InputChanged
+priority over outer inventory mutation; its dual-mutation control passes both
+profiles. All-target package Clippy and scoped formatting pass in corrected
+six-command qualification `e3edd8b60252597279f3ef9eee8cc1aedfd6d744f22d4a70b6800ea4d5e8b21d`;
+the first attempt's test-initializer Clippy failure remains preserved. No new
+client/native execution or joined world comparison follows.
+Authentic staging, VMO selection, final VMaps, real resources, product/navigation/
+runtime and Linux delivery remain open. See `docs/forever-collision.md`.
+
+### Compatible world preparation library — 2026-10-17
+
+Separate `collision::compatible::world` preparation now acquires available
+70374/70425 Map rows and complete liquids on authentic compatible startup,
+retaining one collector/cache/payload owner, handles, target/order and ledger.
+Guarded callbacks retain topology/lookups; uninvoked captures and sink drop
+before final error guards. Finishing yields genuine completed startup and
+topology, not a completed world. Focused debug/release each pass 43 compatible
+methods, including all 24 new controls; package all-target Clippy and focused
+formatting pass. Full CASC library regression passes 1,586 methods / five
+historical ignores per profile, including all 24 new methods. Initial
+22-pass/two-failure fixture checks remain failed;
+test-only corrections preserve production classification and typed cache policy.
+No new client/native execution follows. Traversal, parent own-cache replay,
+empty barriers, final VMaps, product/navigation/runtime and Linux delivery remain
+open. This later source is outside frozen C11 and its comparison caller.
+
+The updated GNU15 comparison harness separately passes seven software commands:
+42 comparator, 94 constructor/admission and eight Rust methods per profile,
+release build, Clippy and formatting. Independent terminal QA passes 201,600
+checks without findings (`6b34054339bd4dda52f075ae59f775d1321f3da64c50a92b3a37c69041ef633c`).
+The preceding formatting failure retains no accepted prefix. Fresh combined
+static inspection subsequently passes seven ELF objects / twenty dependency
+edges, with 99,997 independent checks and no findings
+(`ed51ee08b67d586a5c468269c7993d9d87cca2064937fce5cb8cd45d58cb5f25`).
+No target or loader executes; two terminal observations and an empty initial
+group precede one stop. The complete joined comparison remains pending. See
+`docs/forever-collision.md`; no real acquisition/product/runtime acceptance follows.
+
+### Explicit70425 complete liquid reader library — 2026-10-17
+
+Fixed `read_liquid_materials_70425` and `read_liquid_types_70425` APIs select
+the existing `wowdbdefs-70425-v1` catalog and reuse complete-source decoding
+and copy semantics. Generic selectors and resource limits retain their behavior.
+Seventeen new synthetic methods pass in each debug/release profile; each full
+DB2 library run passes 441 tests / one historical ignore. Package all-target
+Clippy and formatting of the three changed Rust files pass. The initial focused
+run's incorrect parent-count error expectation remains a failed invocation;
+the corrected test matches existing parser precedence without changing production.
+This is library software evidence only, separate from frozen C11 and the updated
+comparison caller. Real liquid acquisition, compatible world integration, final
+VMaps, product/runtime and complete Linux delivery remain open. See
+`docs/forever-70425.md`.
+
+### GNU15-compatible placement software — 2026-10-17
+
+Issue #92's separately selected GNU15-compatible v2 path passes all eight C11
+software commands. Functional `dce471c9314fda3a38a0fbad3dfacc5cdbb0e9b6` matches
+all 781 selected Git files in frozen C11 (822 files / 211 directories, including
+41 unchanged offline inputs). Its snapshot-time uncommitted claim remains
+historical. Debug/release each pass 3,414 tests / 26 historical ignores /
+52 targets, all 26 GNU15 checks and retained 31 placement, 39 compatible collision,
+49 explicit70425, 38 disk, eleven mount and four helper methods. Both product
+builds, Clippy/format, 424 source contracts / two skips and 165 distribution
+checks / one skip pass. Independent terminal software QA passes 155,908 checks
+without findings; receipt:
+`37d950a3b65fff28de966df71d9ea202d7dbb9501a3ec3698806de9c1fd0facc`.
+Original software/source guards close; two matching terminal observations and
+the initial group empty precede one stop, with root progress queries separate.
+Strict/v1 APIs, payload format gates, product defaults and resource caps remain
+unchanged. C10 remains failed at Clippy with formatting unexecuted. The first
+N03 joined comparison remains failed with no accepted prefix; fresh joined C++
+comparison is pending. World traversal, parent replay, the owned empty-cache
+barrier, final compatible VMaps, real resources, product/navigation/runtime and
+stable Linux delivery remain open; Windows is deferred. This documentation delta
+is not rebuilt into qualified binaries. See `docs/forever-collision.md` and
+`docs/forever-completion.md`.
+
+### Compatible serial placement software — 2026-10-17
+
+Issue #92 adds separately selected Linux compatible placement sessions over one
+collector, ID allocator and provisional sink. Physical occurrences determine
+acquisition and serial IDs; omissions and no-collision outcomes consume no IDs,
+and doodad-only WMOs emit surviving children without a parent ID. Existing strict
+APIs, product profiles and resource ceilings remain scoped. Functional
+`c5267371f827e42bd94ff3824f6d97336ca821c0` binds all 778 selected Git files to
+frozen C9. Eight software commands pass, including 3,388 workspace tests and all
+31 new placement methods per debug/release profile. The separate comparison
+harness passes seven commands (42/73 Python methods and eight Rust methods per
+profile). The native harness subsequently passes 71 compilation/link commands;
+static inspection accepts seven ELF objects / twenty loader edges. The first
+joined campaign stops after ten successful child exits at `70374/N03`, whose WMO
+child-to-ID order differs. No prefix is accepted. Source diagnosis identifies
+GNU libstdc++ 15 unordered-set traversal versus sorted Rust references. The later
+separately selected GNU15-v2 mode passes C11 software qualification above;
+native comparison remains pending. Native placement compatibility, world
+traversal, parent replay, the owned empty-cache barrier and final compatible
+VMaps remain unaccepted. This later
+documentation annex is not rebuilt into the qualified binaries. See
+`docs/forever-collision.md` and `docs/forever-completion.md`; full Linux extraction
+remains the goal.
+
 ### Linux compatible spooled collision startup — 2026-10-16
 
 Issue #90 adds separately selected compatible spooled startup/model owners for
@@ -2848,3 +3021,222 @@ This accepts the declared available-map terrain domain and explicit omissions;
 coverage is producer-reported. Full-client, collision/navigation for 70374,
 runtime and reproducible stable distribution remain gates. See
 docs/forever-terrain-v13.md.
+
+## 2026-10-17 — compatible VMaps coverage and product v14
+
+The private lineage is N05 → C5 → C6 → coverage → product-v14; this work had
+never been committed. C5's eight-gate qualification stopped at gate 5 (clippy);
+the retained summary `../evidence/recovery-and-gate-status-v1.json`
+(`gates_observed.C6_frozen.clippy_D_warnings.why_c5_missed`) records that C5
+Clippy aborted at the forever-casc lib target with 22 `dead_code`/`result_large_err`
+errors, before test-target lints. Gates 6–8 (source contracts, distribution and
+format) never ran. This is distinct from the failed `../clippy.stderr` capture,
+whose compiler paths identify the earlier `priv-product-v14-check-20261017` tree
+and whose five errors are four `possible_missing_else` findings in
+`collision_coverage.rs` and one `manual_contains` in `verify/compatible_vmaps.rs`.
+The current integration Clippy run succeeded; its snapshot log is
+`../evidence/acceptance-20261017T2049Z/logs/clippy.stderr` (the run-local
+`../logs/` paths are overwritten by later runs). C6 did not run the C5 gate set.
+The historical-unknown-version contract
+regression therefore escaped those qualifications. A later separate source-
+contract attempt is retained at `../logs/early-source-contracts.stderr`: 426
+ran, 2 failed and 2 were skipped because v12/v13 still pinned the old version-14
+sentinel. That was corrected: the historical-unknown-version control moved
+from plan version 14 to 99 because product plan version 14 now exists; v12 and
+v13 contract pins were updated to the same 99 value, matching
+`product_v11_cli.rs` and keeping the control pinned. The initial v14-only test
+failures (3 passed, 2 failed) are retained in
+`../logs/v14-contract-initial-failure.txt`; the initial distribution failure
+(166 tests, 2 failures, 1 skipped) is retained in
+`../logs/v14-contract-acceptance.txt`.
+
+The retained CI-equivalent Linux run was reproduced from
+`.github/workflows/forever-rust.yml`, job `linux`, with debug and release
+profiles. Its authoritative retained copy is `../evidence/acceptance-20261017T2049Z/`:
+`acceptance-result.tsv` records exit 0 for each of its 12 steps, `logs/` contains
+the captured outputs, and `rust-source-sha256.txt` records the source-file hashes.
+The run-local paths under `../logs/` are rewritten by each run; the snapshot is
+the cited record. Its aggregate Rust-source hash is
+`39e7202a6fa95f00a0119d6f37fe26e9124991dc703ea235b5a3f82380327c4e`, identifying
+the source revision to which these gates apply. This run predates the v14
+admission-contract/test/fixtures/CI-line/capability-documentation artifacts,
+added later the same day; the Rust v14 implementation and its unit tests
+(`plan::v14_tests`, `verify::compatible_vmaps::tests`, and v14 replay tests) were
+already present and passing. It is not v14 admission acceptance. Its exact
+results are: format and clippy both exit 0
+(`../evidence/acceptance-20261017T2049Z/logs/fmt.stdout`/`fmt.stderr`,
+`../evidence/acceptance-20261017T2049Z/logs/clippy.stdout`/`clippy.stderr`);
+workspace tests in debug and release each exit 0 with 3,624 passed, 0 failed
+and 26 ignored (`../evidence/acceptance-20261017T2049Z/logs/test-debug.stdout`/
+`test-debug.stderr`, `../evidence/acceptance-20261017T2049Z/logs/test-rel.stdout`/
+`test-rel.stderr`); debug and release binary builds exit 0
+(`../evidence/acceptance-20261017T2049Z/logs/bins-debug.stderr`,
+`../evidence/acceptance-20261017T2049Z/logs/bins-rel.stderr`); source contracts
+exit 0 with 426 tests OK and 2 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/contracts.stderr`); all contracts
+exit 0 with 373 OK (`../evidence/acceptance-20261017T2049Z/logs/allctr.stderr`);
+distribution exits 0 with 166 OK and 1 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/distrib.stderr`); DB2 inspect
+build exits 0 (`../evidence/acceptance-20261017T2049Z/logs/inspect.stderr`);
+metadata CLI exits 0 with 5 OK
+(`../evidence/acceptance-20261017T2049Z/logs/metacli.stderr`); and the synthetic
+Python suite exits 0 with 389 OK and 156 skipped
+(`../evidence/acceptance-20261017T2049Z/logs/synth.stderr`). The complete
+per-step commands and exit codes are in
+`../evidence/acceptance-20261017T2049Z/acceptance-result.tsv`.
+
+Reviewed fixes in this increment include `Coverage::matches` searching by
+ASCII-folded path order while rechecking exact equality (`a.path != e.path`);
+sealed resume recomputing artifacts and verifying each against the immutable
+receipt instead of rewriting it; and correcting two stale test expectations:
+the resume test restores the `INCOMPLETE` marker, and the M2 placement ID is
+`u32::MAX - 1`.
+
+The product-v14 admission contract for build 70425, canonical plan fixtures,
+contract test, Linux CI command and capability documentation were added. The
+source-contract harness `CHECKS` now exactly matches the workflow's 22 command
+lines. The two exact distribution optional-input pins were deliberately
+extended for `docs/forever-product-v14.md`; the expected combined optional
+input count is 6, and negative coverage rejects
+`source/docs/forever-product-v14-extra.md`. The v14 contract test was strengthened
+after the independent mutation audit finding in this integration handoff showed
+that 18 of the 26 fixture field values and several contract numbers were unpinned.
+
+Current closeout used Rust/Cargo 1.98.0, `CARGO_TARGET_DIR=../target` and
+`PYTHONDONTWRITEBYTECODE=1`. Exact commands and observed results:
+(a) `cargo fmt --all -- --check`: exit 0, no output;
+(b) `python3 -B -m unittest discover -s tests/distribution -p 'test*.py'`:
+exit 0, `Ran 166 tests in 13.800s`, `OK (skipped=1)`;
+(c) `python3 -B -m unittest discover -s tests/contracts -p 'test*.py'`:
+exit 0, `Ran 378 tests in 6.843s`, `OK`;
+(d) `python3 -B -m unittest discover -s tests/contracts -p 'test_forever_product_v14_contract.py' -v`:
+exit 0, `Ran 5 tests in 0.039s`, `OK`;
+(e) `python3 -B -m unittest discover -s tests/contracts -p 'test_forever_ci_contract.py' -v`:
+exit 0, `Ran 21 tests in 0.005s`, `OK`;
+(f) `python3 -S -B /home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/source_contracts.py`:
+exit 0, `Ran 431 tests in 2.267s`, `OK (skipped=2)`. The distribution exact-pin
+correction was re-run in the full distribution suite. No fresh current v14
+clippy, workspace debug/release, or binary-build run was made in this closeout;
+the earlier pre-v14 run above does not transfer acceptance to this target.
+
+Both debug and release logs list 19 phase-1 tests and execute them: 7
+`product70425_*` driver cases, 7 `v14_verify_*`, and 5 `plan::v14_tests::*`.
+Resume with six fresh owner repositories is tested by
+`driver::disk::compatible::tests::product70425_resume_recomputes_with_fresh_six_repositories`;
+startup assembly, publication and offline link verification by
+`driver::disk::compatible::tests::product70425_genuine_startup_world_models_package_and_offline_links`.
+Coverage/admission cases are `verify::compatible_vmaps::tests::v14_verify_*` and
+`plan::v14_tests::*`. Synthetic tests only: no real-client extraction,
+full-world resources or runtime acceptance.
+
+## Unqualified status
+
+No real-client extraction, RustyCore runtime verification, release acceptance,
+or real full-world geometry/world acceptance has been established. Windows is
+deferred. No older-build acceptance transfers to build 70425; full extractor
+completion remains false.
+
+## 2026-10-17 — v14 CLI admission and Linux package reproduction
+
+Commit `5f890a9` adds `crates/forever-extractor/tests/product_v14_cli.rs` (four
+synthetic tests) and one line in `tests/contracts/test_forever_product_v14_contract.py`.
+This supplies the dedicated v14 CLI gate missing from v9–v13. It checks v14
+`inspect` disclosures; absent and truncated coverage rejection by both `verify`
+and `verify-links`, without semantic fallback; and the keys, scratch, backend,
+collision-domain, build and component-scope error codes. Details are in
+`docs/forever-product-v14.md`.
+
+Independent read-only audit first found three test defects and two observations;
+the defects were corrected. Re-audit found no residual defect, verified the six
+error codes verbatim and non-vacuous assertions, and confirmed the contract edit
+is additive. One residual observation is that the `build 70374` assertion depends
+on `validate()` ordering: a reorder could report `product_plan_schema_catalog`
+instead of `product_plan_build`.
+
+The local 14-step `acceptance-repo.sh` run exits zero at every step. Format and
+all-target workspace Clippy pass; `--no-default-features` workspace tests report
+3,628 passed / 0 failed / 26 ignored in debug and 3,628 passed / 0 failed / 26
+ignored in release, each across 53 targets. Debug/release workspace binaries build. Source
+contracts pass 431 / two skipped; repository contracts 378; distribution 166 / one
+skipped; synthetic tests 389 / 156 skipped; metadata CLI five; provenance records
+355 imported paths / ten modification notices; conformance passes nine. The debug
+test total is four above 3,624, matching the new CLI tests. Exact records:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/repologs/console3.txt`
+and `.../repologs/repo-acceptance-result-v3.tsv`.
+
+The build command is `tools/package_forever.py build --source
+/home/joe/projects/dream/wow/rustycore-extractors --output
+/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt1
+--cargo-cache <registry cache> --epoch 1791720000`. The
+`forever-distribution-v1` Linux x86_64 candidate reports
+`schema: forever-distribution-v1`, `created`, 864
+files, archive SHA-256 `e57e685cf001da76152a5179e0cae5731eac3a2de4989eaac494ebc3222ef59e`,
+binary SHA-256 `9d35a107b3a5d93216c036d02039626e72e20b97f07c55b7199acc7c9ab90694`,
+source SHA-256 `27445f6caf5db3a9424b59cbcea8af2972e903f794a8a66119664e0e2f958549`,
+and `full_extractor_complete: false`. The verify command
+`tools/package_forever.py verify --archive
+/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt1/forever-extractor-linux.tar.gz`
+reports `verified` with the same binary/files figures. In the extracted
+`moved-source`, `python3 source/tools/package_forever.py rebuild --bundle .
+--output /home/joe/.local/share/rustycore-distribution-v14-20261017/rebuild1`
+reports `rebuilt` and reproduces the original binary byte-for-byte. `attempt1`,
+the extracted `moved-source` directory and `rebuild1` are retained under
+`/home/joe/.local/share/rustycore-distribution-v14-20261017/`.
+
+Real extraction for target profiles 70374/70425 remains unperformed: no client for
+either profile is installed here; the installed client is 1.60.1.70450, not an
+implemented target, and the bounded live helper admits only 70170/70205. No older
+or other build acceptance transfers. No RustyCore server binary is built; the
+runtime declares 1.60.1 build 70170, so target-profile runtime acceptance is
+absent. C++ generations A and B were rejected. R4 has static inspection (seven
+objects / twenty edges) and software QA, but independent terminal ELF-lifecycle QA
+is pending. The finite-105 role-rebind plan is source-plan-only pending explicit
+root GO; its 105 real processes were not launched. No full extraction, runtime,
+release or publication acceptance follows.
+
+## 2026-10-17 — combined-static terminal QA, clean-HEAD package, and the 105-process block
+
+From clean committed HEAD `ab12d18de2ffc6e3a0e4ea93310c19946310628d`,
+`tools/package_forever.py build` created
+`/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt2`: 865 files,
+archive SHA-256 `8967d98c6484606907283df75737896f940ea05b5d181156667631ebd25c5992`,
+source SHA-256 `1b027a4103fb6be7e9e601b864e9aa4b85ace64adef9ef7ee7d7d9ff082a9c3c`,
+binary SHA-256 `9d35a107b3a5d93216c036d02039626e72e20b97f07c55b7199acc7c9ab90694`,
+and `full_extractor_complete: false`. `verify --archive` reported `verified` with
+the same binary digest and 865 files. Extracting to `moved-source2` and running
+`rebuild --bundle . --output …/rebuild2` reported `rebuilt`; its binary was
+byte-identical to the original. Unlike attempt1 (864 files, packaged from a tree
+with in-progress work and predating the new test), attempt2 includes
+`crates/forever-extractor/tests/product_v14_cli.rs` and is tied to the audited
+commit; attempt1's archive instead matches source `b69c86e`. The two archive builds
+and the offline rebuild of each extracted archive produced one binary digest.
+Archive and source digests differ because the packaged source sets differ by one
+file. All six directories (attempt1, moved-source, rebuild1, attempt2,
+moved-source2 and rebuild2) are retained. Packaging establishes archive integrity
+and reproducibility only, not real extraction, runtime or release acceptance.
+
+R4 `pathv2` combined-static root-observer terminal QA is closed under static
+analysis. Review files are
+`…/forever-product-runs/linux-functional-db2-20261015-39o2hd2n/qa/compatible-committed691-pathv2-combined-static-terminal-independent-v1/review-v1.json`
+(SHA-256 `817bb19c333f33bd7a3f0aafb36bf2d4f81d4983b2656d244b1dd2fc6c11d04e`)
+and `…/forever-product-runs/linux-functional-db2-20261015-39o2hd2n/qa/compatible-committed691-pathv2-combined-static-terminal-independent-v1/review-reference-v1.json`
+(SHA-256 `ecbf117686ea8e004ce13c1e5a491b2a35a100a4bb6bd6dc667b77559694a3e3`).
+The verdict is `passed-static-software-only`, with no findings, schema
+`independent-compatible-serial-placement-combined-static-terminal-QA-v1`. The
+reviewed closing is
+`~/.local/share/rustycore-caller691-work-v1/next-compatible-committed691-pathv2-combined-static-execution-v1/root-terminal-closing-v1.json`
+(SHA-256 `72838c9c32ceaf7f8fee379e0fcf8c2ff67dd4e2b4fa8b6792285493a6b16420`).
+The reviewer recomputed 39/39 path/digest citations, revalidated 140 recorded stat
+facts, confirmed the terminal facts (unit stopped, initial ownership group empty
+before the sole stop, no query after stop), re-derived the 7-object/20-edge
+closure counts and byte-equal binary copies, and corroborated non-execution of the
+qualified parser, process helper, Rust/native targets, readelf, ldd, loader and
+client from the frozen observer, trace and seccomp proof. The closing claims only
+static software QA; its own `independent_terminal_QA` remains historical,
+unmodified `pending`. This does not establish runtime, product, full-goal,
+105-process-campaign or release acceptance, and transfers no older ELF acceptance.
+
+`next-compatible-committed691-finite105-role-rebind-source-plan-v1` remains
+source-plan-only; the 105 real processes were not launched and require explicit
+authorization from the root. C++ generations A and B remain rejected. The C++
+comparison remains open and unaccepted.

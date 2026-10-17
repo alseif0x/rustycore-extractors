@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Authored 2026-10-12: original closed selected-model VMO disk preparation.
+// Modified by the RustyCore Extractors project, 2026-10-17.
+// Authored 2026-10-12; modified 2026-10-17: shared closed genuine-phase VMO kernel.
 //! Consumes the actual authenticated placement stage. Selection is every name
 //! BEFORE placement ID deduplication plus every successful startup TempList row.
 //! Unused acquired dependencies are excluded. One complete authenticated RAW is
@@ -20,6 +21,7 @@ use crate::collision::{
 };
 use forever_vmap::{RawM2, gameobject_models, vmo, wmo::raw};
 use std::mem::size_of;
+pub mod compatible;
 pub mod package;
 #[cfg(test)]
 mod tests;
@@ -291,13 +293,250 @@ impl Limits {
         Ok(())
     }
 }
+
+// Authored 2026-10-17: closed borrowed model kernel shared by genuine phases.
+// This trait is private to staged; only strict Staged and compatible::Staged
+// implement it. No public trait or caller-defined proof/RAW mode exists.
+pub(super) trait Phase {
+    type Cause: Copy;
+    type Error: Copy;
+    fn archive(&self) -> &super::Stage;
+    fn archive_mut(&mut self) -> &mut super::Stage;
+    fn phase_guards(&mut self) -> super::Guards;
+    fn verify_unchanged(&mut self) -> Result<(), Self::Error>;
+    fn parts(error: Self::Error) -> (Self::Cause, super::Guards);
+    fn stage_error(error: StageError) -> Self::Error;
+    fn compact(&self) -> Result<payload::CompactView<'_>, CollectorError>;
+    fn shape(&self, handle: ModelHandle) -> Result<payload::PayloadShape, CollectorError>;
+    fn resident_bytes(&self) -> Result<usize, CollectorError>;
+    fn lists(&self) -> Result<&gameobject_models::Lists, Self::Error>;
+    fn with_raw_phase<T, E: Copy>(
+        &mut self,
+        handle: ModelHandle,
+        source: usize,
+        callback: usize,
+        call: impl FnOnce(Option<&[u8]>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>>;
+}
+impl Phase for Staged {
+    type Cause = super::Cause;
+    type Error = super::Error;
+    fn archive(&self) -> &super::Stage {
+        &self.stage
+    }
+    fn archive_mut(&mut self) -> &mut super::Stage {
+        &mut self.stage
+    }
+    fn phase_guards(&mut self) -> super::Guards {
+        self.guards()
+    }
+    fn verify_unchanged(&mut self) -> Result<(), Self::Error> {
+        Staged::verify_unchanged(self)
+    }
+    fn parts(e: Self::Error) -> (Self::Cause, super::Guards) {
+        debug_assert!(e.guards.wdt.is_none() && e.guards.cache.is_none());
+        (e.cause, e.guards)
+    }
+    fn stage_error(e: StageError) -> Self::Error {
+        e.into()
+    }
+    fn compact(&self) -> Result<payload::CompactView<'_>, CollectorError> {
+        self.world.startup().extraction().phase_compact()
+    }
+    fn shape(&self, h: ModelHandle) -> Result<payload::PayloadShape, CollectorError> {
+        self.world.startup().extraction().phase_shape(h)
+    }
+    fn resident_bytes(&self) -> Result<usize, CollectorError> {
+        self.world.startup().extraction().phase_resident_bytes()
+    }
+    fn lists(&self) -> Result<&gameobject_models::Lists, Self::Error> {
+        self.world
+            .startup()
+            .data()
+            .map(|d| d.lists())
+            .map_err(|e| super::Error {
+                cause: super::Cause::Startup(e),
+                guards: Default::default(),
+            })
+    }
+    fn with_raw_phase<T, E: Copy>(
+        &mut self,
+        h: ModelHandle,
+        source: usize,
+        callback: usize,
+        call: impl FnOnce(Option<&[u8]>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        self.world
+            .extraction_mut()
+            .with_payload_phase(h, source, callback, |p| call(p.raw()))
+    }
+}
+#[derive(Clone, Copy)]
+enum WorkCause<C, E = ()> {
+    Phase(C),
+    Kind(Kind),
+    Collector(CollectorError),
+    Callback(E),
+}
+#[derive(Clone, Copy)]
+struct WorkError<C, E = ()> {
+    cause: WorkCause<C, E>,
+    guards: Guards,
+}
+impl<C, E> From<Kind> for WorkError<C, E> {
+    fn from(e: Kind) -> Self {
+        Self {
+            cause: WorkCause::Kind(e),
+            guards: Guards::default(),
+        }
+    }
+}
+impl<C, E> From<CollectorError> for WorkError<C, E> {
+    fn from(e: CollectorError) -> Self {
+        Self {
+            cause: WorkCause::Collector(e),
+            guards: Guards::default(),
+        }
+    }
+}
+fn phase<P: Phase, E>(e: P::Error) -> WorkError<P::Cause, E> {
+    let (cause, g) = P::parts(e);
+    WorkError {
+        cause: WorkCause::Phase(cause),
+        guards: Guards {
+            collector: g.collector,
+            placements: g.stage,
+            archive: None,
+        },
+    }
+}
+fn strict_error<E>(e: WorkError<super::Cause, E>) -> Error<E> {
+    Error {
+        cause: match e.cause {
+            WorkCause::Phase(e) => Cause::Phase(e),
+            WorkCause::Kind(e) => Cause::Kind(e),
+            WorkCause::Collector(e) => Cause::Collector(e),
+            WorkCause::Callback(e) => Cause::Callback(e),
+        },
+        guards: e.guards,
+    }
+}
+// Inert move storage. It never owns a second index/repository/ledger. Constructor
+// errors run final independent guards before this storage is dropped; successful
+// conversion into either public concrete Prepared is allocation-free/infallible.
+struct PreparedState<P: Phase> {
+    stage: P,
+    repository: spool::Spool,
+    index: Vec<Entry>,
+    limits: Limits,
+    base: usize,
+    stats: Stats,
+    failed: Option<Kind>,
+}
+struct ModelWork<'a, P: Phase> {
+    stage: &'a mut P,
+    repository: &'a mut spool::Spool,
+    index: &'a mut Vec<Entry>,
+    limits: Limits,
+    base: usize,
+    stats: &'a mut Stats,
+    failed: &'a mut Option<Kind>,
+}
+impl<P: Phase> PreparedState<P> {
+    fn work(&mut self) -> ModelWork<'_, P> {
+        ModelWork {
+            stage: &mut self.stage,
+            repository: &mut self.repository,
+            index: &mut self.index,
+            limits: self.limits,
+            base: self.base,
+            stats: &mut self.stats,
+            failed: &mut self.failed,
+        }
+    }
+}
+fn selected_models<'a, P: Phase>(
+    stage: &'a P,
+    index: &'a [Entry],
+) -> Result<impl Iterator<Item = (&'a [u8], Class)> + 'a, CollectorError> {
+    let compact = stage.compact()?;
+    Ok(index.iter().filter(|e| e.selected).map(move |e| {
+        let d = compact.descriptor(e.handle).expect("closed source handle");
+        (d.output_basename(), d.class())
+    }))
+}
+fn binding<P: Phase>(stage: &P, index: &[Entry], name: &[u8]) -> Result<usize, Kind> {
+    let view = stage.compact().map_err(|_| Kind::State)?;
+    let at = index
+        .binary_search_by(|e| {
+            view.descriptor(e.handle)
+                .expect("closed source handle")
+                .output_basename()
+                .cmp(name)
+        })
+        .map_err(|_| Kind::Binding)?;
+    if view
+        .descriptor(index[at].handle)
+        .map_err(|_| Kind::Binding)?
+        .status()
+        != Status::Collision
+    {
+        return Err(Kind::Binding);
+    }
+    Ok(at)
+}
+impl Prepared {
+    fn work(&mut self) -> ModelWork<'_, Staged> {
+        ModelWork {
+            stage: &mut self.stage,
+            repository: &mut self.repository,
+            index: &mut self.index,
+            limits: self.limits,
+            base: self.base,
+            stats: &mut self.stats,
+            failed: &mut self.failed,
+        }
+    }
+    // Only the package unit controls inspect this strict-owner budget helper.
+    #[cfg(test)]
+    fn live(&self) -> Result<usize, Kind> {
+        add(self.base, mul(self.index.capacity(), size_of::<Entry>())?)
+    }
+    pub fn verify_unchanged(&mut self) -> Result<(), Error> {
+        self.work().verify_unchanged().map_err(strict_error)
+    }
+    pub const fn stage(&self) -> &Staged {
+        &self.stage
+    }
+    pub fn stats(&self) -> Result<Stats, Error> {
+        self.failed.map_or(Ok(()), |e| Err(Error::from(e)))?;
+        Ok(self.stats)
+    }
+    pub fn models(&self) -> Result<impl Iterator<Item = (&[u8], Class)> + '_, Error> {
+        self.stats()?;
+        selected_models(&self.stage, &self.index).map_err(Error::from)
+    }
+    pub fn with_model<T, E: Copy>(
+        &mut self,
+        name: &[u8],
+        callback_heap_allowance: usize,
+        call: impl FnOnce(&vmo::View<'_>) -> Result<T, E>,
+    ) -> Result<T, Error<E>> {
+        self.work()
+            .with_model(name, callback_heap_allowance, call)
+            .map_err(strict_error)
+    }
+}
+
 struct Identity {
     header: [u8; HEADER],
     name: [u8; NAME_BYTES],
     len: usize,
 }
-fn identity(extraction: &payload::SpoolingExtraction, e: Entry) -> Result<Identity, Error> {
-    let descriptor = extraction.descriptor(e.handle)?;
+fn identity_view<C>(view: payload::CompactView<'_>, e: Entry) -> Result<Identity, WorkError<C>> {
+    let descriptor = view
+        .descriptor(e.handle)
+        .map_err(CollectorError::Collision)?;
     if descriptor.status() != Status::Collision || !e.selected {
         return Err(Kind::Binding.into());
     }
@@ -336,7 +575,12 @@ fn identity(extraction: &payload::SpoolingExtraction, e: Entry) -> Result<Identi
         len: name.len(),
     })
 }
-impl Prepared {
+// Keep the pre-existing strict test helper signature without a second wire kernel.
+#[cfg(test)]
+fn identity(extraction: &payload::SpoolingExtraction, e: Entry) -> Result<Identity, Error> {
+    identity_view(extraction.phase_compact()?, e).map_err(strict_error)
+}
+impl<P: Phase> ModelWork<'_, P> {
     fn live(&self) -> Result<usize, Kind> {
         add(self.base, mul(self.index.capacity(), size_of::<Entry>())?)
     }
@@ -349,14 +593,17 @@ impl Prepared {
         Ok(())
     }
     fn guards(&mut self) -> Guards {
-        let p = self.stage.guards();
+        let p = self.stage.phase_guards();
         Guards {
             collector: p.collector,
             placements: p.stage,
             archive: self.repository.verify_unchanged().err(),
         }
     }
-    fn guarded<T, E: Copy>(&mut self, result: Result<T, Error<E>>) -> Result<T, Error<E>> {
+    fn guarded<T, E: Copy>(
+        &mut self,
+        result: Result<T, WorkError<P::Cause, E>>,
+    ) -> Result<T, WorkError<P::Cause, E>> {
         let mut guards = self.guards();
         let mut error = match result {
             Err(e) => e,
@@ -370,7 +617,7 @@ impl Prepared {
                 }
                 drop(value);
                 guards = self.guards();
-                Error::from(self.failed.unwrap_or(Kind::State))
+                WorkError::from(self.failed.unwrap_or(Kind::State))
             }
         };
         // Existing typed causes survive every independent observed change.
@@ -386,58 +633,15 @@ impl Prepared {
         self.failed.get_or_insert(Kind::State);
         Err(error)
     }
-    pub fn verify_unchanged(&mut self) -> Result<(), Error> {
+    pub fn verify_unchanged(&mut self) -> Result<(), WorkError<P::Cause>> {
         let r = self.failed.map_or(Ok(()), |e| Err(e.into()));
         self.guarded(r)
     }
-    pub const fn stage(&self) -> &Staged {
-        &self.stage
-    }
-    pub fn stats(&self) -> Result<Stats, Error> {
-        self.failed.map_or(Ok(()), |e| Err(Error::from(e)))?;
-        Ok(self.stats)
-    }
-    pub fn models(&self) -> Result<impl Iterator<Item = (&[u8], Class)> + '_, Error> {
-        self.stats()?;
-        let compact = self.stage.world.startup().extraction().phase_compact()?;
-        Ok(self.index.iter().filter(|e| e.selected).map(move |e| {
-            let d = compact.descriptor(e.handle).expect("closed source handle");
-            (d.output_basename(), d.class())
-        }))
-    }
     fn binding(&self, name: &[u8]) -> Result<usize, Kind> {
-        let view = self
-            .stage
-            .world
-            .startup()
-            .extraction()
-            .phase_compact()
-            .map_err(|_| Kind::State)?;
-        let at = self
-            .index
-            .binary_search_by(|e| {
-                view.descriptor(e.handle)
-                    .expect("closed source handle")
-                    .output_basename()
-                    .cmp(name)
-            })
-            .map_err(|_| Kind::Binding)?;
-        let descriptor = view
-            .descriptor(self.index[at].handle)
-            .map_err(|_| Kind::Binding)?;
-        if descriptor.status() != Status::Collision {
-            return Err(Kind::Binding);
-        }
-        Ok(at)
+        binding(self.stage, self.index, name)
     }
-    fn select(&mut self) -> Result<(), Error> {
-        let count = self
-            .stage
-            .world
-            .startup()
-            .extraction()
-            .phase_compact()?
-            .model_count();
+    fn select(&mut self) -> Result<(), WorkError<P::Cause>> {
+        let count = self.stage.compact()?.model_count();
         if count > self.repository.resources().collector_limits().max_models {
             return Err(Kind::Limit.into());
         }
@@ -453,7 +657,7 @@ impl Prepared {
             record: None,
             bytes: 0,
         }));
-        let source = self.stage.world.startup().extraction().phase_compact()?;
+        let source = self.stage.compact()?;
         self.index.sort_unstable_by(|a, b| {
             source
                 .descriptor(a.handle)
@@ -479,19 +683,19 @@ impl Prepared {
             return Err(Kind::Binding.into());
         }
         // One map buffer stays inside the fully reserved placement component.
-        for at in 0..self.stage.stage.entries.len() {
-            let entry = self.stage.stage.entries[at];
+        for at in 0..self.stage.archive().entries.len() {
+            let entry = self.stage.archive().entries[at];
             if !matches!(entry.context.kind, crate::collision::run::Kind::Global) {
                 continue;
             }
-            self.stage.verify_unchanged()?;
+            self.stage.verify_unchanged().map_err(phase::<P, ()>)?;
             let bytes = self
                 .stage
-                .stage
+                .archive_mut()
                 .read_map(entry.context.map_id, 0)
-                .map_err(|e| Error::from(super::Error::from(e)))?;
+                .map_err(|e| phase::<P, ()>(P::stage_error(e)))?;
             let view =
-                forever_vmap::placement::DirBin::parse(&bytes, self.stage.stage.limits.records)
+                forever_vmap::placement::DirBin::parse(&bytes, self.stage.archive().limits.records)
                     .map_err(Kind::Placement)?;
             for row in view.records() {
                 let at = self.binding(row.name())?;
@@ -503,17 +707,12 @@ impl Prepared {
                 )?;
             }
             drop(bytes);
-            self.stage.verify_unchanged()?;
+            self.stage.verify_unchanged().map_err(phase::<P, ()>)?;
             bump(&mut self.stats.maps_scanned, 1, super::super::MAX_MAPS)?;
         }
-        let data = self.stage.world.startup().data().map_err(|e| {
-            Error::from(super::Error {
-                cause: super::Cause::Startup(e),
-                guards: Default::default(),
-            })
-        })?;
+        let lists = self.stage.lists().map_err(phase::<P, ()>)?;
         let list = gameobject_models::TempList::parse(
-            data.lists().temp_bytes(),
+            lists.temp_bytes(),
             gameobject_models::Limits::default(),
         )
         .map_err(Kind::Lists)?;
@@ -528,7 +727,7 @@ impl Prepared {
         }
         Ok(())
     }
-    fn scan(&mut self) -> Result<(), Error> {
+    fn scan(&mut self) -> Result<(), WorkError<P::Cause>> {
         // Aggregate geometry and bounds are admitted for EVERY selected model
         // before the first conversion or archive write, as in resident assembly.
         for at in 0..self.index.len() {
@@ -537,12 +736,7 @@ impl Prepared {
             }
             self.verify_unchanged()?;
             let e = self.index[at];
-            let shape = self
-                .stage
-                .world
-                .startup()
-                .extraction()
-                .phase_shape(e.handle)?;
+            let shape = self.stage.shape(e.handle)?;
             let bytes = shape.raw_bytes.ok_or(Kind::Binding)?;
             self.admit(shape.record_bytes)?;
             bump64(
@@ -552,12 +746,10 @@ impl Prepared {
                     .ok_or(Kind::Limit)?,
                 self.limits.max_raw_visit_bytes,
             )?;
-            let result = self.stage.world.extraction_mut().with_payload_phase(
-                e.handle,
-                shape.record_bytes,
-                0,
-                |p| {
-                    let bytes = p.raw().ok_or(Kind::Binding)?;
+            let result = self
+                .stage
+                .with_raw_phase(e.handle, shape.record_bytes, 0, |raw| {
+                    let bytes = raw.ok_or(Kind::Binding)?;
                     match shape.class {
                         Class::M2 => {
                             let v = RawM2::parse(bytes, forever_vmap::Limits::default())
@@ -576,14 +768,13 @@ impl Prepared {
                             Ok((None, vertices, triangles))
                         }
                     }
-                },
-            );
+                });
             let (bounds, vertices, triangles) = match result {
                 Ok(v) => v,
                 Err(CallbackFailure::Collector(e)) => return Err(e.into()),
                 Err(CallbackFailure::Callback { cause, guard }) => {
-                    return Err(Error {
-                        cause: Cause::Kind(cause),
+                    return Err(WorkError {
+                        cause: WorkCause::Kind(cause),
                         guards: Guards {
                             collector: guard,
                             ..Default::default()
@@ -601,19 +792,14 @@ impl Prepared {
         }
         Ok(())
     }
-    fn convert(&mut self) -> Result<(), Error> {
+    fn convert(&mut self) -> Result<(), WorkError<P::Cause>> {
         for at in 0..self.index.len() {
             if !self.index[at].selected {
                 continue;
             }
             self.verify_unchanged()?;
             let e = self.index[at];
-            let shape = self
-                .stage
-                .world
-                .startup()
-                .extraction()
-                .phase_shape(e.handle)?;
+            let shape = self.stage.shape(e.handle)?;
             let raw_bytes = shape.raw_bytes.ok_or(Kind::Binding)?;
             bump64(
                 &mut self.stats.raw_visit_bytes,
@@ -622,7 +808,7 @@ impl Prepared {
                     .ok_or(Kind::Limit)?,
                 self.limits.max_raw_visit_bytes,
             )?;
-            let mut binding = identity(self.stage.world.startup().extraction(), e)?;
+            let mut binding = identity_view(self.stage.compact()?, e)?;
             let mut c = self.limits.conversion;
             let envelope = add(HEADER, binding.len)?;
             let disk_remaining = self
@@ -656,12 +842,12 @@ impl Prepared {
             let limits = self.limits;
             let stats = &mut self.stats;
             let repository = &mut self.repository;
-            let result = self.stage.world.extraction_mut().with_payload_phase(
+            let result = self.stage.with_raw_phase(
                 e.handle,
                 shape.record_bytes,
                 c.max_memory_bytes,
-                |p| {
-                    let bytes = p.raw().ok_or(Kind::Binding)?;
+                |raw| {
+                    let bytes = raw.ok_or(Kind::Binding)?;
                     let converted = match shape.class {
                         Class::M2 => {
                             let parsed = RawM2::parse(bytes, forever_vmap::Limits::default())
@@ -710,8 +896,8 @@ impl Prepared {
                 }
                 Err(CallbackFailure::Collector(e)) => return Err(e.into()),
                 Err(CallbackFailure::Callback { cause, guard }) => {
-                    return Err(Error {
-                        cause: Cause::Kind(cause),
+                    return Err(WorkError {
+                        cause: WorkCause::Kind(cause),
                         guards: Guards {
                             collector: guard,
                             ..Default::default()
@@ -730,14 +916,14 @@ impl Prepared {
         name: &[u8],
         callback_heap_allowance: usize,
         call: impl FnOnce(&vmo::View<'_>) -> Result<T, E>,
-    ) -> Result<T, Error<E>> {
+    ) -> Result<T, WorkError<P::Cause, E>> {
         let setup = (|| {
-            self.verify_unchanged().map_err(|e| Error {
+            self.verify_unchanged().map_err(|e| WorkError {
                 cause: match e.cause {
-                    Cause::Phase(c) => Cause::Phase(c),
-                    Cause::Kind(k) => Cause::Kind(k),
-                    Cause::Collector(c) => Cause::Collector(c),
-                    Cause::Callback(()) => Cause::Kind(Kind::Callback),
+                    WorkCause::Phase(c) => WorkCause::Phase(c),
+                    WorkCause::Kind(k) => WorkCause::Kind(k),
+                    WorkCause::Collector(c) => WorkCause::Collector(c),
+                    WorkCause::Callback(()) => WorkCause::Kind(Kind::Callback),
                 },
                 guards: e.guards,
             })?;
@@ -746,16 +932,15 @@ impl Prepared {
             if !entry.selected || entry.bytes == 0 {
                 return Err(Kind::Missing.into());
             }
-            let binding =
-                identity(self.stage.world.startup().extraction(), entry).map_err(|e| Error {
-                    cause: match e.cause {
-                        Cause::Phase(c) => Cause::Phase(c),
-                        Cause::Kind(k) => Cause::Kind(k),
-                        Cause::Collector(c) => Cause::Collector(c),
-                        Cause::Callback(()) => Cause::Kind(Kind::Callback),
-                    },
-                    guards: e.guards,
-                })?;
+            let binding = identity_view(self.stage.compact()?, entry).map_err(|e| WorkError {
+                cause: match e.cause {
+                    WorkCause::Phase(c) => WorkCause::Phase(c),
+                    WorkCause::Kind(k) => WorkCause::Kind(k),
+                    WorkCause::Collector(c) => WorkCause::Collector(c),
+                    WorkCause::Callback(()) => WorkCause::Kind(Kind::Callback),
+                },
+                guards: e.guards,
+            })?;
             let extent = add(add(HEADER, binding.len)?, entry.bytes)?;
             let free = self
                 .limits
@@ -796,7 +981,7 @@ impl Prepared {
                             || bytes[..HEADER] != binding.header
                             || bytes[HEADER..HEADER + binding.len] != binding.name[..binding.len]
                         {
-                            return Err(Error::from(Kind::Binding));
+                            return Err(WorkError::from(Kind::Binding));
                         }
                         let view = vmo::View::parse(&bytes[HEADER + binding.len..], reader)
                             .map_err(Kind::Vmo)?;
@@ -808,8 +993,8 @@ impl Prepared {
                         {
                             return Err(Kind::Class.into());
                         }
-                        call(&view).map_err(|e| Error {
-                            cause: Cause::Callback(e),
+                        call(&view).map_err(|e| WorkError {
+                            cause: WorkCause::Callback(e),
                             guards: Default::default(),
                         })
                     })());
@@ -832,27 +1017,27 @@ impl Prepared {
 }
 /// Sole constructor: no supplied model identities or selected-name inventory.
 /// Errors consume the authenticated phase and return no usable partial archive.
-pub fn prepare(
-    mut stage: Staged,
+fn prepare_state<P: Phase>(
+    mut stage: P,
     mut repository: spool::Spool,
     limits: Limits,
-) -> Result<Prepared, Error> {
-    let admission: Result<usize, Error> = (|| {
-        if repository.resources() != stage.stage.repository.resources()
-            || repository.backend() != stage.stage.repository.backend()
+) -> Result<PreparedState<P>, WorkError<P::Cause>> {
+    let admission: Result<usize, WorkError<P::Cause>> = (|| {
+        if repository.resources() != stage.archive().repository.resources()
+            || repository.backend() != stage.archive().repository.backend()
         {
             return Err(Kind::InvalidLimits.into());
         }
         limits.validate_resources(repository.resources())?;
-        stage.verify_unchanged()?;
+        stage.verify_unchanged().map_err(phase::<P, ()>)?;
         repository.verify_unchanged().map_err(Kind::Spool)?;
         if repository.stats().map_err(Kind::Spool)?.records != 0 {
             return Err(Kind::State.into());
         }
         let base = add(
             add(
-                stage.world.startup().extraction().phase_resident_bytes()?,
-                stage.stage.limits.max_heap_bytes,
+                stage.resident_bytes()?,
+                stage.archive().limits.max_heap_bytes,
             )?,
             add(
                 mul(repository.limits().max_descriptor_bytes, 2)?,
@@ -867,7 +1052,7 @@ pub fn prepare(
     let base = match admission {
         Ok(n) => n,
         Err(mut e) => {
-            let g = stage.guards();
+            let g = stage.phase_guards();
             e.guards = Guards {
                 collector: g.collector,
                 placements: g.stage,
@@ -876,7 +1061,7 @@ pub fn prepare(
             return Err(e);
         }
     };
-    let mut out = Prepared {
+    let mut out = PreparedState {
         stage,
         repository,
         index: Vec::new(),
@@ -889,11 +1074,62 @@ pub fn prepare(
         },
         failed: None,
     };
-    let result = out
-        .select()
-        .and_then(|()| out.scan())
-        .and_then(|()| out.convert());
-    out.guarded(result)?;
-    out.stats.reserved_bytes = out.live()?;
+    {
+        let mut work = out.work();
+        let result = work
+            .select()
+            .and_then(|()| work.scan())
+            .and_then(|()| work.convert());
+        work.guarded(result)?;
+        // Pure already-admitted capacity arithmetic; preserve strict guard cadence.
+        work.stats.reserved_bytes = work.live()?;
+    }
     Ok(out)
+}
+
+/// Strict public constructor retains its original concrete owner and seven fields.
+pub fn prepare(stage: Staged, repository: spool::Spool, limits: Limits) -> Result<Prepared, Error> {
+    let PreparedState {
+        stage,
+        repository,
+        index,
+        limits,
+        base,
+        stats,
+        failed,
+    } = prepare_state(stage, repository, limits).map_err(strict_error)?;
+    // Infallible field moves: no allocations, callbacks, new guards or ledger.
+    Ok(Prepared {
+        stage,
+        repository,
+        index,
+        limits,
+        base,
+        stats,
+        failed,
+    })
+}
+
+// Private package seam, retaining the original Prepared seven fields unchanged.
+impl package::Owner for Prepared {
+    type Phase = Staged;
+    fn view(&self) -> package::ModelView<'_, Staged> {
+        package::ModelView {
+            phase: &self.stage,
+            repository: &self.repository,
+            index: &self.index,
+            index_capacity: self.index.capacity(),
+            limits: self.limits,
+            base: self.base,
+            stats: self.stats,
+            failed: self.failed,
+            topology: self.stage.world().topology(),
+        }
+    }
+    fn model_work(&mut self) -> ModelWork<'_, Staged> {
+        self.work()
+    }
+    fn stage_stats(&self) -> Result<super::Stats, WorkError<super::Cause>> {
+        self.stage.stats().map_err(phase::<Staged, ()>)
+    }
 }

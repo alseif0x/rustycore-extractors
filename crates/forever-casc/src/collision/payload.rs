@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-17.
 // Authored 2026-10-11: original explicit per-model spooling collector.
 //! The old owned Extractor remains unchanged in behavior. This route persists
 //! every completed model immediately (including recursive M2 children), drops
@@ -21,6 +22,31 @@ pub const PROFILE: &str = "linux-private-collision-payload-spool-v1";
 const MAGIC: &[u8; 8] = b"RCEPLD1\0";
 pub const COMPATIBLE_PROFILE: &str = "linux-private-compatible-collision-payload-spool-v1";
 const COMPATIBLE_MAGIC: &[u8; 8] = b"RCEPLC1\0";
+/// Separately selected GNU libstdc++15 reference traversal; never v1 wire data.
+pub const COMPATIBLE_GNU15_PROFILE: &str =
+    "linux-private-compatible-collision-payload-spool-gnu15-native-order-v2";
+const COMPATIBLE_GNU15_MAGIC: &[u8; 8] = b"RCEPLC2\0";
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Strict,
+    CompatibleV1,
+    CompatibleGnu15V2,
+}
+impl Mode {
+    const fn compatible(self) -> bool {
+        !matches!(self, Self::Strict)
+    }
+    const fn native_order(self) -> bool {
+        matches!(self, Self::CompatibleGnu15V2)
+    }
+    const fn magic(self) -> &'static [u8; 8] {
+        match self {
+            Self::Strict => MAGIC,
+            Self::CompatibleV1 => COMPATIBLE_MAGIC,
+            Self::CompatibleGnu15V2 => COMPATIBLE_GNU15_MAGIC,
+        }
+    }
+}
 const COMPATIBLE_BINDING: usize = 16;
 const HEADER: usize = 52;
 const BINDING: usize = 12;
@@ -154,7 +180,7 @@ pub(crate) struct Repository {
     spool: Spool,
     mapping: Vec<Mapping>,
     wmo: wmo::Limits,
-    compatible: bool,
+    mode: Mode,
     observed_active: usize,
     failed: Option<Error>,
 }
@@ -166,7 +192,14 @@ impl Repository {
         if !self.mapping.is_empty() {
             return Err(Error::State);
         }
-        self.compatible = true;
+        self.mode = Mode::CompatibleV1;
+        Ok(())
+    }
+    pub(super) fn enable_compatible_native_order(&mut self) -> Result<(), Error> {
+        if !self.mapping.is_empty() {
+            return Err(Error::State);
+        }
+        self.mode = Mode::CompatibleGnu15V2;
         Ok(())
     }
 
@@ -255,7 +288,7 @@ impl Repository {
         compact: usize,
         live: usize,
     ) -> Result<usize, Error> {
-        let result = self.store_inner(handle, model, compact, live, None);
+        let result = self.store_inner(handle, model, compact, live, None, None);
         self.remember(result)
     }
     pub(super) fn store_compatible(
@@ -265,11 +298,12 @@ impl Repository {
         compact: usize,
         live: usize,
         bindings: Option<&[super::compatible::Binding]>,
+        native_references: Option<&[u16]>,
     ) -> Result<usize, Error> {
-        if !self.compatible {
+        if !self.mode.compatible() {
             return Err(Error::State);
         }
-        let result = self.store_inner(handle, model, compact, live, bindings);
+        let result = self.store_inner(handle, model, compact, live, bindings, native_references);
         self.remember(result)
     }
     fn store_inner(
@@ -279,6 +313,7 @@ impl Repository {
         compact: usize,
         live: usize,
         compatible_bindings: Option<&[super::compatible::Binding]>,
+        native_references: Option<&[u16]>,
     ) -> Result<usize, Error> {
         if self.mapping.iter().any(|m| m.model == handle) {
             return Err(Error::State);
@@ -291,7 +326,7 @@ impl Repository {
                 model.raw.as_deref().unwrap_or(&[]),
                 w.root_bytes.as_slice(),
                 w.bindings.as_slice(),
-                w.selection.references(),
+                native_references.unwrap_or_else(|| w.selection.references()),
                 w.groups.as_slice(),
             ),
             None => (
@@ -302,11 +337,14 @@ impl Repository {
                 &[][..],
             ),
         };
-        if model.wmo.is_some() && self.compatible != compatible_bindings.is_some() {
+        if native_references.is_some() != (self.mode.native_order() && model.wmo.is_some()) {
+            return Err(Error::State);
+        }
+        if model.wmo.is_some() && self.mode.compatible() != compatible_bindings.is_some() {
             return Err(Error::State);
         }
         let binding_count = compatible_bindings.map_or(bindings.len(), <[_]>::len);
-        let binding_width = if self.compatible {
+        let binding_width = if self.mode.compatible() {
             COMPATIBLE_BINDING
         } else {
             BINDING
@@ -325,11 +363,7 @@ impl Repository {
         }
         self.check_descriptors(compact)?;
         let mut header = [0; HEADER];
-        header[..8].copy_from_slice(if self.compatible {
-            COMPATIBLE_MAGIC
-        } else {
-            MAGIC
-        });
+        header[..8].copy_from_slice(self.mode.magic());
         let flags = u32::from(model.raw.is_some()) | (u32::from(model.wmo.is_some()) << 1);
         header[8..12].copy_from_slice(&flags.to_le_bytes());
         for (part, n) in header[12..].as_chunks_mut::<8>().0.iter_mut().zip([
@@ -403,7 +437,7 @@ impl Repository {
         budget: usize,
         call: impl FnOnce(Payload<'_>) -> Result<T, Error>,
     ) -> Result<T, Error> {
-        if self.compatible {
+        if self.mode.compatible() {
             return Err(Error::Format);
         }
         self.with_record_payload(handle, budget, false, call)
@@ -426,13 +460,13 @@ impl Repository {
                 .ok_or(Error::State)?;
             let (record, shape) = (mapping.record, mapping.shape);
             let limits = self.wmo;
-            let actual_compatible = self.compatible;
+            let actual_mode = self.mode;
             self.spool.with_record(record, budget, |bytes| {
-                if actual_compatible != compatible {
+                if actual_mode.compatible() != compatible {
                     return Err(Error::Format);
                 }
                 let payload = if compatible {
-                    Payload::parse_profile(bytes, limits, true)?
+                    Payload::parse_mode(bytes, limits, actual_mode)?
                 } else {
                     Payload::parse(bytes, limits)?
                 };
@@ -455,9 +489,28 @@ fn write_source(out: &mut RecordWriter<'_>, g: &SourceFacts) -> Result<(), Error
     out.bytes(&[u8::from(g.first_magic.is_some())])?;
     out.bytes(&g.first_magic.unwrap_or([0; 4]))
 }
+// Exactly the u16 domain, stack-only; it is not a new logical heap allowance.
+// v1 continues to require strict ascending references in its original branch.
+fn validate_native_references(bytes: &[u8], spawn_count: usize) -> Result<(), Error> {
+    let (references, remainder) = bytes.as_chunks::<2>();
+    if !remainder.is_empty() || references.len() > 65536 {
+        return Err(Error::Format);
+    }
+    let mut seen = [0u8; 8192];
+    for b in references {
+        let reference = usize::from(u16::from_le_bytes(*b));
+        let mask = 1u8 << (reference % 8);
+        if reference >= spawn_count || seen[reference / 8] & mask != 0 {
+            return Err(Error::Format);
+        }
+        seen[reference / 8] |= mask;
+    }
+    Ok(())
+}
 /// A borrowed payload, never Debug. Its lifetime is confined to one guarded
 /// callback. Root/source/key facts remain explicit accessors, never diagnostics.
 pub struct Payload<'a> {
+    mode: Mode,
     raw: Option<&'a [u8]>,
     wmo: Option<Wmo<'a>>,
 }
@@ -470,7 +523,19 @@ impl<'a> Payload<'a> {
         limits: wmo::Limits,
         compatible: bool,
     ) -> Result<Self, Error> {
-        let magic = if compatible { COMPATIBLE_MAGIC } else { MAGIC };
+        Self::parse_mode(
+            bytes,
+            limits,
+            if compatible {
+                Mode::CompatibleV1
+            } else {
+                Mode::Strict
+            },
+        )
+    }
+    fn parse_mode(bytes: &'a [u8], limits: wmo::Limits, mode: Mode) -> Result<Self, Error> {
+        let compatible = mode.compatible();
+        let magic = mode.magic();
         let binding_width = if compatible {
             COMPATIBLE_BINDING
         } else {
@@ -537,12 +602,18 @@ impl<'a> Payload<'a> {
                     return Err(Error::Format);
                 }
             }
-            for b in parts[3].as_chunks::<2>().0.iter() {
-                let v = u16::from_le_bytes(*b);
-                if previous.is_some_and(|p| p >= v) || usize::from(v) >= root.doodad_spawn_count() {
-                    return Err(Error::Format);
+            if mode.native_order() {
+                validate_native_references(parts[3], root.doodad_spawn_count())?;
+            } else {
+                for b in parts[3].as_chunks::<2>().0.iter() {
+                    let v = u16::from_le_bytes(*b);
+                    if previous.is_some_and(|p| p >= v)
+                        || usize::from(v) >= root.doodad_spawn_count()
+                    {
+                        return Err(Error::Format);
+                    }
+                    previous = Some(v);
                 }
-                previous = Some(v);
             }
             for g in parts[4].as_chunks::<GROUP>().0.iter() {
                 if g[28] > 1 || g[28] == 0 && g[29..] != [0; 4] {
@@ -560,6 +631,7 @@ impl<'a> Payload<'a> {
             None
         };
         Ok(Self {
+            mode,
             raw: (flags & 1 != 0).then_some(parts[0]),
             wmo,
         })
@@ -653,6 +725,13 @@ pub struct CompatiblePayload<'a> {
     payload: Payload<'a>,
 }
 impl<'a> CompatiblePayload<'a> {
+    pub const fn profile(&self) -> &'static str {
+        if self.payload.mode.native_order() {
+            COMPATIBLE_GNU15_PROFILE
+        } else {
+            COMPATIBLE_PROFILE
+        }
+    }
     fn validate(payload: Payload<'a>, models: &[Model]) -> Result<Self, Error> {
         if let Some(w) = payload.wmo() {
             let view = CompactView {
@@ -748,6 +827,30 @@ impl<'v, 'a> CompatibleWmo<'v, 'a> {
                     super::compatible::Disposition::Missing
                 },
             })
+    }
+    pub(crate) fn binding(&self, name_index: u32) -> Option<super::compatible::Binding> {
+        let values = self.wmo.bindings.as_chunks::<COMPATIBLE_BINDING>().0;
+        let at = values
+            .binary_search_by_key(&name_index, |b| u32_at(&b[..4]))
+            .ok()?;
+        let b = values[at];
+        Some(super::compatible::Binding {
+            name_index,
+            disposition: if u32_at(&b[4..8]) == 0 {
+                super::compatible::Disposition::Present(ModelHandle(u64_at(&b[8..16]) as usize))
+            } else {
+                super::compatible::Disposition::Missing
+            },
+        })
+    }
+    pub fn set_count(&self) -> usize {
+        self.wmo.set_count()
+    }
+    pub fn set_references(
+        &self,
+        requested: u16,
+    ) -> impl Iterator<Item = doodads::SetReference> + '_ {
+        self.wmo.set_references(requested)
     }
     pub fn references(&self) -> impl ExactSizeIterator<Item = u16> + '_ {
         self.wmo.references()
@@ -865,7 +968,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             spool,
             mapping: Vec::new(),
             wmo: limits.wmo,
-            compatible: false,
+            mode: Mode::Strict,
             observed_active: 0,
             failed: None,
         });
@@ -1012,7 +1115,11 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         handle: ModelHandle,
         call: impl FnOnce(Option<&[u8]>) -> Result<T, E>,
     ) -> Result<T, CallbackFailure<E>> {
-        let compatible = self.inner.payloads.as_ref().is_some_and(|r| r.compatible);
+        let compatible = self
+            .inner
+            .payloads
+            .as_ref()
+            .is_some_and(|r| r.mode.compatible());
         if !compatible {
             return self.with_payload_result(handle, |p| call(p.raw()));
         }
@@ -1128,6 +1235,50 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
                     Err(error) => {
                         cause = Some(error);
                         Err(Error::Callback)
+                    }
+                })
+                .map_err(|_| CollisionError::Aborted)
+        })();
+        let result = self.checked(result);
+        match (result, cause) {
+            (Ok(value), None) => Ok(value),
+            (Err(error), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: (error != CollectorError::Payload(Error::Callback)).then_some(error),
+            }),
+            (Err(error), None) => Err(CallbackFailure::Collector(error)),
+            (Ok(_), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: Some(CollectorError::Collision(CollisionError::State)),
+            }),
+        }
+    }
+    /// Compatible wire validation and compact descriptor borrow share the same
+    /// immutable models; callbacks cannot manufacture missing-child bindings.
+    pub(crate) fn with_compatible_payload_descriptors_result<T, E>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(CompatiblePayload<'_>, CompactView<'_>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let mut cause = None;
+        let result = (|| {
+            self.inner.ready()?;
+            let budget = self.inner.free()?;
+            let view = CompactView {
+                models: &self.inner.models,
+                requests: &self.inner.requests,
+            };
+            self.inner
+                .payloads
+                .as_mut()
+                .ok_or(CollisionError::State)?
+                .with_record_payload(handle, budget, true, |payload| {
+                    match call(CompatiblePayload::validate(payload, view.models)?, view) {
+                        Ok(value) => Ok(value),
+                        Err(error) => {
+                            cause = Some(error);
+                            Err(Error::Callback)
+                        }
                     }
                 })
                 .map_err(|_| CollisionError::Aborted)
@@ -1439,6 +1590,60 @@ impl SpoolingExtraction {
         }
         Ok(shape)
     }
+    /// Borrow metadata from a genuine compatible owner without any payload IO.
+    /// The declared heap covers captures, callback work and a returned owned T.
+    /// An uncalled capture or rejected T drops before the LAST spool guard.
+    pub(crate) fn with_metadata_phase<T, E: Copy>(
+        &mut self,
+        callback_heap: usize,
+        call: impl FnOnce() -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let setup = (|| {
+            self.metadata_guard()?;
+            self.ready()?;
+            self.memory
+                .checked_sub(self.phase_resident_bytes()?)
+                .and_then(|n| n.checked_sub(callback_heap))
+                .ok_or(CollisionError::Limit)?;
+            Ok::<(), CollectorError>(())
+        })();
+        if let Err(e) = setup {
+            drop(call);
+            let e = self.metadata_guard().err().unwrap_or(e);
+            self.failed = Some(e);
+            return Err(CallbackFailure::Collector(e));
+        }
+        let outcome = call();
+        match outcome {
+            Err(cause) => {
+                let guard = self.metadata_guard().err();
+                self.failed = Some(guard.unwrap_or(CollectorError::Payload(Error::Callback)));
+                Err(CallbackFailure::Callback { cause, guard })
+            }
+            Ok(value) => match self.metadata_guard() {
+                Ok(()) => Ok(value),
+                Err(e) => {
+                    drop(value);
+                    let e = self.metadata_guard().err().unwrap_or(e);
+                    self.failed = Some(e);
+                    Err(CallbackFailure::Collector(e))
+                }
+            },
+        }
+    }
+    pub(crate) fn metadata_guard(&mut self) -> Result<(), CollectorError> {
+        let source = CollectorError::Collision(CollisionError::Store(
+            crate::local_store::Error::InputChanged,
+        ));
+        let previous = self.failed;
+        let current = self.verify_unchanged();
+        if previous == Some(source) {
+            self.failed = Some(source);
+            Err(source)
+        } else {
+            current
+        }
+    }
     /// Closed phases admit caller conversion/retained allowance before reload.
     /// This reduces only the remaining collector memory budget; the repository
     /// active ceiling continues to cover the source record, not caller geometry.
@@ -1489,6 +1694,89 @@ impl SpoolingExtraction {
             .repository
             .with_payload(handle, budget, |payload| {
                 outcome = Some(call(payload));
+                Ok(())
+            })
+            .map_err(CollectorError::Payload);
+        match outcome {
+            Some(Err(cause)) => {
+                let guard = self.verify_unchanged().err().or(io.err());
+                self.failed = Some(guard.unwrap_or(CollectorError::Payload(Error::Callback)));
+                Err(CallbackFailure::Callback { cause, guard })
+            }
+            Some(Ok(value)) => {
+                let guard = self.verify_unchanged();
+                match io.and(guard) {
+                    Ok(()) => Ok(value),
+                    Err(e) => {
+                        drop(value);
+                        let final_error = self.verify_unchanged().err().unwrap_or(e);
+                        self.failed = Some(final_error);
+                        Err(CallbackFailure::Collector(final_error))
+                    }
+                }
+            }
+            None => {
+                let e = self
+                    .verify_unchanged()
+                    .err()
+                    .or(io.err())
+                    .unwrap_or(CollectorError::Payload(Error::State));
+                self.failed = Some(e);
+                Err(CallbackFailure::Collector(e))
+            }
+        }
+    }
+    /// Compatible final phases retain the same closed memory and guard contract.
+    /// MAGIC2/bindings/native order are validated against this genuine collection.
+    /// This reduces only the remaining collector memory budget; the repository
+    /// active ceiling continues to cover the source record, not caller geometry.
+    /// Both must also fit the enclosing phase ledger enforced by the caller.
+    pub(crate) fn with_compatible_payload_phase<T, E: Copy>(
+        &mut self,
+        handle: ModelHandle,
+        source_allowance: usize,
+        callback_heap_allowance: usize,
+        call: impl FnOnce(CompatiblePayload<'_>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let setup = (|| {
+            self.verify_unchanged()?;
+            self.ready()?;
+            let shape = self.phase_shape(handle)?;
+            let memory = self
+                .memory
+                .checked_sub(self.phase_resident_bytes()?)
+                .and_then(|n| n.checked_sub(callback_heap_allowance))
+                .ok_or(CollisionError::Limit)?;
+            let active = self
+                .repository
+                .active_limit()
+                .checked_sub(
+                    self.external_resident
+                        .checked_sub(self.compatible_descriptors)
+                        .ok_or(CollisionError::State)?,
+                )
+                .ok_or(CollisionError::Limit)?;
+            let budget = memory.min(active).min(source_allowance);
+            if shape.record_bytes > budget {
+                return Err(CollisionError::Limit.into());
+            }
+            Ok(budget)
+        })();
+        let budget = match setup {
+            Ok(n) => n,
+            Err(e) => {
+                // A refused callback may own a mutating Drop. Check after it.
+                drop(call);
+                let final_error = self.verify_unchanged().err().unwrap_or(e);
+                self.failed = Some(final_error);
+                return Err(CallbackFailure::Collector(final_error));
+            }
+        };
+        let mut outcome = None;
+        let io = self
+            .repository
+            .with_record_payload(handle, budget, true, |payload| {
+                outcome = Some(call(CompatiblePayload::validate(payload, &self.models)?));
                 Ok(())
             })
             .map_err(CollectorError::Payload);
@@ -1635,3 +1923,100 @@ impl SpoolingExtraction {
 }
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod native_order_cases {
+    use super::*;
+
+    fn chunk(tag: &[u8; 4], body: &[u8]) -> Vec<u8> {
+        let mut bytes: Vec<_> = tag.iter().rev().copied().collect();
+        bytes.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(body);
+        bytes
+    }
+    fn frame(mode: Mode, references: &[u16]) -> Vec<u8> {
+        let mut root_header = [0; 64];
+        root_header[60] = 4;
+        let mut root = chunk(b"MOHD", &root_header);
+        root.extend(chunk(b"GFID", &[]));
+        root.extend(chunk(b"MODI", &[0; 12]));
+        let mut spawns = [0; 120];
+        for index in 0..3 {
+            spawns[index * 40..index * 40 + 4].copy_from_slice(&(index as u32).to_le_bytes());
+            spawns[index * 40 + 32..index * 40 + 36].copy_from_slice(&1f32.to_le_bytes());
+        }
+        root.extend(chunk(b"MODD", &spawns));
+        let mut bytes = vec![0; HEADER];
+        bytes[..8].copy_from_slice(mode.magic());
+        bytes[8..12].copy_from_slice(&2u32.to_le_bytes());
+        for (slot, value) in bytes[12..].as_chunks_mut::<8>().0.iter_mut().zip([
+            0,
+            root.len(),
+            0,
+            references.len(),
+            0,
+        ]) {
+            slot.copy_from_slice(&(value as u64).to_le_bytes());
+        }
+        bytes.extend(root);
+        for reference in references {
+            bytes.extend(reference.to_le_bytes());
+        }
+        bytes
+    }
+    #[test]
+    fn native_gnu15_payload_v1_rejects_v2_magic_without_fallback() {
+        let bytes = frame(Mode::CompatibleGnu15V2, &[0, 1, 2]);
+        assert!(Payload::parse_profile(&bytes, wmo::Limits::default(), true).is_err());
+        assert!(Payload::parse(&bytes, wmo::Limits::default()).is_err());
+        assert!(
+            Payload::parse_mode(&bytes, wmo::Limits::default(), Mode::CompatibleGnu15V2).is_ok()
+        );
+    }
+    #[test]
+    fn native_gnu15_payload_v2_rejects_v1_magic_without_fallback() {
+        let bytes = frame(Mode::CompatibleV1, &[0, 1, 2]);
+        assert!(Payload::parse_profile(&bytes, wmo::Limits::default(), true).is_ok());
+        assert!(
+            Payload::parse_mode(&bytes, wmo::Limits::default(), Mode::CompatibleGnu15V2).is_err()
+        );
+    }
+    #[test]
+    fn native_gnu15_payload_accepts_unique_nonmonotonic_refs_and_v1_stays_sorted() {
+        let bytes = frame(Mode::CompatibleGnu15V2, &[2, 0, 1]);
+        let payload =
+            Payload::parse_mode(&bytes, wmo::Limits::default(), Mode::CompatibleGnu15V2).unwrap();
+        assert_eq!(
+            payload.wmo().unwrap().references().collect::<Vec<_>>(),
+            [2, 0, 1]
+        );
+        let old = frame(Mode::CompatibleV1, &[2, 0, 1]);
+        assert!(Payload::parse_profile(&old, wmo::Limits::default(), true).is_err());
+    }
+    #[test]
+    fn native_gnu15_payload_rejects_duplicate_refs() {
+        let bytes = frame(Mode::CompatibleGnu15V2, &[2, 0, 2]);
+        assert!(
+            Payload::parse_mode(&bytes, wmo::Limits::default(), Mode::CompatibleGnu15V2).is_err()
+        );
+    }
+    #[test]
+    fn native_gnu15_payload_rejects_reference_outside_spawn_count() {
+        let bytes = frame(Mode::CompatibleGnu15V2, &[3]);
+        assert!(
+            Payload::parse_mode(&bytes, wmo::Limits::default(), Mode::CompatibleGnu15V2).is_err()
+        );
+    }
+    #[test]
+    fn native_gnu15_payload_bitmap_accepts_entire_u16_domain_in_reverse() {
+        let bytes: Vec<_> = (0..=u16::MAX).rev().flat_map(u16::to_le_bytes).collect();
+        assert!(validate_native_references(&bytes, 65536).is_ok());
+        assert!(validate_native_references(&bytes, 65535).is_err());
+    }
+    #[test]
+    fn native_gnu15_payload_bitmap_rejects_odd_and_overdomain_lengths() {
+        assert!(validate_native_references(&[0], 1).is_err());
+        assert!(validate_native_references(&vec![0; 65537 * 2], 65536).is_err());
+        assert!(validate_native_references(&[], 0).is_ok());
+    }
+}

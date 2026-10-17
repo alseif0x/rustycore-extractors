@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="#current-status">Status</a> ·
+  <a href="#find-your-starting-point">Start here</a> ·
   <a href="#build-the-rust-product">Rust quick start</a> ·
   <a href="#build-the-existing-suite">C++ suite</a> ·
   <a href="#documentation">Documentation</a> ·
@@ -24,6 +25,12 @@
 > **Forever is in development.** Bounded Linux extraction and reader checks
 > exist, but complete client extraction, full world resources and RustyCore
 > runtime acceptance remain open. Windows delivery is deferred.
+
+![Extraction workflow: choose a client folder and an explicit plan, extract through local CASC, package versioned components, then verify offline.](docs/assets/extraction-flow.svg)
+
+Choose a supported plan, point the tool at your client folder, and keep output
+in a separate directory. The [status tables](#current-status) below describe
+which builds and components have been exercised so far.
 
 ## What this repository is
 
@@ -43,6 +50,17 @@ The standalone C++ targets retain their **3.4.3/51943** contract when built
 from `forever`. Selecting a branch does not change their supported client or
 output formats. The Rust product is the separate `forever-extractor` binary.
 
+## Find your starting point
+
+| I want to… | Start here |
+| --- | --- |
+| See what works and what is still missing | [Current status](#current-status) and [completion checklist](docs/forever-completion.md) |
+| Build the Rust command-line tool | [Rust quick start](#build-the-rust-product) |
+| Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
+| Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
+| Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
+| Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
+
 ## Current status
 
 **Linux comes first:** complete acquisition, component output, full world
@@ -55,7 +73,7 @@ source of truth; the table below summarizes the boundaries.
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
 | DB2 | Build-specific catalogs, decoding, batch extraction and verification; selected real data comparisons | Complete catalog acquisition and the required server consumers |
 | Game tables & cameras | Linux product integration and bounded real extraction; cameras are preserved as raw files | Full target coverage; camera playback is outside raw extraction |
-| Terrain / MAPS | ADT conversion, assembly, readers and bounded local execution; separate available-Map terrain profiles | Complete real terrain selections and world/runtime acceptance |
+| Terrain / MAPS | ADT conversion, assembly and readers; a real v13 available-map run verifies 3,322 MAPS and 71 tilelists | Whole-client terrain coverage and world/runtime acceptance |
 | Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Complete current-client acquisition, final product integration and real runtime acceptance |
 | Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Complete real world generation, product integration and runtime acceptance |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
@@ -65,16 +83,128 @@ source of truth; the table below summarizes the boundaries.
 
 | Build | What the evidence establishes | Boundary |
 | --- | --- | --- |
-| **70374** | Linux product v10 selects DB2; v11 selects DB2, game tables and raw cameras. Bounded real lifecycle and local packaging evidence exist. Separate available-source collision and terrain work is documented. | Full catalog, complete world resources and runtime support remain open. |
-| **70425** | Explicit disabled-key bootstrap, a separate catalog and available-section Map/GameObjectDisplayInfo readers; a bounded real source-reader probe is recorded. | No 70425 product profile, full component extraction or runtime acceptance follows. |
+| **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
+| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
+
+The 70425 row above preserves its earlier checkpoint. Since then, product v14
+adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
+software/profile addition does not establish real extraction or runtime support.
+Its coverage is producer-reported and does not claim full encrypted-Map coverage.
+See the [v14 scope](docs/forever-product-v14.md).
 
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.
 
 See [product scope](docs/forever-product.md),
+[available-map terrain results](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance),
 [70425 source-reader scope](docs/forever-70425.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
+
+The real terrain result covers its declared available-map selection: two WDTs
+remain unavailable and three Map sections are omitted. Unknown coordinates
+remain unknown; this result does not establish whole-client or server runtime
+coverage.
+
+### In progress: matching the C++ collision extractor
+
+The current implementation is tracked in
+[issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92).
+
+- [x] Implement serial placements over the compatible model collector.
+- [x] Qualify the C11 snapshot with eight software commands, including 3,414 tests
+  in each debug/release profile, 31 placement tests and 26 GNU15 order checks.
+- [x] Qualify the initial Rust and Python comparison harness.
+- [x] Build and independently qualify the original C++ comparison harness
+  (71 compilation and link commands).
+- [x] Inspect the original comparison harness binaries and loader dependencies.
+- [x] Qualify the updated GNU15 Rust/Python comparison harness.
+- [x] Prepare Map/liquids on the same collector, with synthetic library checks.
+- [x] Add compatible world traversal and immediate-parent own-cache replay.
+- [x] Inspect the harness binaries rebuilt after the empty-WMO correction.
+- [x] Bind the comparison tools to fresh working directories and qualify that revision.
+- [ ] Inspect the binaries of the fresh-directory revision.
+- [ ] Complete the joined C++ output comparison.
+- [ ] Connect authentic staging, selected model conversion and final VMap output.
+- [ ] Validate real resources, product integration and RustyCore runtime use.
+
+<details>
+<summary><strong>Latest validation checkpoints</strong> — software results and comparison status</summary>
+
+| Checkpoint | Result |
+| --- | --- |
+| Comparison tools before the empty-WMO fix | Seven software checks and independent review pass. Static inspection covers seven ELF objects and twenty dependency edges. |
+| Compatible world traversal | 67 compatible tests per profile, including 24 new controls; the complete CASC library passes 1,610 tests per profile with five historical ignores. Clippy and scoped formatting pass. |
+| Joined C++ comparison | The preceding attempt failed at a valid WMO without collision geometry. Complete output compatibility remains pending. |
+| Empty-WMO correction | Eleven new controls pass in each profile. The full CASC library passes 1,621 tests per profile with five historical ignores; Clippy and scoped formatting pass. Applies to the explicit GNU15 v2 path. |
+| Current workspace: `6912551` | All eight software checks pass, including 3,490 tests and all 76 new controls in each debug/release profile. Independent review closes without findings. |
+| Updated comparison tools: `6912551` | All seven software checks pass, with independent review. Separate static inspection passes seven ELF objects and twenty dependencies. Fresh comparison directories and the complete C++ output comparison remain pending. |
+| Fresh-directory comparison tools | All seven software checks pass: 58 and 110 Python tests, eight Rust tests per profile, release build, Clippy and formatting. Independent review passes; inspection of these new binaries and the complete C++ comparison remain pending. |
+| Compatible-VMaps coverage + product v14 (70425) | The current checkout passes its reproduced Linux debug/release software gates; this does not establish real extraction, complete world output or runtime acceptance. Evidence and exact scope follow. |
+
+The compatible-VMaps coverage/product line was recovered from a private working
+tree (N05 → C5 → C6 → coverage → product v14) and, until this increment, had
+never been committed. The earlier C5 eight-gate qualification aborted at gate 5
+(Clippy), so gates 6–8 (source contracts, distribution and formatting) did not
+run; the historical-plan-version contract regression consequently went
+undetected. This is the first run of those gates against this code. The retained
+evidence is in
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/`
+(`repologs/`, `repo-acceptance-result.tsv`, and `evidence/`).
+
+The CI-equivalent `.github/workflows/forever-rust.yml` `linux` job was reproduced
+with `--no-default-features`: formatting and Clippy with `-D warnings` are clean;
+workspace tests pass 3,624 / 0 failed / 26 ignored in both debug and release;
+`--workspace --bins` builds pass in both profiles. Source contracts plus the
+synthetic oracle report 431 OK / 2 skipped; `tests/contracts` reports 378 OK;
+`tests/distribution` 166 OK / 1 skipped; synthetic CLI 389 OK / 156
+environment-gated skips; metadata CLI 5 OK; conformance 9 OK; and provenance
+verifies 355 imported paths. The run is software evidence only.
+
+The v14 admission contract was added for build 70425 because v9–v13 each had a
+contract and v14 had none. It adds
+`contracts/forever-product-contract-v14.json`, the contract test and canonical
+plan fixtures, a Linux CI command, and [the product guide](docs/forever-product-v14.md).
+Because plan v14 now exists, the historical-unknown-plan-version control moved
+from 14 to 99 in `product_v11_cli.rs` and the v12/v13 contract pins. The coverage
+file is producer-reported and makes no claim of full encrypted-Map coverage.
+This increment also carries its own independent audit conclusions: no gate was
+weakened and no assertion was removed.
+
+**Unqualified status:** No real-client extraction for this compatible-VMaps /
+product-v14 scope has been performed for build 70374 or 70425. The only real
+client on this workstation activates
+`wow_classic_beta 1.60.1.70450`, which matches no implemented profile; the
+bounded live helper admits only 70170/70205. There is no RustyCore runtime
+verification, release acceptance, or real full-world geometry/world acceptance.
+Windows is deferred; older-build acceptance does not transfer to build 70425;
+`full_extractor_complete` remains false.
+
+</details>
+
+**Next:** inspect the rebuilt comparison binaries, compare complete outputs
+with the original C++ extractor and connect the final VMap pipeline.
+Follow the active implementation in
+[PR #93](https://github.com/alseif0x/rustycore-extractors/pull/93).
+Real runtime validation remains a separate gate.
+
+<details>
+<summary>Validation scope and retained failures</summary>
+
+The separately selected GNU15-compatible path passes the C11 software campaign.
+The subsequent immutable `6912551` snapshot also passes the complete eight-command
+campaign and independent software review. Its 26 historical ignores per profile
+remain explicit; these results do not establish complete output compatibility.
+The preceding joined comparison failed at N05: Rust stopped where the reference source
+skips an empty WMO and continues to the next model. That attempt and the previous
+ordering mismatch and C10 Clippy failure remain failed, with no accepted partial
+output. The correction requires a fresh complete comparison.
+
+These checkpoints cover library software. The
+[collision guide](docs/forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17)
+records the tested source and remaining acceptance gates.
+
+</details>
 
 ## Build the Rust product
 

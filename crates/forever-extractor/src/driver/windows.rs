@@ -110,7 +110,12 @@ impl execution::Adapter for WindowsExecution<'_> {
         verify_keys(self.key_source)
     }
 
-    fn extract_collision(&self, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+    fn extract_collision(
+        &self,
+        _plan: &Plan,
+        store: &mut LocalStore,
+        run: &mut Run,
+    ) -> Result<(), Error> {
         vmaps(store, run)
     }
 }
