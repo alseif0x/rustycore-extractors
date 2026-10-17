@@ -23,7 +23,7 @@ if [[ -f "$rce_openssl_root/include/openssl/ssl.h" ]]; then
 fi
 # This selects a path only; ordinary checks still unset all live-test selectors.
 export RCE_OPENCODE_CLIENT="${RCE_OPENCODE_CLIENT:-/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft}"
-export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 
 # Real-client outputs must also be outside the enclosing wow Git repository.
 export RCE_OPENCODE_RUN_ROOT="${RCE_OPENCODE_RUN_ROOT:-${HOME}/.local/share/rustycore-extractor-work/runs/candidate}"

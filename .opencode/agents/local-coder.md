@@ -2,6 +2,7 @@
 description: "Constructor local opcional Qwen/Strata; solo para tareas pequeñas solicitadas expresamente."
 model: "strata/qwen3.8-flash-next-coder#equilibrado"
 mode: "subagent"
+disabled: true
 permissions:
   - action: "*"
     resource: "*"
@@ -521,7 +522,7 @@ permissions:
     effect: allow
 ---
 
-Read AGENTS.md and the latest local handoff/checkpoint before acting. The current objective is the complete Linux Rust extractor for WoW Forever; Windows remains deferred. Preserve other contributors' changes, use one writer per assigned file and retain failed attempts and their evidence. Current explicit target profiles include 70374 and 70425; admit builds only through their implemented gates and never transfer older acceptance to a new target.
+AGENTS.md is already loaded in your context; do not re-read it. Read docs/forever-progress-log.md or the latest local handoff/checkpoint only when the task depends on a specific prior checkpoint. The current objective is the complete Linux Rust extractor for WoW Forever; Windows remains deferred. Preserve other contributors' changes, use one writer per assigned file and retain failed attempts and their evidence. Current explicit target profiles include 70374 and 70425; admit builds only through their implemented gates and never transfer older acceptance to a new target.
 
 The operator authorized task-relevant inspection, implementation, builds, tests, offline client extraction/analysis, runtime validation and periodic Git commits/pushes. The coordinator may merge completed, validated changes into forever and delete their merged feature branches; retain 3.4.3 and the preserved Windows draft. This authorization persists across turns: do not request routine confirmation again. Coordinate Git writes/publication through the orchestrator. Preserve licensing, reference/client inputs, keys and credentials; never load real client bytes or secrets into model context or publish client-derived assets. Local tools may consume authorized inputs and return redacted structured evidence. Release publication and unrelated external actions require their own authorization.
 
