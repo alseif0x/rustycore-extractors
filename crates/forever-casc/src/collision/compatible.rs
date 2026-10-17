@@ -10,12 +10,19 @@ use super::{
 use crate::local_store::LocalStore;
 use forever_vmap::wmo::{self, doodads, liquid::LiquidLookup};
 
+mod native_order;
 pub mod startup;
+#[cfg(test)]
+mod tests;
 /// Separately selected serial projection using this compatible collector.
 pub use super::placements::compatible as placements;
 
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-model-spool-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-model-spool-v1";
+pub const PROFILE_GNU15_70374: &str =
+    "linux70374-disabled-key-compatible-model-spool-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70425: &str =
+    "linux70425-disabled-key-compatible-model-spool-gnu15-native-order-v2";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Omission {
     MissingRoot,
@@ -51,6 +58,7 @@ struct Converted {
     raw: Option<Vec<u8>>,
     wmo: Option<WmoMetadata>,
     bindings: Option<Vec<Binding>>,
+    native_references: Option<Vec<u16>>,
 }
 struct Identity {
     class: Class,
@@ -69,6 +77,7 @@ enum Slot {
 }
 #[derive(Default)]
 struct State {
+    native_order: bool,
     entries: Vec<Slot>,
     resident: usize,
 }
@@ -246,6 +255,7 @@ impl State {
             raw,
             wmo,
             bindings,
+            native_references,
         } = converted;
         let cap = e.vector_reservation_cap(&e.models, 1, true)?;
         reserve(&mut e.models, 1, &mut e.live, cap)?;
@@ -299,12 +309,18 @@ impl State {
                 compact,
                 e.live,
                 bindings.as_deref(),
+                native_references.as_deref(),
             )
             .map_err(|_| Error::Aborted)?;
         e.release(released);
         if let Some(bindings) = bindings {
             e.release(capacity(&bindings)?);
             drop(bindings);
+        }
+        if let Some(references) = native_references {
+            let bytes = capacity(&references)?;
+            drop(references);
+            e.release(bytes);
         }
         e.available_total()?;
         Ok(Outcome::Present(handle))
@@ -395,6 +411,7 @@ impl State {
                     raw,
                     wmo: None,
                     bindings: None,
+                    native_references: None,
                 },
             );
         }
@@ -463,6 +480,13 @@ impl State {
         }
         let (selection, raw, omitted_usable) =
             e.convert_wmo_geometry(&root, &groups, &facts, &valid, &omitted)?;
+        // Strict Selection remains sorted. Only the explicitly selected v2
+        // retains the separate GNU15 traversal while physical group bytes live.
+        let native_references = if self.native_order {
+            Some(native_references(e, &root, &groups, &facts, &selection)?)
+        } else {
+            None
+        };
         e.release(capacity(&omitted)?);
         for g in &groups {
             e.release(g.capacity());
@@ -476,6 +500,11 @@ impl State {
             doodads::Outcome::Ok => Status::Collision,
             doodads::Outcome::OkNoCollision => Status::DoodadOnly,
             doodads::Outcome::FailedNoCollision if omitted_usable => {
+                if let Some(references) = native_references {
+                    let bytes = capacity(&references)?;
+                    drop(references);
+                    e.release(bytes);
+                }
                 e.release(selection.resident_bytes());
                 e.release(capacity(&facts)?);
                 e.release(capacity(&bindings)?);
@@ -504,9 +533,94 @@ impl State {
                 raw,
                 wmo: Some(metadata),
                 bindings: Some(bindings),
+                native_references,
             },
         )
     }
+}
+
+fn native_references<L: LiquidLookup + ?Sized>(
+    e: &mut Extractor<'_, '_, L>,
+    root: &wmo::Root<'_>,
+    group_bytes: &[Vec<u8>],
+    group_facts: &[SourceFacts],
+    selection: &doodads::Selection,
+) -> Result<Vec<u16>, Error> {
+    // This separate traversal shares the existing projection ceiling with the
+    // retained sorted Selection. Each new actual capacity is subtracted before
+    // the next allocation: Group + GroupInput + contexts + Order work. Order
+    // work itself includes its output vector, so finish never double-charges it.
+    let mut projection = e
+        .limits
+        .wmo
+        .max_projection_bytes
+        .checked_sub(selection.resident_bytes())
+        .ok_or(Error::Limit)?;
+    let mut groups = Vec::new();
+    let cap = e
+        .vector_reservation_cap(&groups, group_bytes.len(), false)?
+        .min(add(e.live, projection)?);
+    reserve(&mut groups, group_bytes.len(), &mut e.live, cap)?;
+    let group_capacity = capacity(&groups)?;
+    projection = projection.checked_sub(group_capacity).ok_or(Error::Limit)?;
+    for bytes in group_bytes {
+        groups.push(wmo::Group::parse(bytes, e.limits.wmo).map_err(Error::Wmo)?);
+    }
+    let mut inputs = Vec::new();
+    let cap = e
+        .vector_reservation_cap(&inputs, groups.len(), false)?
+        .min(add(e.live, projection)?);
+    reserve(&mut inputs, groups.len(), &mut e.live, cap)?;
+    let input_capacity = capacity(&inputs)?;
+    projection = projection.checked_sub(input_capacity).ok_or(Error::Limit)?;
+    for (source, group) in group_facts.iter().zip(&groups) {
+        inputs.push(wmo::GroupInput {
+            file_data_id: source.id,
+            group,
+        });
+    }
+    let contexts = wmo::resolve_contexts(
+        root,
+        &inputs,
+        wmo::Limits {
+            max_projection_bytes: projection.min(e.free()?),
+            ..e.limits.wmo
+        },
+    )
+    .map_err(Error::Wmo)?;
+    let context_capacity = capacity(&contexts)?;
+    e.charge(context_capacity)?;
+    let budget = projection
+        .checked_sub(context_capacity)
+        .ok_or(Error::Limit)?
+        .min(e.free()?);
+    let mut order = native_order::Order::new(selection.references().len(), budget)?;
+    let work = order.work_bytes()?;
+    e.charge(work)?;
+    // Selection already applied exact spawn bounds, successful-collision names
+    // and skipped contexts. Missing/NoCollision never affect insertion history.
+    for context in &contexts {
+        if context.skip_reason().is_some() {
+            continue;
+        }
+        let group = context.group();
+        for index in 0..group.doodad_reference_count() {
+            let reference = group.doodad_reference(index).ok_or(Error::State)?;
+            if selection.references().binary_search(&reference).is_ok() {
+                order.insert(reference)?;
+            }
+        }
+    }
+    let references = order.finish()?;
+    let retained = capacity(&references)?;
+    e.release(work.checked_sub(retained).ok_or(Error::State)?);
+    drop(contexts);
+    e.release(context_capacity);
+    drop(inputs);
+    e.release(input_capacity);
+    drop(groups);
+    e.release(group_capacity);
+    Ok(references)
 }
 
 pub struct Collector<'s, 'l, L: LiquidLookup + ?Sized> {
@@ -522,17 +636,30 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
         limits: Limits,
         spool: Spool,
     ) -> Result<Self, payload::CollectorError> {
+        Self::new_with_native_order(store, lookup, target, limits, spool, false)
+    }
+    fn new_with_native_order(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        target: Target,
+        limits: Limits,
+        spool: Spool,
+        native_order: bool,
+    ) -> Result<Self, payload::CollectorError> {
         target.check(store)?;
         let mut inner = payload::SpoolingExtractor::new(store, lookup, limits, spool)?;
-        inner
-            .inner
-            .payloads
-            .as_mut()
-            .ok_or(Error::State)?
-            .enable_compatible()?;
+        let repository = inner.inner.payloads.as_mut().ok_or(Error::State)?;
+        if native_order {
+            repository.enable_compatible_native_order()?;
+        } else {
+            repository.enable_compatible()?;
+        }
         Ok(Self {
             inner,
-            state: State::default(),
+            state: State {
+                native_order,
+                ..State::default()
+            },
             target,
         })
     }
@@ -552,10 +679,29 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     ) -> Result<Self, payload::CollectorError> {
         Self::new(store, lookup, Target::Build70425, limits, spool)
     }
+    /// Explicit GNU libstdc++15 doodad order; existing v1 constructors stay sorted.
+    pub fn new_native_gnu15_70374(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        spool: Spool,
+    ) -> Result<Self, payload::CollectorError> {
+        Self::new_with_native_order(store, lookup, Target::Build70374, limits, spool, true)
+    }
+    pub fn new_native_gnu15_70425(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        spool: Spool,
+    ) -> Result<Self, payload::CollectorError> {
+        Self::new_with_native_order(store, lookup, Target::Build70425, limits, spool, true)
+    }
     pub fn profile(&self) -> &'static str {
-        match self.target {
-            Target::Build70374 => PROFILE_70374,
-            Target::Build70425 => PROFILE_70425,
+        match (self.target, self.state.native_order) {
+            (Target::Build70374, false) => PROFILE_70374,
+            (Target::Build70425, false) => PROFILE_70425,
+            (Target::Build70374, true) => PROFILE_GNU15_70374,
+            (Target::Build70425, true) => PROFILE_GNU15_70425,
         }
     }
     pub fn extract(
@@ -709,9 +855,11 @@ impl Completed {
         self.extraction.facts()
     }
     pub fn profile(&self) -> &'static str {
-        match self.target {
-            Target::Build70374 => PROFILE_70374,
-            Target::Build70425 => PROFILE_70425,
+        match (self.target, self.state.native_order) {
+            (Target::Build70374, false) => PROFILE_70374,
+            (Target::Build70425, false) => PROFILE_70425,
+            (Target::Build70374, true) => PROFILE_GNU15_70374,
+            (Target::Build70425, true) => PROFILE_GNU15_70425,
         }
     }
     /// Enumerates the immutable completed collection, excluding negative/staged

@@ -21,6 +21,10 @@ use forever_vmap::{
 mod tests;
 pub const PROFILE_70374: &str = "linux70374-compatible-spooled-serial-placements-v1";
 pub const PROFILE_70425: &str = "linux70425-compatible-spooled-serial-placements-v1";
+pub const PROFILE_GNU15_70374: &str =
+    "linux70374-compatible-spooled-serial-placements-gnu15-native-order-v2";
+pub const PROFILE_GNU15_70425: &str =
+    "linux70425-compatible-spooled-serial-placements-gnu15-native-order-v2";
 const SCRATCH: usize = 62 + placement::MAX_NAME_BYTES;
 /// The owned sink must bound ALL retained heap (including side buffers and
 /// growth overlap) by its declared allowance. Disk publication is external.
@@ -229,10 +233,11 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
         self.checked(self.failed.map_or(Ok(()), Err))
     }
     pub fn profile(&self) -> &'static str {
-        if self.collector.profile() == crate::collision::compatible::PROFILE_70374 {
-            PROFILE_70374
-        } else {
-            PROFILE_70425
+        match self.collector.profile() {
+            crate::collision::compatible::PROFILE_GNU15_70374 => PROFILE_GNU15_70374,
+            crate::collision::compatible::PROFILE_GNU15_70425 => PROFILE_GNU15_70425,
+            crate::collision::compatible::PROFILE_70374 => PROFILE_70374,
+            _ => PROFILE_70425,
         }
     }
     /// Observation only; this does not transfer ownership/accounting or seal.
