@@ -213,6 +213,24 @@ para recargar el servidor compartido. Una instancia privada iniciada con
 `--standalone` requiere dirigir la recarga a su URL mediante
 `opencode reload --server URL`.
 
+La revisión general de esta fecha también habilita skills, Code Mode y los MCP
+`rea` y `typesafe-jev` en los seis perfiles. Se eliminan los límites `steps`
+de 10–32 pasos y se actualizan las instrucciones antiguas para respetar la
+autorización persistente de compilación, extracción local, commit/push y fusión
+de implementaciones validadas. El coordinador conserva la propiedad de las
+operaciones Git compartidas. Los límites de recursos de los extractores y la
+ventana de continuación del plugin Goal se mantienen independientes.
+
+REA se registra en el `opencode.json` del proyecto mediante el formato MCP de
+OpenCode V2: ejecuta `~/.local/bin/rea mcp`, usa Code Mode y reutiliza las rutas
+locales existentes de Ghidra, Java y temporales. El timeout de ejecución es
+1.860.000 ms, igual al configurado en Codex; el registro no instala motores ni
+inicia análisis de binarios. La skill `reverse-engineer-anything` ya instalada
+en `~/.agents/skills` se descubre por compatibilidad, sin copiarla ni sustituirla.
+`gh` usa la autenticación existente del usuario; no se guardan credenciales en
+el repositorio. Publicar releases y datos del cliente sigue fuera de esta
+autorización de desarrollo.
+
 El usuario autorizó que los agentes completen el circuito y ejecuten los
 comandos necesarios. Los seis perfiles permiten ejecución shell para tareas
 del proyecto, además de los helpers: compilación, tests, binarios propios y

@@ -9,5 +9,29 @@
     "plan": {
       "disabled": true
     }
+  },
+  "mcp": {
+    "servers": {
+      "rea": {
+        "type": "local",
+        "command": [
+          "/home/joe/.local/bin/rea",
+          "mcp"
+        ],
+        "environment": {
+          "GHIDRA_INSTALL_DIR": "/mnt/nvme2/datos/tools/rea/native/ghidra_12.1.4_PUBLIC",
+          "JAVA_HOME": "/mnt/nvme2/datos/tools/rea/native/jdk-21.0.12.1+1",
+          "REA_GHIDRA_STARTUP_TIMEOUT_MS": "1800000",
+          "TMPDIR": "/mnt/nvme2/datos/tools/rea/runtime",
+          "GHIDRA_HEADLESS_MAXMEM": "4G"
+        },
+        "codemode": true,
+        "timeout": {
+          "startup": 30000,
+          "catalog": 30000,
+          "execution": 1860000
+        }
+      }
+    }
   }
 }
