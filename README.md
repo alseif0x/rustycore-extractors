@@ -64,6 +64,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | See what works and what is still missing | [Current status](#current-status) and [completion checklist](docs/forever-completion.md) |
 | Build the Rust command-line tool | [Rust quick start](#build-the-rust-product) |
 | Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
+| Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -79,7 +80,7 @@ source of truth; the table below summarizes the boundaries.
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
 | DB2 | Build-specific catalogs, decoding, batch extraction and verification; selected real data comparisons | Complete catalog acquisition and the required server consumers |
 | Game tables & cameras | Linux product integration and bounded real extraction; cameras are preserved as raw files | Full target coverage; camera playback is outside raw extraction |
-| Terrain / MAPS | ADT conversion, assembly, readers and bounded local execution; separate available-Map terrain profiles | Complete real terrain selections and world/runtime acceptance |
+| Terrain / MAPS | ADT conversion, assembly and readers; a real v13 available-map run verifies 3,322 MAPS and 71 tilelists | Whole-client terrain coverage and world/runtime acceptance |
 | Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Complete current-client acquisition, final product integration and real runtime acceptance |
 | Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Complete real world generation, product integration and runtime acceptance |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
@@ -89,7 +90,7 @@ source of truth; the table below summarizes the boundaries.
 
 | Build | What the evidence establishes | Boundary |
 | --- | --- | --- |
-| **70374** | Linux product v10 selects DB2; v11 selects DB2, game tables and raw cameras. Bounded real lifecycle and local packaging evidence exist. Separate available-source collision and terrain work is documented. | Full catalog, complete world resources and runtime support remain open. |
+| **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section Map/GameObjectDisplayInfo readers and complete LiquidMaterial/LiquidType reader APIs. A bounded real Map/GameObject probe is recorded; the new liquid APIs have synthetic library checks. | World integration, real liquid acquisition, a 70425 product profile and runtime acceptance remain open. |
 
 Older builds retain their own recorded results. Evidence is tied to the
@@ -97,8 +98,14 @@ specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.
 
 See [product scope](docs/forever-product.md),
+[available-map terrain results](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance),
 [70425 source-reader scope](docs/forever-70425.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
+
+The real terrain result covers its declared available-map selection: two WDTs
+remain unavailable and three Map sections are omitted. Unknown coordinates
+remain unknown; this result does not establish whole-client or server runtime
+coverage.
 
 ### In progress: matching the C++ collision extractor
 
