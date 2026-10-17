@@ -23,9 +23,9 @@ checks / two skips and distribution tests pass 165 checks / one skip.
 Independent terminal software QA passes without findings:
 `0183b7402e560c5d58917c2cc7b5e7e03949885912f8fca74b0a361aa2296e64`.
 The parent exits zero and its initial owned group is empty before the unit is
-stopped. This accepts software qualification only. Original C++ placement
-comparison is still unexecuted; its reviewed source and independent constructor
-proposal do not establish compatibility acceptance.
+stopped. This accepts software qualification only. The later comparison attempt
+and its failure are recorded below; software qualification does not establish
+placement compatibility acceptance.
 
 The separate Rust/Python comparison harness subsequently passes seven software
 commands: 42 comparator methods, 73 independent constructor methods and eight
@@ -38,7 +38,31 @@ authority. Qualification does not run the fixture generator, constructor CLI,
 native targets, real client or joined comparison campaign. The root terminal
 closing used an inline driver without saved original source/streams; QA binds
 its saved terminal and stop evidence, with a later attestation labelled as
-testimony only. Runtime ELF inspection and native comparison remain separate.
+testimony only.
+
+The original native harness subsequently passes all 71 compilation/link
+commands. Independent terminal QA passes 46,553 checks. Separate static
+inspection then accepts seven ELF objects and twenty loader edges, with
+independent terminal QA passing 69,921 checks. These are software/build and
+static inspection results, without client acquisition or runtime acceptance.
+
+The first joined campaign is planned for 105 children but stops after ten
+attempted children, all exit0: one generator, three constructors, three Rust
+calls and three native calls. The first two comparisons match; the third
+(`70374/N03`) rejects with `complete_placement_cache_replay_bytes`. Both
+placement files contain the same three records and have equal lengths, but two
+WMO child names are associated with the serial IDs in opposite order. The
+campaign fails as a whole; neither the earlier comparisons nor their output
+form an accepted prefix.
+
+Source inspection identifies the relevant ordering difference: the pinned
+native reference collects surviving WMO references in GNU libstdc++ 15's
+`unordered_set<uint16>` traversal order, while the current Rust selection is
+sorted. Missing and no-collision children are excluded before native insertion.
+A separately selected GNU15-compatible mode is in development. It still needs
+fresh software qualification and native comparisons; reversing all references
+would not reproduce bucket collisions and rehashing. Failed-run preservation
+and its terminal cleanup remain separate from compatibility acceptance.
 
 The bridge does not implement world traversal, parent replay or the owned empty
 cache barrier. Final compatible VMap assembly, complete required real resources,

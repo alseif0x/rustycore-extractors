@@ -87,9 +87,15 @@ The current implementation is tracked in
 - [x] Qualify the Rust and Python comparison harness.
 - [x] Build and independently qualify the original C++ comparison harness
   (71 compilation and link commands).
+- [x] Inspect the Rust/native binaries and their loader dependencies.
 - [ ] Complete comparison with the original C++ extractor.
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
+
+**Current blocker:** the first joined comparison stopped at a WMO case where
+Rust assigned the child placement IDs in a different order from the original
+C++ tool. The correction is in development; that failed campaign establishes
+no placement compatibility or accepted partial output.
 
 This checkpoint covers library software. The
 [collision guide](docs/forever-collision.md#compatible-serial-placement-software-checkpoint--2026-10-17)

@@ -54,10 +54,17 @@ The source was uncommitted at qualification, then bound byte for byte.
 The separate comparison harness now passes all seven software commands:
 42 comparator tests, 73 independent constructor tests, eight Rust methods in
 each profile, release compilation, Clippy and formatting. Independent terminal
-QA passes without findings. This qualifies the harness; it does not execute
-the original C++ placement comparison or generate its authored fixtures.
+QA passes without findings. The native harness subsequently passes 71
+compilation/link commands, and separate static inspection accepts seven ELF
+objects / twenty loader edges. These results qualify software and static
+dependencies.
 
-Native placement comparison remains unexecuted. World traversal, parent replay,
+The first joined comparison campaign stops after ten successful child exits
+because case `70374/N03` produces different WMO child-to-ID ordering. The
+105-child plan remains incomplete, with no accepted prefix. Source diagnosis
+points to native GNU libstdc++ 15 unordered-set traversal versus the sorted Rust
+selection; an explicit compatibility mode is being implemented and is not yet
+qualified. Native placement compatibility remains open. World traversal, parent replay,
 the owned empty cache barrier and final compatible VMap assembly remain open,
 alongside required real resources, navigation, product/runtime integration and
 reproducible Linux delivery. The latest diagnostic attempt fails before any Rust

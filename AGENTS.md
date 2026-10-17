@@ -42,7 +42,13 @@ APIs, product profiles and resource ceilings remain scoped. Functional
 frozen C9. Eight software commands pass, including 3,388 workspace tests and all
 31 new placement methods per debug/release profile. The separate comparison
 harness passes seven commands (42/73 Python methods and eight Rust methods per
-profile). Native placement comparison, world traversal, parent replay, the owned
+profile). The native harness subsequently passes 71 compilation/link commands;
+static inspection accepts seven ELF objects / twenty loader edges. The first
+joined campaign stops after ten successful child exits at `70374/N03`, whose WMO
+child-to-ID order differs. No prefix is accepted. Source diagnosis identifies
+GNU libstdc++ 15 unordered-set traversal versus sorted Rust references; a new
+explicit mode is in development and remains unqualified. Native placement
+compatibility, world traversal, parent replay, the owned
 empty-cache barrier and final compatible VMaps remain unaccepted. This later
 documentation annex is not rebuilt into the qualified binaries. See
 `docs/forever-collision.md` and `docs/forever-completion.md`; full Linux extraction
