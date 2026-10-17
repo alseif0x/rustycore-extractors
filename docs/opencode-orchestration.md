@@ -231,6 +231,29 @@ en `~/.agents/skills` se descubre por compatibilidad, sin copiarla ni sustituirl
 el repositorio. Publicar releases y datos del cliente sigue fuera de esta
 autorización de desarrollo.
 
+El plugin local V2 `.opencode/plugins/project-environment.js` añade Cargo al
+`PATH` de los comandos shell y suministra los directorios externos de Cargo,
+temporales y caché Python también cuando se usa el servidor compartido sin el
+launcher. Conserva los directorios y el número de jobs declarados explícitamente
+por el caller. `.opencode/environment.sh` sigue suministrando las referencias
+nativas y el resto de defaults de los helpers; no se modifica el entorno global
+del usuario ni los presupuestos de las ejecuciones de aceptación.
+
+La comprobación efectiva del servidor detectó que Goal 0.1.54 fallaba al cargar
+con `Schema.optionalWith is not a function`, por la incompatibilidad con el
+runtime Effect 4 del host. Las entradas servidor/CLI de Goal se actualizaron a
+`@prevalentware/opencode-goal-plugin@0.1.64`, que usa su dependencia privada
+compatible para persistencia. Se respaldaron ambas configuraciones y el estado
+de goals. El API del proyecto confirma ahora `local.goal-mode.server` activo y
+los comandos `goal`, `pause_goal` y `resume_goal` registrados. Esto prueba carga
+y registro; no ejecuta un objetivo ni acredita una campaña autónoma completa.
+La ventana de 25 continuaciones se conserva.
+
+La comprobación shell real, lanzada por el API de OpenCode desde este proyecto,
+resuelve `cargo` y `rustc` en `~/.cargo/bin` y confirma ambas versiones 1.98.0.
+Cargo, temporales y caché Python apuntan a los directorios externos documentados;
+no se ejecutó compilación ni extracción durante esta comprobación de entorno.
+
 El usuario autorizó que los agentes completen el circuito y ejecuten los
 comandos necesarios. Los seis perfiles permiten ejecución shell para tareas
 del proyecto, además de los helpers: compilación, tests, binarios propios y
