@@ -122,7 +122,7 @@ The current implementation is tracked in
 - [x] Qualify the updated GNU15 Rust/Python comparison harness.
 - [x] Prepare Map/liquids on the same collector, with synthetic library checks.
 - [x] Add compatible world traversal and immediate-parent own-cache replay.
-- [x] Inspect the updated harness binaries and their dependency graph.
+- [ ] Inspect the harness binaries rebuilt after the empty-WMO correction.
 - [ ] Complete the joined C++ output comparison.
 - [ ] Connect authentic staging, selected model conversion and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
