@@ -175,8 +175,11 @@ weakened and no assertion was removed.
 product-v14 scope has been performed for build 70374 or 70425. The only real
 client on this workstation activates
 `wow_classic_beta 1.60.1.70450`, which matches no implemented profile; the
-bounded live helper admits only 70170/70205. There is no RustyCore runtime
-verification, release acceptance, or real full-world geometry/world acceptance.
+bounded live helper admits only 70170/70205. The product v14 CLI itself refuses
+that installed client with `unsupported_client` (exit 9) at build admission, so
+the refusal is not merely a limitation of the historical live helper. There is
+no RustyCore runtime verification, release acceptance, or real full-world
+geometry/world acceptance.
 Windows is deferred; older-build acceptance does not transfer to build 70425;
 `full_extractor_complete` remains false.
 

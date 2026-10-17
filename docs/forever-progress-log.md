@@ -3296,3 +3296,68 @@ no real extraction, full-world resources or runtime acceptance. The `3.4.3` bran
 preserved Windows draft `codex/forever-windows-disk-world` are untouched. A merge
 to the default branch is not release authorization and establishes no real
 extraction, full-world resources or runtime acceptance.
+
+## 2026-10-17 — Forever 70450 admission refusal and compatibility prerequisites
+
+The operator confirmed that the installed Forever CASC root is
+`/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft`, the
+directory holding `.build.info`, `Data/` and `_classic_beta_/`. The root exists;
+Forever is product `wow_classic_beta`, distinct from `wow_classic_era`. The
+declared active row is `wow_classic_beta 1.60.1.70450`.
+
+Direct inspection with packaged candidate
+`/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt2/bin/forever-extractor`
+(SHA-256 `9d35a107b3a5d93216c036d02039626e72e20b97f07c55b7199acc7c9ab90694`, built
+from source already merged in `forever`), using a copy of
+`tests/contracts/fixtures/forever-product-v14/all-available-maps.tsv`, returned
+`exit=9`, empty stdout, and stderr
+`{"contract":"forever-product-v14","status":"failed","code":"unsupported_client","component":null,"full_extractor_complete":false}`.
+No files were created inside the client directory. This is a product CLI
+build-admission refusal; it does not indicate that the client is absent.
+
+The gate is `admit_db2_70425` → `admit_selected(parse_supported)` against Linux
+`DB2_70425_CLIENTS = [("1.60.1.70425", 70425)]`, so v14 admits exactly
+`1.60.1.70425` (`crates/forever-casc/src/admission.rs:29-34`). Legacy generic
+admission remains `SUPPORTED_CLIENTS = [70170, 70205, 70338]`
+(`crates/forever-casc/src/admission.rs:7`).
+
+The current local WoWDBDefs pin
+`996e53f029c0213b223aecb94d754f6b4b9efb49` (2026-10-16, “Merge 1.60.1.70425”)
+contains `1.60.1.70425` definitions and no `1.60.1.70450` definition; it is
+recorded in `contracts/wowdbdefs-70425-v1.json:3-11`, and the generator maps build
+70425 to this catalogue (`tools/generate_wowdbdefs_catalog.py:56-63`). A public
+WoWDBDefs source for 70450 is located at
+`https://github.com/wowdev/WoWDBDefs/commit/bfebcbc5181f47b954e7886862f92c5577dbbe4a`
+(SHA `bfebcbc5181f47b954e7886862f92c5577dbbe4a`, dated `2026-10-16T22:31:48Z`,
+“Merge 1.60.1.70450”, with changes in `definitions/*.dbd`). The public source
+exists and is located; its acquisition and pinning in the local inputs/catalogue,
+analysis, integration and validation remain pending. The 70450 refusal is a
+compatibility gap in the current product, not evidence that compatible public
+definitions are unavailable.
+
+No acceptance from 70374, 70425 or 70338 transfers to 70450; the plan build was
+not changed to bypass admission. No extraction was performed and no extraction
+success is claimed. Diagnostic outputs (a plan copy and two diagnostic files)
+remain outside every checkout and outside the client at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/compat-70450-admission-20261017-214617/`.
+The two lab evidence records alongside the acceptance tree are
+`forever-client-70450-admission-probe-v1.json` and
+`forever-70450-catalog-prerequisite-probe-v1.json`.
+
+For any new `1.60.1.70450` profile, compatibility categories requiring their own
+gates include client admission (`crates/forever-casc/src/admission.rs:29-34`);
+a build-specific schema catalogue, contract and generated Rust
+(`contracts/wowdbdefs-70425-v1.json:3-11`,
+`crates/forever-db2/src/records/wowdbdefs_70425_generated.rs:10`); plan grammar,
+build pin and profile identities (`crates/forever-extractor/src/plan.rs:174,395,418`,
+`crates/forever-extractor/src/plan/v14_tests.rs:4`,
+`docs/forever-product-v14.md:4-18`); collision coverage checks
+(`crates/forever-extractor/src/collision_coverage.rs:506-510`); and the context
+whitelist (`crates/forever-casc/src/package/model.rs:57`). Related pinned
+surfaces include contract/Rust CLI tests
+(`tests/contracts/test_forever_product_v14_contract.py:21-37`,
+`crates/forever-extractor/tests/product_v14_cli.rs:15`), fixtures
+(`tests/contracts/fixtures/forever-product-v14/all-available-maps.tsv:2,6,16`),
+the workflow check (`.github/workflows/forever-rust.yml:113`), package inclusion
+(`tools/package_forever.py:54`) and documentation. These are compatibility-gap
+categories, not implemented gates or acceptance evidence.
