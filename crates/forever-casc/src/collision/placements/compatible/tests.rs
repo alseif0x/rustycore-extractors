@@ -249,6 +249,15 @@ fn collector<'s>(
     }
     .unwrap()
 }
+fn complete_no_collision_root(group: u32) -> Vec<u8> {
+    let mut header = [0; 64];
+    put(&mut header, 4, 1);
+    header[60] = 4;
+    let mut bytes = chunk(b"MVER", &17u32.to_le_bytes());
+    bytes.extend(chunk(b"MOHD", &header));
+    bytes.extend(chunk(b"GFID", &group.to_le_bytes()));
+    bytes
+}
 fn ids(bytes: &[u8]) -> Vec<u32> {
     DirBin::parse(bytes, placement::Limits::default())
         .unwrap()
@@ -424,6 +433,99 @@ fn compatible_missing_required_group_retains_orphan_without_placement() {
     })
     .unwrap();
     e.finish().unwrap();
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_wmo_then_m2_keeps_first_serial_id() {
+    for build in [70374, 70425] {
+        let f = CollisionFixture::for_build(
+            &[
+                (30, None, complete_no_collision_root(31)),
+                (31, None, group(false, false, &[])),
+                (10, None, m2(true)),
+            ],
+            build,
+        );
+        let p = Private::new();
+        let mut store = open(&f, build);
+        let spool = p.spool(&f, SpoolLimits::default());
+        let mut e = match build {
+            70374 => Collector::new_native_gnu15_70374(
+                &mut store,
+                &Lookup,
+                CollisionLimits::default(),
+                spool,
+            ),
+            70425 => Collector::new_native_gnu15_70425(
+                &mut store,
+                &Lookup,
+                CollisionLimits::default(),
+                spool,
+            ),
+            _ => unreachable!(),
+        }
+        .unwrap();
+        let mut b = chunk(b"MODF", &modf(30, 200, 0));
+        b.extend(chunk(b"MODF", &modf(30, 201, 0)));
+        b.extend(chunk(b"MDDF", &mddf(10, 17)));
+        let o = parse(&b);
+        let mut s = Session::new(&mut e, TestSink::default(), SINK_ALLOWANCE, limits()).unwrap();
+        s.project_to_sink(&[batch(&o, 9)]).unwrap();
+        let stats = s.stats();
+        assert_eq!(
+            (
+                stats.source_requests,
+                stats.omitted_requests,
+                stats.no_collision_requests,
+                stats.records
+            ),
+            (3, 2, 0, 1)
+        );
+        assert_eq!((stats.ids.calls, stats.ids.m2_counter_consumed), (1, 1));
+        assert_eq!(ids(&s.sink().rows[0].3), [u32::MAX - 1]);
+        let view = DirBin::parse(&s.sink().rows[0].3, placement::Limits::default()).unwrap();
+        assert_eq!(view.records().next().unwrap().name(), b"FILE0000000A.xxx");
+        assert_eq!(s.sink().rows.len(), 1);
+        s.finish().unwrap();
+        assert_eq!(
+            (
+                e.facts().unwrap().reads,
+                e.facts().unwrap().models,
+                e.request_calls()
+            ),
+            (3, 1, 3)
+        );
+        let done = e.finish().unwrap();
+        assert_eq!(done.facts().models, 1);
+        assert_eq!(done.cached_identity_count(), 2);
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_session_v1_remains_fatal_without_prefix() {
+    for build in [70374, 70425] {
+        let f = CollisionFixture::for_build(
+            &[
+                (30, None, complete_no_collision_root(31)),
+                (31, None, group(false, false, &[])),
+                (10, None, m2(true)),
+            ],
+            build,
+        );
+        let p = Private::new();
+        let mut store = open(&f, build);
+        let mut e = collector(&mut store, &p, &f, build);
+        let mut b = chunk(b"MODF", &modf(30, 200, 0));
+        b.extend(chunk(b"MDDF", &mddf(10, 17)));
+        let o = parse(&b);
+        let mut s = Session::new(&mut e, TestSink::default(), SINK_ALLOWANCE, limits()).unwrap();
+        assert_eq!(
+            s.project_to_sink(&[batch(&o, 9)]).unwrap_err().code(),
+            crate::collision::Error::NoCollision.code()
+        );
+        assert!(s.sink().rows.is_empty());
+        assert_eq!(s.stats().ids.calls, 0);
+        assert!(s.finish().is_err());
+        assert!(e.finish().is_err());
+    }
 }
 #[test]
 fn compatible_multiple_calls_reuse_ids_but_consume_successful_m2_counter() {

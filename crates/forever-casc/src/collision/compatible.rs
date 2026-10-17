@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-16: opt-in staged complete-model acquisition.
-//! Only an exact complete-read MissingFile becomes an omission. This owner is
-//! separate from strict APIs; world traversal and final packaging remain separate.
+// Modified 2026-10-17: GNU15-only complete no-collision WMO omission.
+//! Typed source absence becomes an omission. The explicit GNU15-v2 profile also
+//! omits complete WMOs without usable collision, preserving later serial work.
+//! This owner remains separate from strict APIs and final packaging.
 use super::{
     Class, Error, Extractor, Facts, InputRef, Limits, Model, ModelHandle, ModelRequest, Origin,
     SourceFacts, Status, WmoMetadata, add, capacity, classify, names, payload, reserve,
@@ -30,6 +32,10 @@ pub enum Omission {
     MissingRoot,
     MissingRequiredGroup,
     NoUsableCollisionAfterOmission,
+    /// Complete root and required groups, without geometry or usable sets.
+    /// Child routes may still be absent or unreferenced; no child completeness
+    /// or unknown geometry is inferred. Only the GNU15-v2 profile emits this.
+    CompleteNoCollision,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Outcome {
@@ -499,25 +505,44 @@ impl State {
         drop(valid);
         drop(omitted);
         let status = match selection.outcome(raw.is_some()) {
-            doodads::Outcome::Ok => Status::Collision,
-            doodads::Outcome::OkNoCollision => Status::DoodadOnly,
+            doodads::Outcome::Ok => Ok(Status::Collision),
+            doodads::Outcome::OkNoCollision => Ok(Status::DoodadOnly),
             doodads::Outcome::FailedNoCollision if omitted_usable => {
-                if let Some(references) = native_references {
-                    let bytes = capacity(&references)?;
-                    drop(references);
-                    e.release(bytes);
-                }
-                e.release(selection.resident_bytes());
-                e.release(capacity(&facts)?);
-                e.release(capacity(&bindings)?);
-                e.release(bytes.capacity());
-                return self.omit(
-                    at,
-                    Omission::NoUsableCollisionAfterOmission,
-                    source.first_magic,
-                );
+                Err(Omission::NoUsableCollisionAfterOmission)
+            }
+            doodads::Outcome::FailedNoCollision if self.native_order => {
+                Err(Omission::CompleteNoCollision)
             }
             doodads::Outcome::FailedNoCollision => return Err(Error::NoCollision),
+        };
+        let status = match status {
+            Ok(status) => status,
+            Err(reason) => {
+                let references_bytes = native_references
+                    .as_ref()
+                    .map(capacity)
+                    .transpose()?
+                    .unwrap_or(0);
+                let selection_bytes = selection.resident_bytes();
+                let facts_bytes = capacity(&facts)?;
+                let bindings_bytes = capacity(&bindings)?;
+                let root_bytes = bytes.capacity();
+                // The root view only borrows bytes and has no owned heap.
+                // Destroy every owned temporary before refunding its charge
+                // and caching absence. Previously committed children survive.
+                drop(native_references);
+                drop(selection);
+                drop(facts);
+                drop(bindings);
+                drop(raw);
+                drop(bytes);
+                e.release(references_bytes);
+                e.release(selection_bytes);
+                e.release(facts_bytes);
+                e.release(bindings_bytes);
+                e.release(root_bytes);
+                return self.omit(at, reason, source.first_magic);
+            }
         };
         let metadata = WmoMetadata {
             root_bytes: bytes,

@@ -423,3 +423,361 @@ fn native_gnu15_v2_n07_overlapping_sets_repeat_in_serialized_native_order() {
         ]
     );
 }
+
+fn complete_no_collision_root(children: &[u32], sets: &[(u32, u32)]) -> Vec<u8> {
+    let mut bytes = chunk(b"MVER", &17u32.to_le_bytes());
+    bytes.extend(root(&[101], children, sets));
+    bytes
+}
+fn complete_no_collision_group(references: &[u16]) -> Vec<u8> {
+    let mut header = vec![0; 68];
+    put(&mut header, 56, 99);
+    header.extend(chunk(
+        b"MODR",
+        &references
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect::<Vec<_>>(),
+    ));
+    chunk(b"MOGP", &header)
+}
+fn complete_no_collision_collector<'s>(
+    store: &'s mut LocalStore,
+    private: &Private,
+    fixture: &CollisionFixture,
+    build: u32,
+    native: bool,
+) -> Collector<'s, 'static, Lookup> {
+    let spool = private.spool(fixture);
+    match (build, native) {
+        (70374, true) => {
+            Collector::new_native_gnu15_70374(store, &Lookup, Limits::default(), spool)
+        }
+        (70425, true) => {
+            Collector::new_native_gnu15_70425(store, &Lookup, Limits::default(), spool)
+        }
+        (70374, false) => Collector::new_70374(store, &Lookup, Limits::default(), spool),
+        (70425, false) => Collector::new_70425(store, &Lookup, Limits::default(), spool),
+        _ => unreachable!(),
+    }
+    .unwrap()
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_is_cached_without_handle_raw_or_temp_charge() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[], &[])),
+                (101, None, complete_no_collision_group(&[])),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        let omitted = Outcome::Omitted(Omission::CompleteNoCollision);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            omitted
+        );
+        assert_eq!(c.facts().unwrap().reads, 2);
+        assert_eq!(c.facts().unwrap().models, 0);
+        assert_eq!(c.facts().unwrap().raw_bytes, 0);
+        assert_eq!(c.inner.inner.live, c.state.resident);
+        assert_eq!(c.inner.inner.external, c.state.resident);
+        assert!(c.inner.inner.requests.is_empty());
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            omitted
+        );
+        assert_eq!(
+            c.extract_gameobject_fdid(100).unwrap(),
+            GameObjectOutcome::Omitted(Omission::CompleteNoCollision)
+        );
+        assert_eq!(c.request_calls(), 3);
+        assert_eq!(c.facts().unwrap().reads, 2);
+        assert_eq!(c.state.entries.len(), 1);
+        assert!(c.model_handle(0).is_err());
+        let done = c.finish().unwrap();
+        assert_eq!(done.facts().models, 0);
+        assert_eq!(done.cached_identity_count(), 1);
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_keeps_v1_fatal_on_both_targets() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[], &[])),
+                (101, None, complete_no_collision_group(&[])),
+                (10, None, m2(true)),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, false);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100))),
+            Err(payload::CollectorError::Collision(Error::NoCollision))
+        );
+        let reads = c.inner.inner.reads;
+        assert!(
+            c.extract(ModelRequest::M2(InputRef::FileDataId(10)))
+                .is_err()
+        );
+        assert_eq!(c.inner.inner.reads, reads);
+        assert!(c.finish().is_err());
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_retains_unreferenced_child_orphan_and_missing_cache() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[10, 19], &[])),
+                (101, None, complete_no_collision_group(&[0])),
+                (10, None, m2(true)),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            Outcome::Omitted(Omission::CompleteNoCollision)
+        );
+        let facts = c.facts().unwrap();
+        assert_eq!(
+            (facts.reads, facts.dependency_requests, facts.models),
+            (4, 2, 1)
+        );
+        assert!(facts.raw_bytes > 0);
+        assert!(c.inner.inner.requests.is_empty());
+        assert_eq!(c.state.entries.len(), 3);
+        let child = c.model_handle(0).unwrap();
+        assert!(matches!(
+            c.descriptor(child).unwrap().origin(),
+            InputRef::FileDataId(10)
+        ));
+        c.with_payload(child, |p| {
+            assert!(p.raw().is_some());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            c.extract(ModelRequest::M2(InputRef::FileDataId(19)))
+                .unwrap(),
+            Outcome::Omitted(Omission::MissingRoot)
+        );
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            Outcome::Omitted(Omission::CompleteNoCollision)
+        );
+        assert_eq!(c.facts().unwrap(), facts);
+        let mut done = c.finish().unwrap();
+        done.with_payload(child, |p| {
+            assert!(p.raw().is_some());
+            Ok(())
+        })
+        .unwrap();
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_preserves_omitted_usable_reason_precedence() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[19], &[(0, 1)])),
+                (101, None, complete_no_collision_group(&[0])),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            Outcome::Omitted(Omission::NoUsableCollisionAfterOmission)
+        );
+        assert_eq!(c.facts().unwrap().models, 0);
+        assert_eq!(c.inner.inner.live, c.state.resident);
+        c.finish().unwrap();
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_preserves_doodad_only_and_m2_statuses() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[10], &[(0, 1)])),
+                (101, None, complete_no_collision_group(&[0])),
+                (10, None, m2(true)),
+                (20, None, m2(false)),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        let parent = handle(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+        );
+        assert_eq!(c.descriptor(parent).unwrap().status(), Status::DoodadOnly);
+        c.with_payload(parent, |p| {
+            assert!(p.raw().is_none());
+            assert!(p.wmo().is_some());
+            Ok(())
+        })
+        .unwrap();
+        let child = handle(
+            c.extract(ModelRequest::M2(InputRef::FileDataId(20)))
+                .unwrap(),
+        );
+        assert_eq!(c.descriptor(child).unwrap().status(), Status::NoCollision);
+        c.with_payload(child, |p| {
+            assert!(p.raw().is_none());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(c.facts().unwrap().models, 3);
+        c.finish().unwrap();
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_does_not_hide_malformed_group_or_root() {
+    for build in [70374, 70425] {
+        for malformed_root in [false, true] {
+            let fixture = CollisionFixture::for_build(
+                &[
+                    (
+                        100,
+                        None,
+                        if malformed_root {
+                            b"bad".to_vec()
+                        } else {
+                            complete_no_collision_root(&[], &[])
+                        },
+                    ),
+                    (101, None, b"bad".to_vec()),
+                    (10, None, m2(true)),
+                ],
+                build,
+            );
+            let private = Private::new();
+            let mut store = open(&fixture, build);
+            let mut c =
+                complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+            assert!(matches!(
+                c.extract(ModelRequest::Wmo(InputRef::FileDataId(100))),
+                Err(payload::CollectorError::Collision(Error::Wmo(_)))
+            ));
+            let reads = c.inner.inner.reads;
+            assert!(
+                c.extract(ModelRequest::M2(InputRef::FileDataId(10)))
+                    .is_err()
+            );
+            assert_eq!(c.inner.inner.reads, reads);
+            assert!(c.finish().is_err());
+        }
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_preserves_missing_root_and_group_dispositions() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[], &[])),
+                (10, None, m2(true)),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(99)))
+                .unwrap(),
+            Outcome::Omitted(Omission::MissingRoot)
+        );
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            Outcome::Omitted(Omission::MissingRequiredGroup)
+        );
+        let child = handle(
+            c.extract(ModelRequest::M2(InputRef::FileDataId(10)))
+                .unwrap(),
+        );
+        assert!(matches!(
+            c.descriptor(child).unwrap().origin(),
+            InputRef::FileDataId(10)
+        ));
+        assert_eq!(c.facts().unwrap().models, 1);
+        c.finish().unwrap();
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_negative_identity_still_enforces_class_alias() {
+    for build in [70374, 70425] {
+        let fixture = CollisionFixture::for_build(
+            &[
+                (100, None, complete_no_collision_root(&[], &[])),
+                (101, None, complete_no_collision_group(&[])),
+            ],
+            build,
+        );
+        let private = Private::new();
+        let mut store = open(&fixture, build);
+        let mut c = complete_no_collision_collector(&mut store, &private, &fixture, build, true);
+        assert_eq!(
+            c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+                .unwrap(),
+            Outcome::Omitted(Omission::CompleteNoCollision)
+        );
+        assert_eq!(
+            c.extract(ModelRequest::M2(InputRef::FileDataId(100))),
+            Err(payload::CollectorError::Collision(Error::Alias))
+        );
+        assert_eq!(c.inner.inner.reads, 2);
+        assert!(c.finish().is_err());
+    }
+}
+#[test]
+fn native_gnu15_v2_complete_no_collision_cache_hit_preserves_source_guard_priority() {
+    let fixture = CollisionFixture::for_build(
+        &[
+            (100, None, complete_no_collision_root(&[], &[])),
+            (101, None, complete_no_collision_group(&[])),
+        ],
+        70425,
+    );
+    let private = Private::new();
+    let mut store = open(&fixture, 70425);
+    let mut c = complete_no_collision_collector(&mut store, &private, &fixture, 70425, true);
+    assert_eq!(
+        c.extract(ModelRequest::Wmo(InputRef::FileDataId(100)))
+            .unwrap(),
+        Outcome::Omitted(Omission::CompleteNoCollision)
+    );
+    fs::write(
+        fixture.path().join(".build.info"),
+        b"synthetic-input-change",
+    )
+    .unwrap();
+    assert_eq!(
+        c.extract(ModelRequest::Wmo(InputRef::FileDataId(100))),
+        Err(payload::CollectorError::Collision(Error::Store(
+            local_store::Error::InputChanged
+        )))
+    );
+    assert_eq!(c.inner.inner.reads, 2);
+    assert!(c.finish().is_err());
+}

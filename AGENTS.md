@@ -31,6 +31,30 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### GNU15 complete no-collision WMO correction — 2026-10-17
+
+Only the explicit GNU15-v2 collector emits `Omission::CompleteNoCollision` for
+a complete root/required-group WMO without usable collision. It retains negative
+identity and committed child models while omitting the parent handle, RAW,
+payload and placement ID; the same session continues to later models. Missing
+or unreferenced children are not declared complete. The existing
+`NoUsableCollisionAfterOmission` reason keeps precedence, and strict/compatible-v1
+intrinsic-empty behavior remains fatal. Owned temporaries drop before refunds
+and caching the omission.
+
+Six scoped software commands pass: eleven new methods per focused profile,
+1,621 complete CASC library tests / five historical ignores per debug/release
+profile, all-target package Clippy and exact three-file formatting. All eleven
+methods execute in both full profiles. Receipt is
+`7cb3595b71f7f21362ef1e86c376f4978c68c36f20c48a65dccac22f776b56fe`.
+The first compile failure and narrow formatter-validator failure remain preserved;
+only test API usage changed after the compile failure. The preceding joined
+comparison remains failed at Rust N05, with fifteen children and no accepted
+prefix; native N05 did not execute. Independent failure-preservation QA passes
+126,036 checks, without transferring parity or extraction acceptance. Fresh
+whole-source and joined comparison, final VMaps, real resources, product/runtime
+and full Linux delivery remain open. See `docs/forever-collision.md`.
+
 ### Compatible world traversal library — 2026-10-17
 
 The consuming compatible world inventory path now traverses authentic startup

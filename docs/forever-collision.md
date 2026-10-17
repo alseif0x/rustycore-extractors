@@ -1,5 +1,44 @@
 # Forever collision foundation
 
+## GNU15 complete no-collision WMO correction — 2026-10-17
+
+The explicit GNU15-v2 collector now omits a WMO whose complete root and required
+groups parse successfully but yield no usable collision. The typed
+`Omission::CompleteNoCollision` preserves its negative cache identity without
+creating a parent model handle, RAW, payload or placement ID. The same serial
+session continues to the following model. Previously committed child models,
+including orphan RAW, remain retained. Missing or unreferenced children are not
+declared complete. The existing omission-derived reason takes precedence;
+strict and compatible-v1 intrinsic-empty behavior remains fatal.
+
+This corrects a source-derived difference from the original C++ extractor,
+which skips that WMO and continues processing the ADT. The preceding joined
+comparison remains failed at Rust N05: fifteen children ran, the last exited
+four instead of zero, and native N05 did not execute. Four earlier comparison
+receipts do not form an accepted prefix. Independent preservation review passes
+126,036 checks without findings, including the original guards, saved numeric
+terminal observations and sole successful stop. It accepts failure preservation
+only, without native parity or full extraction acceptance.
+
+The corrected source passes six scoped software commands: eleven new methods
+in each focused debug/release profile, 1,621 complete CASC library tests / five
+historical ignores in each profile, all-target package Clippy and exact
+three-file formatting. All eleven methods run in both complete profiles too.
+Source and original software guards close, and all child groups are absent.
+Network activity is unobserved. Qualification receipt:
+`7cb3595b71f7f21362ef1e86c376f4978c68c36f20c48a65dccac22f776b56fe`.
+
+The first focused compilation remains failed with exit 101 and zero executed
+tests: three assertions called a cache-count API on Collector instead of its
+completed owner. Test-only corrections retain the fixtures and expectations.
+The formatter itself passed; its earlier whitespace-only validator remains
+failed because rustfmt also added standard braces and trailing commas. A separate
+full-diff source review admits that formatting delta without rerunning it.
+
+Current whole-source qualification and a new complete joined comparison remain
+required. Authentic staging, selected VMO conversion, final compatible VMaps,
+real resources, product integration and runtime acceptance remain open.
+
 ## Compatible world traversal library — 2026-10-17
 
 `collision::compatible::world::inventory::{extract, extract_selected,
@@ -9,9 +48,10 @@ serial placement session and cumulative ledger span the selected world.
 Builds 70374/70425 and their explicit GNU15 order selectors remain separate.
 Available Map facts remain distinct from complete liquid source facts.
 
-Only a typed missing-file result permits omission: an unavailable WDT skips that
-map's global and tile work; an unavailable own object ADT can replay the exact
-cell from its immediate parent's own cache. A successful empty own tile blocks
+For WDT/ADT acquisition, only a typed missing-file result permits omission: an
+unavailable WDT skips that map's global and tile work; an unavailable own object
+ADT can replay the exact cell from its immediate parent's own cache. A successful
+empty own tile blocks
 inheritance. Replayed inherited data never becomes an own-cache entry, and
 grandparent fallback is not introduced. Replay retains placement IDs and does
 not reacquire models. Committed child RAW models survive omission of their

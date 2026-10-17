@@ -39,6 +39,24 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## GNU15 empty-WMO correction prerequisite — 2026-10-17
+
+The explicit GNU15-v2 collector now omits a successfully parsed WMO without
+usable collision, preserving its negative identity and any committed children.
+The same placement session continues without allocating a parent ID. Strict and
+compatible-v1 intrinsic-empty behavior remains fatal. Eleven new controls pass
+in both focused profiles and in each complete CASC library run (1,621 passed /
+five historical ignores). All-target package Clippy and scoped formatting pass;
+the first test compilation and narrow formatter-validator failures remain recorded.
+
+The joined comparison that exposed this difference remains failed at Rust N05;
+its fifteen children and four earlier receipts provide no accepted prefix.
+Independent failure-preservation review passes, without native N05 or parity
+acceptance. Fresh whole-source qualification and a complete joined comparison
+are still required. Final compatible VMaps, real resources, product integration,
+navigation, runtime and Linux delivery remain open. See the
+[correction scope](forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17).
+
 ## Compatible world traversal prerequisite — 2026-10-17
 
 The separate consuming 70374/70425 compatible world owner now traverses WDTs and

@@ -113,7 +113,7 @@ The current implementation is tracked in
 [issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92).
 
 - [x] Implement serial placements over the compatible model collector.
-- [x] Pass the eight software qualification commands, including 3,414 tests
+- [x] Qualify the C11 snapshot with eight software commands, including 3,414 tests
   in each debug/release profile, 31 placement tests and 26 GNU15 order checks.
 - [x] Qualify the initial Rust and Python comparison harness.
 - [x] Build and independently qualify the original C++ comparison harness
@@ -127,12 +127,14 @@ The current implementation is tracked in
 - [ ] Connect authentic staging, selected model conversion and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-**Latest result:** the updated comparison harness passes its seven software
-checks and independent review. Fresh static inspection checks seven ELF objects
-and twenty dependency edges without executing the targets. World traversal passes
-67 compatible tests in each profile, including 24 new controls; the complete CASC
-library passes 1,610 tests per profile with five historical ignores. Package
-Clippy and scoped formatting pass too.
+### Latest checkpoints
+
+| Checkpoint | Result |
+| --- | --- |
+| Comparison tools before the empty-WMO fix | Seven software checks and independent review pass. Static inspection covers seven ELF objects and twenty dependency edges. |
+| Compatible world traversal | 67 compatible tests per profile, including 24 new controls; the complete CASC library passes 1,610 tests per profile with five historical ignores. Clippy and scoped formatting pass. |
+| Joined C++ comparison | The fresh attempt fails at a valid WMO without collision geometry. Complete output compatibility remains pending. |
+| Empty-WMO correction | Eleven new controls pass in each profile. The full CASC library passes 1,621 tests per profile with five historical ignores; Clippy and scoped formatting pass. Applies to the explicit GNU15 v2 path. |
 
 **Next:** compare complete outputs with the original C++ extractor and connect
 the final VMap pipeline. Follow the active implementation in
@@ -143,11 +145,13 @@ Real runtime validation remains a separate gate.
 <summary>Validation scope and retained failures</summary>
 
 The separately selected GNU15-compatible path passes the C11 software campaign.
-The fresh joined comparison remains pending. The previous ordering mismatch and
-C10 Clippy failure remain failed, with no accepted partial output.
+The fresh joined comparison fails at N05: Rust stops where the reference source
+skips an empty WMO and continues to the next model. That attempt and the previous
+ordering mismatch and C10 Clippy failure remain failed, with no accepted partial
+output. The correction requires a fresh complete comparison.
 
-This checkpoint covers library software. The
-[collision guide](docs/forever-collision.md#gnu15-compatible-placement-software-checkpoint--2026-10-17)
+These checkpoints cover library software. The
+[collision guide](docs/forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17)
 records the tested source and remaining acceptance gates.
 
 </details>
