@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="#current-status">Status</a> ·
+  <a href="#find-your-starting-point">Start here</a> ·
   <a href="#build-the-rust-product">Rust quick start</a> ·
   <a href="#build-the-existing-suite">C++ suite</a> ·
   <a href="#documentation">Documentation</a> ·
@@ -24,6 +25,10 @@
 > **Forever is in development.** Bounded Linux extraction and reader checks
 > exist, but complete client extraction, full world resources and RustyCore
 > runtime acceptance remain open. Windows delivery is deferred.
+
+| Local inputs | Versioned tools | Verified outputs |
+| :---: | :---: | :---: |
+| Read an installed client through local CASC | Select an explicit client build and component plan | Check package integrity with offline verifiers |
 
 ## What this repository is
 
@@ -42,6 +47,16 @@ There are two distinct version lines:
 The standalone C++ targets retain their **3.4.3/51943** contract when built
 from `forever`. Selecting a branch does not change their supported client or
 output formats. The Rust product is the separate `forever-extractor` binary.
+
+## Find your starting point
+
+| I want to… | Start here |
+| --- | --- |
+| See what works and what is still missing | [Current status](#current-status) and [completion checklist](docs/forever-completion.md) |
+| Build the Rust command-line tool | [Rust quick start](#build-the-rust-product) |
+| Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
+| Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
+| Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
 ## Current status
 
@@ -76,7 +91,7 @@ See [product scope](docs/forever-product.md),
 [70425 source-reader scope](docs/forever-70425.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
 
-### Active milestone: collision placement compatibility
+### In progress: matching the C++ collision extractor
 
 The current implementation is tracked in
 [issue #92](https://github.com/alseif0x/rustycore-extractors/issues/92).
@@ -92,15 +107,26 @@ The current implementation is tracked in
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-**Current work:** compare the separately selected GNU15-compatible WMO child
-ordering with the original C++ extractor. C11 passes all eight software commands,
-including Clippy and formatting. The fresh joined comparison is pending; the
-previous ordering mismatch and C10 Clippy failure remain failed, with no accepted
-partial output.
+**Latest result:** the Rust correction passes all eight local software checks,
+including Clippy and formatting. It implements the GNU15 traversal used by the
+reference for WMO child models, which determines their collision identifiers.
+
+**Next:** qualify the updated comparison harness, then compare complete outputs
+with the original C++ extractor. World traversal, final VMaps and real runtime
+validation follow as separate gates.
+
+<details>
+<summary>Validation scope and retained failures</summary>
+
+The separately selected GNU15-compatible path passes the C11 software campaign.
+The fresh joined comparison remains pending. The previous ordering mismatch and
+C10 Clippy failure remain failed, with no accepted partial output.
 
 This checkpoint covers library software. The
 [collision guide](docs/forever-collision.md#gnu15-compatible-placement-software-checkpoint--2026-10-17)
 records the tested source and remaining acceptance gates.
+
+</details>
 
 ## Build the Rust product
 
