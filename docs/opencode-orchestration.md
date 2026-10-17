@@ -1,28 +1,59 @@
 # Orquestación OpenCode del proyecto
 
-Configuración local del 2026-10-04 para OpenCode 2.0.22. La conexión Go ya
-registrada en la cuenta se reutiliza; no se guardan claves ni credenciales aquí.
+Configuración local creada el 2026-10-04 (OpenCode 2.0.22) y revisada el
+2026-10-17 para OpenCode 2.0.32. Las conexiones Go y OpenAI ya registradas en
+OpenCode se reutilizan; no se guardan claves ni credenciales aquí.
 
-## Equipo
+## Equipo (2026-10-17)
 
-| Perfil | Modelo | Responsabilidad |
-| --- | --- | --- |
-| `orchestrator` | `opencode-go/deepseek-v4.1-flash` | Coordinar y delegar; no implementar |
-| `general` | `opencode-go/glm-5.3` | Contratos, arquitectura, formatos y aceptación |
-| `scout` | `opencode-go/deepseek-v4.1-flash` | Localizar archivos, símbolos y pruebas |
-| `builder` | `opencode-go/deepseek-v4.1-flash` | Implementar y corregir por archivos asignados |
-| `explore` | `opencode-go/glm-5.3` | Auditoría independiente y validación |
-| `local-coder` | `strata/qwen3.8-flash-next-coder#equilibrado` | Constructor local opcional y acotado |
+| Perfil | Modelo | Pasos | Responsabilidad |
+| --- | --- | --- | --- |
+| `orchestrator` | `opencode-go/deepseek-v4.1-flash` | — | Coordinar y delegar; no implementar |
+| `general` | `opencode-go/deepseek-v4-pro#high` | 60 | Contratos, arquitectura, formatos y aceptación |
+| `scout` | `opencode-go/deepseek-v4.1-flash` | 40 | Localizar archivos, símbolos y pruebas |
+| `builder` | `openai/gpt-6-luna#max` | 200 | Implementar y corregir por archivos asignados |
+| `explore` | `opencode-go/deepseek-v4.1-flash#high` | 80 | Auditoría independiente y validación |
+| `local-coder` | deshabilitado | — | Su proveedor Strata ya no existe |
 
 Solo el coordinador es un agente principal. Los demás son subagentes.
 Los perfiles incorporados `build` y `plan` se deshabilitan en este proyecto
 para que la sesión inicial use la orquestación. La configuración global de
 OpenCode y los otros proyectos se conservan.
 
-El constructor local no es el predeterminado: en la prueba anterior, el contexto
-casi lleno de 64K tardó unos 11 minutos y el borrador Rust requirió reparación
-remota. Este proyecto usa la elección posterior del usuario: acelerar con
-DeepSeek. No se utilizan Kimi ni GPT como fallback automático.
+El auditor (`explore`) usa una familia de modelos distinta del constructor,
+lo que mantiene la auditoría independiente. GLM-5.3 se retiró: en Go tiene un
+límite de 15 USD/mes (unas 220 peticiones cada 5 h) y concentraba el 60 % del
+gasto con el 3 % de los tokens. Luna `#max` se usa por su precio (0,10/0,50 USD
+por millón en la tarifa de Go) y se ejecuta con la cuenta OpenAI/Codex, con la
+que comparte cuota.
+
+## Coste, contexto y fallback (2026-10-17)
+
+- `AGENTS.md` se inyecta en todas las peticiones de todos los agentes,
+  subagentes incluidos; antes medía 218 KB (~60k tokens). El historial fechado
+  se movió literalmente a `docs/forever-progress-log.md`; añadir allí las nuevas
+  entradas y mantener `AGENTS.md` pequeño.
+- `opencode.json` limita el contexto efectivo de DeepSeek a 262.144 tokens y el
+  de Luna a 272.000 (su tarifa sube por encima), de modo que la compactación
+  automática actúa hacia los ~235k en lugar de ~900k. `tool_output` limita cada
+  resultado de herramienta a 400 líneas / 32 KB.
+- `.opencode/checks` guarda la salida completa en
+  `../rustycore-extractor-work/reports/opencode/checks/` e imprime solo un
+  resumen (o la salida entera si es corta) y la ruta del log.
+- `policies` bloquea de forma absoluta, por encima de cualquier regla de agente
+  o aprobación, el push forzado, `reset --hard`, `clean`, borrado de stashes y
+  worktrees, publicaciones/releases y la lectura/edición del cliente WoW, `.env`
+  y las claves API de OpenCode. Las reglas de cada perfil se conservan: los
+  `permissions` globales se aplican antes que las del agente y cada perfil
+  empieza con `* deny`, por lo que no pueden factorizarse ahí sin anularse.
+- OpenCode V2 no tiene fallback automático de proveedor. Si se agota la cuota
+  de Go, `.opencode/model-route api` cambia los agentes DeepSeek a la API directa
+  de DeepSeek (proveedor `deepseek` de la configuración global, con saldo propio)
+  y `.opencode/model-route go` los devuelve; `status` muestra la ruta actual.
+  Recarga el servicio compartido; una instancia `--standalone` debe reiniciarse.
+- `CARGO_BUILD_JOBS` pasa de 1 a 4 por defecto en el trabajo ordinario; las
+  ejecuciones de aceptación conservan sus propios entornos y límites.
+- Consumo: `opencode stats --project . --models --cost`.
 
 ## Arranque
 
@@ -65,8 +96,9 @@ permitidas; los rechazos explícitos siguen vigentes.
 
 Los handoffs incluyen objetivo, archivos propios, cambios que preservar,
 contrato aplicable, casos positivos/negativos y comandos de validación. No se
-llena el contexto de 64K artificialmente ni se envía el repositorio entero
-para una modificación pequeña.
+envían documentos completos, transcripciones previas ni el repositorio entero
+para una modificación pequeña; los subagentes devuelven informes breves y citan
+la ruta de los logs.
 
 ## Validación y rutas
 
@@ -127,10 +159,10 @@ sistema operativo. Las pruebas ejecutan código del repositorio: revisar sus
 entradas y sus efectos sigue siendo necesario. Las instrucciones de `AGENTS.md`,
 las licencias y los gates de aceptación continúan aplicándose.
 
-Para un experimento local explícito, arrancar `strata-iniciar` y pedir al
-coordinador que use `local-coder` para una tarea pequeña. No se arranca Strata
-al abrir este proyecto. Los modelos están fijados y un fallo de cuota/acceso
-se comunica; no se cambia automáticamente a otro proveedor.
+`local-coder` queda deshabilitado (`disabled: true`) porque el proveedor Strata
+se retiró de la configuración. Los modelos están fijados y un fallo de
+cuota/acceso se comunica; no se cambia automáticamente a otro proveedor. El
+cambio manual Go → API DeepSeek se hace con `.opencode/model-route api`.
 
 ## Verificación de instalación
 

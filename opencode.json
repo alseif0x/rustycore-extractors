@@ -2,6 +2,54 @@
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode-go/deepseek-v4.1-flash",
   "default_agent": "orchestrator",
+  "providers": {
+    "opencode-go": {
+      "models": {
+        "deepseek-v4.1-flash": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        },
+        "deepseek-v4-pro": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        }
+      }
+    },
+    "deepseek": {
+      "models": {
+        "deepseek-flash": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        },
+        "deepseek-v4-pro": {
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          }
+        }
+      }
+    },
+    "openai": {
+      "models": {
+        "gpt-6-luna": {
+          "limit": {
+            "context": 272000,
+            "output": 64000
+          }
+        }
+      }
+    }
+  },
+  "tool_output": {
+    "max_lines": 400,
+    "max_bytes": 32000
+  },
   "agents": {
     "build": {
       "disabled": true
@@ -43,6 +91,118 @@
         "max_auto_turns": 25,
         "locale": "auto"
       }
+    }
+  ],
+  "policies": [
+    {
+      "action": "tool.use",
+      "resource": "shell:git push --force*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push -f*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * --force*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push * -f*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push --mirror*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git reset --hard*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git clean*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git stash drop*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git stash clear*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git worktree remove*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh release create*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:gh repo delete*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:cargo publish*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:npm publish*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft/**",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:**/.env",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:**/.env.*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "read:/home/joe/.config/opencode/*-api-key",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft/**",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:**/.env",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:**/.env.*",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "edit:/home/joe/.config/opencode/*-api-key",
+      "effect": "deny"
     }
   ]
 }

@@ -22,7 +22,7 @@ export default {
       env.CARGO_TARGET_DIR ??= join(workRoot, "builds/cargo-opencode");
       env.TMPDIR ??= join(homedir(), ".local/share/rustycore-extractor-work/tmp/opencode");
       env.PYTHONPYCACHEPREFIX ??= join(workRoot, "cache/python-opencode");
-      env.CARGO_BUILD_JOBS ??= "1";
+      env.CARGO_BUILD_JOBS ??= "4";
       for (const path of [env.CARGO_TARGET_DIR, env.TMPDIR, env.PYTHONPYCACHEPREFIX]) {
         mkdirSync(path, { recursive: true, mode: 0o700 });
       }
