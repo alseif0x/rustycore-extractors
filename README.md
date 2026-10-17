@@ -26,14 +26,7 @@
 > exist, but complete client extraction, full world resources and RustyCore
 > runtime acceptance remain open. Windows delivery is deferred.
 
-```mermaid
-flowchart LR
-    Client["Client folder"] --> CASC["Local CASC"]
-    Plan["Build + component plan"] --> Extract["Extract components"]
-    CASC --> Extract
-    Extract --> Output["Versioned output"]
-    Output --> Verify["Offline verification"]
-```
+![Extraction workflow: choose a client folder and an explicit plan, extract through local CASC, package versioned components, then verify offline.](docs/assets/extraction-flow.svg)
 
 Choose a supported plan, point the tool at your client folder, and keep output
 in a separate directory. The [status tables](#current-status) below describe
@@ -128,7 +121,8 @@ The current implementation is tracked in
 - [ ] Connect authentic staging, selected model conversion and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
-### Latest checkpoints
+<details>
+<summary><strong>Latest validation checkpoints</strong> — software results and comparison status</summary>
 
 | Checkpoint | Result |
 | --- | --- |
@@ -138,6 +132,8 @@ The current implementation is tracked in
 | Empty-WMO correction | Eleven new controls pass in each profile. The full CASC library passes 1,621 tests per profile with five historical ignores; Clippy and scoped formatting pass. Applies to the explicit GNU15 v2 path. |
 | Current workspace: `6912551` | All eight software checks pass, including 3,490 tests and all 76 new controls in each debug/release profile. Independent review closes without findings. |
 | Updated comparison tools: `6912551` | All seven software checks pass, with independent review. Separate static inspection passes seven ELF objects and twenty dependencies. Fresh comparison directories and the complete C++ output comparison remain pending. |
+
+</details>
 
 **Next:** bind the harness to fresh comparison directories, compare complete
 outputs with the original C++ extractor and connect the final VMap pipeline.
