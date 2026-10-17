@@ -53,7 +53,11 @@ The updated GNU15 comparison harness separately passes seven software commands:
 release build, Clippy and formatting. Independent terminal QA passes 201,600
 checks without findings (`6b34054339bd4dda52f075ae59f775d1321f3da64c50a92b3a37c69041ef633c`).
 The preceding formatting failure retains no accepted prefix. Fresh combined
-static inspection and complete joined comparison remain pending. See
+static inspection subsequently passes seven ELF objects / twenty dependency
+edges, with 99,997 independent checks and no findings
+(`ed51ee08b67d586a5c468269c7993d9d87cca2064937fce5cb8cd45d58cb5f25`).
+No target or loader executes; two terminal observations and an empty initial
+group precede one stop. The complete joined comparison remains pending. See
 `docs/forever-collision.md`; no real acquisition/product/runtime acceptance follows.
 
 ### Explicit70425 complete liquid reader library — 2026-10-17

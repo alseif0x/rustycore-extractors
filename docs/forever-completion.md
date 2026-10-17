@@ -53,8 +53,10 @@ ignores per profile; all 24 new methods execute.
 Traversal, immediate-parent own-cache replay, the empty-cache barrier, final
 VMaps and product integration remain required. There is no new client/native
 execution or real acquisition acceptance. The updated comparison harness also
-passes its seven software commands and independent terminal review; combined
-static inspection and the full joined C++ comparison remain open. See the
+passes its seven software commands and independent terminal review. Fresh combined
+static inspection separately passes for seven ELF objects / twenty dependency
+edges, with independent review and no target execution. The full joined C++
+comparison remains open. See the
 [library scope](forever-collision.md#compatible-world-preparation-library--2026-10-17).
 These source changes are outside frozen C11 and its comparison caller.
 

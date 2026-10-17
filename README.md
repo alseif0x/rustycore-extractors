@@ -121,17 +121,21 @@ The current implementation is tracked in
 - [x] Inspect the original comparison harness binaries and loader dependencies.
 - [x] Qualify the updated GNU15 Rust/Python comparison harness.
 - [x] Prepare Map/liquids on the same collector, with synthetic library checks.
-- [ ] Inspect the updated harness binaries and complete the C++ comparison.
+- [x] Inspect the updated harness binaries and their dependency graph.
+- [ ] Complete the joined C++ output comparison.
 - [ ] Integrate world traversal, parent replay and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
 **Latest result:** the updated comparison harness passes its seven software
-checks and independent review. Shared collector preparation passes 43 compatible
-tests in each profile, including 24 new controls, plus Clippy and formatting.
+checks and independent review. Fresh static inspection checks seven ELF objects
+and twenty dependency edges without executing the targets. Shared collector
+preparation passes 43 compatible tests in each profile, including 24 new controls,
+plus Clippy and formatting.
 
-**Next:** inspect the updated comparison binaries and compare complete outputs
-with the original C++ extractor. Complete world traversal, final VMaps and real
-runtime validation remain separate gates.
+**Next:** compare complete outputs with the original C++ extractor and finish
+world traversal and final VMaps. Follow the active implementation in
+[PR #93](https://github.com/alseif0x/rustycore-extractors/pull/93).
+Real runtime validation remains a separate gate.
 
 <details>
 <summary>Validation scope and retained failures</summary>

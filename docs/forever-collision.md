@@ -47,10 +47,20 @@ terminal observations and an empty initial group precede one stop. One separate
 root progress query is recorded. The preceding seven-command attempt remains
 failed at formatting, with no accepted prefix.
 
-This qualifies the updated Rust/Python software harness only. The original C++
-71-command build remains separately qualified; fresh combined static inspection
-and the complete joined comparison are still pending. No world, real acquisition,
-product or runtime acceptance follows from these software checks.
+Fresh combined static inspection subsequently passes for the updated Rust binary
+and the separately qualified original C++ binary: seven ELF objects and twenty
+dependency edges. Independent terminal review passes 99,997 checks without
+findings; static-only receipt:
+`ed51ee08b67d586a5c468269c7993d9d87cca2064937fce5cb8cd45d58cb5f25`.
+The pure parser does not execute either target or the loader. Original software
+guards, source owners and binary/compiler-output equivalence close; two matching
+terminal observations and the empty initial group precede one successful stop.
+The parser child's strict network trace is empty; parent and preexec network
+activity are unobserved.
+
+This qualifies software and static dependencies only. The complete joined C++
+comparison remains pending. No world, real acquisition, product or runtime
+acceptance follows from these checks.
 
 ## GNU15-compatible placement software checkpoint — 2026-10-17
 
