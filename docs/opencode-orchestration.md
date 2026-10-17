@@ -55,6 +55,37 @@ que comparte cuota.
   ejecuciones de aceptación conservan sus propios entornos y límites.
 - Consumo: `opencode stats --project . --models --cost`.
 
+### Verificación (2026-10-17)
+
+- Línea base previa (`opencode stats --project .`, todo el historial del
+  proyecto): 7,02 USD; DeepSeek V4.1 Flash 241M tokens / 2,77 USD; GLM-5.3 7,1M
+  tokens / 4,24 USD; 95,9 % de la entrada leída de caché. Las 87 sesiones
+  (80 de subagentes) cargaban el mismo bloque de instrucciones de 221.522 bytes
+  y ninguna llegó a compactar.
+- Llamadas reales aceptan `openai/gpt-6-luna#max`,
+  `opencode-go/deepseek-v4.1-flash#high`, `opencode-go/deepseek-v4-pro#high`,
+  `deepseek/deepseek-flash#profundo` y `deepseek/deepseek-v4-pro#profundo`; una
+  variante inexistente se rechaza.
+- `opencode debug agents` resuelve los cinco perfiles con su modelo, variante y
+  pasos; `local-coder` ya no aparece. El API de modelos confirma los límites
+  262.144/65.536 (DeepSeek, Go y API) y 272.000/64.000 (Luna).
+- `model-route api` seguido de `model-route go` deja `opencode.json` y los seis
+  perfiles idénticos byte a byte (md5).
+- `.opencode/checks fmt-check` pasa; `contracts` pasa 373 tests; un modo
+  desconocido sale con código 2 y deja su log.
+- Prueba de humo de solo lectura (`smoke config 2026-10-17`): el coordinador
+  delegó en `scout` (DeepSeek Flash) y `builder` (Luna max), que respondieron
+  `rust-toolchain.toml` → `1.98.0` sin cambios. Coste ~0,007 USD; el bloque de
+  instrucciones de la sesión mide 12.652 bytes.
+- Evidencia: `../rustycore-extractor-work/reports/opencode/cost-tuning-20261017.json`
+  (SHA-256 `c22bdd4643982dd27f3555ce6dafc80a153fd427509cfbc30a7be025c40ef0e4`)
+  y logs en `reports/opencode/checks/`. El respaldo
+  `opencode.json.before-remove-strata-20261006T152138` se movió a
+  `reports/opencode/config-backups/`.
+- Pendiente: medir el consumo real tras una semana de uso. Fuera de este
+  proyecto, la configuración global descarta su entrada `providers.openai`
+  (`gpt-6.1-sol`) por formato inválido.
+
 ## Arranque
 
 Desde este repositorio:
