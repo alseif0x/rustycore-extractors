@@ -31,6 +31,21 @@ pub const PROFILE_GNU15_70425: &str =
     "linux70425-disabled-key-compatible-model-spool-gnu15-native-order-v2";
 pub const PROFILE_GNU15_70450: &str =
     "linux70450-disabled-key-compatible-model-spool-gnu15-native-order-v2";
+
+pub(in crate::collision) const fn model_profile_for(
+    target: Target,
+    native_order: bool,
+) -> &'static str {
+    match (target, native_order) {
+        (Target::Build70374, false) => PROFILE_70374,
+        (Target::Build70425, false) => PROFILE_70425,
+        (Target::Build70450, false) => PROFILE_70450,
+        (Target::Build70374, true) => PROFILE_GNU15_70374,
+        (Target::Build70425, true) => PROFILE_GNU15_70425,
+        (Target::Build70450, true) => PROFILE_GNU15_70450,
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Omission {
     MissingRoot,
@@ -744,14 +759,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
         Self::new_with_native_order(store, lookup, Target::Build70450, limits, spool, true)
     }
     pub fn profile(&self) -> &'static str {
-        match (self.target, self.state.native_order) {
-            (Target::Build70374, false) => PROFILE_70374,
-            (Target::Build70425, false) => PROFILE_70425,
-            (Target::Build70450, false) => PROFILE_70450,
-            (Target::Build70374, true) => PROFILE_GNU15_70374,
-            (Target::Build70425, true) => PROFILE_GNU15_70425,
-            (Target::Build70450, true) => PROFILE_GNU15_70450,
-        }
+        model_profile_for(self.target, self.state.native_order)
     }
     pub fn extract(
         &mut self,
@@ -1050,14 +1058,7 @@ impl Completed {
         self.extraction.facts()
     }
     pub fn profile(&self) -> &'static str {
-        match (self.target, self.state.native_order) {
-            (Target::Build70374, false) => PROFILE_70374,
-            (Target::Build70425, false) => PROFILE_70425,
-            (Target::Build70450, false) => PROFILE_70450,
-            (Target::Build70374, true) => PROFILE_GNU15_70374,
-            (Target::Build70425, true) => PROFILE_GNU15_70425,
-            (Target::Build70450, true) => PROFILE_GNU15_70450,
-        }
+        model_profile_for(self.target, self.state.native_order)
     }
     /// Enumerates the immutable completed collection, excluding negative/staged
     /// identities. Metadata readiness is not a claim of source/spool IO checks.

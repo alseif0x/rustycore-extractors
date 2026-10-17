@@ -15,15 +15,18 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
-        let plan = Plan::parse(crate::plan::v14_tests::V14).unwrap();
+        Self::with_plan_and_context_build(crate::plan::v14_tests::V14, 70425)
+    }
+    fn with_plan_and_context_build(plan_text: &str, context_build: u32) -> Self {
+        let plan = Plan::parse(plan_text).unwrap();
         let root = std::env::temp_dir().join(format!(
-            "rce-v14-offline-{}-{}",
+            "rce-compatible-vmap-offline-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&root).unwrap();
         let context = Context {
-            build: 70425,
+            build: context_build,
             locale: forever_casc::Locale::EsEs,
             components: Component::Collision.bit(),
             source_sha256: [1; 32],
@@ -156,6 +159,20 @@ fn v14_verify_refuses_symlink_root_even_for_valid_package() {
     symlink(f.output(), &link).unwrap();
     assert!(verify(&f.plan, &link, None).is_err());
 }
+
+#[test]
+fn v14_v15_verification_rejects_cross_build_coverage_contexts() {
+    for (plan_text, coverage_build) in [
+        (crate::plan::v15_tests::V15, 70425),
+        (crate::plan::v14_tests::V14, 70450),
+    ] {
+        let fixture = Fixture::with_plan_and_context_build(plan_text, coverage_build);
+        fixture.publish(&fixture.files(&[], None));
+        let error = verify(&fixture.plan, &fixture.output(), Some(fixture.context)).unwrap_err();
+        assert_eq!(error.code, "product_plan_mismatch");
+    }
+}
+
 #[test]
 fn v14_verify_integrity_rejects_changed_coverage_without_semantic_fallback() {
     let f = Fixture::new();

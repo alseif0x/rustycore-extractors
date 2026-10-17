@@ -26,18 +26,21 @@ fn v15_exact_mask_build_catalog_and_disabled_keys() {
     let p = Plan::parse(V15).unwrap();
     for mask in 0..=255 {
         if mask != Component::Collision.bit() {
-            assert!(
+            assert_eq!(
                 Plan {
                     components: mask,
                     ..p.clone()
                 }
-                .validate()
-                .is_err()
+                .validate(),
+                Err("product_plan_component_scope")
             );
         }
     }
     for build in [0, 70170, 70205, 70338, 70374, 70425] {
-        assert!(Plan { build, ..p.clone() }.validate().is_err());
+        assert_eq!(
+            Plan { build, ..p.clone() }.validate(),
+            Err("product_plan_build")
+        );
     }
     for schema_catalog in [
         SchemaCatalog::PinnedMetadataV1,
@@ -46,22 +49,22 @@ fn v15_exact_mask_build_catalog_and_disabled_keys() {
         SchemaCatalog::WowDbDefs70374V1,
         SchemaCatalog::WowDbDefs70425V1,
     ] {
-        assert!(
+        assert_eq!(
             Plan {
                 schema_catalog,
                 ..p.clone()
             }
-            .validate()
-            .is_err()
+            .validate(),
+            Err("product_plan_schema_catalog")
         );
     }
-    assert!(
+    assert_eq!(
         Plan {
             decryption: Decryption::ProvidedSalsa20V1,
             ..p
         }
-        .validate()
-        .is_err()
+        .validate(),
+        Err("product_plan_component_scope")
     );
 }
 
@@ -154,13 +157,13 @@ fn v15_rejects_cross_build_catalogue_and_wrong_profiles() {
         .validate(),
         Err("product_plan_build")
     );
-    assert!(
+    assert_eq!(
         Plan {
             build: 70170,
             ..p.clone()
         }
-        .validate()
-        .is_err()
+        .validate(),
+        Err("product_plan_build")
     );
     for profile in [
         PublicationProfile::Legacy,
@@ -168,13 +171,13 @@ fn v15_rejects_cross_build_catalogue_and_wrong_profiles() {
         PublicationProfile::Build70374Db2OnlyV1,
         PublicationProfile::Build70374CompatibleTerrainV1,
     ] {
-        assert!(
+        assert_eq!(
             Plan {
                 publication_profile: profile,
                 ..p.clone()
             }
-            .validate()
-            .is_err()
+            .validate(),
+            Err("product_plan_build")
         );
     }
     assert_eq!(

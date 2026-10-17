@@ -29,6 +29,17 @@ pub const PROFILE_GNU15_70425: &str =
 pub const PROFILE_GNU15_70450: &str =
     "linux70450-compatible-spooled-serial-placements-gnu15-native-order-v2";
 const SCRATCH: usize = 62 + placement::MAX_NAME_BYTES;
+pub(in crate::collision) fn profile_for_collector(collector_profile: &'static str) -> &'static str {
+    match collector_profile {
+        crate::collision::compatible::PROFILE_GNU15_70374 => PROFILE_GNU15_70374,
+        crate::collision::compatible::PROFILE_GNU15_70425 => PROFILE_GNU15_70425,
+        crate::collision::compatible::PROFILE_GNU15_70450 => PROFILE_GNU15_70450,
+        crate::collision::compatible::PROFILE_70374 => PROFILE_70374,
+        crate::collision::compatible::PROFILE_70450 => PROFILE_70450,
+        crate::collision::compatible::PROFILE_70425 => PROFILE_70425,
+        _ => collector_profile,
+    }
+}
 /// The owned sink must bound ALL retained heap (including side buffers and
 /// growth overlap) by its declared allowance. Disk publication is external.
 /// Neither a callback nor a successful Session finish seals prior output.
@@ -236,15 +247,7 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
         self.checked(self.failed.map_or(Ok(()), Err))
     }
     pub fn profile(&self) -> &'static str {
-        match self.collector.profile() {
-            crate::collision::compatible::PROFILE_GNU15_70374 => PROFILE_GNU15_70374,
-            crate::collision::compatible::PROFILE_GNU15_70425 => PROFILE_GNU15_70425,
-            crate::collision::compatible::PROFILE_GNU15_70450 => PROFILE_GNU15_70450,
-            crate::collision::compatible::PROFILE_70374 => PROFILE_70374,
-            crate::collision::compatible::PROFILE_70450 => PROFILE_70450,
-            crate::collision::compatible::PROFILE_70425 => PROFILE_70425,
-            _ => PROFILE_70425,
-        }
+        profile_for_collector(self.collector.profile())
     }
     /// Observation only; this does not transfer ownership/accounting or seal.
     pub fn sink(&self) -> &S {
@@ -785,4 +788,38 @@ fn emit(
     }
     bytes.extend_from_slice(&encoded);
     Ok(())
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+
+    #[test]
+    fn unknown_collector_profile_is_not_relabelled_as_a_target_build() {
+        let unknown = "linux-unknown-synthetic-compatible-profile-v1";
+        let reported = profile_for_collector(unknown);
+        assert_eq!(reported, unknown);
+        assert_ne!(reported, PROFILE_70425);
+        assert_ne!(reported, PROFILE_GNU15_70425);
+        assert_ne!(reported, PROFILE_70450);
+        assert_ne!(reported, PROFILE_GNU15_70450);
+    }
+
+    #[test]
+    fn recognized_build_profiles_keep_their_existing_mappings() {
+        for (collector, product) in [
+            (
+                crate::collision::compatible::PROFILE_GNU15_70425,
+                PROFILE_GNU15_70425,
+            ),
+            (crate::collision::compatible::PROFILE_70425, PROFILE_70425),
+            (
+                crate::collision::compatible::PROFILE_GNU15_70450,
+                PROFILE_GNU15_70450,
+            ),
+            (crate::collision::compatible::PROFILE_70450, PROFILE_70450),
+        ] {
+            assert_eq!(profile_for_collector(collector), product);
+        }
+    }
 }

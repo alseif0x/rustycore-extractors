@@ -142,6 +142,7 @@ fn open(fixture: &CollisionFixture, build: u32) -> LocalStore {
     match build {
         70374 => LocalStore::open_db2_70374(fixture.path(), options),
         70425 => LocalStore::open_db2_70425(fixture.path(), options),
+        70450 => LocalStore::open_db2_70450(fixture.path(), options),
         _ => unreachable!(),
     }
     .unwrap()
@@ -303,6 +304,12 @@ fn project(files: &[FixtureFile<'_>], build: u32, set: u16, native: bool) -> Vec
             Limits::default(),
             private.spool(&fixture),
         ),
+        (70450, true) => Collector::new_native_gnu15_70450(
+            &mut store,
+            &Lookup,
+            Limits::default(),
+            private.spool(&fixture),
+        ),
         (70374, false) => Collector::new_70374(
             &mut store,
             &Lookup,
@@ -310,6 +317,12 @@ fn project(files: &[FixtureFile<'_>], build: u32, set: u16, native: bool) -> Vec
             private.spool(&fixture),
         ),
         (70425, false) => Collector::new_70425(
+            &mut store,
+            &Lookup,
+            Limits::default(),
+            private.spool(&fixture),
+        ),
+        (70450, false) => Collector::new_70450(
             &mut store,
             &Lookup,
             Limits::default(),
@@ -343,7 +356,9 @@ fn project(files: &[FixtureFile<'_>], build: u32, set: u16, native: bool) -> Vec
         match (build, native) {
             (70374, true) => placements::PROFILE_GNU15_70374,
             (70425, true) => placements::PROFILE_GNU15_70425,
+            (70450, true) => placements::PROFILE_GNU15_70450,
             (70374, false) => placements::PROFILE_70374,
+            (70450, false) => placements::PROFILE_70450,
             _ => placements::PROFILE_70425,
         }
     );
@@ -366,11 +381,33 @@ fn project(files: &[FixtureFile<'_>], build: u32, set: u16, native: bool) -> Vec
         match (build, native) {
             (70374, true) => PROFILE_GNU15_70374,
             (70425, true) => PROFILE_GNU15_70425,
+            (70450, true) => PROFILE_GNU15_70450,
             (70374, false) => PROFILE_70374,
+            (70450, false) => PROFILE_70450,
             _ => PROFILE_70425,
         }
     );
     entries
+}
+#[test]
+fn build70450_native_and_sorted_model_and_placement_profiles_are_selected() {
+    for (native, model_profile, placement_profile) in [
+        (false, PROFILE_70450, placements::PROFILE_70450),
+        (true, PROFILE_GNU15_70450, placements::PROFILE_GNU15_70450),
+    ] {
+        assert_eq!(
+            super::model_profile_for(super::Target::Build70450, native),
+            model_profile
+        );
+        assert_eq!(
+            placements::profile_for_collector(model_profile),
+            placement_profile
+        );
+        assert_ne!(model_profile, PROFILE_70425);
+        assert_ne!(model_profile, PROFILE_GNU15_70425);
+        assert_ne!(placement_profile, placements::PROFILE_70425);
+        assert_ne!(placement_profile, placements::PROFILE_GNU15_70425);
+    }
 }
 #[test]
 fn native_gnu15_v2_n03_child_name_id_association_filters_missing_and_nocollision_before_insert() {
