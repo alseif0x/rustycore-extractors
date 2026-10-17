@@ -16,6 +16,8 @@ use forever_vmap::{
     wmo,
 };
 #[cfg(target_os = "linux")]
+pub mod compatible;
+#[cfg(target_os = "linux")]
 pub mod spooled;
 
 #[cfg(test)]

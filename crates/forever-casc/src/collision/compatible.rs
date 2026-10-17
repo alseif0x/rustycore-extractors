@@ -11,6 +11,8 @@ use crate::local_store::LocalStore;
 use forever_vmap::wmo::{self, doodads, liquid::LiquidLookup};
 
 pub mod startup;
+/// Separately selected serial projection using this compatible collector.
+pub use super::placements::compatible as placements;
 
 pub const PROFILE_70374: &str = "linux70374-disabled-key-compatible-model-spool-v1";
 pub const PROFILE_70425: &str = "linux70425-disabled-key-compatible-model-spool-v1";
@@ -621,6 +623,45 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
         call: impl FnOnce(payload::CompatiblePayload<'_>) -> Result<T, payload::Error>,
     ) -> Result<T, payload::CollectorError> {
         self.inner.with_compatible_payload(handle, call)
+    }
+    pub(crate) fn resources(&self) -> super::resources::Profile {
+        self.inner.resources()
+    }
+    pub(crate) fn reserve_external(&mut self, bytes: usize) -> Result<(), payload::CollectorError> {
+        self.inner.reserve_external(bytes)
+    }
+    pub(crate) fn release_external(&mut self, bytes: usize) -> Result<(), payload::CollectorError> {
+        self.inner.release_external(bytes)
+    }
+    pub(crate) fn free_bytes(&self) -> Result<usize, payload::CollectorError> {
+        self.inner.free_bytes()
+    }
+    pub(crate) fn admit_reloads(
+        &mut self,
+        count: usize,
+        bytes: usize,
+    ) -> Result<(), payload::CollectorError> {
+        self.inner.admit_reloads(count, bytes)
+    }
+    pub(crate) fn finish_external_operation<T, E>(
+        &mut self,
+        result: Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        self.inner.finish_external_operation(result)
+    }
+    pub(crate) fn with_descriptors_result<T, E>(
+        &mut self,
+        call: impl FnOnce(payload::CompactView<'_>) -> Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        self.inner.with_descriptors_result(call)
+    }
+    pub(crate) fn with_compatible_payload_descriptors_result<T, E>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(payload::CompatiblePayload<'_>, payload::CompactView<'_>) -> Result<T, E>,
+    ) -> Result<T, payload::CallbackFailure<E>> {
+        self.inner
+            .with_compatible_payload_descriptors_result(handle, call)
     }
     pub fn verify_unchanged(&mut self) -> Result<(), payload::CollectorError> {
         self.inner.verify_unchanged()

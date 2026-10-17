@@ -749,6 +749,30 @@ impl<'v, 'a> CompatibleWmo<'v, 'a> {
                 },
             })
     }
+    pub(crate) fn binding(&self, name_index: u32) -> Option<super::compatible::Binding> {
+        let values = self.wmo.bindings.as_chunks::<COMPATIBLE_BINDING>().0;
+        let at = values
+            .binary_search_by_key(&name_index, |b| u32_at(&b[..4]))
+            .ok()?;
+        let b = values[at];
+        Some(super::compatible::Binding {
+            name_index,
+            disposition: if u32_at(&b[4..8]) == 0 {
+                super::compatible::Disposition::Present(ModelHandle(u64_at(&b[8..16]) as usize))
+            } else {
+                super::compatible::Disposition::Missing
+            },
+        })
+    }
+    pub fn set_count(&self) -> usize {
+        self.wmo.set_count()
+    }
+    pub fn set_references(
+        &self,
+        requested: u16,
+    ) -> impl Iterator<Item = doodads::SetReference> + '_ {
+        self.wmo.set_references(requested)
+    }
     pub fn references(&self) -> impl ExactSizeIterator<Item = u16> + '_ {
         self.wmo.references()
     }
@@ -1128,6 +1152,50 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
                     Err(error) => {
                         cause = Some(error);
                         Err(Error::Callback)
+                    }
+                })
+                .map_err(|_| CollisionError::Aborted)
+        })();
+        let result = self.checked(result);
+        match (result, cause) {
+            (Ok(value), None) => Ok(value),
+            (Err(error), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: (error != CollectorError::Payload(Error::Callback)).then_some(error),
+            }),
+            (Err(error), None) => Err(CallbackFailure::Collector(error)),
+            (Ok(_), Some(cause)) => Err(CallbackFailure::Callback {
+                cause,
+                guard: Some(CollectorError::Collision(CollisionError::State)),
+            }),
+        }
+    }
+    /// Compatible wire validation and compact descriptor borrow share the same
+    /// immutable models; callbacks cannot manufacture missing-child bindings.
+    pub(crate) fn with_compatible_payload_descriptors_result<T, E>(
+        &mut self,
+        handle: ModelHandle,
+        call: impl FnOnce(CompatiblePayload<'_>, CompactView<'_>) -> Result<T, E>,
+    ) -> Result<T, CallbackFailure<E>> {
+        let mut cause = None;
+        let result = (|| {
+            self.inner.ready()?;
+            let budget = self.inner.free()?;
+            let view = CompactView {
+                models: &self.inner.models,
+                requests: &self.inner.requests,
+            };
+            self.inner
+                .payloads
+                .as_mut()
+                .ok_or(CollisionError::State)?
+                .with_record_payload(handle, budget, true, |payload| {
+                    match call(CompatiblePayload::validate(payload, view.models)?, view) {
+                        Ok(value) => Ok(value),
+                        Err(error) => {
+                            cause = Some(error);
+                            Err(Error::Callback)
+                        }
                     }
                 })
                 .map_err(|_| CollisionError::Aborted)
