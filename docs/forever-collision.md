@@ -48,6 +48,21 @@ The first actual terminal auditor rejection remains recorded; its corrected
 revision reconstructs the original serialized launch order. No software command
 or stopped service is repeated by that metadata review.
 
+The updated external comparison caller on this same functional base also passes
+all seven software commands: 42 and 94 Python methods, eight Rust methods in each
+debug/release profile with no ignores, release build, example Clippy and formatting.
+Independent terminal QA passes 265,421 checks without findings:
+`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`.
+All 6,592 original software guards, 969 directories and 48 aliases close unchanged.
+The single persistent service closes with two numeric terminal observations,
+an empty initial owned group and one successful stop. Python traces are empty;
+the three compiler traces use their existing classifier. Rust test, parent and
+pre-execution networking remain unobserved. A preceding low-space preparation
+remains failed; a separately reviewed revision uses another local volume with
+the same 16 GiB reserve. No original native binary or full joined comparison runs
+in these software checks. Fresh binary inspection and the full joined
+comparison still need their own evidence.
+
 A new complete joined comparison remains required. Authentic staging, selected
 VMO conversion, final compatible VMaps,
 real resources, product integration and runtime acceptance remain open.

@@ -67,6 +67,17 @@ stopped service. This closes current whole-source software qualification only.
 The joined comparison and all extraction/product/runtime gates remain open.
 This documentation update is not rebuilt into the qualified binaries.
 
+The updated external comparison caller on the same functional `6912551` base
+subsequently passes all seven software commands: 42 and 94 Python methods,
+eight Rust methods per debug/release profile without ignores, release build,
+example Clippy and formatting. Independent terminal QA passes 265,421 checks
+without findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`).
+Original 6,592 software guards, 969 directories and 48 aliases close unchanged.
+The rejected low-space preparation remains failed; its separate corrected
+preparation uses another local volume with the same 16 GiB reserve. This is
+caller software evidence only: new binary inspection, complete joined output
+comparison, final VMaps and product/runtime acceptance remain required.
+
 ### Compatible world traversal library — 2026-10-17
 
 The consuming compatible world inventory path now traverses authentic startup

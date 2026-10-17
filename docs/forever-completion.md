@@ -57,6 +57,11 @@ all eight commands, with 3,490 tests / 26 historical ignores / 52 targets and al
 76 new controls in each profile. Both product builds, source contracts,
 distribution checks, Clippy and formatting pass. Independent terminal software
 QA closes without findings (`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`).
+The updated external comparison caller then passes all seven software checks:
+42 and 94 Python methods, eight Rust methods per profile without ignores,
+release build, Clippy and formatting. Independent terminal QA passes without
+findings (`689418d114c092607745c5f425ea36382b1093e2fb05e6531878cf6f5ba151c1`).
+Its new binary inspection and complete output comparison remain separate gates.
 A complete joined comparison is still required. Final compatible VMaps, real resources, product integration,
 navigation, runtime and Linux delivery remain open. See the
 [correction scope](forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17).
