@@ -785,6 +785,28 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     ) -> Result<(Vec<u8>, SourceFacts), payload::CollectorError> {
         self.inner.read_source(id, cap)
     }
+    // Trusted world traversal only: exact typed MissingFile is absence. Keep
+    // successful source capacities in the same source-release ledger; no facts
+    // are manufactured for an omitted WDT/own object ADT.
+    pub(in crate::collision) fn read_world_source(
+        &mut self,
+        input: InputRef<'_>,
+        cap: usize,
+    ) -> Result<Option<(Vec<u8>, SourceFacts)>, payload::CollectorError> {
+        let result = (|| {
+            let e = &mut self.inner.inner;
+            e.ready()?;
+            if let InputRef::FileDataId(id) = input {
+                names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
+            }
+            let value = e.read_capped_policy(input, cap, true)?;
+            if let Some((bytes, _)) = &value {
+                e.external_sources = add(e.external_sources, bytes.capacity())?;
+            }
+            Ok(value)
+        })();
+        self.inner.checked(result)
+    }
     pub(in crate::collision) fn read_available_source(
         &mut self,
         id: u32,

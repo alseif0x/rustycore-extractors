@@ -39,6 +39,27 @@ synthetic methods; the subsequent 26-call real campaign closed with six exact
 V5 remains DB2-only. Complete real acquisition, geometry/world resources and
 runtime remain gates; this bounded local package does not complete Linux.
 
+## Compatible world traversal prerequisite — 2026-10-17
+
+The separate consuming 70374/70425 compatible world owner now traverses WDTs and
+object ADTs on one collector/cache/ledger and serial placement session. Typed
+missing WDTs omit their map work; missing own ADTs may replay only the immediate
+parent's own cell. Successful empty own tiles block inheritance, and inherited
+data never becomes own cache. Available Map facts, complete liquid sources and
+topology retain their distinct authenticated scopes.
+
+Debug/release each pass 67 compatible methods, including 24 new traversal
+controls. Both full CASC library profiles pass 1,610 methods / five historical
+ignores, with all 24 new methods executed. Package all-target Clippy and scoped
+formatting also pass; the earlier
+test-initializer Clippy failure remains preserved. Outputs remain provisional.
+Authentic staging, selected VMO conversion and final VMaps remain required,
+followed by real resources, product integration, navigation, runtime and Linux
+distribution.
+No new client/native execution or joined world comparison is established by
+these synthetic checks. See the
+[traversal scope](forever-collision.md#compatible-world-traversal-library--2026-10-17).
+
 ## Compatible world preparation prerequisite — 2026-10-17
 
 The separate 70374/70425 compatible preparation owner now retains authentic
@@ -50,8 +71,9 @@ returns completed startup and topology, without claiming a completed world.
 Full CASC library regression separately passes 1,586 methods / five historical
 ignores per profile; all 24 new methods execute.
 
-Traversal, immediate-parent own-cache replay, the empty-cache barrier, final
-VMaps and product integration remain required. There is no new client/native
+The consuming traversal above supplies the next library step, including
+immediate-parent own-cache replay and the empty-cache barrier. Final VMaps
+and product integration remain required. There is no new client/native
 execution or real acquisition acceptance. The updated comparison harness also
 passes its seven software commands and independent terminal review. Fresh combined
 static inspection separately passes for seven ELF objects / twenty dependency

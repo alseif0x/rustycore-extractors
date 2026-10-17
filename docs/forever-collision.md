@@ -1,5 +1,43 @@
 # Forever collision foundation
 
+## Compatible world traversal library — 2026-10-17
+
+`collision::compatible::world::inventory::{extract, extract_selected,
+extract_prepared}` now consumes genuine compatible startup or a fresh prepared
+owner. A single collector, payload repository, negative cache, model handles,
+serial placement session and cumulative ledger span the selected world.
+Builds 70374/70425 and their explicit GNU15 order selectors remain separate.
+Available Map facts remain distinct from complete liquid source facts.
+
+Only a typed missing-file result permits omission: an unavailable WDT skips that
+map's global and tile work; an unavailable own object ADT can replay the exact
+cell from its immediate parent's own cache. A successful empty own tile blocks
+inheritance. Replayed inherited data never becomes an own-cache entry, and
+grandparent fallback is not introduced. Replay retains placement IDs and does
+not reacquire models. Committed child RAW models survive omission of their
+parent. Other source, parser and policy failures remain fatal.
+
+The returned `Completed` retains authentic startup, available Map and complete
+liquid facts, topology, lookup/map statistics and the traversal report. Its sink
+output is provisional: staging, selected VMO conversion, final VMap assembly,
+product publication and runtime acceptance remain separate gates. Traversal
+does not infer coverage of omitted Map sections or unavailable WDTs.
+
+Both focused profiles pass 67 compatible methods, including all 24 new traversal
+controls, with no ignores. Both complete CASC library profiles pass 1,610 methods /
+five historical ignores; all 24 new methods execute. Source review also closes
+a preparation-error precedence finding: an observed source change survives
+outer inventory changes while preserving both typed causes. Its deterministic
+dual-mutation control runs in both profiles. Package all-target Clippy and exact
+eight-file formatting pass. The corrected six-command qualification receipt is
+`e3edd8b60252597279f3ef9eee8cc1aedfd6d744f22d4a70b6800ea4d5e8b21d`.
+The first scoped attempt remains failed at Clippy's test-initializer style lint;
+the correction changes that initializer only. All six corrected checks run on
+the same source bytes, with source/software guards closed and owned child groups
+absent. Network activity is unobserved. These are synthetic library checks;
+there is no new client or original native execution, full joined comparison,
+product or runtime acceptance.
+
 ## Compatible world preparation library — 2026-10-17
 
 `collision::compatible::world::{prepare, prepare_selected}` consumes authentic

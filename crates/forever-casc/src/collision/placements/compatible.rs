@@ -173,7 +173,7 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
     // Trusted consuming transfer from the world owner. The exact prior Sink
     // reservation is retained, not released or charged twice. No public caller
     // can declare an unbacked prior charge. Failure retains conservative charges.
-    fn new_precharged(
+    pub(in crate::collision) fn new_precharged(
         collector: &'c mut Collector<'s, 'l, L>,
         sink: S,
         sink_heap_allowance: usize,
@@ -244,6 +244,84 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
     pub fn sink(&self) -> &S {
         self.sink.as_ref().expect("live session sink")
     }
+    // Only the trusted world traversal may transfer source/external ownership.
+    // These operations never reset IDs, physical requests or cached outcomes.
+    pub(in crate::collision) fn run_read_world_source(
+        &mut self,
+        input: InputRef<'_>,
+        cap: usize,
+    ) -> Result<Option<Vec<u8>>, Error<S::Error>> {
+        let result = self.failed.map_or_else(
+            || {
+                self.collector
+                    .read_world_source(input, cap)
+                    .map(|v| v.map(|v| v.0))
+                    .map_err(Error::from)
+            },
+            Err,
+        );
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_reserve(
+        &mut self,
+        bytes: usize,
+    ) -> Result<(), Error<S::Error>> {
+        let result = self.failed.map_or_else(
+            || self.collector.reserve_external(bytes).map_err(Error::from),
+            Err,
+        );
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_release(
+        &mut self,
+        bytes: usize,
+    ) -> Result<(), Error<S::Error>> {
+        let result = self.failed.map_or_else(
+            || self.collector.release_external(bytes).map_err(Error::from),
+            Err,
+        );
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_release_source(
+        &mut self,
+        bytes: usize,
+    ) -> Result<(), Error<S::Error>> {
+        let result = self.failed.map_or_else(
+            || self.collector.release_source(bytes).map_err(Error::from),
+            Err,
+        );
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_free_bytes(&mut self) -> Result<usize, Error<S::Error>> {
+        let result = self
+            .failed
+            .map_or_else(|| self.collector.free_bytes().map_err(Error::from), Err);
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_facts(
+        &mut self,
+    ) -> Result<crate::collision::Facts, Error<S::Error>> {
+        let result = self
+            .failed
+            .map_or_else(|| self.collector.facts().map_err(Error::from), Err);
+        self.checked(result)
+    }
+    pub(in crate::collision) fn run_with_sink<T>(
+        &mut self,
+        call: impl FnOnce(&mut S) -> Result<T, S::Error>,
+    ) -> Result<T, Error<S::Error>> {
+        let result = match self.failed {
+            Some(e) => Err(e),
+            None => match self.sink.as_mut() {
+                Some(sink) => call(sink).map_err(|cause| Error {
+                    cause: Cause::Sink(cause),
+                    guard: None,
+                }),
+                None => Err(Error::state()),
+            },
+        };
+        self.checked(result)
+    }
     pub fn stats(&self) -> Stats {
         self.snapshot(self.allocator.as_ref().expect("live session IDs").stats())
     }
@@ -260,10 +338,23 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
         }
     }
     pub fn project_to_sink(&mut self, batches: &[Batch<'_, '_>]) -> Result<(), Error<S::Error>> {
-        let result = self.project_inner(batches);
+        let result = self.project_inner(batches, |_, _| Ok(()));
         self.checked(result)
     }
-    fn project_inner(&mut self, batches: &[Batch<'_, '_>]) -> Result<(), Error<S::Error>> {
+    // World-only output admission after THIS acquisition, before any staging.
+    pub(in crate::collision) fn run_project_to_sink(
+        &mut self,
+        batches: &[Batch<'_, '_>],
+        prepare: impl FnOnce(&mut S, crate::collision::Facts) -> Result<(), S::Error>,
+    ) -> Result<(), Error<S::Error>> {
+        let result = self.project_inner(batches, prepare);
+        self.checked(result)
+    }
+    fn project_inner(
+        &mut self,
+        batches: &[Batch<'_, '_>],
+        prepare: impl FnOnce(&mut S, crate::collision::Facts) -> Result<(), S::Error>,
+    ) -> Result<(), Error<S::Error>> {
         if let Some(e) = self.failed {
             return Err(e);
         }
@@ -323,6 +414,11 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
             }
         }
         preflight(self.collector, &entries, self.limits)?;
+        let facts = self.collector.facts()?;
+        prepare(self.sink.as_mut().ok_or_else(Error::state)?, facts).map_err(|cause| Error {
+            cause: Cause::Sink(cause),
+            guard: None,
+        })?;
         // ALL top-level identities/status/shapes above precede IDs or reloads.
         let mut reloads = 0;
         let mut reload_bytes = 0;

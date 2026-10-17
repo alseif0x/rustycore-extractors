@@ -31,6 +31,25 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Compatible world traversal library — 2026-10-17
+
+The consuming compatible world inventory path now traverses authentic startup
+or fresh preparation on one collector/cache/payload owner and serial placement
+session. Only typed missing-file results omit WDT work or permit immediate-parent
+own-cell replay; successful empty own tiles block inheritance and replay never
+becomes own cache. Available Map/complete liquid facts and topology survive in
+genuine compatible `Completed`, with provisional sink output. Debug/release each
+pass 67 compatible methods / 24 new traversal controls; full CASC library
+regression passes 1,610 methods / five historical ignores per profile, including
+all 24 new methods. A source-review finding preserves observed InputChanged
+priority over outer inventory mutation; its dual-mutation control passes both
+profiles. All-target package Clippy and scoped formatting pass in corrected
+six-command qualification `e3edd8b60252597279f3ef9eee8cc1aedfd6d744f22d4a70b6800ea4d5e8b21d`;
+the first attempt's test-initializer Clippy failure remains preserved. No new
+client/native execution or joined world comparison follows.
+Authentic staging, VMO selection, final VMaps, real resources, product/navigation/
+runtime and Linux delivery remain open. See `docs/forever-collision.md`.
+
 ### Compatible world preparation library — 2026-10-17
 
 Separate `collision::compatible::world` preparation now acquires available

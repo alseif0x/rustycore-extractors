@@ -91,7 +91,7 @@ source of truth; the table below summarizes the boundaries.
 | Build | What the evidence establishes | Boundary |
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
-| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Shared collector preparation now connects Map/liquids to startup, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Complete world traversal, real liquid acquisition, a 70425 product profile and runtime acceptance remain open. |
+| **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
 
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
@@ -121,19 +121,21 @@ The current implementation is tracked in
 - [x] Inspect the original comparison harness binaries and loader dependencies.
 - [x] Qualify the updated GNU15 Rust/Python comparison harness.
 - [x] Prepare Map/liquids on the same collector, with synthetic library checks.
+- [x] Add compatible world traversal and immediate-parent own-cache replay.
 - [x] Inspect the updated harness binaries and their dependency graph.
 - [ ] Complete the joined C++ output comparison.
-- [ ] Integrate world traversal, parent replay and final VMap output.
+- [ ] Connect authentic staging, selected model conversion and final VMap output.
 - [ ] Validate real resources, product integration and RustyCore runtime use.
 
 **Latest result:** the updated comparison harness passes its seven software
 checks and independent review. Fresh static inspection checks seven ELF objects
-and twenty dependency edges without executing the targets. Shared collector
-preparation passes 43 compatible tests in each profile, including 24 new controls,
-plus Clippy and formatting.
+and twenty dependency edges without executing the targets. World traversal passes
+67 compatible tests in each profile, including 24 new controls; the complete CASC
+library passes 1,610 tests per profile with five historical ignores. Package
+Clippy and scoped formatting pass too.
 
-**Next:** compare complete outputs with the original C++ extractor and finish
-world traversal and final VMaps. Follow the active implementation in
+**Next:** compare complete outputs with the original C++ extractor and connect
+the final VMap pipeline. Follow the active implementation in
 [PR #93](https://github.com/alseif0x/rustycore-extractors/pull/93).
 Real runtime validation remains a separate gate.
 

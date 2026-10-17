@@ -2,9 +2,11 @@
 // Authored 2026-10-17: same-owner compatible Map/liquid preparation.
 //! Available Map coverage is separate from complete liquid SourceFacts. One
 //! compatible collector/cache/ledger survives startup and the whole callback.
-//! This prepares authentic topology and lookup context, not world traversal,
-//! parent replay, output completion, final VMaps or product/runtime acceptance.
-use super::{Collector, Target, placements, startup};
+//! These preparation functions perform no traversal. The separate consuming
+//! inventory owner traverses the world; final VMaps/product/runtime are separate.
+#[cfg(test)]
+use super::placements;
+use super::{Collector, Target, startup};
 use crate::collision::{
     Facts,
     available_70374::{self as available, AvailableAccess},
@@ -16,6 +18,7 @@ use crate::collision::{
 use forever_db2::availability::MaterializedVMapMaps;
 use forever_vmap::wmo::liquid::LiquidLookup;
 
+pub mod inventory;
 #[cfg(test)]
 mod tests;
 pub type Error = startup::Error;
@@ -124,14 +127,14 @@ fn profile(target: Target, native: bool) -> &'static str {
 /// or its model/negative cache, handles, target/order or source counters. One
 /// serial placement Session within that callback can retain IDs across all maps.
 /// No public constructor accepts caller Map rows, topology or source proofs.
-pub struct Prepared<'s, S: placements::Sink> {
+pub struct Prepared<'s, S> {
     context: Option<startup::Startup<'s>>,
     owner: Option<MaterializedVMapMaps>,
     lookup: Option<strict_world::Lookups>,
     sink: Option<S>,
     topology: Option<Topology>,
-    map: available::TableFacts,
-    liquids: [strict_world::TableFacts; 2],
+    map: Option<available::TableFacts>,
+    liquids: Option<[strict_world::TableFacts; 2]>,
     lookup_stats: LookupStats,
     map_stats: plan::Stats,
     retained: usize,
@@ -139,8 +142,11 @@ pub struct Prepared<'s, S: placements::Sink> {
     limits: Limits,
     profile: &'static str,
     failed: Option<Error>,
+    // A borrowed callback can own arbitrary IDs/staging. It cannot later be
+    // relabelled as the authentic one-Session consuming traversal.
+    callback_used: bool,
 }
-impl<'s, S: placements::Sink> Prepared<'s, S> {
+impl<'s, S> Prepared<'s, S> {
     fn ready(&self) -> Result<&startup::Startup<'s>, Error> {
         if let Some(e) = self.failed {
             return Err(e);
@@ -157,11 +163,15 @@ impl<'s, S: placements::Sink> Prepared<'s, S> {
     }
     pub fn map(&self) -> Result<&available::TableFacts, Error> {
         self.ready()?;
-        Ok(&self.map)
+        self.map
+            .as_ref()
+            .ok_or_else(|| available::Error::State.into())
     }
     pub fn liquids(&self) -> Result<&[strict_world::TableFacts; 2], Error> {
         self.ready()?;
-        Ok(&self.liquids)
+        self.liquids
+            .as_ref()
+            .ok_or_else(|| available::Error::State.into())
     }
     pub fn topology(&self) -> Result<&Topology, Error> {
         self.ready()?;
@@ -230,6 +240,9 @@ impl<'s, S: placements::Sink> Prepared<'s, S> {
     /// callback allocations or RSS. All output remains provisional.
     /// Returning an error poisons this owner;
     /// failed transition/drop guards take priority and no retry is possible.
+    /// After any borrowed callback, `finish_preparation` remains available but
+    /// consuming inventory traversal rejects with world State: a callback may
+    /// already have used its own ID Session. Traversal requires fresh preparation.
     pub fn with_context<T>(
         &mut self,
         call: impl FnOnce(
@@ -249,6 +262,7 @@ impl<'s, S: placements::Sink> Prepared<'s, S> {
             }
             return Err(error);
         }
+        self.callback_used = true;
         let mut original = self.context.take().ok_or(available::Error::State)?;
         let (Some(owner), Some(topology)) = (self.owner.as_ref(), self.topology.as_ref()) else {
             let error = drop_callback_and_guard::<(), _, _, _>(
@@ -385,7 +399,7 @@ impl<'s, S: placements::Sink> Prepared<'s, S> {
         context.finish_with_topology(topology)
     }
 }
-impl<S: placements::Sink> Drop for Prepared<'_, S> {
+impl<S> Drop for Prepared<'_, S> {
     fn drop(&mut self) {
         drop(self.sink.take());
         if let Some(context) = self.context.as_mut() {
@@ -397,7 +411,7 @@ impl<S: placements::Sink> Drop for Prepared<'_, S> {
 }
 /// Prepare all available Map rows and complete liquids; perform no WDT/ADT IO.
 /// Sink allowance bounds its actual capacities and growth for its whole lifetime.
-pub fn prepare<'s, S: placements::Sink>(
+pub fn prepare<'s, S>(
     context: startup::Startup<'s>,
     sink: S,
     sink_heap_allowance: usize,
@@ -411,7 +425,7 @@ pub fn prepare<'s, S: placements::Sink>(
         limits,
     )
 }
-pub fn prepare_selected<'s, S: placements::Sink>(
+pub fn prepare_selected<'s, S>(
     mut context: startup::Startup<'s>,
     sink: S,
     sink_heap_allowance: usize,
@@ -499,8 +513,8 @@ pub fn prepare_selected<'s, S: placements::Sink>(
         lookup: Some(lookup),
         sink,
         topology: Some(topology),
-        map,
-        liquids,
+        map: Some(map),
+        liquids: Some(liquids),
         lookup_stats,
         map_stats,
         retained,
@@ -508,5 +522,6 @@ pub fn prepare_selected<'s, S: placements::Sink>(
         limits,
         profile,
         failed: None,
+        callback_used: false,
     })
 }
