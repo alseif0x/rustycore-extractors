@@ -26,9 +26,18 @@
 > exist, but complete client extraction, full world resources and RustyCore
 > runtime acceptance remain open. Windows delivery is deferred.
 
-| Local inputs | Versioned tools | Verified outputs |
-| :---: | :---: | :---: |
-| Read an installed client through local CASC | Select an explicit client build and component plan | Check package integrity with offline verifiers |
+```mermaid
+flowchart LR
+    Client["Client folder"] --> CASC["Local CASC"]
+    Plan["Build + component plan"] --> Extract["Extract components"]
+    CASC --> Extract
+    Extract --> Output["Versioned output"]
+    Output --> Verify["Offline verification"]
+```
+
+Choose a supported plan, point the tool at your client folder, and keep output
+in a separate directory. The [status tables](#current-status) below describe
+which builds and components have been exercised so far.
 
 ## What this repository is
 
