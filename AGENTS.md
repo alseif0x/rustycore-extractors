@@ -31,6 +31,23 @@ implementation into `forever` and delete its merged local/remote branch.
 GitHub automatically deletes merged feature branches. Preserve uncommitted work
 and pending implementations; retain the `3.4.3` version line.
 
+### Compatible serial placement software — 2026-10-17
+
+Issue #92 adds separately selected Linux compatible placement sessions over one
+collector, ID allocator and provisional sink. Physical occurrences determine
+acquisition and serial IDs; omissions and no-collision outcomes consume no IDs,
+and doodad-only WMOs emit surviving children without a parent ID. Existing strict
+APIs, product profiles and resource ceilings remain scoped. Functional
+`c5267371f827e42bd94ff3824f6d97336ca821c0` binds all 778 selected Git files to
+frozen C9. Eight software commands pass, including 3,388 workspace tests and all
+31 new placement methods per debug/release profile. The separate comparison
+harness passes seven commands (42/73 Python methods and eight Rust methods per
+profile). Native placement comparison, world traversal, parent replay, the owned
+empty-cache barrier and final compatible VMaps remain unaccepted. This later
+documentation annex is not rebuilt into the qualified binaries. See
+`docs/forever-collision.md` and `docs/forever-completion.md`; full Linux extraction
+remains the goal.
+
 ### Linux compatible spooled collision startup — 2026-10-16
 
 Issue #90 adds separately selected compatible spooled startup/model owners for
