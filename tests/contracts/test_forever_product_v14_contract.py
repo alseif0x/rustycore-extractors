@@ -208,6 +208,7 @@ class ProductV14Contract(unittest.TestCase):
                 "crates/forever-extractor/src/driver/disk/compatible.rs",
                 "crates/forever-extractor/src/driver/disk/compatible/tests.rs",
                 "crates/forever-extractor/src/driver/disk/compatible/fixture.rs",
+                "crates/forever-extractor/tests/product_v14_cli.rs",
                 "crates/forever-casc/src/collision/run/compatible_inventory/coverage.rs"):
             self.assertIn(name, selected)
             self.assertTrue((ROOT / name).is_file(), name)
