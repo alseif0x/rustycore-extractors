@@ -56,6 +56,22 @@ selection). This exact-field coverage was strengthened after the independent
 mutation audit included with the integration handoff found 18 of the 26 fixture
 field values and several contract numbers unpinned.
 
+## CLI admission gate
+
+Commit `5f890a9` adds four synthetic CLI integration tests for the v14 contract.
+`inspect` discloses source profile `linux70425-compatible-gnu15-v2`,
+`coverage_authentication: producer_reported`,
+`whole_client_map_coverage: false`, `full_extractor_complete: false`, and
+`collision_domain: all-available-maps`. Both `verify` and `verify-links` refuse a
+sealed collision package when coverage is absent (`package_inventory`) or present
+but truncated (`product_collision_coverage_schema`); neither falls back to
+semantic verification. The tests also pin `--keys` to `product_keys_forbidden`,
+omitted `--scratch` to `product_scratch_required`, `--backend native` to
+`product_usage`, legacy `collision-domain all` to
+`product_plan_collision_domain`, `build 70374` to `product_plan_build`, and a
+wrong component mask to `product_plan_component_scope`. The test is synthetic;
+it does not establish real-client extraction or runtime compatibility.
+
 ## Unqualified status
 
 No real-client extraction has been performed for this admission. There is no

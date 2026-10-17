@@ -3125,3 +3125,61 @@ No real-client extraction, RustyCore runtime verification, release acceptance,
 or real full-world geometry/world acceptance has been established. Windows is
 deferred. No older-build acceptance transfers to build 70425; full extractor
 completion remains false.
+
+## 2026-10-17 — v14 CLI admission and Linux package reproduction
+
+Commit `5f890a9` adds `crates/forever-extractor/tests/product_v14_cli.rs` (four
+synthetic tests) and one line in `tests/contracts/test_forever_product_v14_contract.py`.
+This supplies the dedicated v14 CLI gate missing from v9–v13. It checks v14
+`inspect` disclosures; absent and truncated coverage rejection by both `verify`
+and `verify-links`, without semantic fallback; and the keys, scratch, backend,
+collision-domain, build and component-scope error codes. Details are in
+`docs/forever-product-v14.md`.
+
+Independent read-only audit first found three test defects and two observations;
+the defects were corrected. Re-audit found no residual defect, verified the six
+error codes verbatim and non-vacuous assertions, and confirmed the contract edit
+is additive. One residual observation is that the `build 70374` assertion depends
+on `validate()` ordering: a reorder could report `product_plan_schema_catalog`
+instead of `product_plan_build`.
+
+The local 14-step `acceptance-repo.sh` run exits zero at every step. Format and
+all-target workspace Clippy pass; `--no-default-features` workspace tests report
+3,628 passed / 0 failed / 26 ignored in debug and 3,628 passed / 0 failed / 26
+ignored in release, each across 53 targets. Debug/release workspace binaries build. Source
+contracts pass 431 / two skipped; repository contracts 378; distribution 166 / one
+skipped; synthetic tests 389 / 156 skipped; metadata CLI five; provenance records
+355 imported paths / ten modification notices; conformance passes nine. The debug
+test total is four above 3,624, matching the new CLI tests. Exact records:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/runs/candidate/compatible-vmaps-coverage-integration-20261017/repologs/console3.txt`
+and `.../repologs/repo-acceptance-result-v3.tsv`.
+
+The build command is `tools/package_forever.py build --source
+/home/joe/projects/dream/wow/rustycore-extractors --output
+/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt1
+--cargo-cache <registry cache> --epoch 1791720000`. The
+`forever-distribution-v1` Linux x86_64 candidate reports
+`schema: forever-distribution-v1`, `created`, 864
+files, archive SHA-256 `e57e685cf001da76152a5179e0cae5731eac3a2de4989eaac494ebc3222ef59e`,
+binary SHA-256 `9d35a107b3a5d93216c036d02039626e72e20b97f07c55b7199acc7c9ab90694`,
+source SHA-256 `27445f6caf5db3a9424b59cbcea8af2972e903f794a8a66119664e0e2f958549`,
+and `full_extractor_complete: false`. The verify command
+`tools/package_forever.py verify --archive
+/home/joe/.local/share/rustycore-distribution-v14-20261017/attempt1/forever-extractor-linux.tar.gz`
+reports `verified` with the same binary/files figures. In the extracted
+`moved-source`, `python3 source/tools/package_forever.py rebuild --bundle .
+--output /home/joe/.local/share/rustycore-distribution-v14-20261017/rebuild1`
+reports `rebuilt` and reproduces the original binary byte-for-byte. `attempt1`,
+the extracted `moved-source` directory and `rebuild1` are retained under
+`/home/joe/.local/share/rustycore-distribution-v14-20261017/`.
+
+Real extraction for target profiles 70374/70425 remains unperformed: no client for
+either profile is installed here; the installed client is 1.60.1.70450, not an
+implemented target, and the bounded live helper admits only 70170/70205. No older
+or other build acceptance transfers. No RustyCore server binary is built; the
+runtime declares 1.60.1 build 70170, so target-profile runtime acceptance is
+absent. C++ generations A and B were rejected. R4 has static inspection (seven
+objects / twenty edges) and software QA, but independent terminal ELF-lifecycle QA
+is pending. The finite-105 role-rebind plan is source-plan-only pending explicit
+root GO; its 105 real processes were not launched. No full extraction, runtime,
+release or publication acceptance follows.
