@@ -3278,20 +3278,21 @@ console `…/repologs/console4.txt`); after the final documentation change, Pyth
 gates were green: contracts 378 OK, distribution 166 OK with one skip, and
 source contracts 431 OK with two skips.
 
-Run 39066276935 (`Forever Rust synthetic checks`, `pull_request`, head `fbbac923`):
-`Linux workspace (debug)`, `Linux workspace (release)`, and
-`Windows workspace read consumers and output guards` succeeded;
-`Windows resident product and package recovery` was still running when recorded.
-Run 39066276876 (`Standalone C++ build`, `pull_request`, head `fbbac923`) succeeded;
-both `build (ubuntu-24.04, Ninja)` and
-`build (windows-2022, Visual Studio 17 2022)` succeeded. Run 39066300924
-(`Forever Rust synthetic checks`, `push`, head `7308c443`, the merge commit) was
-cancelled when a later documentation commit was pushed to `forever` and superseded
-it in the workflow's concurrency group. Run 39067172341 is a fresh `Forever Rust
-synthetic checks` run for documentation commit `0cae2061`, in progress when
-recorded. Windows job results do not change the deferred Windows scope, and CI on
-the pull-request head does not establish real extraction, full-world resources or
-runtime acceptance. The `3.4.3` branch and
+Run 39066276935 (`Forever Rust synthetic checks`, event `pull_request`, head
+`fbbac923`) completed: success, with all four jobs successful: `Linux workspace
+(debug)`, `Linux workspace (release)`, `Windows workspace read consumers and
+output guards`, and `Windows resident product and package recovery`. Run
+39066276876 (`Standalone C++ build`, event `pull_request`, head `fbbac923`)
+completed: success, with both `build (ubuntu-24.04, Ninja)` and
+`build (windows-2022, Visual Studio 17 2022)` successful. `fbbac923` is the
+pull-request head whose content landed on `forever`, so this is the full gate set
+passing on the merged content. Run 39066300924 (`Forever Rust synthetic checks`,
+`push`, head `7308c443`, the merge commit) was cancelled when a later documentation
+commit was pushed to `forever` and superseded it in the workflow's concurrency
+group. Run 39067172341 is a fresh `Forever Rust synthetic checks` run for
+documentation commit `0cae2061`, in progress when recorded. Passing Windows jobs do
+not change the deferred Windows scope, and CI on the pull-request head establishes
+no real extraction, full-world resources or runtime acceptance. The `3.4.3` branch and
 preserved Windows draft `codex/forever-windows-disk-world` are untouched. A merge
 to the default branch is not release authorization and establishes no real
 extraction, full-world resources or runtime acceptance.
