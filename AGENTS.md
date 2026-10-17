@@ -55,6 +55,18 @@ prefix; native N05 did not execute. Independent failure-preservation QA passes
 whole-source and joined comparison, final VMaps, real resources, product/runtime
 and full Linux delivery remain open. See `docs/forever-collision.md`.
 
+Subsequent immutable functional `6912551` qualification passes all eight software
+commands: 3,490 tests / 26 historical ignores / 52 targets per debug/release
+profile, all 76 new methods per profile, both product builds, 424 contracts /
+two skips, 165 distribution checks / one skip, Clippy and format. Independent
+terminal QA passes 174,712 checks without findings
+(`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`).
+The first actual terminal auditor rejection stays recorded; a distinct corrected
+metadata review passes without repeating software commands or querying the
+stopped service. This closes current whole-source software qualification only.
+The joined comparison and all extraction/product/runtime gates remain open.
+This documentation update is not rebuilt into the qualified binaries.
+
 ### Compatible world traversal library — 2026-10-17
 
 The consuming compatible world inventory path now traverses authentic startup

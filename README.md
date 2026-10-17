@@ -133,8 +133,9 @@ The current implementation is tracked in
 | --- | --- |
 | Comparison tools before the empty-WMO fix | Seven software checks and independent review pass. Static inspection covers seven ELF objects and twenty dependency edges. |
 | Compatible world traversal | 67 compatible tests per profile, including 24 new controls; the complete CASC library passes 1,610 tests per profile with five historical ignores. Clippy and scoped formatting pass. |
-| Joined C++ comparison | The fresh attempt fails at a valid WMO without collision geometry. Complete output compatibility remains pending. |
+| Joined C++ comparison | The preceding attempt failed at a valid WMO without collision geometry. Complete output compatibility remains pending. |
 | Empty-WMO correction | Eleven new controls pass in each profile. The full CASC library passes 1,621 tests per profile with five historical ignores; Clippy and scoped formatting pass. Applies to the explicit GNU15 v2 path. |
+| Current workspace: `6912551` | All eight software checks pass, including 3,490 tests and all 76 new controls in each debug/release profile. Independent review closes without findings. |
 
 **Next:** compare complete outputs with the original C++ extractor and connect
 the final VMap pipeline. Follow the active implementation in
@@ -145,7 +146,10 @@ Real runtime validation remains a separate gate.
 <summary>Validation scope and retained failures</summary>
 
 The separately selected GNU15-compatible path passes the C11 software campaign.
-The fresh joined comparison fails at N05: Rust stops where the reference source
+The subsequent immutable `6912551` snapshot also passes the complete eight-command
+campaign and independent software review. Its 26 historical ignores per profile
+remain explicit; these results do not establish complete output compatibility.
+The preceding joined comparison failed at N05: Rust stopped where the reference source
 skips an empty WMO and continues to the next model. That attempt and the previous
 ordering mismatch and C10 Clippy failure remain failed, with no accepted partial
 output. The correction requires a fresh complete comparison.

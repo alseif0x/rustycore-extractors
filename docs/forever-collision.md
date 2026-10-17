@@ -35,9 +35,23 @@ The formatter itself passed; its earlier whitespace-only validator remains
 failed because rustfmt also added standard braces and trailing commas. A separate
 full-diff source review admits that formatting delta without rerunning it.
 
-Current whole-source qualification and a new complete joined comparison remain
-required. Authentic staging, selected VMO conversion, final compatible VMaps,
+The subsequent immutable snapshot of functional commit
+`6912551855dff689fac3663acca98c0acd1dacba` passes all eight software commands:
+3,490 tests / 26 historical ignores / 52 targets per debug/release profile,
+all 76 new controls per profile, both product builds, 424 source contracts /
+two skips, 165 distribution tests / one skip, Clippy and formatting. The snapshot
+contains 787 selected Git inputs and 41 retained offline inputs; two documentation
+files from the commit are outside that selection. Independent terminal review
+passes 174,712 checks without findings:
+`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`.
+The first actual terminal auditor rejection remains recorded; its corrected
+revision reconstructs the original serialized launch order. No software command
+or stopped service is repeated by that metadata review.
+
+A new complete joined comparison remains required. Authentic staging, selected
+VMO conversion, final compatible VMaps,
 real resources, product integration and runtime acceptance remain open.
+This later documentation update is not rebuilt into the qualified binaries.
 
 ## Compatible world traversal library — 2026-10-17
 

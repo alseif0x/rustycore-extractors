@@ -52,8 +52,12 @@ the first test compilation and narrow formatter-validator failures remain record
 The joined comparison that exposed this difference remains failed at Rust N05;
 its fifteen children and four earlier receipts provide no accepted prefix.
 Independent failure-preservation review passes, without native N05 or parity
-acceptance. Fresh whole-source qualification and a complete joined comparison
-are still required. Final compatible VMaps, real resources, product integration,
+acceptance. Subsequent whole-source qualification of functional `6912551` passes
+all eight commands, with 3,490 tests / 26 historical ignores / 52 targets and all
+76 new controls in each profile. Both product builds, source contracts,
+distribution checks, Clippy and formatting pass. Independent terminal software
+QA closes without findings (`afdeeff6f31cd216b40a9121505c116bd5c58cb9c126889916cb325ad6716cf0`).
+A complete joined comparison is still required. Final compatible VMaps, real resources, product integration,
 navigation, runtime and Linux delivery remain open. See the
 [correction scope](forever-collision.md#gnu15-complete-no-collision-wmo-correction--2026-10-17).
 
