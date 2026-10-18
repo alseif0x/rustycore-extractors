@@ -96,3 +96,16 @@ fn v16_metadata_admission_checks_the_16_gib_declared_sum_boundary() {
         }
     }
 }
+
+#[test]
+fn v16_verify_routes_through_metadata_preflight_before_payload_inspection() {
+    let p = plan();
+    let lab = Lab::new();
+    let oversized = vec![0; 16 * 1024 * 1024 + 1];
+    lab.publish(context(&p), &[db2_file("AccountStoreCategory", oversized)]);
+
+    let error = verify(&p, &lab.output(), None).unwrap_err();
+    // The v16 metadata preflight reports product_file_limit. If verify fell
+    // through to the post-read DB2 inspector, it would report product_inventory.
+    assert_eq!(error.code, "product_file_limit");
+}

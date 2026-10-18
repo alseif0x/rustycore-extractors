@@ -3457,3 +3457,78 @@ that records an encrypted mandatory source as unavailable without claiming
 completeness. Neither is authorized; the generic error must not be relaxed into
 an omission to obtain a green output. No extraction, runtime, release or
 full-world acceptance is claimed.
+
+## 2026-10-18 — build-70450 DB2-only revision and strict-source evidence
+
+Commit `16c7b7d` adds Linux-only `forever-product-v16` for build 70450 with
+catalog `wowdbdefs-70450-v1`: exactly the DB2 component mask and a nonempty
+catalog-selected DB2 list, resident storage, disabled decryption, and no map
+domain, terrain, navigation or offmesh. It reuses `admit_db2_70450` and the
+implemented `Target::Build70450` readers. Revision 15 remains exactly
+`Collision + LeasedDiskV1 + Disabled`; builds 70425, 70374 and all other builds
+are unchanged. Keys remain forbidden and `full_extractor_complete` remains
+false. The only widened gate is the Linux build-70450 package context, which
+admits the existing collision mask or the DB2 mask and no other mask.
+
+An independent audit found and fixed one real defect in that increment: the v16
+contract promised complete selected-DB2 metadata admission before payload
+reads/hashes, but `verify` and `verify-links` did not route v16 through that
+preflight. They now use the existing catalog-agnostic v10 `admit_metadata`
+before payload access. V16 tests cover exact inventory, empty and oversized
+files, component scope and the 16 GiB declared-sum boundary. A route-level
+synthetic resident package test drives `verify()` with a 16 MiB + 1 byte DB2
+artifact and observes `product_file_limit` from preflight; post-read DB2
+inspection would report `product_inventory`. The auditor's two mutations in a
+throwaway copy under `/tmp/opencode` showed that the prior Python normalized
+source-text assertion alone detected removal of the route, motivating this
+test. Re-audit found no weakened/deleted check or scope escalation and confirmed
+the 70425 and 70450 package gates are exact for every component-mask byte value.
+
+On that increment, local fmt and Clippy `-D warnings` were clean, including the
+`windows-msvc-seal-v2` feature check for target `x86_64-pc-windows-gnu`.
+Workspace tests reported 3,678 passed, 0 failed and 26 ignored across 56
+suites; contracts reported 389 passed; distribution reported 166 passed with
+one skip. The CI run for preceding commit `05c81cb` completed successfully on
+every job, including both Windows jobs. CI status for `16c7b7d` is pending or
+unknown here; no result is claimed.
+
+The project's agents—not the operator—performed bounded offline client runs
+against the operator's installed `wow_classic_beta 1.60.1.70450` client under
+the operator's standing authorization, with disabled keys, no client
+modification, and each plan, output and run directory outside the client and
+every checkout; failed runs were retained. The v16 plan-only `inspect --plan <plan> --client
+<client>` exited 0 with `status:admitted`. The three-table plan selecting
+GameObjectDisplayInfo 1266277, LiquidMaterial 1132538 and LiquidType 1371380
+ran as `extract --plan <plan> --client <client> --output <external-output>`;
+it exited 9 with `local_store_no_verified_encoding` in component `db2` and
+published no artifact. The same plan with
+`FOREVER_PRODUCT_DIAGNOSTIC=<absolute external path>` wrote no record: that
+opt-in diagnostic is wired into the compatible collision product path, not the
+DB2 path. This is a diagnostic limitation, not evidence about the source.
+
+The two-table complement selecting LiquidMaterial 1132538 and LiquidType
+1371380 exited 0 with `status:selected_producers_complete`; package verification
+reported `scope:artifact_integrity, status:verified`. It published:
+
+```text
+dbc/esES/LiquidMaterial.db2  330 bytes    sha256 prefix a9b3d9f69a6309984ee8
+dbc/esES/LiquidType.db2     15438 bytes   sha256 prefix f5fb22b975a546d22c56
+```
+
+These are the first real 70450 component artifacts extracted, scoped only to
+the selected DB2 producers. Because the two plans differ only by
+GameObjectDisplayInfo, that table is the frame-encrypted mandatory source the
+strict full-decode route cannot read. An earlier independent availability-route
+probe read the same table with `full_ckey_verified:false` and
+`encoded_key_authenticated:true`; that is a different read policy, not a
+contradiction. These results do not establish readability of other DB2 sources,
+collision/VMaps, full-world coverage, runtime compatibility or release
+acceptance.
+
+The 70450 collision path remains blocked by encrypted gameobject model 7385605,
+measured earlier during startup. Resolving that class needs either build key
+material or an explicit versioned policy recording an encrypted mandatory
+source as unavailable without claiming completeness. Neither was done: no key
+material was supplied or derived, no CDN/TACT or launcher access occurred, the
+client was not updated, and no generic error was relaxed into an omission. The
+Linux complete-extraction objective remains open.
