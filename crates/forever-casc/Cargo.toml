@@ -32,6 +32,10 @@ path = "src/main.rs"
 required-features = ["native"]
 
 [[bin]]
+name = "forever-source-probe"
+path = "src/source_probe_main.rs"
+
+[[bin]]
 name = "forever-db2-extract"
 path = "src/extract_main.rs"
 
