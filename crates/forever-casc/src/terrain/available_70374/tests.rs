@@ -1,5 +1,6 @@
 use super::*;
 use crate::local_store::tests::{CollisionFile, CollisionFixture};
+use crate::terrain::available_70450;
 use crate::terrain::run::tests::fixtures;
 use crate::{Locale, local_index, root};
 use fixtures::*;
@@ -20,6 +21,12 @@ fn requests() -> [plan::TileRequest; 2] {
     ]
 }
 fn files() -> Vec<CollisionFile<'static>> {
+    files_for_catalog(catalog::WOWDBDEFS_70374_CATALOG_ID)
+}
+fn files_70450() -> Vec<CollisionFile<'static>> {
+    files_for_catalog(catalog::WOWDBDEFS_70450_CATALOG_ID)
+}
+fn files_for_catalog(catalog_id: &str) -> Vec<CollisionFile<'static>> {
     let mut f = basic();
     f[5].2 = liquid_adt();
     for (id, _, bytes) in &mut f {
@@ -31,7 +38,7 @@ fn files() -> Vec<CollisionFile<'static>> {
             _ => None,
         };
         if let Some(name) = name {
-            let h = catalog::resolve_for(catalog::WOWDBDEFS_70374_CATALOG_ID, name)
+            let h = catalog::resolve_for(catalog_id, name)
                 .unwrap()
                 .unwrap()
                 .metadata()
@@ -47,6 +54,18 @@ fn open(f: &CollisionFixture) -> LocalStore {
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::write(&path, text.replace("1.60.1.70205", "1.60.1.70374")).unwrap();
     LocalStore::open_db2_70374(
+        f.path(),
+        local_store::OpenOptions {
+            locale: Locale::EnUs,
+            index_layouts: [local_index::Layout::Contiguous; 16],
+            root_layout: root::Layout::Header50893V2,
+            limits: local_store::Limits::default(),
+        },
+    )
+    .unwrap()
+}
+fn open_70450(f: &CollisionFixture) -> LocalStore {
+    LocalStore::open_db2_70450(
         f.path(),
         local_store::OpenOptions {
             locale: Locale::EnUs,
@@ -130,6 +149,54 @@ impl Sink for Stage<'_> {
         Ok(())
     }
 }
+
+#[derive(Default)]
+struct Stage70450 {
+    maps: Vec<MapFacts>,
+    sources: Vec<run::SourceFacts>,
+    tiles: Vec<(conversion::Context, Vec<u8>)>,
+    witnesses: usize,
+    lists: Vec<(u32, Vec<u8>)>,
+    outcomes: Vec<CompatibleMapOutcome>,
+}
+impl Sink for Stage70450 {
+    fn compatible_map_outcome(
+        &mut self,
+        outcome: CompatibleMapOutcome,
+    ) -> Result<(), run::SinkError> {
+        self.outcomes.push(outcome);
+        Ok(())
+    }
+    fn map_source(&mut self, facts: MapFacts) -> Result<(), run::SinkError> {
+        self.maps.push(facts);
+        Ok(())
+    }
+    fn source(&mut self, facts: run::SourceFacts) -> Result<(), run::SinkError> {
+        self.sources.push(facts);
+        Ok(())
+    }
+    fn native_witness(&mut self, witness: NativeWitness<'_>) -> Result<(), run::SinkError> {
+        assert!(!witness.adt.is_empty());
+        assert_eq!(witness.context.build, 70450);
+        self.witnesses += 1;
+        Ok(())
+    }
+    fn tile_list(&mut self, map_id: u32, list: &tilelist::TileList) -> Result<(), run::SinkError> {
+        self.lists.push((map_id, list.bytes().to_vec()));
+        Ok(())
+    }
+    fn tile(
+        &mut self,
+        context: conversion::Context,
+        _: run::SourceFacts,
+        tile: &conversion::ConvertedTile,
+    ) -> Result<(), run::SinkError> {
+        assert_eq!(context.build, 70450);
+        self.tiles.push((context, tile.bytes().to_vec()));
+        Ok(())
+    }
+}
+
 fn execute(
     f: &[CollisionFile<'_>],
     q: &[plan::TileRequest],
@@ -170,6 +237,190 @@ fn unknown(mut b: Vec<u8>, copies: u32) -> Vec<u8> {
     }
     out
 }
+
+#[test]
+fn available_70450_and_70374_runner_build_gates_reject_in_both_directions() {
+    let fixture = CollisionFixture::for_build(&files(), 70374);
+    let mut store = open(&fixture);
+    assert_eq!(
+        available_70450::run_selected(
+            &mut store,
+            &requests()[..1],
+            true,
+            Limits::default(),
+            &mut Stage70450::default(),
+        )
+        .err()
+        .unwrap()
+        .error,
+        Error::Build70450
+    );
+
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    assert_eq!(
+        run_selected(
+            &mut store,
+            &requests()[..1],
+            true,
+            Limits::default(),
+            &mut Stage::default(),
+        )
+        .err()
+        .unwrap()
+        .error,
+        Error::Build
+    );
+}
+
+#[test]
+fn available_70450_strict_and_partial_map_routes_preserve_authentication_coverage() {
+    let request = [requests()[0]];
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    let mut strict_sink = Stage70450::default();
+    let strict = available_70450::run_selected(
+        &mut store,
+        &request,
+        true,
+        Limits::default(),
+        &mut strict_sink,
+    )
+    .unwrap();
+    assert_eq!(strict.build(), 70450);
+    assert_eq!(strict.profile(), PROFILE_70450);
+    assert!(strict.map().full_ckey_verified);
+    assert!(!strict.map().encoded_key_authenticated);
+    assert_eq!(strict.map().available_bytes, strict.map().declared_bytes);
+    assert_eq!(strict_sink.tiles.len(), 1);
+    forever_terrain::maps::verify_70450(
+        &strict_sink.tiles[0].1,
+        70450,
+        forever_terrain::maps::MAX_MAP_BYTES,
+    )
+    .unwrap();
+
+    let mut partial_files = files_70450();
+    partial_files[0].2 = unknown(partial_files[0].2.clone(), 2);
+    let section_offset =
+        u32::from_le_bytes(partial_files[0].2[252..256].try_into().unwrap()) as usize;
+    let record_size = u32::from_le_bytes(partial_files[0].2[144..148].try_into().unwrap()) as usize;
+    let encrypted_range = section_offset..section_offset + record_size;
+    let fixture = CollisionFixture::with_available_holes_for_build(
+        &partial_files,
+        &[(MAP_ID, encrypted_range)],
+        70450,
+    );
+    let mut store = open_70450(&fixture);
+    let mut partial_sink = Stage70450::default();
+    let partial = available_70450::run_selected(
+        &mut store,
+        &request,
+        true,
+        Limits::default(),
+        &mut partial_sink,
+    )
+    .unwrap();
+    let facts = partial.map();
+    assert!(!facts.full_ckey_verified);
+    assert!(facts.encoded_key_authenticated);
+    assert!(facts.available_bytes < facts.declared_bytes);
+    assert_eq!(
+        facts.sections[1].unwrap().state,
+        db2::SectionState::UnknownTact
+    );
+    assert_eq!(facts.sections[1].unwrap().declared_records, 1);
+    assert_eq!(facts.sections[1].unwrap().declared_copies, 2);
+    assert_eq!(partial_sink.tiles.len(), 1);
+    forever_terrain::maps::verify_70450(
+        &partial_sink.tiles[0].1,
+        70450,
+        forever_terrain::maps::MAX_MAP_BYTES,
+    )
+    .unwrap();
+}
+
+#[test]
+fn available_70450_omitted_map_sections_still_count_against_row_and_copy_limits() {
+    let mut f = files_70450();
+    f[0].2 = unknown(f[0].2.clone(), 2);
+    for direct_limit in [true, false] {
+        let fixture = CollisionFixture::for_build(&f, 70450);
+        let mut store = open_70450(&fixture);
+        let mut limits = Limits::default();
+        if direct_limit {
+            limits.resources.max_direct_rows = 1;
+        } else {
+            limits.resources.max_copy_records = 1;
+        }
+        let mut sink = Stage70450::default();
+        let failure =
+            available_70450::run_selected(&mut store, &requests()[..1], true, limits, &mut sink)
+                .err()
+                .unwrap();
+        assert_eq!(failure.error, limit());
+        assert!(sink.tiles.is_empty());
+    }
+}
+
+#[test]
+fn available_70450_full_map_entrypoint_emits_only_70450_tilelist_and_maps() {
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    let selected_maps = [7];
+    let mut sink = Stage70450::default();
+    let completed = available_70450::run_full_maps(
+        &mut store,
+        plan::Selection::MapIds(&selected_maps),
+        true,
+        FullMapLimits::default(),
+        &mut sink,
+    )
+    .unwrap();
+    assert_eq!(completed.build(), 70450);
+    assert_eq!(completed.profile(), available_70450::FULL_MAP_PROFILE);
+    assert_eq!(sink.tiles.len(), 2);
+    assert_eq!(sink.lists.len(), 1);
+    tilelist::verify_70450(&sink.lists[0].1, 70450).unwrap();
+    assert_eq!(
+        tilelist::verify_70374(&sink.lists[0].1, 70450),
+        Err(tilelist::Error::Build)
+    );
+    for (_, bytes) in &sink.tiles {
+        forever_terrain::maps::verify_70450(bytes, 70450, forever_terrain::maps::MAX_MAP_BYTES)
+            .unwrap();
+    }
+
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    let mut sink = Stage70450::default();
+    let compatible = available_70450::run_compatible_full_maps(
+        &mut store,
+        plan::Selection::MapIds(&selected_maps),
+        true,
+        FullMapLimits::default(),
+        &mut sink,
+    )
+    .unwrap();
+    assert_eq!(compatible.build(), 70450);
+    assert_eq!(
+        compatible.profile(),
+        available_70450::COMPATIBLE_FULL_MAP_PROFILE
+    );
+    assert_eq!(compatible.outcomes().known_present_tiles, 2);
+    assert_eq!(sink.lists.len(), 1);
+    tilelist::verify_70450(&sink.lists[0].1, 70450).unwrap();
+}
+
+#[test]
+fn available_map_coverage_invariant_rejects_inconsistent_ckey_completeness() {
+    assert_eq!(validate_map_coverage(10, 9, false), Ok(()));
+    assert_eq!(validate_map_coverage(10, 10, false), Ok(()));
+    assert_eq!(validate_map_coverage(10, 10, true), Ok(()));
+    assert_eq!(validate_map_coverage(10, 9, true), Err(Error::Coverage));
+    assert_eq!(validate_map_coverage(10, 11, false), Err(Error::Coverage));
+}
+
 #[test]
 fn selected_complete_sources_current_headers_and_fixed_order() {
     let (r, s) = execute(&files(), &requests(), Limits::default());

@@ -22,6 +22,7 @@ fn read70450(name: &str, bytes: &[u8], text_limit: usize) -> Result<Collected, R
     let role = match name {
         "LiquidMaterial" => Role::LiquidMaterial,
         "LiquidType" => Role::LiquidType,
+        "LiquidObject" => Role::LiquidObject,
         _ => panic!("closed liquid fixture name"),
     };
     terrain::read_liquids_70450(bytes, role, text_limit)
@@ -91,12 +92,51 @@ fn liquid70450_readers_decode_only_their_build_specific_binding() {
     assert_eq!(source.direct_records()[0].fields.flags_bits, u32::MAX);
     assert_eq!(source.direct_records()[0].fields.lvf, i8::MIN);
 
-    for role in [Role::Map, Role::GameObject, Role::LiquidObject] {
+    for role in [Role::Map, Role::GameObject] {
         assert_eq!(
             terrain::read_liquids_70450(&bytes, role, 64).err(),
             Some(RecordError::Schema)
         );
     }
+}
+
+#[test]
+fn liquid_object70450_reader_binds_catalog_and_validates_physical_structure() {
+    let mut object = spec70450("LiquidObject", &[7, 9]);
+    set_short(&mut object, 0, 2, -1);
+    set_short(&mut object, 1, 2, 513);
+    object.copies = vec![(11, 7)];
+    let valid = assemble(table70450("LiquidObject"), &object);
+    let rows = terrain::read_liquid_objects_70450(&valid).unwrap();
+    assert_eq!(rows.direct_records()[0].fields.liquid_type_id, u16::MAX);
+    assert_eq!(rows.direct_records()[1].fields.liquid_type_id, 513);
+    assert_eq!(rows.materialize().unwrap()[&11].liquid_type_id, u16::MAX);
+
+    for (offset, value) in [(152, 0), (156, 0), (140, 0), (176, 0)] {
+        let mut invalid = valid.clone();
+        put32(&mut invalid, offset, value);
+        assert_eq!(
+            terrain::read_liquid_objects_70450(&invalid).err(),
+            Some(RecordError::Schema),
+            "header offset {offset}"
+        );
+    }
+    let mut trailing = valid.clone();
+    trailing.push(0);
+    assert_eq!(
+        terrain::read_liquid_objects_70450(&trailing).err(),
+        Some(RecordError::Bounds)
+    );
+    let mut sparse = valid.clone();
+    put16(&mut sparse, 172, 1);
+    assert_eq!(
+        terrain::read_liquid_objects_70450(&sparse).err(),
+        Some(RecordError::Unsupported)
+    );
+    assert_eq!(
+        terrain::read_liquids_70450(&valid, Role::Map, 64).err(),
+        Some(RecordError::Schema)
+    );
 }
 
 #[test]

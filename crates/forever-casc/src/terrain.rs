@@ -12,3 +12,9 @@ pub mod tilelist;
 /// Separate Linux70374 available-Map, complete-selected-tile capability.
 #[cfg(target_os = "linux")]
 pub mod available_70374;
+
+/// Separate Linux70450 available-Map capability. The shared implementation
+/// routes through exact build and catalog gates; this module exposes its own
+/// target-bound entry points and profile tokens.
+#[cfg(target_os = "linux")]
+pub mod available_70450;

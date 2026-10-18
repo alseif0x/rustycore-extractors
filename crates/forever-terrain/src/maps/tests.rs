@@ -722,3 +722,54 @@ fn current_70374_entrypoints_do_not_widen_legacy_gates() {
         Some(Error::Layout)
     );
 }
+
+#[test]
+fn build70450_maps_v10_round_trip_and_target_gates_are_explicit() {
+    assert_eq!(
+        BUILD_70450_FORMAT_ASSUMPTION,
+        "build 70450 MAPS output assumes the build 70374 MAPS v10 wire layout"
+    );
+    let area = area(true);
+    let height = heights(Encoding::Uint8, true);
+    let liquid = liquids(true, true, false);
+    let sections = MapSections {
+        area: &area,
+        height: &height,
+        liquid: Some(&liquid),
+        holes: None,
+    };
+    let out_70450 = assemble_70450(70450, sections, MAX_MAP_BYTES).unwrap();
+    let out_70374 = assemble_70374(70374, sections, MAX_MAP_BYTES).unwrap();
+    let mut expected = out_70374.clone();
+    expected[8..12].copy_from_slice(&70450u32.to_le_bytes());
+    assert_eq!(out_70450, expected);
+    assert_eq!(
+        verify_70450(&out_70450, 70450, MAX_MAP_BYTES)
+            .unwrap()
+            .build(),
+        70450
+    );
+
+    assert_eq!(
+        assemble_70450(70374, sections, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    assert_eq!(
+        assemble_70374(70450, sections, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    assert_eq!(
+        verify_70450(&out_70374, 70450, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    assert_eq!(
+        verify_70374(&out_70450, 70374, MAX_MAP_BYTES).err(),
+        Some(Error::UnsupportedBuild)
+    );
+    let mut wrong_format = out_70450;
+    set32(&mut wrong_format, 4, VERSION + 1);
+    assert_eq!(
+        verify_70450(&wrong_format, 70450, MAX_MAP_BYTES).err(),
+        Some(Error::Header)
+    );
+}

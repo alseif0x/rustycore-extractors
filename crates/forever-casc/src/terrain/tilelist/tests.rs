@@ -106,3 +106,27 @@ fn explicit_70374_rejects_truncated_extra_header_and_non_ascii() {
     }
     assert_eq!(verify_70374(list.bytes(), 70205), Err(Error::Build));
 }
+
+#[test]
+fn explicit_70450_tilelist_build_verify_round_trip_is_separate_from_70374() {
+    for build in [70170, 70205, 70374, 70425, 0, u32::MAX] {
+        assert_eq!(TileList::new_70450(build).err(), Some(Error::Build));
+    }
+    assert!(TileList::new(70450).is_err());
+    assert!(TileList::new_70374(70450).is_err());
+    let mut list = TileList::new_70450(70450).unwrap();
+    for (x, y) in [(0, 0), (63, 63), (3, 2), (1, 4)] {
+        list.set(x, y).unwrap();
+    }
+    let mut expected = *TileList::new_70374(70374).unwrap().bytes();
+    expected[8..12].copy_from_slice(&70450u32.to_le_bytes());
+    for (x, y) in [(0, 0), (63, 63), (3, 2), (1, 4)] {
+        expected[index(x, y).unwrap()] = b'1';
+    }
+    assert_eq!(list.bytes(), &expected);
+    verify_70450(list.bytes(), 70450).unwrap();
+    assert!(present_70450(list.bytes(), 70450, 3, 2).unwrap());
+    assert!(!present_70450(list.bytes(), 70450, 2, 3).unwrap());
+    assert_eq!(verify_70450(list.bytes(), 70374), Err(Error::Build));
+    assert_eq!(verify_70374(list.bytes(), 70450), Err(Error::Build));
+}

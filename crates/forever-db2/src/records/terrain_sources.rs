@@ -237,6 +237,16 @@ pub fn read_liquid_materials_70450(
         _ => Err(RecordError::Schema),
     }
 }
+/// Complete LiquidObject projection using the separately pinned build70450
+/// catalog, including its table-hash and structure gates.
+pub fn read_liquid_objects_70450(
+    data: &[u8],
+) -> Result<SourceRecords<LiquidObjectFields>, RecordError> {
+    match read_liquids_70450(data, Role::LiquidObject, TEXT_POLICY_LIMIT)? {
+        Collected::LiquidObject(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
 pub fn read_liquid_objects(data: &[u8]) -> Result<SourceRecords<LiquidObjectFields>, RecordError> {
     match read(data, Role::LiquidObject, TEXT_POLICY_LIMIT)? {
         Collected::LiquidObject(rows) => Ok(rows),
@@ -469,6 +479,7 @@ pub(super) fn read_liquids_70450(
     let (name, collector) = match role {
         Role::LiquidType => ("LiquidType", Collector::LiquidType(Vec::new())),
         Role::LiquidMaterial => ("LiquidMaterial", Collector::LiquidMaterial(Vec::new())),
+        Role::LiquidObject => ("LiquidObject", Collector::LiquidObject(Vec::new())),
         _ => return Err(RecordError::Schema),
     };
     let table = CharacterTable::from_catalog_id(super::catalog::WOWDBDEFS_70450_CATALOG_ID, name)

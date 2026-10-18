@@ -13,6 +13,13 @@
 
 use crate::{Adt, adt::CELL_COUNT, height, liquid, liquid_section, maps};
 
+/// ADT and MAPS conversion for build 70450 explicitly assumes the same terrain
+/// wire formats as the pinned build-70374 implementation. ADT has no build tag;
+/// its supported MVER/chunk grammar is checked, and the caller build tag remains
+/// exact. This assumption is not client-format or runtime compatibility evidence.
+pub const BUILD_70450_FORMAT_ASSUMPTION: &str =
+    "build 70450 ADT/MAPS conversion assumes build 70374 terrain wire formats";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Context {
     pub map_id: u32,
@@ -128,7 +135,7 @@ pub fn convert_adt(
     context: Context,
     limits: Limits,
 ) -> Result<ConvertedTile, Error> {
-    convert_impl(bytes, lookup, context, limits, false)
+    convert_impl(bytes, lookup, context, limits, None)
 }
 
 /// Explicit70374 complete-ADT conversion. Caller binds acquisition/Map coverage.
@@ -139,7 +146,18 @@ pub fn convert_adt_70374(
     context: Context,
     limits: Limits,
 ) -> Result<ConvertedTile, Error> {
-    convert_impl(bytes, lookup, context, limits, true)
+    convert_impl(bytes, lookup, context, limits, Some(70374))
+}
+
+/// Explicit build70450 conversion under `BUILD_70450_FORMAT_ASSUMPTION`.
+/// The context must declare build 70450; the returned MAPS v10 tag is exact.
+pub fn convert_adt_70450(
+    bytes: &[u8],
+    lookup: &impl liquid::LiquidLookup,
+    context: Context,
+    limits: Limits,
+) -> Result<ConvertedTile, Error> {
+    convert_impl(bytes, lookup, context, limits, Some(70450))
 }
 
 fn convert_impl(
@@ -147,7 +165,7 @@ fn convert_impl(
     lookup: &impl liquid::LiquidLookup,
     context: Context,
     limits: Limits,
-    current: bool,
+    current_build: Option<u32>,
 ) -> Result<ConvertedTile, Error> {
     limits.validate()?;
     if usize::from(context.tile_x) >= crate::wdt::MAP_SIZE
@@ -155,11 +173,9 @@ fn convert_impl(
     {
         return Err(Error::InvalidCoordinates);
     }
-    if if current {
-        context.build != 70374
-    } else {
-        !matches!(context.build, 70170 | 70205)
-    } {
+    if current_build.is_some_and(|expected| context.build != expected)
+        || current_build.is_none() && !matches!(context.build, 70170 | 70205)
+    {
         return Err(Error::Maps(maps::Error::UnsupportedBuild));
     }
     let adt = Adt::parse(
@@ -220,10 +236,11 @@ fn convert_impl(
     } else {
         None
     };
-    let assemble = if current {
-        maps::assemble_70374
-    } else {
-        maps::assemble
+    let assemble = match current_build {
+        Some(70374) => maps::assemble_70374,
+        Some(70450) => maps::assemble_70450,
+        None => maps::assemble,
+        Some(_) => return Err(Error::Maps(maps::Error::UnsupportedBuild)),
     };
     let output = assemble(
         context.build,

@@ -36,6 +36,7 @@ impl CollisionFixture {
             70205 => "1.60.1.70205",
             70374 => "1.60.1.70374",
             70425 => "1.60.1.70425",
+            70450 => "1.60.1.70450",
             _ => panic!("unsupported synthetic fixture build"),
         };
         builder.routes.clear();
@@ -75,7 +76,15 @@ impl CollisionFixture {
         files: &[CollisionFile<'_>],
         holes: &[(u32, std::ops::Range<usize>)],
     ) -> Self {
-        let mut builder = Self::builder(files, 70205);
+        Self::with_available_holes_for_build(files, holes, 70205)
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn with_available_holes_for_build(
+        files: &[CollisionFile<'_>],
+        holes: &[(u32, std::ops::Range<usize>)],
+        build: u32,
+    ) -> Self {
+        let mut builder = Self::builder(files, build);
         let mut seen = std::collections::BTreeSet::new();
         for (id, range) in holes {
             assert!(seen.insert(*id));

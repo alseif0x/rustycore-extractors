@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Explicit Linux70374 disabled-key selected terrain, at most two tiles/one map.
+//! Shared target-parameterized implementation for the explicit Linux70374 and
+//! Linux70450 disabled-key available-Map terrain capabilities. Build, catalog,
+//! reader, codec and conversion selection remain exact per target.
 //! Map coverage can be partial; every requested tile must be present and its
 //! WDT/root ADT and all liquid inputs must be complete CKey-verified sources.
 //! All callbacks are provisional until CompletedSelected, including on closing
@@ -21,6 +23,78 @@ pub const FULL_MAP_PROFILE: &str = "linux70374-full-maps-available-map-v1";
 /// Separately opted-in traversal; only explicit LocalStore::MissingFile may be
 /// omitted. This profile makes no native acquisition or error-category claim.
 pub const COMPATIBLE_FULL_MAP_PROFILE: &str = "linux70374-compatible-full-maps-available-map-v1";
+pub const PROFILE_70450: &str = "linux70450-selected-terrain-available-map-v1";
+pub const FULL_MAP_PROFILE_70450: &str = "linux70450-full-maps-available-map-v1";
+pub const COMPATIBLE_FULL_MAP_PROFILE_70450: &str =
+    "linux70450-compatible-full-maps-available-map-v1";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Target {
+    Build70374,
+    Build70450,
+}
+impl Target {
+    const fn build(self) -> u32 {
+        match self {
+            Self::Build70374 => 70374,
+            Self::Build70450 => 70450,
+        }
+    }
+    const fn selected_profile(self) -> &'static str {
+        match self {
+            Self::Build70374 => PROFILE,
+            Self::Build70450 => PROFILE_70450,
+        }
+    }
+    const fn full_profile(self) -> &'static str {
+        match self {
+            Self::Build70374 => FULL_MAP_PROFILE,
+            Self::Build70450 => FULL_MAP_PROFILE_70450,
+        }
+    }
+    const fn compatible_profile(self) -> &'static str {
+        match self {
+            Self::Build70374 => COMPATIBLE_FULL_MAP_PROFILE,
+            Self::Build70450 => COMPATIBLE_FULL_MAP_PROFILE_70450,
+        }
+    }
+    const fn catalog_id(self) -> &'static str {
+        match self {
+            Self::Build70374 => catalog::WOWDBDEFS_70374_CATALOG_ID,
+            Self::Build70450 => catalog::WOWDBDEFS_70450_CATALOG_ID,
+        }
+    }
+    const fn build_error(self) -> Error {
+        match self {
+            Self::Build70374 => Error::Build,
+            Self::Build70450 => Error::Build70450,
+        }
+    }
+    const fn catalog_error(self) -> Error {
+        match self {
+            Self::Build70374 => Error::Catalog,
+            Self::Build70450 => Error::Catalog70450,
+        }
+    }
+    const fn absent_tile_error(self) -> Error {
+        match self {
+            Self::Build70374 => Error::AbsentTile,
+            Self::Build70450 => Error::AbsentTile70450,
+        }
+    }
+    const fn file_id_routing_error(self) -> Error {
+        match self {
+            Self::Build70374 => Error::FileIdRouting,
+            Self::Build70450 => Error::FileIdRouting70450,
+        }
+    }
+    const fn full_map_selection_error(self) -> Error {
+        match self {
+            Self::Build70374 => Error::FullMapSelection,
+            Self::Build70450 => Error::FullMapSelection70450,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WdtDisposition {
@@ -122,6 +196,12 @@ pub enum Error {
     AbsentTile,
     FileIdRouting,
     FullMapSelection,
+    Build70450,
+    Catalog70450,
+    AbsentTile70450,
+    FileIdRouting70450,
+    FullMapSelection70450,
+    Coverage,
 }
 impl Error {
     pub fn code(self) -> &'static str {
@@ -133,6 +213,12 @@ impl Error {
             Self::AbsentTile => "terrain_70374_requested_tile_absent",
             Self::FileIdRouting => "terrain_70374_file_id_routing_required",
             Self::FullMapSelection => "terrain_70374_full_map_selection_required",
+            Self::Build70450 => "terrain_70450_build",
+            Self::Catalog70450 => "terrain_70450_catalog",
+            Self::AbsentTile70450 => "terrain_70450_requested_tile_absent",
+            Self::FileIdRouting70450 => "terrain_70450_file_id_routing_required",
+            Self::FullMapSelection70450 => "terrain_70450_full_map_selection_required",
+            Self::Coverage => "terrain_available_map_coverage_inconsistent",
         }
     }
 }
@@ -150,6 +236,8 @@ impl std::fmt::Display for Failure {
 impl std::error::Error for Failure {}
 
 /// Separate facts: an available Map is never represented as VerifiedFile.
+/// Section states disclose omitted TACT data; no aggregate complete-Map
+/// coverage flag is exposed, even when the selected Map domain finishes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MapFacts {
     pub declared_bytes: u64,
@@ -208,6 +296,7 @@ pub trait Sink {
     ) -> Result<(), run::SinkError>;
 }
 pub struct CompletedSelected {
+    target: Target,
     plan: plan::Completion,
     stats: run::Stats,
     map: MapFacts,
@@ -215,7 +304,10 @@ pub struct CompletedSelected {
 }
 impl CompletedSelected {
     pub const fn build(&self) -> u32 {
-        70374
+        self.target.build()
+    }
+    pub const fn profile(&self) -> &'static str {
+        self.target.selected_profile()
     }
     pub const fn plan(&self) -> plan::Completion {
         self.plan
@@ -239,10 +331,10 @@ pub struct CompletedFullMaps {
 }
 impl CompletedFullMaps {
     pub const fn profile(&self) -> &'static str {
-        FULL_MAP_PROFILE
+        self.completed.target.full_profile()
     }
     pub const fn build(&self) -> u32 {
-        70374
+        self.completed.target.build()
     }
     pub const fn plan(&self) -> plan::Completion {
         self.completed.plan
@@ -261,6 +353,7 @@ impl CompletedFullMaps {
 /// Completion of the separate compatible traversal, not proof that every
 /// selected source/tile was available. Earlier callbacks are provisional.
 pub struct CompletedCompatibleFullMaps {
+    target: Target,
     plan: plan::CompatibleCompletion,
     stats: run::Stats,
     map: MapFacts,
@@ -269,10 +362,10 @@ pub struct CompletedCompatibleFullMaps {
 }
 impl CompletedCompatibleFullMaps {
     pub const fn profile(&self) -> &'static str {
-        COMPATIBLE_FULL_MAP_PROFILE
+        self.target.compatible_profile()
     }
     pub const fn build(&self) -> u32 {
-        70374
+        self.target.build()
     }
     pub const fn plan(&self) -> plan::CompatibleCompletion {
         self.plan
@@ -302,7 +395,19 @@ pub fn run_compatible_full_maps(
     limits: FullMapLimits,
     sink: &mut impl Sink,
 ) -> Result<CompletedCompatibleFullMaps, Failure> {
+    run_compatible_full_maps_for(Target::Build70374, store, selection, pack, limits, sink)
+}
+
+pub(super) fn run_compatible_full_maps_for(
+    target: Target,
+    store: &mut LocalStore,
+    selection: plan::Selection<'_>,
+    pack: bool,
+    limits: FullMapLimits,
+    sink: &mut impl Sink,
+) -> Result<CompletedCompatibleFullMaps, Failure> {
     let mut r = Runner {
+        target,
         store,
         sink,
         limits: limits.resources,
@@ -316,7 +421,7 @@ pub fn run_compatible_full_maps(
         .map_err(Error::Run)
         .and_then(|()| {
             if matches!(selection, plan::Selection::Tiles(_)) {
-                return Err(Error::FullMapSelection);
+                return Err(target.full_map_selection_error());
             }
             r.execute_compatible(selection, pack)
         });
@@ -342,7 +447,19 @@ pub fn run_full_maps(
     limits: FullMapLimits,
     sink: &mut impl Sink,
 ) -> Result<CompletedFullMaps, Failure> {
+    run_full_maps_for(Target::Build70374, store, selection, pack, limits, sink)
+}
+
+pub(super) fn run_full_maps_for(
+    target: Target,
+    store: &mut LocalStore,
+    selection: plan::Selection<'_>,
+    pack: bool,
+    limits: FullMapLimits,
+    sink: &mut impl Sink,
+) -> Result<CompletedFullMaps, Failure> {
     let mut r = Runner {
+        target,
         store,
         sink,
         limits: limits.resources,
@@ -356,7 +473,7 @@ pub fn run_full_maps(
         .map_err(Error::Run)
         .and_then(|()| {
             if matches!(selection, plan::Selection::Tiles(_)) {
-                return Err(Error::FullMapSelection);
+                return Err(target.full_map_selection_error());
             }
             r.execute(selection, pack, true)
         });
@@ -378,7 +495,19 @@ pub fn run_selected(
     limits: Limits,
     sink: &mut impl Sink,
 ) -> Result<CompletedSelected, Failure> {
+    run_selected_for(Target::Build70374, store, requests, pack, limits, sink)
+}
+
+pub(super) fn run_selected_for(
+    target: Target,
+    store: &mut LocalStore,
+    requests: &[plan::TileRequest],
+    pack: bool,
+    limits: Limits,
+    sink: &mut impl Sink,
+) -> Result<CompletedSelected, Failure> {
     let mut r = Runner {
+        target,
         store,
         sink,
         limits: limits.resources,
@@ -404,6 +533,7 @@ pub fn run_selected(
     }
 }
 struct Runner<'a, S> {
+    target: Target,
     store: &'a mut LocalStore,
     sink: &'a mut S,
     limits: run::Limits,
@@ -441,10 +571,10 @@ impl<S: Sink> Runner<'_, S> {
         pack: bool,
     ) -> Result<CompletedCompatibleFullMaps, Error> {
         self.store.verify_unchanged().map_err(store_error)?;
-        if self.store.build().build != 70374 {
-            return Err(Error::Build);
+        if self.store.build().build != self.target.build() {
+            return Err(self.target.build_error());
         }
-        catalog_gate()?;
+        catalog_gate(self.target)?;
         let tables = self.tables()?;
         self.retained = add(
             self.retained,
@@ -470,7 +600,7 @@ impl<S: Sink> Runner<'_, S> {
                 Err(error) if missing_file(error) => {
                     self.store.verify_unchanged().map_err(store_error)?;
                     expansion.unavailable_next(map).map_err(plan_error)?;
-                    let list = tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?;
+                    let list = new_tilelist(self.target)?;
                     self.compatible_list_outcome(
                         map,
                         &list,
@@ -501,14 +631,14 @@ impl<S: Sink> Runner<'_, S> {
                 .mphd()
                 .is_some_and(|h| h.flags & forever_terrain::wdt::FILE_ID_REFERENCES != 0)
             {
-                return Err(Error::FileIdRouting);
+                return Err(self.target.file_id_routing_error());
             }
             let tiles = expansion
                 .expand_next(file.file_data_id, &wdt)
                 .map_err(plan_error)?;
             if tiles.tiles().iter().filter(|t| t.present()).any(|t|
                 !matches!(t.source(), plan::TileSource::FileDataId(id) if *id != 0 && *id != u32::MAX)) {
-                return Err(Error::FileIdRouting);
+                return Err(self.target.file_id_routing_error());
             }
             // Every known present request remains charged, including failures.
             // Only the list is guaranteed output; per-tile bytes charge on actual conversion.
@@ -529,14 +659,14 @@ impl<S: Sink> Runner<'_, S> {
                 self.retained,
                 add(self.limits.max_wdt_bytes, 256 * 1024)?,
             )?)?;
-            let mut list = tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?;
+            let mut list = new_tilelist(self.target)?;
             let mut converted = 0usize;
             let mut missing = 0usize;
             drop(wdt);
             drop(file);
             for tile in tiles.tiles().iter().filter(|t| t.present()) {
                 let plan::TileSource::FileDataId(id) = tile.source() else {
-                    return Err(Error::FileIdRouting);
+                    return Err(self.target.file_id_routing_error());
                 };
                 self.step = run::Step::Adt {
                     map: map.map_id,
@@ -560,10 +690,11 @@ impl<S: Sink> Runner<'_, S> {
                     map_id: map.map_id,
                     tile_x: tile.x(),
                     tile_y: tile.y(),
-                    build: 70374,
+                    build: self.target.build(),
                     pack,
                 };
-                let output = conversion::convert_adt_70374(
+                let output = convert_adt(
+                    self.target,
                     &file.bytes,
                     &tables,
                     context,
@@ -589,7 +720,7 @@ impl<S: Sink> Runner<'_, S> {
                 converted = add(converted, 1)?;
                 self.store.verify_unchanged().map_err(store_error)?;
                 list.set(tile.x(), tile.y())
-                    .map_err(|_| Error::FileIdRouting)?;
+                    .map_err(|_| self.target.file_id_routing_error())?;
             }
             let known = tiles.present_tiles();
             self.compatible_list_outcome(
@@ -622,6 +753,7 @@ impl<S: Sink> Runner<'_, S> {
         self.step = run::Step::Finish;
         let plan = expansion.finish_compatible().map_err(plan_error)?;
         Ok(CompletedCompatibleFullMaps {
+            target: self.target,
             plan,
             stats: self.stats,
             map: tables.map_facts,
@@ -655,12 +787,12 @@ impl<S: Sink> Runner<'_, S> {
         full_maps: bool,
     ) -> Result<CompletedSelected, Error> {
         self.store.verify_unchanged().map_err(store_error)?;
-        if self.store.build().build != 70374 {
-            return Err(Error::Build);
+        if self.store.build().build != self.target.build() {
+            return Err(self.target.build_error());
         }
         if !full_maps {
             let plan::Selection::Tiles(requests) = selection else {
-                return Err(Error::FullMapSelection);
+                return Err(self.target.full_map_selection_error());
             };
             // Shape-only admission before acquisition, then planner binds actual rows.
             if requests.is_empty() || requests.len() > self.limits.plan.max_explicit_tiles {
@@ -682,7 +814,7 @@ impl<S: Sink> Runner<'_, S> {
                 return Err(Error::Run(run::Error::Plan(plan::Error::DuplicateRequest)));
             }
         }
-        catalog_gate()?;
+        catalog_gate(self.target)?;
         let tables = self.tables()?;
         self.retained = add(
             self.retained,
@@ -715,16 +847,16 @@ impl<S: Sink> Runner<'_, S> {
                 .mphd()
                 .is_some_and(|h| h.flags & forever_terrain::wdt::FILE_ID_REFERENCES != 0)
             {
-                return Err(Error::FileIdRouting);
+                return Err(self.target.file_id_routing_error());
             }
             let tiles = expansion
                 .expand_next(file.file_data_id, &wdt)
                 .map_err(plan_error)?;
             if !full_maps && tiles.absent_tiles() != 0 {
-                return Err(Error::AbsentTile);
+                return Err(self.target.absent_tile_error());
             }
             // Preflight all selected roots before converting any tile.
-            if tiles.tiles().iter().filter(|t|t.present()).any(|t|!matches!(t.source(),plan::TileSource::FileDataId(id) if *id!=0 && *id!=u32::MAX)) {return Err(Error::FileIdRouting);}
+            if tiles.tiles().iter().filter(|t|t.present()).any(|t|!matches!(t.source(),plan::TileSource::FileDataId(id) if *id!=0 && *id!=u32::MAX)) {return Err(self.target.file_id_routing_error());}
             let mut list = if full_maps {
                 // Reserve every known remaining read and minimum framing output
                 // before converting this map; actual lengths charge cumulatively.
@@ -745,7 +877,7 @@ impl<S: Sink> Runner<'_, S> {
                     self.retained,
                     add(self.limits.max_wdt_bytes, 256 * 1024)?,
                 )?)?;
-                Some(tilelist::TileList::new_70374(70374).map_err(|_| Error::Build)?)
+                Some(new_tilelist(self.target)?)
             } else {
                 None
             };
@@ -753,7 +885,7 @@ impl<S: Sink> Runner<'_, S> {
             drop(file);
             for tile in tiles.tiles().iter().filter(|tile| tile.present()) {
                 let plan::TileSource::FileDataId(id) = tile.source() else {
-                    return Err(Error::FileIdRouting);
+                    return Err(self.target.file_id_routing_error());
                 };
                 self.step = run::Step::Adt {
                     map: map.map_id,
@@ -769,10 +901,11 @@ impl<S: Sink> Runner<'_, S> {
                     map_id: map.map_id,
                     tile_x: tile.x(),
                     tile_y: tile.y(),
-                    build: 70374,
+                    build: self.target.build(),
                     pack,
                 };
-                let output = conversion::convert_adt_70374(
+                let output = convert_adt(
+                    self.target,
                     &file.bytes,
                     &tables,
                     context,
@@ -796,7 +929,7 @@ impl<S: Sink> Runner<'_, S> {
                 self.store.verify_unchanged().map_err(store_error)?;
                 if let Some(list) = &mut list {
                     list.set(tile.x(), tile.y())
-                        .map_err(|_| Error::FileIdRouting)?;
+                        .map_err(|_| self.target.file_id_routing_error())?;
                 }
             }
             if let Some(list) = list {
@@ -812,6 +945,7 @@ impl<S: Sink> Runner<'_, S> {
         self.step = run::Step::Finish;
         let plan = expansion.finish().map_err(plan_error)?;
         Ok(CompletedSelected {
+            target: self.target,
             plan,
             stats: self.stats,
             map: tables.map_facts,
@@ -821,15 +955,28 @@ impl<S: Sink> Runner<'_, S> {
     fn tables(&mut self) -> Result<Tables, Error> {
         self.step = run::Step::Map;
         let cap = self.begin_read(self.limits.max_db2_bytes, self.retained)?;
-        let file = self
-            .store
-            .read_file_data_id_available_with_external_budget(
+        let file = match self.target {
+            Target::Build70374 => self.store.read_file_data_id_available_with_external_budget(
                 run::MAP_ID,
                 cap,
                 self.retained,
                 self.limits.max_memory_bytes,
-            )
-            .map_err(Error::Available)?;
+            ),
+            Target::Build70450 => self
+                .store
+                .read_file_data_id_available_70450_with_external_budget(
+                    run::MAP_ID,
+                    cap,
+                    self.retained,
+                    self.limits.max_memory_bytes,
+                ),
+        }
+        .map_err(Error::Available)?;
+        validate_map_coverage(
+            file.declared_bytes(),
+            file.available_bytes(),
+            file.full_ckey_verified(),
+        )?;
         self.stats.source_bytes = self
             .stats
             .source_bytes
@@ -843,7 +990,11 @@ impl<S: Sink> Runner<'_, S> {
             self.retained,
             add(file.resident_bytes().map_err(Error::Available)?, allowance)?,
         )?)?;
-        let rows = db2::read_map_70374(&file).map_err(db2_error)?;
+        let rows = match self.target {
+            Target::Build70374 => db2::read_map_70374(&file),
+            Target::Build70450 => db2::read_map_70450(&file),
+        }
+        .map_err(db2_error)?;
         let (declared_rows, declared_copies) =
             rows.sections()
                 .iter()
@@ -881,7 +1032,11 @@ impl<S: Sink> Runner<'_, S> {
             .map_source(facts)
             .map_err(|_| Error::Run(run::Error::Sink))?;
         let file = self.table_file(run::Step::Material, run::MATERIAL_ID, false)?;
-        let rows = source::read_liquid_materials(&file.bytes).map_err(db2_error)?;
+        let rows = match self.target {
+            Target::Build70374 => source::read_liquid_materials(&file.bytes),
+            Target::Build70450 => source::read_liquid_materials_70450(&file.bytes),
+        }
+        .map_err(db2_error)?;
         let mut mat = self.table_facts(&file, &rows)?;
         let tree = rows.materialize().map_err(db2_error)?;
         let materials = compact(tree, self.limits.max_lookup_rows)?;
@@ -889,7 +1044,11 @@ impl<S: Sink> Runner<'_, S> {
         self.retain(capacity(&materials)?)?;
         drop(file);
         let file = self.table_file(run::Step::Object, run::OBJECT_ID, false)?;
-        let rows = source::read_liquid_objects(&file.bytes).map_err(db2_error)?;
+        let rows = match self.target {
+            Target::Build70374 => source::read_liquid_objects(&file.bytes),
+            Target::Build70450 => source::read_liquid_objects_70450(&file.bytes),
+        }
+        .map_err(db2_error)?;
         let mut obj = self.table_facts(&file, &rows)?;
         let objects = rows.materialize().map_err(db2_error)?;
         if objects.len() > self.limits.max_lookup_rows {
@@ -899,7 +1058,11 @@ impl<S: Sink> Runner<'_, S> {
         drop(objects);
         drop(file);
         let file = self.table_file(run::Step::Type, run::TYPE_ID, true)?;
-        let rows = source::read_liquid_types(&file.bytes).map_err(db2_error)?;
+        let rows = match self.target {
+            Target::Build70374 => source::read_liquid_types(&file.bytes),
+            Target::Build70450 => source::read_liquid_types_70450(&file.bytes),
+        }
+        .map_err(db2_error)?;
         let mut ty = self.table_facts(&file, &rows)?;
         let types = compact(
             rows.materialize().map_err(db2_error)?,
@@ -933,24 +1096,27 @@ impl<S: Sink> Runner<'_, S> {
             run::MATERIAL_ID => "LiquidMaterial",
             run::OBJECT_ID => "LiquidObject",
             run::TYPE_ID => "LiquidType",
-            _ => return Err(Error::Catalog),
+            _ => return Err(self.target.catalog_error()),
         };
-        let metadata = catalog::resolve_for(catalog::WOWDBDEFS_70374_CATALOG_ID, name)
-            .map_err(|_| Error::Catalog)?
-            .ok_or(Error::Catalog)?
+        let metadata = catalog::resolve_for(self.target.catalog_id(), name)
+            .map_err(|_| self.target.catalog_error())?
+            .ok_or_else(|| self.target.catalog_error())?
             .metadata();
+        if metadata.file_data_id != id {
+            return Err(self.target.catalog_error());
+        }
         let raw: &[u8; forever_db2::HEADER_SIZE] = f
             .bytes
             .get(..forever_db2::HEADER_SIZE)
-            .ok_or(Error::Catalog)?
+            .ok_or_else(|| self.target.catalog_error())?
             .try_into()
-            .map_err(|_| Error::Catalog)?;
-        let header = forever_db2::Header::parse(raw).map_err(|_| Error::Catalog)?;
+            .map_err(|_| self.target.catalog_error())?;
+        let header = forever_db2::Header::parse(raw).map_err(|_| self.target.catalog_error())?;
         if metadata
             .table_hash
             .is_some_and(|hash| header.table_hash != hash)
         {
-            return Err(Error::Catalog);
+            return Err(self.target.catalog_error());
         }
         self.memory(add(
             self.retained,
@@ -1043,7 +1209,35 @@ impl<S: Sink> Runner<'_, S> {
         Ok(())
     }
 }
-fn catalog_gate() -> Result<(), Error> {
+fn catalog_gate(target: Target) -> Result<(), Error> {
+    match target {
+        Target::Build70374 => catalog_gate_70374(),
+        Target::Build70450 => catalog_gate_70450(),
+    }
+}
+
+fn new_tilelist(target: Target) -> Result<tilelist::TileList, Error> {
+    match target {
+        Target::Build70374 => tilelist::TileList::new_70374(70374),
+        Target::Build70450 => tilelist::TileList::new_70450(70450),
+    }
+    .map_err(|_| target.build_error())
+}
+
+fn convert_adt(
+    target: Target,
+    bytes: &[u8],
+    lookup: &impl liquid::LiquidLookup,
+    context: conversion::Context,
+    limits: conversion::Limits,
+) -> Result<conversion::ConvertedTile, conversion::Error> {
+    match target {
+        Target::Build70374 => conversion::convert_adt_70374(bytes, lookup, context, limits),
+        Target::Build70450 => conversion::convert_adt_70450(bytes, lookup, context, limits),
+    }
+}
+
+fn catalog_gate_70374() -> Result<(), Error> {
     for (name, id) in [
         ("LiquidMaterial", run::MATERIAL_ID),
         ("LiquidObject", run::OBJECT_ID),
@@ -1067,6 +1261,38 @@ fn catalog_gate() -> Result<(), Error> {
             || a.fields != b.fields
         {
             return Err(Error::Catalog);
+        }
+    }
+    Ok(())
+}
+
+fn catalog_gate_70450() -> Result<(), Error> {
+    for (name, id, hash, layout, fields) in [
+        ("Map", run::MAP_ID, 0xBD84_CD62, 0xD43A_FAC3, 26),
+        (
+            "LiquidMaterial",
+            run::MATERIAL_ID,
+            0x8C37_9329,
+            0x98E5_D7AA,
+            2,
+        ),
+        ("LiquidObject", run::OBJECT_ID, 0xFC2A_0DFF, 0xCB0D_39E8, 5),
+        ("LiquidType", run::TYPE_ID, 0x6613_BED3, 0xD1EC_EEC9, 21),
+    ] {
+        let metadata = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
+            .map_err(|_| Error::Catalog70450)?
+            .ok_or(Error::Catalog70450)?
+            .metadata();
+        if metadata.file_data_id != id
+            || metadata.table_hash != Some(hash)
+            || metadata.layout_hash != layout
+            || metadata.field_count != fields
+            || metadata.file_field_count != fields
+            || metadata.index != -1
+            || metadata.parent_index != -1
+            || !metadata.shape_compatible()
+        {
+            return Err(Error::Catalog70450);
         }
     }
     Ok(())
@@ -1101,6 +1327,16 @@ fn missing_file(error: Error) -> bool {
 }
 fn db2_error(e: RecordError) -> Error {
     Error::Run(run::Error::Db2(e))
+}
+fn validate_map_coverage(
+    declared_bytes: u64,
+    available_bytes: u64,
+    full_ckey_verified: bool,
+) -> Result<(), Error> {
+    if available_bytes > declared_bytes || full_ckey_verified && available_bytes != declared_bytes {
+        return Err(Error::Coverage);
+    }
+    Ok(())
 }
 fn plan_error(e: plan::Error) -> Error {
     Error::Run(run::Error::Plan(e))

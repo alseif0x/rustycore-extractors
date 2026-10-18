@@ -28,6 +28,13 @@ impl TileList {
         }
         Ok(Self::header(build))
     }
+    /// Explicit70450 codec; old new/verify/present retain their older gates.
+    pub fn new_70450(build: u32) -> Result<Self, Error> {
+        if build != 70450 {
+            return Err(Error::Build);
+        }
+        Ok(Self::header(build))
+    }
     fn header(build: u32) -> Self {
         let mut bytes = [b'0'; BYTES];
         bytes[..4].copy_from_slice(b"MAPS");
@@ -51,6 +58,10 @@ pub fn verify(bytes: &[u8], build: u32) -> Result<(), Error> {
 pub fn verify_70374(bytes: &[u8], build: u32) -> Result<(), Error> {
     verify_header(bytes, &TileList::new_70374(build)?)
 }
+/// Explicit70450 list verification; no source or referenced-file authentication.
+pub fn verify_70450(bytes: &[u8], build: u32) -> Result<(), Error> {
+    verify_header(bytes, &TileList::new_70450(build)?)
+}
 fn verify_header(bytes: &[u8], header: &TileList) -> Result<(), Error> {
     if bytes.len() != BYTES
         || bytes[..12] != header.bytes[..12]
@@ -66,6 +77,10 @@ pub fn present(bytes: &[u8], build: u32, x: u8, y: u8) -> Result<bool, Error> {
 }
 pub fn present_70374(bytes: &[u8], build: u32, x: u8, y: u8) -> Result<bool, Error> {
     verify_70374(bytes, build)?;
+    Ok(bytes[index(x, y)?] == b'1')
+}
+pub fn present_70450(bytes: &[u8], build: u32, x: u8, y: u8) -> Result<bool, Error> {
+    verify_70450(bytes, build)?;
     Ok(bytes[index(x, y)?] == b'1')
 }
 fn index(x: u8, y: u8) -> Result<usize, Error> {

@@ -221,6 +221,62 @@ fn context_rejects_out_of_grid_coordinates_and_build_before_parsing() {
 }
 
 #[test]
+fn build70450_conversion_uses_explicit_format_assumption_and_exact_build_gate() {
+    assert_eq!(
+        BUILD_70450_FORMAT_ASSUMPTION,
+        "build 70450 ADT/MAPS conversion assumes build 70374 terrain wire formats"
+    );
+    let input = adt(&[]);
+    let context_70450 = Context {
+        build: 70450,
+        ..context()
+    };
+    let converted = convert_adt_70450(&input, &LOOKUP, context_70450, Limits::default()).unwrap();
+    assert_eq!(
+        maps::verify_70450(converted.bytes(), 70450, maps::MAX_MAP_BYTES)
+            .unwrap()
+            .build(),
+        70450
+    );
+    let old = convert_adt_70374(
+        &input,
+        &LOOKUP,
+        Context {
+            build: 70374,
+            ..context()
+        },
+        Limits::default(),
+    )
+    .unwrap();
+    let mut expected = old.bytes().to_vec();
+    expected[8..12].copy_from_slice(&70450u32.to_le_bytes());
+    assert_eq!(converted.bytes(), expected);
+
+    for (target, context_build) in [(70450, 70374), (70374, 70450)] {
+        let context_for_target = Context {
+            build: context_build,
+            ..context()
+        };
+        let result = if target == 70450 {
+            convert_adt_70450(&[], &LOOKUP, context_for_target, Limits::default())
+        } else {
+            convert_adt_70374(&[], &LOOKUP, context_for_target, Limits::default())
+        };
+        assert_eq!(
+            result.err(),
+            Some(Error::Maps(maps::Error::UnsupportedBuild))
+        );
+    }
+
+    let mut unsupported_mver = input;
+    put(&mut unsupported_mver, 8, crate::wdt::FILE_VERSION + 1);
+    assert_eq!(
+        convert_adt_70450(&unsupported_mver, &LOOKUP, context_70450, Limits::default()).err(),
+        Some(Error::Adt(crate::Error::UnsupportedVersion))
+    );
+}
+
+#[test]
 fn limits_cannot_expand_even_for_tiny_or_invalid_inputs() {
     let default = Limits::default();
     for limits in [

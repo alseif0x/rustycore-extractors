@@ -19,6 +19,11 @@ use crate::{
 
 pub const HEADER_BYTES: usize = 44;
 pub const VERSION: u32 = 10;
+/// Explicit assumption: build 70450 uses the same MAPS v10 wire layout as
+/// 70374. This is not independent format evidence; exact build/version gates
+/// remain mandatory and no conversion silently retags another build.
+pub const BUILD_70450_FORMAT_ASSUMPTION: &str =
+    "build 70450 MAPS output assumes the build 70374 MAPS v10 wire layout";
 pub const AREA_HEADER_BYTES: usize = 8;
 pub const AREA_FULL_BYTES: usize = AREA_HEADER_BYTES + CELL_COUNT * 2;
 pub const HOLE_BYTES: usize = CELL_COUNT * 8;
@@ -104,7 +109,7 @@ pub struct MapSections<'a> {
 
 pub fn assemble(build: u32, sections: MapSections<'_>, max_bytes: usize) -> Result<Vec<u8>, Error> {
     supported_build(build)?;
-    assemble_impl(build, sections, max_bytes, false)
+    assemble_impl(build, sections, max_bytes, None)
 }
 
 /// Explicit70374 declaration; legacy assemble/verify gates remain unchanged.
@@ -113,16 +118,26 @@ pub fn assemble_70374(
     sections: MapSections<'_>,
     max_bytes: usize,
 ) -> Result<Vec<u8>, Error> {
-    current_build(build)?;
-    assemble_impl(build, sections, max_bytes, true)
+    assemble_impl(build, sections, max_bytes, Some(70374))
+}
+
+/// Explicit build70450 MAPS v10 assembly under the documented format
+/// assumption. The build tag must match exactly.
+pub fn assemble_70450(
+    build: u32,
+    sections: MapSections<'_>,
+    max_bytes: usize,
+) -> Result<Vec<u8>, Error> {
+    assemble_impl(build, sections, max_bytes, Some(70450))
 }
 
 fn assemble_impl(
     build: u32,
     sections: MapSections<'_>,
     max_bytes: usize,
-    current: bool,
+    current_build: Option<u32>,
 ) -> Result<Vec<u8>, Error> {
+    check_build(build, current_build)?;
     let pieces = [
         Some(sections.area.bytes()),
         Some(sections.height.bytes()),
@@ -157,7 +172,7 @@ fn assemble_impl(
     }
     // Typed section constructors establish content invariants. Independently
     // check their assembled placement before returning any complete bytes.
-    verify_impl(&out, build, max_bytes, current)?;
+    verify_impl(&out, build, max_bytes, current_build)?;
     Ok(out)
 }
 
@@ -312,7 +327,7 @@ impl<'a> LiquidView<'a> {
 /// declaration, not authentication of the original client or source tables.
 pub fn verify(bytes: &[u8], expected_build: u32, max_bytes: usize) -> Result<MapView<'_>, Error> {
     supported_build(expected_build)?;
-    verify_impl(bytes, expected_build, max_bytes, false)
+    verify_impl(bytes, expected_build, max_bytes, None)
 }
 
 /// Separate70374 verifier; build tags remain declarations, not source proofs.
@@ -321,16 +336,26 @@ pub fn verify_70374(
     expected_build: u32,
     max_bytes: usize,
 ) -> Result<MapView<'_>, Error> {
-    current_build(expected_build)?;
-    verify_impl(bytes, expected_build, max_bytes, true)
+    verify_impl(bytes, expected_build, max_bytes, Some(70374))
+}
+
+/// Separate build70450 verifier for exact MAPS v10 output under the documented
+/// format assumption; build and version mismatches fail closed.
+pub fn verify_70450(
+    bytes: &[u8],
+    expected_build: u32,
+    max_bytes: usize,
+) -> Result<MapView<'_>, Error> {
+    verify_impl(bytes, expected_build, max_bytes, Some(70450))
 }
 
 fn verify_impl(
     bytes: &[u8],
     expected_build: u32,
     max_bytes: usize,
-    current: bool,
+    current_build: Option<u32>,
 ) -> Result<MapView<'_>, Error> {
+    check_build(expected_build, current_build)?;
     if bytes.len() > max_bytes || bytes.len() > MAX_MAP_BYTES {
         return Err(Error::Limit);
     }
@@ -338,11 +363,7 @@ fn verify_impl(
         return Err(Error::Header);
     }
     let build = word(bytes, 8);
-    if current {
-        current_build(build)?;
-    } else {
-        supported_build(build)?;
-    }
+    check_build(build, current_build)?;
     if build != expected_build {
         return Err(Error::BuildMismatch);
     }
@@ -505,8 +526,14 @@ fn verify_liquid(raw: &[u8]) -> Result<LiquidView<'_>, Error> {
     Ok(LiquidView { raw })
 }
 
-fn current_build(build: u32) -> Result<(), Error> {
-    if build == 70374 {
+fn check_build(build: u32, current_build: Option<u32>) -> Result<(), Error> {
+    if let Some(expected) = current_build {
+        if build == expected {
+            return Ok(());
+        }
+        return Err(Error::UnsupportedBuild);
+    }
+    if matches!(build, 70170 | 70205) {
         Ok(())
     } else {
         Err(Error::UnsupportedBuild)
