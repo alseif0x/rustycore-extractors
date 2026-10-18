@@ -13,6 +13,7 @@ pub enum PublicationProfile {
     Build70374CompatibleTerrainV1,
     Build70425CompatibleCollisionV1,
     Build70450CompatibleCollisionV1,
+    Build70450CollisionProvidedKeysV1,
     Build70450Db2OnlyV1,
     Build70450Db2ProvidedKeysV1,
 }
@@ -69,10 +70,35 @@ impl PublicationProfile {
             }
             return Ok(());
         }
+        if self == Self::Build70450CollisionProvidedKeysV1 {
+            if plan.build != 70450 {
+                return Err("product_plan_build");
+            }
+            if plan.schema_catalog != SchemaCatalog::WowDbDefs70450V1 {
+                return Err("product_plan_schema_catalog");
+            }
+            if plan.components != Component::Collision.bit()
+                || !matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_))
+                || plan.decryption != super::Decryption::ProvidedSalsa20V1
+                || !plan.db2.is_empty()
+                || plan.terrain != Selection::None
+                || plan.navigation != Selection::None
+                || plan.offmesh.is_some()
+                || !plan.pack
+                || plan.big_base_unit
+                || plan.skip_liquids
+                || plan.maximum_slope != 55
+                || plan.non_steep_slope != 55
+            {
+                return Err("product_plan_component_scope");
+            }
+            return Ok(());
+        }
         let (build, catalog, components) = match self {
             Self::Legacy
             | Self::Build70425CompatibleCollisionV1
-            | Self::Build70450CompatibleCollisionV1 => {
+            | Self::Build70450CompatibleCollisionV1
+            | Self::Build70450CollisionProvidedKeysV1 => {
                 unreachable!("profile returned above")
             }
             Self::Build70338Db2GtCamerasV1 => (

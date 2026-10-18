@@ -71,7 +71,7 @@ fn verify_inner(
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
     #[cfg(target_os = "linux")]
-    if plan.is_v14() || plan.is_v15() {
+    if plan.is_v14() || plan.is_v15() || plan.is_v18() {
         return compatible_vmaps::verify(plan, output, expected);
     }
     let mut limits = package::Limits::default();
@@ -116,51 +116,38 @@ fn verify_inner(
         })
     };
     #[cfg(target_os = "linux")]
-    let original_plan = plan;
-    #[cfg(target_os = "linux")]
-    let v17_metadata_plan = plan.is_v17().then(|| {
-        // v10's catalog-agnostic inventory admission reads only locale and the
-        // exact DB2 selection. Project v17's identical inventory fields onto
-        // the v16 identity for this callback only; payload inspection and plan
-        // binding continue to use the original provided-key revision.
-        let mut metadata_plan = (*plan).clone();
-        metadata_plan.publication_profile = crate::plan::PublicationProfile::Build70450Db2OnlyV1;
-        metadata_plan.decryption = crate::plan::Decryption::Disabled;
-        metadata_plan
-    });
-    #[cfg(target_os = "linux")]
-    let plan = v17_metadata_plan.as_ref().unwrap_or(original_plan);
-    #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified =
-        if plan.is_gt_cameras() || plan.is_v10() || plan.is_v16() || plan.is_available_terrain() {
-            package::verify_with_preflight(
-                output,
-                expected,
-                limits,
-                |artifacts| {
-                    let admitted = if plan.is_v13() {
-                        crate::driver::terrain_v13::admit_metadata(plan, artifacts)
-                    } else if plan.is_v12() {
-                        crate::driver::terrain_v12::admit_metadata(plan, artifacts)
-                    } else if plan.is_v10() || plan.is_v16() {
-                        v10::admit_metadata(plan, artifacts)
-                    } else {
-                        v9::admit_metadata(plan, artifacts)
-                    };
-                    admitted.map_err(|error| {
-                        metadata_failure = Some(error);
-                        package::Error::Schema
-                    })
-                },
-                inspect,
-            )
-        } else {
-            package::verify_with(output, expected, limits, inspect)
-        };
-    #[cfg(target_os = "linux")]
-    let plan = original_plan;
+    let verified = if plan.is_gt_cameras()
+        || plan.is_v10()
+        || plan.is_v16()
+        || plan.is_v17()
+        || plan.is_available_terrain()
+    {
+        package::verify_with_preflight(
+            output,
+            expected,
+            limits,
+            |artifacts| {
+                let admitted = if plan.is_v13() {
+                    crate::driver::terrain_v13::admit_metadata(plan, artifacts)
+                } else if plan.is_v12() {
+                    crate::driver::terrain_v12::admit_metadata(plan, artifacts)
+                } else if plan.is_v10() || plan.is_v16() || plan.is_v17() {
+                    v10::admit_metadata(plan, artifacts)
+                } else {
+                    v9::admit_metadata(plan, artifacts)
+                };
+                admitted.map_err(|error| {
+                    metadata_failure = Some(error);
+                    package::Error::Schema
+                })
+            },
+            inspect,
+        )
+    } else {
+        package::verify_with(output, expected, limits, inspect)
+    };
     #[cfg(not(target_os = "linux"))]
     let verified = package::verify_with(output, expected, limits, inspect);
     #[cfg(target_os = "linux")]

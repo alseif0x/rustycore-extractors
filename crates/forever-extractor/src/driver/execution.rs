@@ -52,7 +52,7 @@ pub(super) fn execute(
 }
 
 fn replay_mask(plan: &Plan, completed: u8) -> u8 {
-    if plan.is_v14() || plan.is_v15() {
+    if plan.is_v14() || plan.is_v15() || plan.is_v18() {
         // Rebuild with a fresh six-owner scratch namespace even when sealed:
         // Run::put replays coverage and every actual final artifact.
         completed & !Component::Collision.bit()
@@ -429,5 +429,20 @@ mod v12_replay_tests {
         assert_eq!(replay_mask(&p, 63), 63 & !Component::Collision.bit());
         assert_eq!(replay_mask(&p, Component::Collision.bit()), 0);
         assert_eq!(replay_mask(&p, 0), 0);
+        v18_collision_resume_replay_mask_clears_only_the_sealed_collision_component();
+    }
+
+    fn v18_collision_resume_replay_mask_clears_only_the_sealed_collision_component() {
+        let plan = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v18/all-available-maps.tsv"
+        ))
+        .unwrap();
+        assert_eq!(
+            replay_mask(&plan, 63),
+            63 & !Component::Collision.bit(),
+            "a sealed v18 collision is cleared before resume production"
+        );
+        assert_eq!(replay_mask(&plan, Component::Collision.bit()), 0);
+        assert_eq!(replay_mask(&plan, 0), 0);
     }
 }

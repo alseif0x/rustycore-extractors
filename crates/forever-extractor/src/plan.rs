@@ -194,6 +194,7 @@ impl Plan {
             "15" => 15,
             "16" => 16,
             "17" => 17,
+            "18" => 18,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -227,7 +228,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=17 => match field(&mut lines, "schema-catalog")? {
+            15..=18 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -243,14 +244,14 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=17 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=18 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if matches!(version, 3 | 8 | 14 | 15)
+        let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
@@ -261,7 +262,7 @@ impl Plan {
         } else {
             CollisionStorage::Resident
         };
-        let map_domain = if matches!(version, 14 | 15) {
+        let map_domain = if matches!(version, 14 | 15 | 18) {
             let profile = if version == 14 {
                 COMPATIBLE_COLLISION_VERIFY_PROFILE
             } else {
@@ -351,6 +352,8 @@ impl Plan {
         let plan = Self {
             publication_profile: if version == 17 {
                 PublicationProfile::Build70450Db2ProvidedKeysV1
+            } else if version == 18 {
+                PublicationProfile::Build70450CollisionProvidedKeysV1
             } else if version == 16 {
                 PublicationProfile::Build70450Db2OnlyV1
             } else if version == 15 {
@@ -399,7 +402,7 @@ impl Plan {
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.publication_profile.validate(self)?;
-        if !self.is_v14() && !self.is_v15() {
+        if !self.is_v14() && !self.is_v15() && !self.is_v18() {
             map_domain::validate(self)?;
         }
         if let Some(connections) = &self.offmesh {
@@ -424,6 +427,7 @@ impl Plan {
             && !self.is_v15()
             && !self.is_v16()
             && !self.is_v17()
+            && !self.is_v18()
         {
             return Err("product_plan_build");
         }
@@ -451,6 +455,7 @@ impl Plan {
             && !self.is_v15()
             && !self.is_v16()
             && !self.is_v17()
+            && !self.is_v18()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -550,6 +555,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v18() {
+            return 18;
+        }
         if self.is_v17() {
             return 17;
         }
@@ -601,6 +609,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v18() {
+            return "forever-product-v18";
+        }
         if self.is_v17() {
             return "forever-product-v17";
         }
@@ -704,6 +715,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build70450 compatible GNU15-v2 collision with supplied keys.
+    pub const fn is_v18(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450CollisionProvidedKeysV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -758,16 +777,16 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=16, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=18, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
         let collision_storage = self.collision_storage.render();
-        let map_domain = if self.is_v14() || self.is_v15() {
+        let map_domain = if self.is_v14() || self.is_v15() || self.is_v18() {
             let selected = self
                 .map_domain
                 .map_or_else(|| "all-available-maps".to_owned(), |id| format!("map:{id}"));
-            let profile = if self.is_v15() {
+            let profile = if self.is_v15() || self.is_v18() {
                 COMPATIBLE_COLLISION_VERIFY_PROFILE_70450
             } else {
                 COMPATIBLE_COLLISION_VERIFY_PROFILE
@@ -874,3 +893,6 @@ mod v16_tests;
 
 #[cfg(test)]
 mod v17_tests;
+
+#[cfg(test)]
+mod v18_tests;
