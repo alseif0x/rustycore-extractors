@@ -61,11 +61,15 @@ impl Context {
         {
             return Err(Error::Context);
         }
-        // Explicit product plans v14/v15 bind their independent profile through
-        // plan_sha256. Admit only the Linux collision mask for their own builds.
-        if [70425, 70450].contains(&self.build)
-            && (self.components != Component::Collision.bit() || !cfg!(target_os = "linux"))
-        {
+        // Explicit product plans bind their independent profile through
+        // plan_sha256. Build 70425 admits v14 collision; build 70450 admits
+        // either v15 collision or v16 DB2, on Linux only.
+        let product_scope = match self.build {
+            70425 => self.components == Component::Collision.bit(),
+            70450 => [Component::Collision.bit(), Component::Db2.bit()].contains(&self.components),
+            _ => true,
+        };
+        if [70425, 70450].contains(&self.build) && (!product_scope || !cfg!(target_os = "linux")) {
             return Err(Error::Context);
         }
         if self.build == 70374
@@ -474,7 +478,7 @@ mod product70425_context_tests {
 mod product70450_context_tests {
     use super::*;
     #[test]
-    fn context70450_is_exact_linux_collision_mask_only() {
+    fn context70450_admits_only_linux_collision_or_db2_masks() {
         let c = Context {
             build: 70450,
             locale: crate::Locale::EsEs,
@@ -487,8 +491,16 @@ mod product70450_context_tests {
         if cfg!(target_os = "linux") {
             assert_eq!(Context::parse(&c.json()).unwrap(), c);
         }
+        let db2 = Context {
+            components: Component::Db2.bit(),
+            ..c
+        };
+        assert_eq!(db2.validate().is_ok(), cfg!(target_os = "linux"));
+        if cfg!(target_os = "linux") {
+            assert_eq!(Context::parse(&db2.json()).unwrap(), db2);
+        }
         for components in 0..=255 {
-            if components != Component::Collision.bit() {
+            if components != Component::Collision.bit() && components != Component::Db2.bit() {
                 assert!(Context { components, ..c }.validate().is_err());
             }
         }

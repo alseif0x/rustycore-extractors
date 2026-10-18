@@ -13,6 +13,7 @@ pub enum PublicationProfile {
     Build70374CompatibleTerrainV1,
     Build70425CompatibleCollisionV1,
     Build70450CompatibleCollisionV1,
+    Build70450Db2OnlyV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -91,6 +92,9 @@ impl PublicationProfile {
             Self::Build70374Db2OnlyV1 => {
                 (70374, SchemaCatalog::WowDbDefs70374V1, Component::Db2.bit())
             }
+            Self::Build70450Db2OnlyV1 => {
+                (70450, SchemaCatalog::WowDbDefs70450V1, Component::Db2.bit())
+            }
         };
         if plan.build != build {
             return Err("product_plan_build");
@@ -120,6 +124,9 @@ impl PublicationProfile {
         }
         if plan.terrain != Selection::None || plan.navigation != Selection::None {
             return Err("product_plan_dependencies");
+        }
+        if self == Self::Build70450Db2OnlyV1 && plan.decryption != super::Decryption::Disabled {
+            return Err("product_plan_component_scope");
         }
         Ok(())
     }

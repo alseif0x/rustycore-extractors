@@ -68,7 +68,7 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v15() {
+    let mut store = if plan.is_v15() || plan.is_v16() {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70450(client).map_err(|e| Error::from(e.code()))? != 70450 {
@@ -144,6 +144,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_available_terrain()
         || plan.is_v14()
         || plan.is_v15()
+        || plan.is_v16()
     {
         return Err("product_platform".into());
     }
@@ -328,7 +329,7 @@ fn prepare_domain(
 ) -> Result<Option<crate::map_domain::Domain>, Error> {
     // v14 derives its declared domain once from the genuine available Map owner.
     // Do not reopen a complete Map or manufacture strict SourceFacts here.
-    if plan.is_v14() || plan.is_v15() {
+    if plan.is_v14() || plan.is_v15() || plan.is_v16() {
         return Ok(None);
     }
     let Some(requested) = plan.map_domain else {
@@ -504,7 +505,11 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let cap = if plan.is_gt_cameras() || plan.is_v10() || plan.is_available_terrain() {
+        let cap = if plan.is_gt_cameras()
+            || plan.is_v10()
+            || plan.is_v16()
+            || plan.is_available_terrain()
+        {
             db2_remaining(total)?
         } else {
             DB2_FILE_BYTES

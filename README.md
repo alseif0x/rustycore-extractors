@@ -97,6 +97,11 @@ Linux compatible-VMaps scope. It does not claim real extraction, full-world
 resources, or runtime acceptance. See the
 [v15 scope](docs/forever-product-v15.md).
 
+Product v16 separately admits only `wow_classic_beta 1.60.1.70450` for the
+Linux DB2-only scope with disabled decryption and `wowdbdefs-70450-v1`. It does
+not claim collision/VMaps, full-world resources, or runtime acceptance. See the
+[v16 scope](docs/forever-product-v16.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.

@@ -118,31 +118,32 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if plan.is_gt_cameras() || plan.is_v10() || plan.is_available_terrain() {
-        package::verify_with_preflight(
-            output,
-            expected,
-            limits,
-            |artifacts| {
-                let admitted = if plan.is_v13() {
-                    crate::driver::terrain_v13::admit_metadata(plan, artifacts)
-                } else if plan.is_v12() {
-                    crate::driver::terrain_v12::admit_metadata(plan, artifacts)
-                } else if plan.is_v10() {
-                    v10::admit_metadata(plan, artifacts)
-                } else {
-                    v9::admit_metadata(plan, artifacts)
-                };
-                admitted.map_err(|error| {
-                    metadata_failure = Some(error);
-                    package::Error::Schema
-                })
-            },
-            inspect,
-        )
-    } else {
-        package::verify_with(output, expected, limits, inspect)
-    };
+    let verified =
+        if plan.is_gt_cameras() || plan.is_v10() || plan.is_v16() || plan.is_available_terrain() {
+            package::verify_with_preflight(
+                output,
+                expected,
+                limits,
+                |artifacts| {
+                    let admitted = if plan.is_v13() {
+                        crate::driver::terrain_v13::admit_metadata(plan, artifacts)
+                    } else if plan.is_v12() {
+                        crate::driver::terrain_v12::admit_metadata(plan, artifacts)
+                    } else if plan.is_v10() || plan.is_v16() {
+                        v10::admit_metadata(plan, artifacts)
+                    } else {
+                        v9::admit_metadata(plan, artifacts)
+                    };
+                    admitted.map_err(|error| {
+                        metadata_failure = Some(error);
+                        package::Error::Schema
+                    })
+                },
+                inspect,
+            )
+        } else {
+            package::verify_with(output, expected, limits, inspect)
+        };
     #[cfg(not(target_os = "linux"))]
     let verified = package::verify_with(output, expected, limits, inspect);
     #[cfg(target_os = "linux")]

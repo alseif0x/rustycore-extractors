@@ -192,6 +192,7 @@ impl Plan {
             "13" => 13,
             "14" => 14,
             "15" => 15,
+            "16" => 16,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -225,7 +226,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15 => match field(&mut lines, "schema-catalog")? {
+            15 | 16 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -241,7 +242,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=15 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=16 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -347,7 +348,9 @@ impl Plan {
             });
         }
         let plan = Self {
-            publication_profile: if version == 15 {
+            publication_profile: if version == 16 {
+                PublicationProfile::Build70450Db2OnlyV1
+            } else if version == 15 {
                 PublicationProfile::Build70450CompatibleCollisionV1
             } else if version == 14 {
                 PublicationProfile::Build70425CompatibleCollisionV1
@@ -416,6 +419,7 @@ impl Plan {
             && !self.is_available_terrain()
             && !self.is_v14()
             && !self.is_v15()
+            && !self.is_v16()
         {
             return Err("product_plan_build");
         }
@@ -441,6 +445,7 @@ impl Plan {
         }
         if (self.schema_catalog == SchemaCatalog::WowDbDefs70450V1 || self.build == 70450)
             && !self.is_v15()
+            && !self.is_v16()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -540,6 +545,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v16() {
+            return 16;
+        }
         if self.is_v15() {
             return 15;
         }
@@ -585,6 +593,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v16() {
+            return "forever-product-v16";
+        }
         if self.is_v15() {
             return "forever-product-v15";
         }
@@ -666,6 +677,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build70450 disabled-key DB2-only publication.
+    pub const fn is_v16(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450Db2OnlyV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -720,7 +739,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=15, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=16, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -830,3 +849,6 @@ pub(crate) mod v14_tests;
 
 #[cfg(test)]
 pub(crate) mod v15_tests;
+
+#[cfg(test)]
+mod v16_tests;
