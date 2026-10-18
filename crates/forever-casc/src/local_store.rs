@@ -189,6 +189,7 @@ impl Error {
 /// Product execution stage for opt-in first-source-failure diagnostics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProductDiagnosticPhase {
+    Db2,
     Startup,
     Placements,
     Models,
@@ -198,6 +199,7 @@ pub enum ProductDiagnosticPhase {
 impl ProductDiagnosticPhase {
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Db2 => "db2",
             Self::Startup => "startup",
             Self::Placements => "placements",
             Self::Models => "models",

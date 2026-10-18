@@ -22,6 +22,7 @@ use std::{
 mod anchors;
 mod capacity;
 mod compatible;
+pub(super) use compatible::product_diagnostic_for_db2;
 #[cfg(all(
     test,
     target_arch = "x86_64",

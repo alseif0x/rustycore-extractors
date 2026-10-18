@@ -4,6 +4,8 @@ use crate::{
     Error,
     plan::{CollisionStorage, Plan, Selection},
 };
+#[cfg(target_os = "linux")]
+use forever_casc::local_store::{ProductDiagnosticPhase, ProductDiagnosticRequestKind};
 use forever_casc::{
     cameras,
     gametables::catalog as gt,
@@ -257,6 +259,11 @@ fn extract_inner(
     scratch: Option<&Path>,
 ) -> Result<package::Summary, Error> {
     plan.validate()?;
+    let diagnostic_output = if plan.is_v16() {
+        std::env::var_os("FOREVER_PRODUCT_DIAGNOSTIC")
+    } else {
+        None
+    };
     let preflight = match (plan.collision_storage, scratch) {
         (CollisionStorage::Resident, None) => None,
         (CollisionStorage::Resident, Some(_)) => return Err("product_scratch_forbidden".into()),
@@ -272,6 +279,12 @@ fn extract_inner(
             )?)
         }
     };
+    let product_diagnostic = if plan.is_v16() {
+        disk::product_diagnostic_for_db2(client, diagnostic_output)?
+    } else {
+        None
+    };
+    let diagnostic_enabled = product_diagnostic.is_some();
     let (mut store, key_source) = match keys {
         Some(keys) => (
             open_with_keys(plan, client, keys.keyring)?,
@@ -279,6 +292,10 @@ fn extract_inner(
         ),
         None => (open(plan, client)?, None),
     };
+    if let Some(observer) = product_diagnostic {
+        store.set_product_diagnostic_observer(Some(observer));
+        store.set_product_diagnostic_phase(ProductDiagnosticPhase::Db2);
+    }
     // Validate complete Map and all selected projections before creating or
     // resuming package state. Retained compact facts remain charged by each
     // producer; source buffers and graph scratch are dropped here.
@@ -309,7 +326,7 @@ fn extract_inner(
     } else {
         Run::create(output, context, protected, package_limits)?
     };
-    execution::execute(
+    let result = execution::execute(
         plan,
         &mut store,
         output,
@@ -319,7 +336,11 @@ fn extract_inner(
             domain,
             context,
         },
-    )
+    );
+    if diagnostic_enabled {
+        store.finish_product_diagnostic(result.as_ref().err().map(|error| error.code), false);
+    }
+    result
 }
 
 #[cfg(target_os = "linux")]
@@ -514,7 +535,33 @@ fn db2(
         } else {
             DB2_FILE_BYTES
         };
-        let bytes = read(store, entry.id, cap)?;
+        #[cfg(target_os = "linux")]
+        let diagnostic_request = if plan.is_v16() {
+            store.begin_product_diagnostic_request(
+                ProductDiagnosticRequestKind::Db2Table,
+                Some(entry.id),
+            )
+        } else {
+            None
+        };
+        let file = match store.read_file_data_id_with_limit(entry.id, cap) {
+            Ok(file) => file,
+            Err(error) => {
+                #[cfg(target_os = "linux")]
+                if plan.is_v16() {
+                    store.record_product_diagnostic_failure(
+                        diagnostic_request,
+                        error,
+                        matches!(error, forever_casc::local_store::Error::InputChanged),
+                    );
+                }
+                return Err(Error::from(error.code()));
+            }
+        };
+        if file.bytes.is_empty() || file.bytes.len() as u64 > cap {
+            return Err("product_file_limit".into());
+        }
+        let bytes = file.bytes;
         total = total
             .checked_add(bytes.len() as u64)
             .filter(|n| *n <= DB2_TOTAL_BYTES)

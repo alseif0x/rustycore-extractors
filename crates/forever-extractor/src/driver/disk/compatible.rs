@@ -243,6 +243,18 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
     }
 }
 
+pub(in crate::driver) fn product_diagnostic_for_db2(
+    client_path: &Path,
+    output: Option<OsString>,
+) -> Result<Option<Box<dyn ProductDiagnosticObserver>>, Error> {
+    let Some(output) = output else {
+        return Ok(None);
+    };
+    let client = anchors::Chain::open(client_path, true)?;
+    let sink = ProductDiagnosticSink::at_path(&client, &PathBuf::from(output))?;
+    Ok(Some(Box::new(sink)))
+}
+
 impl Preflight {
     pub(in crate::driver) fn run_compatible_70425(
         &self,
