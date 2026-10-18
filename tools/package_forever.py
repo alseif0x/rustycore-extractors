@@ -51,7 +51,15 @@ TOOLCHAIN_NOTICES = {
 }
 TEST_SUFFIXES = {".py", ".rs", ".cpp", ".h", ".hpp", ".tsv", ".json", ".md"}
 DOCS = ("README.md", "docs/forever-product.md", "docs/forever-completion.md", "docs/forever-distribution.md", "docs/forever-ci.md", "docs/forever-windows-producer.md")
-OPTIONAL_CI_DOCS = ("docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md", "docs/forever-product-v14.md", "docs/forever-windows-membership.md", "docs/forever-windows-output.md")
+OPTIONAL_CI_DOCS = (
+    "docs/forever-linux-compatibility.md",
+    "docs/forever-terrain-v12.md",
+    "docs/forever-product-v14.md",
+    "docs/forever-windows-membership.md",
+    "docs/forever-windows-output.md",
+    "docs/forever-product-v20.md",
+    "docs/forever-key-investigation.md",
+)
 OPTIONAL_CI_SOURCE = ("tools/generate_forever_catalog.py",)
 OPTIONAL_PRODUCT_V15_SOURCE = (
     "contracts/forever-product-contract-v15.json",

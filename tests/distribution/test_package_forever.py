@@ -446,7 +446,7 @@ class DistributionTests(unittest.TestCase):
 
     def test_current_ci_optional_inputs_are_shipped_and_moved(self):
         names = m.OPTIONAL_CI_DOCS + m.OPTIONAL_CI_SOURCE
-        self.assertEqual(len(names), 6)
+        self.assertEqual(len(names), 8)
         self.assertTrue(set(names).issubset(m.selected_paths(REPO)))
         for name in names:
             path = self.source / name
@@ -481,16 +481,43 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(m.OPTIONAL_CI_DOCS, (
             "docs/forever-linux-compatibility.md", "docs/forever-terrain-v12.md",
             "docs/forever-product-v14.md", "docs/forever-windows-membership.md",
-            "docs/forever-windows-output.md"))
+            "docs/forever-windows-output.md", "docs/forever-product-v20.md",
+            "docs/forever-key-investigation.md"))
         self.assertEqual(m.OPTIONAL_CI_SOURCE, ("tools/generate_forever_catalog.py",))
         for name in ("source/docs/forever-linux-compatibility-extra.md",
                      "source/docs/forever-terrain-v12-extra.md",
                      "source/docs/forever-product-v14-extra.md",
-                     "source/docs/forever-windows-membership-extra.md",
-                     "source/docs/forever-windows-output-extra.md",
-                     "source/tools/generate_forever_catalog_extra.py"):
+                      "source/docs/forever-windows-membership-extra.md",
+                      "source/docs/forever-windows-output-extra.md",
+                      "source/docs/forever-product-v20-extra.md",
+                      "source/docs/forever-key-investigation-extra.md",
+                      "source/tools/generate_forever_catalog_extra.py"):
             with self.subTest(name=name):
                 self.assertFalse(m.bundle_path_allowed(name))
+
+    def test_v20_and_key_investigation_guides_are_optional_bundle_inputs(self):
+        names = (
+            "docs/forever-product-v20.md",
+            "docs/forever-key-investigation.md",
+        )
+        self.assertTrue(set(names).issubset(m.OPTIONAL_CI_DOCS))
+        self.assertTrue(set(names).issubset(m.selected_paths(REPO)))
+        for name in names:
+            path = self.source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(("authored synthetic guide:" + name + "\n").encode())
+            self.assertTrue(m.bundle_path_allowed("source/" + name))
+        self.build("v20-guides")
+        manifest = m.verify_archive(
+            self.root / "v20-guides/forever-extractor-linux.tar.gz"
+        )
+        for name in names:
+            with self.subTest(name=name):
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual(
+                    (self.root / "v20-guides/source" / name).read_bytes(),
+                    (self.source / name).read_bytes(),
+                )
 
     def test_optional_windows_qa_source_is_shipped_when_present(self):
         for name in m.OPTIONAL_WINDOWS_QA_SOURCE:

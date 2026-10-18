@@ -3598,3 +3598,116 @@ was started, modified or updated by this project's agents. The encrypted sources
 remain unresolved, and no revision of this project has demonstrated their
 decryption. No claim is made that keys exist or are obtainable, that decryption
 is possible, or that any component, full-world, runtime or release gate is met.
+
+## 2026-10-19 — build-70450 terrain v20 and deferred key-source investigation
+
+Commit `59b00ad` adds Linux-only build-70450 revision 20, publication profile
+`Build70450CompatibleTerrainV1`, reusing the available-terrain lower layer from
+`4ef4413`. It binds `wowdbdefs-70450-v1` to exactly the Terrain component mask
+(`8`), resident storage and disabled decryption; supplied keys are refused as in
+revisions 14–16. The DB2 output list must be empty because Map and the three
+liquid startup tables are read by fixed file data ID in the runner. Selection is
+`all-available-maps` or `map:<u32>`; per-tile selection, DB2, GameTables,
+cameras, collision, navigation, offmesh and map-domain scope are rejected.
+Build-70450 package contexts now admit exactly the implemented masks: DB2 (`1`,
+revisions 16/17), collision (`16`, revisions 15/18), DB2+GameTables+Cameras
+(`7`, revision 19) and Terrain (`8`, revision 20). The context test remains
+exhaustive over all u8 values and round-trips admitted contexts; build 70425 is
+unchanged and the 70374 rule is untouched.
+
+The contract records `coverage.authentication: producer_reported` and
+`complete_global_map_coverage_claim: false`. For a partially readable Map the
+coverage reports `full_ckey_verified=false` and
+`encoded_key_authenticated=true`; fewer available bytes than declared are not
+accepted as full CKey verification. The ADT/MAPS build-70450 wire-format equality
+is an explicit, unproven lower-layer assumption, not parity evidence. Revision
+20 has synthetic tests only and **no real-client evidence**: real reads remain
+deferred under the separate key investigation. No whole-world, runtime or
+release acceptance is claimed.
+
+The independent audit found no blocking issue. It checked a CLI scope matrix,
+reproduced the behavioral dispatch and coverage falsifications, and added two
+mutations of its own: removing v20 from the availability predicate and forcing
+the strict full-map runner; both were caught. It confirmed revisions 14–19
+unchanged and found no real-client, format-parity or runtime claim. The strict
+runner mutation does not compile as originally written; it only fails after
+adapting the assertions. All four new 70450 availability error codes are
+asserted by synthetic cases.
+
+Local validation recorded for `59b00ad`: workspace **3,763 passed, 0 failed,
+26 ignored across 60 suites**; contracts **411 passed**; distribution **166
+passed, 1 skipped**; fmt and Clippy `-D warnings` clean, including the
+`windows-msvc-seal-v2` feature lint for `x86_64-pc-windows-gnu`. No client,
+keys or network were accessed by this implementation work.
+
+### Source-only ROOT/ENCODING selection audit
+
+The operator-requested source audit compared our local selection with the
+pinned CASC reference's `CascRootFile_WoW.cpp`. Its predicates match: it skips
+the `0x100` root flag, skips low-violence `0x80` unless overridden, filters the
+audio-locale bit and applies the locale mask; the pinned enUS/esES constants
+match ours. Locale is selected when storage opens, not per file. The reference
+and our native bridge ignore the per-file locale argument. Our resolver orders
+rows by file data ID and audio bit, then takes the first eligible row whose CKey
+is central-present, with no locale fallback. For one resolved CKey, our reader
+tries ENCODING rows in order and may reach a later decodable encoding; the
+reference opens only one encoding per CKey. This is a possible difference in
+outcome, not in which ROOT variant is selected. Our reader rejects
+`archive_index >= 0x1000` as unsupported.
+
+The redacted evidence needed to distinguish locale selection from encryption is
+per ROOT row of the three blocked file IDs: block index, locale flags, effective
+content flags, audio bit and central-present status; for each resolved CKey, its
+ordered ENCODING rows with content size, encoding count and whether the index
+has a matching nine-byte prefix for each encoding; per-candidate rejection
+class and BLTE code; and the `.build.info` tags plus whether the client's own
+storage open used the default locale. No key values are part of this evidence.
+
+The open locale explanation remains a **hypothesis**. The earlier executed
+real-run plans declared locale `esES`; the investigator observed that the Map's
+esES variant remains encrypted while an enUS encoding exists but is not locally
+available. It is not established whether the three blocked IDs are inaccessible
+because our plans select a variant the client does not use, or because the
+selected variants are genuinely key-encrypted in every locale. Neither
+explanation is distinguished. The redacted ROOT/ENCODING row enumeration above
+is needed when real reads resume; this record does not claim the locale is wrong.
+
+### Key-investigation retry checkpoints (2026-10-19; investigator-reported)
+
+The reports are named only: directory
+`/home/joe/.local/share/rustycore-key-retry-70450-20261019-tvaa55c2/reports/`
+contains `retry-result.json` and `independent-checkpoint-20261019.json`; directory
+`/home/joe/.local/share/rustycore-rea-keyflow-70450-20261019-mhqytzbc/reports/`
+contains `all-cache-records.json`. No report payloads, key values, cache records,
+screenshots, memory contents or packet data are copied here.
+
+As relayed, the new build-70450 cache is 3,334,666 bytes with SHA-256
+`c02fc57d9bfc26ae50e45ed0c046f39d88a1f2dc20d92f7bf8383273de020758`, audited
+across 32,917 records. Of 133 key-table rows, 14 were classified as valid and
+119 as invalid; the 14 valid entries were already public. Their union with the
+previously read 69 static entries is 83; both blocked names have a latest-cache
+row but no valid key. BroadcastText had 92 rows, 29 with content, none with a
+key trailer; the base tail is 46 bytes per the 70450 catalogue, so no new
+observation was established. `.build.info` showed no KeyRing or Armadillo.
+Repeating isolated probes with the 83 already public entries still encountered
+the same two blocked names for Map, GameObjectDisplayInfo and model 7385605.
+The complete authenticated public list at revision
+`2394fc00248074b9624ebb6749934f7a41a5f09e` contains neither observed name.
+
+The Map has ten ROOT rows: the esES variant was encrypted and an enUS encoding
+was not locally available. GameObjectDisplayInfo and model 7385605 each had one
+ROOT row and one encoding, both encrypted. Fourteen historical minidumps were
+reviewed with no match; that observation covers only captured memory of older
+builds. REA inspected executable SHA-256
+`e87aaae6b4204cced22c05975d5378a7ea49e5560c171905c450fbc848e933c1`; `.text`
+entropy was 7.999825 bits per byte, consistent with a transformation but not
+proof of a packer. The instrumented run produced no candidates because provider
+capability was unavailable and the agent was rejected or the process ended.
+
+The guide `docs/forever-key-investigation.md` now carries methodology and
+redacted results, and the repository's `AGENTS.md` points to it for future
+key-source investigation. One client instance was started under the operator's
+pinned runtime for memory comparison. **No key was recovered, no decryption was
+demonstrated, nothing is unblocked, and the goal is not complete.** No claim is
+made that a needed key exists or is obtainable, that decryption is possible, or
+that any component, full-world, runtime or release gate is met.
