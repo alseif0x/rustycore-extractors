@@ -8,6 +8,9 @@ use std::{
 };
 
 const MAX_BYTES: u32 = 128 * 1024 * 1024;
+/// Default complete-file budget for an optional map WDT/tile probe.
+const DEFAULT_TILE_BYTES: u32 = 1024 * 1024;
+const MAX_MAP_TILES: usize = 4;
 const SOURCE_ORDER: [SourceKind; 4] = [
     SourceKind::GameObjectDisplayInfo,
     SourceKind::Map,
@@ -39,10 +42,13 @@ struct Options {
     locale: Locale,
     build: u32,
     max_bytes: u32,
+    map: Option<u32>,
+    tile_bytes: u32,
 }
 
 fn parse(args: Vec<OsString>) -> Result<Options, ()> {
-    let (mut client, mut locale, mut build, mut max_bytes) = (None, None, None, None);
+    let (mut client, mut locale, mut build, mut max_bytes, mut map, mut tile_bytes) =
+        (None, None, None, None, None, None);
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         let value = args.next().ok_or(())?;
@@ -64,11 +70,24 @@ fn parse(args: Vec<OsString>) -> Result<Options, ()> {
             "--max-bytes" if max_bytes.is_none() => {
                 max_bytes = Some(value.to_str().ok_or(())?.parse::<u32>().map_err(|_| ())?)
             }
+            "--map" if map.is_none() => {
+                map = Some(value.to_str().ok_or(())?.parse::<u32>().map_err(|_| ())?)
+            }
+            "--tile-bytes" if tile_bytes.is_none() => {
+                tile_bytes = Some(value.to_str().ok_or(())?.parse::<u32>().map_err(|_| ())?)
+            }
             _ => return Err(()),
         }
     }
     let max_bytes = max_bytes.unwrap_or(MAX_BYTES);
-    if max_bytes == 0 || max_bytes > MAX_BYTES {
+    let tile_bytes_was_set = tile_bytes.is_some();
+    let tile_bytes = tile_bytes.unwrap_or(DEFAULT_TILE_BYTES);
+    if max_bytes == 0
+        || max_bytes > MAX_BYTES
+        || tile_bytes == 0
+        || tile_bytes > MAX_BYTES
+        || (tile_bytes_was_set && map.is_none())
+    {
         return Err(());
     }
     Ok(Options {
@@ -76,6 +95,8 @@ fn parse(args: Vec<OsString>) -> Result<Options, ()> {
         locale: locale.ok_or(())?,
         build: build.ok_or(())?,
         max_bytes,
+        map,
+        tile_bytes,
     })
 }
 
@@ -108,6 +129,74 @@ impl SourceResult {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReadStatus {
+    status: &'static str,
+    code: Option<&'static str>,
+}
+impl ReadStatus {
+    const fn success() -> Self {
+        Self {
+            status: "success",
+            code: None,
+        }
+    }
+    const fn failure(code: &'static str) -> Self {
+        Self {
+            status: "error",
+            code: Some(code),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct MapReport {
+    map_id: u32,
+    status: &'static str,
+    code: Option<&'static str>,
+    wdt: Option<ReadStatus>,
+    tiles: Vec<ReadStatus>,
+}
+impl MapReport {
+    fn unresolved(map_id: u32, status: &'static str, code: &'static str) -> Self {
+        Self {
+            map_id,
+            status,
+            code: Some(code),
+            wdt: None,
+            tiles: Vec::new(),
+        }
+    }
+    fn render(&self) -> String {
+        let mut json = format!("{{\"map\":{},\"status\":\"{}\"", self.map_id, self.status);
+        if let Some(code) = self.code {
+            json.push_str(&format!(",\"code\":\"{code}\""));
+        }
+        json.push_str(",\"wdt\":");
+        json.push_str(
+            &self
+                .wdt
+                .map_or_else(|| "null".to_owned(), render_read_status),
+        );
+        json.push_str(",\"tiles\":[");
+        for (index, tile) in self.tiles.iter().enumerate() {
+            if index != 0 {
+                json.push(',');
+            }
+            json.push_str(&render_read_status(*tile));
+        }
+        json.push_str("]}");
+        json
+    }
+}
+
+fn render_read_status(status: ReadStatus) -> String {
+    match status.code {
+        Some(code) => format!("{{\"status\":\"{}\",\"code\":\"{code}\"}}", status.status),
+        None => format!("{{\"status\":\"{}\"}}", status.status),
+    }
+}
+
 #[derive(Debug)]
 struct Report {
     requested_build: u32,
@@ -116,6 +205,7 @@ struct Report {
     admission_code: &'static str,
     build_info_code: Option<&'static str>,
     sources: Vec<SourceResult>,
+    map: Option<MapReport>,
     exit_code: u8,
 }
 impl Report {
@@ -147,7 +237,11 @@ impl Report {
             }
             json.push('}');
         }
-        json.push_str("],\"paths_redacted\":true}");
+        json.push(']');
+        if let Some(map) = &self.map {
+            json.push_str(&format!(",\"map\":{}", map.render()));
+        }
+        json.push_str(",\"paths_redacted\":true}");
         json
     }
 }
@@ -255,11 +349,215 @@ fn probe_complete(
 }
 
 #[cfg(target_os = "linux")]
-fn source_results(store: &mut LocalStore, build: u32, max_bytes: u32) -> Vec<SourceResult> {
+fn read_map_rows(
+    source: &forever_casc::local_store::availability::AvailableSource,
+    build: u32,
+) -> Result<(), forever_db2::RecordError> {
+    use forever_db2::availability;
+
+    match build {
+        70374 => availability::read_map_70374(source).map(|_| ()),
+        70425 => availability::read_map_70425(source).map(|_| ()),
+        70450 => availability::read_map_70450(source).map(|_| ()),
+        _ => unreachable!(),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_vmap_map_rows(
+    source: &forever_casc::local_store::availability::AvailableSource,
+    build: u32,
+) -> Result<
+    forever_db2::availability::AvailableRecords<forever_db2::terrain_sources::VMapFields>,
+    forever_db2::RecordError,
+> {
+    use forever_db2::availability;
+
+    match build {
+        70374 => availability::read_vmap_maps_70374(source),
+        70425 => availability::read_vmap_maps_70425(source),
+        70450 => availability::read_vmap_maps_70450(source),
+        _ => unreachable!(),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn probe_map_source(
+    store: &mut LocalStore,
+    build: u32,
+    max_bytes: u32,
+    retain_for_map_probe: bool,
+) -> (
+    SourceResult,
+    Option<Result<forever_db2::availability::MaterializedVMapMaps, &'static str>>,
+) {
+    let name = SourceKind::Map.name();
+    let source = match read_available(
+        store,
+        build,
+        forever_casc::collision::world::MAP_FILE_DATA_ID,
+        max_bytes,
+    ) {
+        Ok(source) => source,
+        Err(code) => {
+            return (
+                SourceResult::failure(name, code, None),
+                retain_for_map_probe.then_some(Err(code)),
+            );
+        }
+    };
+    let crypto = Some(CryptoFacts {
+        full_ckey_verified: source.full_ckey_verified(),
+        encoded_key_authenticated: source.encoded_key_authenticated(),
+    });
+    if let Err(error) = read_map_rows(&source, build) {
+        let code = error.code();
+        return (
+            SourceResult::failure(name, code, crypto),
+            retain_for_map_probe.then_some(Err(code)),
+        );
+    }
+    if !retain_for_map_probe {
+        return (SourceResult::success(name, crypto), None);
+    }
+    let rows = match read_vmap_map_rows(&source, build) {
+        Ok(rows) => rows,
+        Err(error) => {
+            let code = error.code();
+            return (SourceResult::failure(name, code, crypto), Some(Err(code)));
+        }
+    };
+    match rows.materialize() {
+        Ok(rows) => (SourceResult::success(name, crypto), Some(Ok(rows))),
+        Err(error) => {
+            let code = error.code();
+            (SourceResult::failure(name, code, crypto), Some(Err(code)))
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn map_not_resolved(map_id: u32, status: &'static str, code: &'static str) -> MapReport {
+    MapReport::unresolved(map_id, status, code)
+}
+
+#[cfg(target_os = "linux")]
+fn probe_map_reads(
+    store: &mut LocalStore,
+    map_id: u32,
+    tile_bytes: u32,
+    rows: Result<forever_db2::availability::MaterializedVMapMaps, &'static str>,
+) -> MapReport {
+    let rows = match rows {
+        Ok(rows) => rows,
+        Err(code) => return map_not_resolved(map_id, "error", code),
+    };
+    let direct_rows = rows.direct_records();
+    let Some(row) = direct_rows.iter().find(|row| row.id == map_id) else {
+        if rows.rows().iter().any(|row| row.id == map_id) {
+            return map_not_resolved(map_id, "error", "collision_plan_copied_selection");
+        }
+        return map_not_resolved(map_id, "not_present", "map_not_present");
+    };
+    if row.fields.wdt_file_data_id == 0 {
+        return map_not_resolved(map_id, "inactive", "map_inactive");
+    }
+    let maps = match forever_casc::collision::plan::Maps::from_materialized_selection(
+        rows.rows(),
+        direct_rows.len(),
+        forever_casc::collision::plan::MapSelection::MapAndAncestors(map_id),
+        Default::default(),
+    ) {
+        Ok(maps) => maps,
+        Err(error) => return map_not_resolved(map_id, "error", error.code()),
+    };
+    let Some(map) = maps.get(map_id) else {
+        return map_not_resolved(map_id, "not_present", "map_not_present");
+    };
+
+    let limits = forever_casc::collision::run::Limits::default();
+    let wdt_cap = tile_bytes.min(limits.max_file_bytes.min(limits.wdt.max_wdt_bytes) as u32);
+    let wdt_file =
+        match store.read_file_data_id_with_limit(map.wdt_file_data_id(), u64::from(wdt_cap)) {
+            Ok(file) => file,
+            Err(error) => {
+                return MapReport {
+                    map_id,
+                    status: "resolved",
+                    code: None,
+                    wdt: Some(ReadStatus::failure(error.code())),
+                    tiles: Vec::new(),
+                };
+            }
+        };
+    let wdt = match forever_casc::collision::plan::Wdt::parse(&wdt_file.bytes, limits.wdt) {
+        Ok(wdt) => wdt,
+        Err(error) => {
+            return MapReport {
+                map_id,
+                status: "resolved",
+                code: None,
+                wdt: Some(ReadStatus::failure(error.code())),
+                tiles: Vec::new(),
+            };
+        }
+    };
+    let mut requests = match wdt.tiles(map) {
+        Ok(requests) => requests,
+        Err(error) => {
+            return MapReport {
+                map_id,
+                status: "resolved",
+                code: None,
+                wdt: Some(ReadStatus::failure(error.code())),
+                tiles: Vec::new(),
+            };
+        }
+    };
+    let tile_cap = tile_bytes.min(limits.max_file_bytes.min(limits.objects.max_input_bytes) as u32);
+    let mut name_buffer = [0; forever_casc::collision::plan::MAX_NAME_BYTES];
+    let mut tiles = Vec::with_capacity(MAX_MAP_TILES);
+    for _ in 0..MAX_MAP_TILES {
+        let Some(request) = requests.next(&mut name_buffer) else {
+            break;
+        };
+        let status = match request.target {
+            forever_casc::collision::plan::TileTarget::FileDataId(id) => {
+                match store.read_file_data_id_with_limit(id, u64::from(tile_cap)) {
+                    Ok(_) => ReadStatus::success(),
+                    Err(error) => ReadStatus::failure(error.code()),
+                }
+            }
+            forever_casc::collision::plan::TileTarget::Name(_) => {
+                ReadStatus::failure("collision_tile_target_not_file_data_id")
+            }
+        };
+        tiles.push(status);
+    }
+    MapReport {
+        map_id,
+        status: "resolved",
+        code: None,
+        wdt: Some(ReadStatus::success()),
+        tiles,
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn source_results(
+    store: &mut LocalStore,
+    build: u32,
+    max_bytes: u32,
+    map_requested: bool,
+) -> (
+    Vec<SourceResult>,
+    Option<Result<forever_db2::availability::MaterializedVMapMaps, &'static str>>,
+) {
     use forever_casc::collision::{gameobjects, world};
     use forever_db2::{availability, terrain_sources};
 
     let mut sources = Vec::with_capacity(SOURCE_ORDER.len());
+    let mut map_rows = None;
     for source in SOURCE_ORDER {
         let result = match source {
             SourceKind::GameObjectDisplayInfo => probe_available(
@@ -275,19 +573,11 @@ fn source_results(store: &mut LocalStore, build: u32, max_bytes: u32) -> Vec<Sou
                     _ => unreachable!(),
                 },
             ),
-            SourceKind::Map => probe_available(
-                store,
-                build,
-                source.name(),
-                world::MAP_FILE_DATA_ID,
-                max_bytes,
-                |source| match build {
-                    70374 => availability::read_map_70374(source).map(|_| ()),
-                    70425 => availability::read_map_70425(source).map(|_| ()),
-                    70450 => availability::read_map_70450(source).map(|_| ()),
-                    _ => unreachable!(),
-                },
-            ),
+            SourceKind::Map => {
+                let (result, rows) = probe_map_source(store, build, max_bytes, map_requested);
+                map_rows = rows;
+                result
+            }
             SourceKind::LiquidMaterial => probe_complete(
                 store,
                 source.name(),
@@ -315,7 +605,7 @@ fn source_results(store: &mut LocalStore, build: u32, max_bytes: u32) -> Vec<Sou
         };
         sources.push(result);
     }
-    sources
+    (sources, map_rows)
 }
 
 #[cfg(target_os = "linux")]
@@ -330,6 +620,9 @@ fn run(options: Options) -> Report {
                 admission_code: "unsupported_client",
                 build_info_code: None,
                 sources: Vec::new(),
+                map: options.map.map(|map_id| {
+                    MapReport::unresolved(map_id, "not_attempted", "unsupported_client")
+                }),
                 exit_code: 3,
             };
         }
@@ -341,6 +634,9 @@ fn run(options: Options) -> Report {
                 admission_code: error.code(),
                 build_info_code: None,
                 sources: Vec::new(),
+                map: options
+                    .map
+                    .map(|map_id| MapReport::unresolved(map_id, "not_attempted", error.code())),
                 exit_code: error.exit_code(),
             };
         }
@@ -355,18 +651,36 @@ fn run(options: Options) -> Report {
                 admission_code: "ok",
                 build_info_code: Some(error.code()),
                 sources: Vec::new(),
+                map: options
+                    .map
+                    .map(|map_id| MapReport::unresolved(map_id, "not_attempted", error.code())),
                 exit_code: error.exit_code(),
             };
         }
     };
     let resolved_build = store.build().build;
+    let (sources, map_rows) = source_results(
+        &mut store,
+        resolved_build,
+        options.max_bytes,
+        options.map.is_some(),
+    );
+    let map = options.map.map(|map_id| {
+        probe_map_reads(
+            &mut store,
+            map_id,
+            options.tile_bytes,
+            map_rows.unwrap_or(Err("map_source_not_available")),
+        )
+    });
     Report {
         requested_build: options.build,
         resolved_build: Some(resolved_build),
         admitted: true,
         admission_code: "ok",
         build_info_code: Some("ok"),
-        sources: source_results(&mut store, resolved_build, options.max_bytes),
+        sources,
+        map,
         exit_code: 0,
     }
 }
@@ -381,6 +695,9 @@ fn run(options: Options) -> Report {
         admission_code: error.code(),
         build_info_code: None,
         sources: Vec::new(),
+        map: options
+            .map
+            .map(|map_id| MapReport::unresolved(map_id, "not_attempted", error.code())),
         exit_code: error.exit_code(),
     }
 }
@@ -419,14 +736,20 @@ mod tests {
                 locale: Locale::EsEs,
                 build: 70450,
                 max_bytes: 1024,
+                map: None,
+                tile_bytes: DEFAULT_TILE_BYTES,
             }
         );
-        assert_eq!(
-            parse(args("--client c --locale enUS --build 70374"))
-                .unwrap()
-                .max_bytes,
-            MAX_BYTES
-        );
+        let defaults = parse(args("--client c --locale enUS --build 70374")).unwrap();
+        assert_eq!(defaults.max_bytes, MAX_BYTES);
+        assert_eq!(defaults.map, None);
+        assert_eq!(defaults.tile_bytes, DEFAULT_TILE_BYTES);
+        let mapped = parse(args(
+            "--client c --locale enUS --build 70450 --map 389 --tile-bytes 4096",
+        ))
+        .unwrap();
+        assert_eq!(mapped.map, Some(389));
+        assert_eq!(mapped.tile_bytes, 4096);
     }
 
     #[test]
@@ -437,6 +760,11 @@ mod tests {
             "--client c --locale enUS --build 70450 --max-bytes 1 --max-bytes 2",
             "--client c --locale enUS --build 70450 --unknown x",
             "--client c --locale enUS --build 99999",
+            "--client c --locale enUS --build 70450 --map invalid",
+            "--client c --locale enUS --build 70450 --map 4294967296",
+            "--client c --locale enUS --build 70450 --map 389 --map 390",
+            "--client c --locale enUS --build 70450 --tile-bytes 1024",
+            "--client c --locale enUS --build 70450 --map 389 --tile-bytes 134217729",
             "--client c --locale enUS --build 70450 --max-bytes 0",
             "--client c --locale enUS --build 70450 --max-bytes 134217729",
             "--client c --locale zzZZ --build 70450",
@@ -471,6 +799,13 @@ mod tests {
                     }
                 })
                 .collect(),
+            map: Some(MapReport {
+                map_id: 389,
+                status: "resolved",
+                code: None,
+                wdt: Some(ReadStatus::failure("local_store_no_verified_encoding")),
+                tiles: vec![ReadStatus::success()],
+            }),
             exit_code: 0,
         };
         let json = report.render();
@@ -488,6 +823,13 @@ mod tests {
         assert!(json.contains("\"code\":\"local_store_no_verified_encoding\""));
         assert!(json.contains("\"encoded_key_authenticated\":true"));
         assert!(!json.contains("\"file_data_id\""));
+        assert!(json.contains(
+            "\"map\":{\"map\":389,\"status\":\"resolved\",\"wdt\":{\"status\":\"error\",\"code\":\"local_store_no_verified_encoding\"},\"tiles\":[{\"status\":\"success\"}]}"
+        ));
+        assert_eq!(
+            MapReport::unresolved(777, "not_present", "map_not_present").render(),
+            "{\"map\":777,\"status\":\"not_present\",\"code\":\"map_not_present\",\"wdt\":null,\"tiles\":[]}"
+        );
     }
 
     #[test]
