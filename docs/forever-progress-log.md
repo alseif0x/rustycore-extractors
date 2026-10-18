@@ -3361,3 +3361,99 @@ surfaces include contract/Rust CLI tests
 the workflow check (`.github/workflows/forever-rust.yml:113`), package inclusion
 (`tools/package_forever.py:54`) and documentation. These are compatibility-gap
 categories, not implemented gates or acceptance evidence.
+
+## 2026-10-18 — Forever 70450 product admission, terminal source cause, and validation scope
+
+The `forever` branch carries the following commits locally, pushed separately:
+`239bc10` (the earlier admission-refusal entry), `442fefd` (build-70450 schema
+catalogue, admission entry and store bootstrap), `df44af1` (product v15 Linux
+build-70450 compatible-VMaps profile), `d841257` (independent-audit fixes),
+`6aaeef1` (pure-Rust source probe), `ebb6ec3` (source-probe map mode), and
+`b4022df` (opt-in terminal-source diagnostic).
+
+The full 14-step CI-equivalent acceptance runner was executed once, exclusively
+on `d841257`, and all 14 steps exited 0: fmt, clippy `-D warnings`, workspace
+tests in debug and release, bins in debug and release, source contracts,
+contracts, distribution, `forever-db2-inspect` build, metadata CLI, synthetic,
+provenance, and conformance. At that revision each workspace test profile
+reported 3,655 passed, 0 failed and 26 ignored across 54 targets. Its other
+reported results were source contracts 431 OK (2 skipped), contracts 383 OK,
+distribution 166 OK (1 skipped), synthetic 389 OK (156 skipped), metadata CLI
+5 OK, conformance 9 OK, and provenance exit 0.
+
+Later changes were validated on their own surfaces, not by rerunning that
+campaign. On `b4022df`, fmt and clippy `-D warnings` were clean; workspace tests
+reported 3,664 passed, 0 failed and 26 ignored across 55 targets; contracts
+reported 383 OK; distribution 166 OK (1 skipped); source contracts 431 OK
+(2 skipped); synthetic 389 OK (156 skipped); provenance exited 0; and
+conformance reported 9 OK. The 14-step campaign belongs to `d841257` only and
+is not claimed for later revisions.
+
+The operator confirmed the real client root as
+`/home/joe/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft`,
+product `wow_classic_beta`, declared version `1.60.1.70450`. Admission was
+proved by `forever-extractor inspect --plan <v15 all-available-maps plan>
+--client '<client root>'`: exit 0 with `status:admitted`, build 70450, schema
+catalogue `wowdbdefs-70450-v1`, collision source profile
+`linux70450-compatible-gnu15-v2`, `coverage_authentication:producer_reported`,
+`whole_client_map_coverage:false`, and `full_extractor_complete:false`. Nothing
+was created inside the client.
+
+Real bounded extraction was not achieved. With canonical 1 MiB per-record
+budgets, the run stopped at `collision_payload_limit`; with realistic budgets,
+it stopped at `local_store_no_verified_encoding`; no artifact was published.
+Eleven distinct single-map domains—`389, 34, 36, 43, 48, 33, 129, 230, 289,
+349, 209`—failed identically, so the observed failure was not map-specific.
+
+With `FOREVER_PRODUCT_DIAGNOSTIC=<absolute path outside the client>`, the
+product's opt-in diagnostic recorded the following terminal source request
+verbatim:
+
+```json
+{"phase":"startup","request_kind":"gameobject_model","file_data_id":7385605,"ordinal":3765,"typed_cause":{"variant":"NoLocalEncoding","candidate_failures":{"missing":0,"incomplete":0,"encrypted":1,"corrupt":0,"unsupported":0}},"code":"local_store_no_verified_encoding","guards_observed":false,"tolerated_absences":{"db2_table":0,"wdt":0,"tile_adt":0,"root_m2":0,"wmo_root":0,"wmo_group":0,"child":0,"gameobject_model":7,"other":0}}
+```
+
+This measures a gameobject-model request during `startup`. Its typed cause is
+`NoLocalEncoding`: exactly one encrypted candidate and zero missing, incomplete,
+corrupt or unsupported candidates. `crates/forever-casc/src/local_store/io.rs:526-527`
+maps BLTE `MissingKey` and `EncryptedUnsupported` rejections to the encrypted
+candidate, so the source requires a key that the disabled-key plan cannot
+supply. The seven preceding tolerated absences were exact `MissingFile`
+omissions already admitted by the compatible collector contract. The selected
+map does not change this outcome: startup walks every GameObjectDisplayInfo row
+before returning. No census of encrypted sources was run, deliberately; this
+record is the first propagated cause only.
+
+### Corrections
+
+Correction to the earlier repository note that attributed the real-extraction
+failure to model resolution as a fact: the phase and request are now measured as
+above, and that earlier attribution is superseded by this measured record; the
+earlier note is retained.
+
+The `raw staging large only` control's exit code was never captured: the shell
+piped the extractor through `head`, so the observed `0` was the pipeline's exit
+code. Its retained evidence is the failure envelope only. The laboratory
+evidence file was corrected; the control was not rerun.
+
+`local_store_no_verified_encoding` is a generic public code. The retained
+`NoLocalEncoding(CandidateFailures)` counters distinguish encryption from
+absence, incompleteness, corruption and unsupported variants; the generic code
+alone does not.
+
+### Boundaries and open items
+
+No key material was supplied or derived; no TACT, CDN or launcher access
+occurred; and the client was neither updated nor modified. Changing the client
+would change the admitted collection. No acceptance from 70374, 70425 or 70338
+transfers to 70450; no plan build number was changed to bypass admission; and
+`full_extractor_complete` remains false. Outputs, scratch directories and
+diagnostics remain outside every checkout and the client; failed attempts and
+their envelopes are retained.
+
+The Linux complete-extraction objective remains open. Resolving this failure
+class needs either key material for the build or an explicit, versioned policy
+that records an encrypted mandatory source as unavailable without claiming
+completeness. Neither is authorized; the generic error must not be relaxed into
+an omission to obtain a green output. No extraction, runtime, release or
+full-world acceptance is claimed.
