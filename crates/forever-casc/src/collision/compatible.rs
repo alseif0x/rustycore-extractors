@@ -357,6 +357,7 @@ impl State {
         e: &mut Extractor<'_, '_, L>,
         class: Class,
         input: InputRef<'_>,
+        request_kind: crate::local_store::ProductDiagnosticRequestKind,
     ) -> Result<Outcome, Error> {
         let p = names::Prepared::new(input, class)?;
         e.store.verify_unchanged().map_err(Error::Store)?;
@@ -366,7 +367,8 @@ impl State {
         let at = self.begin(e, class, &p)?;
         let route =
             p.id.map_or(InputRef::LogicalName(p.source()), InputRef::FileDataId);
-        let Some((bytes, source)) = e.read_capped_policy(route, e.limits.max_file_bytes, true)?
+        let Some((bytes, source)) =
+            e.read_capped_policy(route, e.limits.max_file_bytes, true, request_kind)?
         else {
             return self.omit(at, Omission::MissingRoot, None);
         };
@@ -389,8 +391,12 @@ impl State {
             });
         }
         self.room(e)?;
-        let Some((bytes, source)) =
-            e.read_capped_policy(InputRef::FileDataId(id), e.limits.max_file_bytes, true)?
+        let Some((bytes, source)) = e.read_capped_policy(
+            InputRef::FileDataId(id),
+            e.limits.max_file_bytes,
+            true,
+            crate::local_store::ProductDiagnosticRequestKind::GameObjectModel,
+        )?
         else {
             return Ok(GameObjectOutcome::Omitted(Omission::MissingRoot));
         };
@@ -455,7 +461,12 @@ impl State {
                 doodads::Target::FileDataId(id) => InputRef::FileDataId(id),
                 doodads::Target::Name(n) => InputRef::LogicalName(n),
             };
-            let outcome = self.obtain(e, Class::M2, input)?;
+            let outcome = self.obtain(
+                e,
+                Class::M2,
+                input,
+                crate::local_store::ProductDiagnosticRequestKind::Child,
+            )?;
             let cap = e.vector_reservation_cap(&bindings, 1, false)?;
             reserve(&mut bindings, 1, &mut e.live, cap)?;
             let disposition = match outcome {
@@ -484,8 +495,12 @@ impl State {
         for id in root.detailed_group_ids() {
             // Apply input/sentinel validation before exact MissingFile handling.
             names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
-            let Some((group, fact)) =
-                e.read_capped_policy(InputRef::FileDataId(id), e.limits.max_file_bytes, true)?
+            let Some((group, fact)) = e.read_capped_policy(
+                InputRef::FileDataId(id),
+                e.limits.max_file_bytes,
+                true,
+                crate::local_store::ProductDiagnosticRequestKind::WmoGroup,
+            )?
             else {
                 for g in &groups {
                     e.release(g.capacity());
@@ -771,7 +786,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
                 ModelRequest::M2(i) => (Class::M2, i),
                 ModelRequest::Wmo(i) => (Class::Wmo, i),
             };
-            let result = self.state.obtain(&mut self.inner.inner, class, input)?;
+            let request_kind = match class {
+                Class::M2 => crate::local_store::ProductDiagnosticRequestKind::RootM2,
+                Class::Wmo => crate::local_store::ProductDiagnosticRequestKind::WmoRoot,
+            };
+            let result = self
+                .state
+                .obtain(&mut self.inner.inner, class, input, request_kind)?;
             if let Outcome::Present(h) = result {
                 self.inner.inner.record_request(h)?;
             }
@@ -830,6 +851,12 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     pub(in crate::collision) const fn target(&self) -> Target {
         self.target
     }
+    pub(in crate::collision) fn set_product_diagnostic_phase(
+        &mut self,
+        phase: crate::local_store::ProductDiagnosticPhase,
+    ) {
+        self.inner.inner.set_product_diagnostic_phase(phase);
+    }
     pub(in crate::collision) const fn native_order(&self) -> bool {
         self.state.native_order
     }
@@ -847,6 +874,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
         &mut self,
         input: InputRef<'_>,
         cap: usize,
+        request_kind: crate::local_store::ProductDiagnosticRequestKind,
     ) -> Result<Option<(Vec<u8>, SourceFacts)>, payload::CollectorError> {
         let result = (|| {
             let e = &mut self.inner.inner;
@@ -854,7 +882,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
             if let InputRef::FileDataId(id) = input {
                 names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
             }
-            let value = e.read_capped_policy(input, cap, true)?;
+            let value = e.read_capped_policy(input, cap, true, request_kind)?;
             if let Some((bytes, _)) = &value {
                 e.external_sources = add(e.external_sources, bytes.capacity())?;
             }

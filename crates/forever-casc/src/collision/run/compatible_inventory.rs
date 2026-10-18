@@ -486,6 +486,7 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
         let Some(bytes) = session.run_read_world_source(
             InputRef::FileDataId(map.wdt_file_data_id()),
             limits.max_file_bytes.min(limits.wdt.max_wdt_bytes),
+            crate::local_store::ProductDiagnosticRequestKind::Wdt,
         )?
         else {
             if capture_coverage {
@@ -555,6 +556,7 @@ fn execute<L: LiquidLookup + ?Sized, S: Sink>(
                 let Some(bytes) = session.run_read_world_source(
                     target,
                     limits.max_file_bytes.min(limits.objects.max_input_bytes),
+                    crate::local_store::ProductDiagnosticRequestKind::TileAdt,
                 )?
                 else {
                     super::bump(&mut missing_object_adts, 1)?;

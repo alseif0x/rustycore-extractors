@@ -70,6 +70,15 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Context<'s, 'l, L> {
         profile(self.collector.target(), self.collector.native_order())
     }
 
+    /// Switch the enclosing product diagnostic stage without releasing this
+    /// startup owner or changing its collector/source guards.
+    pub fn set_product_diagnostic_phase(
+        &mut self,
+        phase: crate::local_store::ProductDiagnosticPhase,
+    ) {
+        self.collector.set_product_diagnostic_phase(phase);
+    }
+
     pub fn data(&self) -> Result<&Data, Error> {
         self.collector.facts()?;
         Ok(&self.data)

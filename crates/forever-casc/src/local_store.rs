@@ -185,6 +185,109 @@ impl Error {
         }
     }
 }
+
+/// Product execution stage for opt-in first-source-failure diagnostics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProductDiagnosticPhase {
+    Startup,
+    Placements,
+    Models,
+    Assembly,
+    Other,
+}
+impl ProductDiagnosticPhase {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Startup => "startup",
+            Self::Placements => "placements",
+            Self::Models => "models",
+            Self::Assembly => "assembly",
+            Self::Other => "other",
+        }
+    }
+}
+
+/// Client source class supplied by the product call site.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProductDiagnosticRequestKind {
+    Db2Table,
+    Wdt,
+    TileAdt,
+    RootM2,
+    WmoRoot,
+    WmoGroup,
+    Child,
+    GameObjectModel,
+    Other,
+}
+impl ProductDiagnosticRequestKind {
+    pub const COUNT: usize = 9;
+    pub const ALL: [Self; Self::COUNT] = [
+        Self::Db2Table,
+        Self::Wdt,
+        Self::TileAdt,
+        Self::RootM2,
+        Self::WmoRoot,
+        Self::WmoGroup,
+        Self::Child,
+        Self::GameObjectModel,
+        Self::Other,
+    ];
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Db2Table => "db2_table",
+            Self::Wdt => "wdt",
+            Self::TileAdt => "tile_adt",
+            Self::RootM2 => "root_m2",
+            Self::WmoRoot => "wmo_root",
+            Self::WmoGroup => "wmo_group",
+            Self::Child => "child",
+            Self::GameObjectModel => "gameobject_model",
+            Self::Other => "other",
+        }
+    }
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Db2Table => 0,
+            Self::Wdt => 1,
+            Self::TileAdt => 2,
+            Self::RootM2 => 3,
+            Self::WmoRoot => 4,
+            Self::WmoGroup => 5,
+            Self::Child => 6,
+            Self::GameObjectModel => 7,
+            Self::Other => 8,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProductDiagnosticRequest {
+    pub phase: ProductDiagnosticPhase,
+    pub request_kind: ProductDiagnosticRequestKind,
+    pub file_data_id: Option<u32>,
+    pub ordinal: u32,
+}
+
+/// Optional product-owned observer. LocalStore does no diagnostic formatting or
+/// output when no observer is installed.
+pub trait ProductDiagnosticObserver {
+    fn set_phase(&mut self, phase: ProductDiagnosticPhase);
+    fn begin_request(
+        &mut self,
+        request_kind: ProductDiagnosticRequestKind,
+        file_data_id: Option<u32>,
+    ) -> Option<ProductDiagnosticRequest>;
+    fn tolerated_absence(&mut self, request: ProductDiagnosticRequest);
+    fn source_failure(
+        &mut self,
+        request: ProductDiagnosticRequest,
+        cause: Error,
+        guards_observed: bool,
+    );
+    fn finish(&mut self, terminal_code: Option<&'static str>, source_guard_changed: bool);
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.code())
@@ -232,6 +335,7 @@ pub struct LocalStore {
     stats: Stats,
     names: Option<EnabledNames>,
     keys: Option<crate::keys::Keyring>,
+    product_diagnostic: Option<Box<dyn ProductDiagnosticObserver>>,
 }
 
 #[derive(Clone, Copy)]
@@ -255,6 +359,50 @@ impl LocalStore {
     }
     pub fn build(&self) -> &AdmittedBuild {
         &self.build
+    }
+    pub fn set_product_diagnostic_observer(
+        &mut self,
+        observer: Option<Box<dyn ProductDiagnosticObserver>>,
+    ) {
+        self.product_diagnostic = observer;
+    }
+    pub fn set_product_diagnostic_phase(&mut self, phase: ProductDiagnosticPhase) {
+        if let Some(observer) = &mut self.product_diagnostic {
+            observer.set_phase(phase);
+        }
+    }
+    pub fn begin_product_diagnostic_request(
+        &mut self,
+        request_kind: ProductDiagnosticRequestKind,
+        file_data_id: Option<u32>,
+    ) -> Option<ProductDiagnosticRequest> {
+        self.product_diagnostic
+            .as_mut()?
+            .begin_request(request_kind, file_data_id)
+    }
+    pub fn record_product_diagnostic_failure(
+        &mut self,
+        request: Option<ProductDiagnosticRequest>,
+        cause: Error,
+        guards_observed: bool,
+    ) {
+        if let (Some(observer), Some(request)) = (&mut self.product_diagnostic, request) {
+            observer.source_failure(request, cause, guards_observed);
+        }
+    }
+    pub fn record_product_diagnostic_absence(&mut self, request: Option<ProductDiagnosticRequest>) {
+        if let (Some(observer), Some(request)) = (&mut self.product_diagnostic, request) {
+            observer.tolerated_absence(request);
+        }
+    }
+    pub fn finish_product_diagnostic(
+        &mut self,
+        terminal_code: Option<&'static str>,
+        source_guard_changed: bool,
+    ) {
+        if let Some(observer) = &mut self.product_diagnostic {
+            observer.finish(terminal_code, source_guard_changed);
+        }
     }
     pub const fn stats(&self) -> Stats {
         self.stats
@@ -508,6 +656,7 @@ impl LocalStore {
             stats,
             names: None,
             keys,
+            product_diagnostic: None,
         })
     }
 

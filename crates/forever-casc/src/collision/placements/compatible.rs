@@ -259,11 +259,12 @@ impl<'c, 's, 'l, L: LiquidLookup + ?Sized, S: Sink> Session<'c, 's, 'l, L, S> {
         &mut self,
         input: InputRef<'_>,
         cap: usize,
+        request_kind: crate::local_store::ProductDiagnosticRequestKind,
     ) -> Result<Option<Vec<u8>>, Error<S::Error>> {
         let result = self.failed.map_or_else(
             || {
                 self.collector
-                    .read_world_source(input, cap)
+                    .read_world_source(input, cap, request_kind)
                     .map(|v| v.map(|v| v.0))
                     .map_err(Error::from)
             },

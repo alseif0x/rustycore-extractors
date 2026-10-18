@@ -52,6 +52,19 @@ pub enum InputRef<'a> {
     FileDataId(u32),
     LogicalName(&'a [u8]),
 }
+fn diagnostic_kind_for_input(input: InputRef<'_>) -> local_store::ProductDiagnosticRequestKind {
+    match input {
+        InputRef::FileDataId(id)
+            if id == gameobjects::TABLE_FILE_DATA_ID
+                || id == world::MAP_FILE_DATA_ID
+                || id == world::MATERIAL_FILE_DATA_ID
+                || id == world::TYPE_FILE_DATA_ID =>
+        {
+            local_store::ProductDiagnosticRequestKind::Db2Table
+        }
+        _ => local_store::ProductDiagnosticRequestKind::Other,
+    }
+}
 #[derive(Clone, Copy)]
 pub enum ModelRequest<'a> {
     M2(InputRef<'a>),
@@ -505,6 +518,12 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub const fn request_calls(&self) -> usize {
         self.request_calls
     }
+    pub(in crate::collision) fn set_product_diagnostic_phase(
+        &mut self,
+        phase: local_store::ProductDiagnosticPhase,
+    ) {
+        self.store.set_product_diagnostic_phase(phase);
+    }
     fn begin_request(&mut self) -> Result<(), Error> {
         self.ready()?;
         if self.request_calls >= self.limits.max_requests {
@@ -749,7 +768,11 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             }
             let memory_limit = add(self.store.stats().resident_bytes, self.available_total()?)?;
             self.reads += 1;
-            let file = match target {
+            let diagnostic_request = self.store.begin_product_diagnostic_request(
+                local_store::ProductDiagnosticRequestKind::Db2Table,
+                Some(id),
+            );
+            let result = match target {
                 target::Target::Build70374 => {
                     self.store.read_file_data_id_available_with_external_budget(
                         id,
@@ -774,8 +797,20 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                         self.live,
                         memory_limit,
                     ),
-            }
-            .map_err(Error::from_available)?;
+            };
+            let file = match result {
+                Ok(file) => file,
+                Err(error) => {
+                    if let local_store::availability::Error::Store(store_error) = error {
+                        self.store.record_product_diagnostic_failure(
+                            diagnostic_request,
+                            store_error,
+                            matches!(store_error, local_store::Error::InputChanged),
+                        );
+                    }
+                    return Err(Error::from_available(error));
+                }
+            };
             let declared = usize::try_from(file.declared_bytes()).map_err(|_| Error::Limit)?;
             if declared > cap {
                 return Err(Error::Limit);
@@ -1080,8 +1115,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         input: InputRef<'_>,
         requested_cap: usize,
     ) -> Result<(Vec<u8>, SourceFacts), Error> {
-        self.read_capped_policy(input, requested_cap, false)?
-            .ok_or(Error::Store(local_store::Error::MissingFile))
+        self.read_capped_policy(
+            input,
+            requested_cap,
+            false,
+            diagnostic_kind_for_input(input),
+        )?
+        .ok_or(Error::Store(local_store::Error::MissingFile))
     }
     // Only compatible model requests and its closed WDT/own-ADT world seam
     // select allow_missing; required sources retain the strict sticky adapter.
@@ -1090,6 +1130,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         input: InputRef<'_>,
         requested_cap: usize,
         allow_missing: bool,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
     ) -> Result<Option<(Vec<u8>, SourceFacts)>, Error> {
         if self.reads >= self.limits.max_reads {
             return Err(Error::Limit);
@@ -1107,6 +1148,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         // Identical to the resident ceiling on the original route; the explicit
         // spool route additionally partitions current scratch from descriptors.
         let memory_limit = add(self.store.stats().resident_bytes, self.available_total()?)?;
+        let diagnostic_request = self.store.begin_product_diagnostic_request(
+            diagnostic_kind,
+            match input {
+                InputRef::FileDataId(id) => Some(id),
+                InputRef::LogicalName(_) => None,
+            },
+        );
         let file = match input {
             InputRef::FileDataId(id) => self.store.read_file_data_id_with_external_budget(
                 id,
@@ -1121,10 +1169,24 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         };
         let file = match file {
             Err(local_store::Error::MissingFile) if allow_missing => {
-                self.store.verify_unchanged().map_err(Error::Store)?;
+                if let Err(error) = self.store.verify_unchanged() {
+                    self.store
+                        .record_product_diagnostic_failure(diagnostic_request, error, true);
+                    return Err(Error::Store(error));
+                }
+                self.store
+                    .record_product_diagnostic_absence(diagnostic_request);
                 return Ok(None);
             }
-            result => result.map_err(Error::Store)?,
+            Err(error) => {
+                self.store.record_product_diagnostic_failure(
+                    diagnostic_request,
+                    error,
+                    matches!(error, local_store::Error::InputChanged),
+                );
+                return Err(Error::Store(error));
+            }
+            Ok(file) => file,
         };
         if file.bytes.len() > cap {
             return Err(Error::Limit);

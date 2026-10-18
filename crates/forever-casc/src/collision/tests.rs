@@ -1206,6 +1206,98 @@ fn memory_partition_is_downward_and_survives_lookup_transition() {
     let extraction = e.finish().unwrap();
     assert_eq!(extraction.resident_bytes(), resident);
 }
+
+#[test]
+fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure() {
+    use std::{cell::RefCell, rc::Rc};
+
+    #[derive(Clone, Copy)]
+    struct Observed {
+        request: local_store::ProductDiagnosticRequest,
+        cause: local_store::Error,
+        guards_observed: bool,
+    }
+    struct Observer {
+        rows: Rc<RefCell<Vec<Observed>>>,
+        phase: local_store::ProductDiagnosticPhase,
+        ordinal: u32,
+    }
+    impl local_store::ProductDiagnosticObserver for Observer {
+        fn set_phase(&mut self, phase: local_store::ProductDiagnosticPhase) {
+            if self.phase != phase {
+                self.phase = phase;
+                self.ordinal = 0;
+            }
+        }
+
+        fn begin_request(
+            &mut self,
+            request_kind: local_store::ProductDiagnosticRequestKind,
+            file_data_id: Option<u32>,
+        ) -> Option<local_store::ProductDiagnosticRequest> {
+            let request = local_store::ProductDiagnosticRequest {
+                phase: self.phase,
+                request_kind,
+                file_data_id,
+                ordinal: self.ordinal,
+            };
+            self.ordinal = self.ordinal.saturating_add(1);
+            Some(request)
+        }
+        fn tolerated_absence(&mut self, _: local_store::ProductDiagnosticRequest) {}
+
+        fn source_failure(
+            &mut self,
+            request: local_store::ProductDiagnosticRequest,
+            cause: local_store::Error,
+            guards_observed: bool,
+        ) {
+            let mut rows = self.rows.borrow_mut();
+            if rows.is_empty() {
+                rows.push(Observed {
+                    request,
+                    cause,
+                    guards_observed,
+                });
+            }
+        }
+
+        fn finish(&mut self, _: Option<&'static str>, _: bool) {}
+    }
+
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    fixture.truncate_archive();
+    let rows = Rc::new(RefCell::new(Vec::new()));
+    store.set_product_diagnostic_observer(Some(Box::new(Observer {
+        rows: rows.clone(),
+        phase: local_store::ProductDiagnosticPhase::Startup,
+        ordinal: 0,
+    })));
+    store.set_product_diagnostic_phase(local_store::ProductDiagnosticPhase::Startup);
+    let mut extractor = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let error = extractor.extract(request(10)).unwrap_err();
+    let Error::Store(local_store::Error::NoLocalEncoding(failures)) = error else {
+        panic!("expected typed synthetic encoding failure")
+    };
+    let observations = rows.borrow();
+    assert_eq!(observations.len(), 1);
+    assert_eq!(
+        observations[0].request.phase,
+        local_store::ProductDiagnosticPhase::Startup
+    );
+    assert_eq!(
+        observations[0].request.request_kind,
+        local_store::ProductDiagnosticRequestKind::Other
+    );
+    assert_eq!(observations[0].request.file_data_id, Some(10));
+    assert_eq!(observations[0].request.ordinal, 0);
+    assert_eq!(
+        observations[0].cause,
+        local_store::Error::NoLocalEncoding(failures)
+    );
+    assert!(!observations[0].guards_observed);
+}
 #[test]
 fn memory_partition_includes_live_external_and_source_buffers() {
     let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
