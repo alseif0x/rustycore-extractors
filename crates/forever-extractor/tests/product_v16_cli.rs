@@ -394,7 +394,7 @@ fn db2_source_failure_diagnostic_is_typed_single_record_and_opt_in_only() {
     assert_eq!(record.lines().count(), 1);
     assert_eq!(
         record,
-        "{\"phase\":\"db2\",\"request_kind\":\"db2_table\",\"file_data_id\":6220124,\"ordinal\":0,\"typed_cause\":{\"variant\":\"NoLocalEncoding\",\"candidate_failures\":{\"missing\":0,\"incomplete\":0,\"encrypted\":1,\"corrupt\":0,\"unsupported\":0}},\"code\":\"local_store_no_verified_encoding\",\"guards_observed\":false,\"tolerated_absences\":{\"db2_table\":0,\"wdt\":0,\"tile_adt\":0,\"root_m2\":0,\"wmo_root\":0,\"wmo_group\":0,\"child\":0,\"gameobject_model\":0,\"other\":0}}\n"
+        "{\"phase\":\"db2\",\"request_kind\":\"db2_table\",\"file_data_id\":6220124,\"ordinal\":0,\"typed_cause\":{\"variant\":\"NoLocalEncoding\",\"candidate_failures\":{\"missing\":0,\"incomplete\":0,\"encrypted\":1,\"corrupt\":0,\"unsupported\":0},\"blte_code\":\"blte_encrypted_unsupported\"},\"code\":\"local_store_no_verified_encoding\",\"guards_observed\":false,\"tolerated_absences\":{\"db2_table\":0,\"wdt\":0,\"tile_adt\":0,\"root_m2\":0,\"wmo_root\":0,\"wmo_group\":0,\"child\":0,\"gameobject_model\":0,\"other\":0}}\n"
     );
 }
 

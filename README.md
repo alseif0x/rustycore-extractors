@@ -102,6 +102,11 @@ Linux DB2-only scope with disabled decryption and `wowdbdefs-70450-v1`. It does
 not claim collision/VMaps, full-world resources, or runtime acceptance. See the
 [v16 scope](docs/forever-product-v16.md).
 
+Product v17 separately admits only `wow_classic_beta 1.60.1.70450` for the
+Linux DB2-only scope with caller-supplied keys and `wowdbdefs-70450-v1`. It does
+not claim complete key coverage, collision/VMaps, full-world resources, or
+runtime acceptance. See the [v17 scope](docs/forever-product-v17.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.

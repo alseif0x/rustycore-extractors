@@ -1,0 +1,190 @@
+{
+  "contract": "forever-product-v17",
+  "version": 17,
+  "publication_profile": "Build70450Db2ProvidedKeysV1",
+  "oracle_commit": "02245dcd245e7433e524577656177723d3e4992e",
+  "builds": [
+    70450
+  ],
+  "locales": [
+    "enUS",
+    "esES"
+  ],
+  "backend": "rust-local",
+  "offline": true,
+  "platform": "linux",
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify",
+    "verify-links"
+  ],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "max_bytes": 131072,
+    "max_db2_entries": 1161,
+    "ordered_keys": [
+      "forever-product",
+      "build",
+      "locale",
+      "index",
+      "root",
+      "schema-catalog",
+      "decryption",
+      "components",
+      "terrain",
+      "pack",
+      "navigation",
+      "big-base-unit",
+      "skip-liquids",
+      "maximum-slope",
+      "non-steep-slope"
+    ],
+    "repeatable_tail": "db2 TAB exact-catalog-name TAB exact-FDID LF; alphabetical names, unique IDs",
+    "components": [
+      "db2"
+    ],
+    "component_mask": 1,
+    "collision_storage": "resident",
+    "map_domain": "field absent",
+    "terrain": [
+      "none"
+    ],
+    "navigation": [
+      "none"
+    ],
+    "index_layouts": [
+      "contiguous",
+      "paged"
+    ],
+    "root_layouts": [
+      "headerless-18125",
+      "header-30080",
+      "header-50893-v1",
+      "header-50893-v2"
+    ],
+    "offmesh_connections": "Field must be absent; even an empty offmesh selection is unsupported.",
+    "decryption": "required after schema-catalog; provided-salsa20-v1 only",
+    "schema_catalog": {
+      "id": "wowdbdefs-70450-v1",
+      "required_build": 70450,
+      "table_count": 1161,
+      "provenance": "contracts/wowdbdefs-70450-v1.json and crates/forever-db2/src/records/wowdbdefs_70450_generated.rs",
+      "source_commit": "bfebcbc5181f47b954e7886862f92c5577dbbe4a",
+      "source_blob": "f95528066d44e1b70ea6cd124a35a5a63685d384",
+      "source_sha256": "f7b752a991d6a0321d07ecb7f06e62cd94694c1594d2fe5ce0cb7b243c71559a",
+      "facts_sha256": "4589beb2e106f5bba4b8a1801b051f40915dca51dc0aafe85350b5b3c24b29c8"
+    },
+    "component_scope": "Exactly DB2, resident, no map-domain/offmesh/terrain/navigation/GT/cameras; explicit Linux build70450 product17 only"
+  },
+  "identities": {
+    "plan": "SHA-256 of the complete canonical TSV bytes",
+    "producer": "SHA-256 of loaded /proc/self/exe, max 256 MiB",
+    "source": "SHA-256(forever-logical-collection-v1 NUL + build little-endian u32 + build key + CDN key + locale ASCII + ENCODING content key + ROOT content key)",
+    "source_scope": "authenticated logical collection; not physical archive availability, encryption-key discovery or a complete archive snapshot; every decoded read still requires complete content MD5; supplied keys do not change logical content identity; MD5 integrity is not a MAC or trusted provenance",
+    "keys": "Key names, values, counts, hashes and input paths are excluded from CLI JSON, plans, package context and manifests. The complete plan SHA-256 binds only the provided-salsa20-v1 capability, not the caller's key-list contents.",
+    "schema_catalog": "This profile binds its exact schema-catalog id in the complete canonical plan SHA-256; older profiles retain their own catalog identities and canonical plan bytes."
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2
+  },
+  "limits": {
+    "db2_file_bytes": 16777216,
+    "db2_total_bytes": 17179869184,
+    "db2_regular_sections": "For catalog DB2 sources with more than one section, the existing bounded catalog reader admits 2..16 regular sections; ordinary selected sources use the strict catalog decoder. No rows or partial table are published.",
+    "db2_string_validation": "The existing catalog raw-source fallback for invalid UTF-8 still validates complete regular-string pointer/NUL framing and cumulative source-byte limits without returning decoded rows; all other validation errors remain fatal.",
+    "full_source_decode": "Every selected DB2 FDID uses the existing supplied-key full-file decode route and still requires complete content CKey MD5 validation. A missing or mismatched caller key remains fatal as local_store_no_verified_encoding; no partial table or encrypted-source omission is published."
+  },
+  "resume": "Explicit same-context only; verified sealed components skipped; the entire unfinished producer reruns and replays retained artifacts; complete output refuses writes; supplied keys are required for each client-side inspect/extract/resume invocation and remain protected from output writes; every unfinished acquired object must still match the same selected complete CKey; sealed producers are verified and skipped.",
+  "verification": {
+    "scope": "artifact_integrity_and_intrinsic_formats",
+    "db2": "Complete bounded validation against the plan-bound wowdbdefs-70450-v1 catalog and exact selected name set; verify-links follows the same selected DB2-only package traversal. Verification checks offline artifacts and does not read keys.",
+    "key_coverage": "A public key list or a partial key match does not prove complete decryption; only successful full-frame decode and complete CKey validation for every selected DB2 source do.",
+    "not_claimed": [
+      "all 1161 tables acquired by a selected plan",
+      "complete key coverage for every 70450 table or encoding",
+      "GameTables or cameras",
+      "terrain",
+      "collision or VMaps",
+      "navigation or MMaps",
+      "complete geometry inventory",
+      "full real-client extraction",
+      "whole-world coverage",
+      "runtime acceptance",
+      "Windows support"
+    ],
+    "metadata_preflight": "Complete exact selected DB2 names, nonempty files<=16MiB, sum<=16GiB before first artifact payload hash/read/allocation; verify-links applies the same DB2-only package traversal; --keys is forbidden for verify and verify-links."
+  },
+  "failure": "Stable path-free code and component; incomplete outputs retained; no available-prefix, native, network, missing-file or encrypted-source fallback.",
+  "full_extractor_complete": false,
+  "provided_keys": {
+    "option": "--keys PATH",
+    "required_for": [
+      "extract/resume when decryption=provided-salsa20-v1",
+      "inspect --client when decryption=provided-salsa20-v1"
+    ],
+    "forbidden_for": [
+      "verify",
+      "verify-links",
+      "inspect without --client"
+    ],
+    "input": "explicit regular file, final symlink and special file rejected; read once with metadata identity and extra-byte EOF check",
+    "max_file_bytes": 262144,
+    "max_entries": 4096,
+    "record_format": "forever-tact-keys TAB 1 LF; sorted unique lowercase hex16 u64 name TAB hex32 key LF",
+    "cipher": "Salsa20/20 with 16-byte keys, nonce4/8 padded to8, frame-index little-endian XOR, initial block counter zero",
+    "frames": "one E wrapper around N or strict Z only; mandatory complete content MD5 and encoded frame MD5 where framed",
+    "discovery": false,
+    "built_in_keys": false,
+    "network": false,
+    "source_protection": "canonical key-file source included in protected roots before output writes",
+    "secure_erasure_guaranteed": false
+  },
+  "failure_codes": {
+    "missing_option": "product_keys_required",
+    "disabled_option": "product_keys_forbidden",
+    "key_input_prefix": "product_keys_input_",
+    "key_allocation": "product_keys_allocation",
+    "parser_prefix": "tact_keys_",
+    "no_verified_encoding": "local_store_no_verified_encoding",
+    "key_source_output_overlap": "package_path"
+  },
+  "failure_envelope": "forever-product-v17 after valid plan admission; generic CLI/plan failures before admission retain forever-product-v1; all errors path-free and key-free",
+  "scope": "Explicit Linux build70450 DB2-only target-catalog publication/recovery with caller-supplied provided-salsa20-v1 keys. No other components, standalone70450, native product, Windows, collision/VMaps, full-world or runtime acceptance.",
+  "legacy_preservation": {
+    "canonical_versions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "v15_collision_profile": "Build70450CompatibleCollisionV1; linux70450-compatible-gnu15-vmap-product-v1; components vmaps (mask 16)",
+    "v16_db2_profile": "Build70450Db2OnlyV1; DB2 mask 1; disabled decryption",
+    "global_SUPPORTED_CLIENTS": "70170,70205,70338 unchanged; 70450 remains absent and is available only through scoped Linux product admission",
+    "catalog_does_not_select_v17": true,
+    "default_backend_unchanged": true
+  },
+  "admission": {
+    "metadata": "admit_db2_70450: exact70450 typed bounded build metadata before bootstrap",
+    "store": "LocalStore::open_db2_70450_with_keys; same build70450 admission/bootstrap as v16 with the caller's Keyring",
+    "raw_store_scope": "authenticated generic FDID bytes, not component acceptance; product driver enforces exact target DB2 catalog",
+    "platform": "Linux only before client/key/output IO; key input is explicit",
+    "standalone": "70450 absent from global/native/legacy/default admission",
+    "package_context": "70450 admits only Linux DB2 mask 1 for v16/v17 and collision mask 16 for v15; the complete plan SHA-256 binds the exact revision"
+  }
+}

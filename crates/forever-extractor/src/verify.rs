@@ -116,6 +116,21 @@ fn verify_inner(
         })
     };
     #[cfg(target_os = "linux")]
+    let original_plan = plan;
+    #[cfg(target_os = "linux")]
+    let v17_metadata_plan = plan.is_v17().then(|| {
+        // v10's catalog-agnostic inventory admission reads only locale and the
+        // exact DB2 selection. Project v17's identical inventory fields onto
+        // the v16 identity for this callback only; payload inspection and plan
+        // binding continue to use the original provided-key revision.
+        let mut metadata_plan = (*plan).clone();
+        metadata_plan.publication_profile = crate::plan::PublicationProfile::Build70450Db2OnlyV1;
+        metadata_plan.decryption = crate::plan::Decryption::Disabled;
+        metadata_plan
+    });
+    #[cfg(target_os = "linux")]
+    let plan = v17_metadata_plan.as_ref().unwrap_or(original_plan);
+    #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
     let verified =
@@ -144,6 +159,8 @@ fn verify_inner(
         } else {
             package::verify_with(output, expected, limits, inspect)
         };
+    #[cfg(target_os = "linux")]
+    let plan = original_plan;
     #[cfg(not(target_os = "linux"))]
     let verified = package::verify_with(output, expected, limits, inspect);
     #[cfg(target_os = "linux")]

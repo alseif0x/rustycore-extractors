@@ -349,6 +349,18 @@ enum Rejection {
     Corrupt,
     Unsupported,
 }
+struct BlteCodeCapture<'a> {
+    enabled: bool,
+    code: &'a mut Option<&'static str>,
+}
+impl BlteCodeCapture<'_> {
+    fn record(&mut self, code: &'static str) {
+        if self.enabled && self.code.is_none() {
+            *self.code = Some(code);
+        }
+    }
+}
+
 fn record_failure(failures: &mut CandidateFailures, rejection: Rejection) -> Result<(), Error> {
     let counter = match rejection {
         Rejection::Missing => &mut failures.missing,
@@ -377,6 +389,8 @@ impl Reader<'_> {
         size: Option<u32>,
         ekeys: impl Iterator<Item = [u8; 16]>,
         max_decoded: u64,
+        capture_blte_code: bool,
+        blte_code: &mut Option<&'static str>,
     ) -> Result<(Vec<u8>, usize), Error> {
         let Self {
             indexes,
@@ -390,6 +404,10 @@ impl Reader<'_> {
         }
         let mut failures = CandidateFailures::default();
         let mut attempts = 0_usize;
+        let mut blte_capture = BlteCodeCapture {
+            enabled: capture_blte_code,
+            code: blte_code,
+        };
         for ekey in ekeys {
             let range = owned::equal_range(order, |index| {
                 indexes[index].key_prefix.as_slice().cmp(&ekey[..9])
@@ -407,7 +425,14 @@ impl Reader<'_> {
                 if attempts > limits.max_candidate_attempts {
                     return Err(Error::Limit);
                 }
-                match self.candidate(&indexes[index as usize], ekey, ckey, size, max_decoded)? {
+                match self.candidate(
+                    &indexes[index as usize],
+                    ekey,
+                    ckey,
+                    size,
+                    max_decoded,
+                    &mut blte_capture,
+                )? {
                     Ok(bytes) => return Ok((bytes, attempts)),
                     Err(rejection) => record_failure(&mut failures, rejection)?,
                 }
@@ -423,6 +448,7 @@ impl Reader<'_> {
         ckey: [u8; 16],
         size: u64,
         max_decoded: u64,
+        blte_capture: &mut BlteCodeCapture<'_>,
     ) -> Result<Result<Vec<u8>, Rejection>, Error> {
         let Self {
             dir,
@@ -522,14 +548,18 @@ impl Reader<'_> {
         Ok(match result {
             Ok(bytes) => Ok(bytes),
             Err(archive_record::Error::Blte(blte::Error::Limit)) => return Err(Error::Limit),
-            Err(archive_record::Error::Blte(
-                blte::Error::EncryptedUnsupported | blte::Error::MissingKey,
-            )) => Err(Rejection::Encrypted),
-            Err(archive_record::Error::Blte(
-                blte::Error::RecursiveUnsupported
-                | blte::Error::UnknownMode
-                | blte::Error::EncryptionUnsupported,
-            )) => Err(Rejection::Unsupported),
+            Err(archive_record::Error::Blte(error)) => {
+                blte_capture.record(error.code());
+                match error {
+                    blte::Error::EncryptedUnsupported | blte::Error::MissingKey => {
+                        Err(Rejection::Encrypted)
+                    }
+                    blte::Error::RecursiveUnsupported
+                    | blte::Error::UnknownMode
+                    | blte::Error::EncryptionUnsupported => Err(Rejection::Unsupported),
+                    _ => Err(Rejection::Corrupt),
+                }
+            }
             Err(_) => Err(Rejection::Corrupt),
         })
     }

@@ -49,7 +49,12 @@ struct ProductDiagnosticSink {
     leaf: OsString,
     phase: ProductDiagnosticPhase,
     next_ordinal: u32,
-    pending: Option<(ProductDiagnosticRequest, StoreError, bool)>,
+    pending: Option<(
+        ProductDiagnosticRequest,
+        StoreError,
+        bool,
+        Option<&'static str>,
+    )>,
     tolerated_absences: [u32; ProductDiagnosticRequestKind::COUNT],
     finished: bool,
 }
@@ -97,10 +102,27 @@ impl ProductDiagnosticSink {
         })
     }
 
-    fn cause_json(cause: StoreError) -> String {
+    fn cause_json(cause: StoreError, blte_code: Option<&'static str>) -> String {
         if let StoreError::NoLocalEncoding(failures) = cause {
+            let blte_field = match blte_code {
+                Some(
+                    code @ ("blte_invalid_header"
+                    | "blte_truncated"
+                    | "blte_size_mismatch"
+                    | "blte_checksum_mismatch"
+                    | "blte_invalid_zlib"
+                    | "blte_encrypted_unsupported"
+                    | "blte_invalid_encryption_header"
+                    | "blte_cipher_unsupported"
+                    | "blte_encryption_key_unavailable"
+                    | "blte_encryption_requires_content_key"
+                    | "blte_recursive_unsupported"
+                    | "blte_unknown_mode"),
+                ) => format!(",\"blte_code\":\"{code}\""),
+                _ => String::new(),
+            };
             return format!(
-                "{{\"variant\":\"NoLocalEncoding\",\"candidate_failures\":{{\"missing\":{},\"incomplete\":{},\"encrypted\":{},\"corrupt\":{},\"unsupported\":{}}}}}",
+                "{{\"variant\":\"NoLocalEncoding\",\"candidate_failures\":{{\"missing\":{},\"incomplete\":{},\"encrypted\":{},\"corrupt\":{},\"unsupported\":{}}}{blte_field}}}",
                 failures.missing,
                 failures.incomplete,
                 failures.encrypted,
@@ -136,6 +158,7 @@ impl ProductDiagnosticSink {
         request: ProductDiagnosticRequest,
         cause: StoreError,
         guards_observed: bool,
+        blte_code: Option<&'static str>,
     ) {
         if self.parent.check().is_err() {
             return;
@@ -149,7 +172,7 @@ impl ProductDiagnosticSink {
             request.request_kind.name(),
             file_data_id,
             request.ordinal,
-            Self::cause_json(cause),
+            Self::cause_json(cause, blte_code),
             cause.code(),
             guards_observed || matches!(cause, StoreError::InputChanged),
             self.tolerated_absences_json(),
@@ -224,8 +247,18 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
         cause: StoreError,
         guards_observed: bool,
     ) {
+        self.source_failure_with_blte_code(request, cause, guards_observed, None);
+    }
+
+    fn source_failure_with_blte_code(
+        &mut self,
+        request: ProductDiagnosticRequest,
+        cause: StoreError,
+        guards_observed: bool,
+        blte_code: Option<&'static str>,
+    ) {
         if !self.finished && self.pending.is_none() {
-            self.pending = Some((request, cause, guards_observed));
+            self.pending = Some((request, cause, guards_observed, blte_code));
         }
     }
 
@@ -234,11 +267,16 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
             return;
         }
         self.finished = true;
-        let Some((request, cause, guards_observed)) = self.pending else {
+        let Some((request, cause, guards_observed, blte_code)) = self.pending else {
             return;
         };
         if terminal_code == Some(cause.code()) {
-            self.write_once(request, cause, guards_observed || source_guard_changed);
+            self.write_once(
+                request,
+                cause,
+                guards_observed || source_guard_changed,
+                blte_code,
+            );
         }
     }
 }

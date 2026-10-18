@@ -287,6 +287,15 @@ pub trait ProductDiagnosticObserver {
         cause: Error,
         guards_observed: bool,
     );
+    fn source_failure_with_blte_code(
+        &mut self,
+        request: ProductDiagnosticRequest,
+        cause: Error,
+        guards_observed: bool,
+        _blte_code: Option<&'static str>,
+    ) {
+        self.source_failure(request, cause, guards_observed);
+    }
     fn finish(&mut self, terminal_code: Option<&'static str>, source_guard_changed: bool);
 }
 
@@ -338,6 +347,7 @@ pub struct LocalStore {
     names: Option<EnabledNames>,
     keys: Option<crate::keys::Keyring>,
     product_diagnostic: Option<Box<dyn ProductDiagnosticObserver>>,
+    product_diagnostic_blte_code: Option<&'static str>,
 }
 
 #[derive(Clone, Copy)]
@@ -378,6 +388,7 @@ impl LocalStore {
         request_kind: ProductDiagnosticRequestKind,
         file_data_id: Option<u32>,
     ) -> Option<ProductDiagnosticRequest> {
+        self.product_diagnostic_blte_code = None;
         self.product_diagnostic
             .as_mut()?
             .begin_request(request_kind, file_data_id)
@@ -388,8 +399,9 @@ impl LocalStore {
         cause: Error,
         guards_observed: bool,
     ) {
+        let blte_code = self.product_diagnostic_blte_code.take();
         if let (Some(observer), Some(request)) = (&mut self.product_diagnostic, request) {
-            observer.source_failure(request, cause, guards_observed);
+            observer.source_failure_with_blte_code(request, cause, guards_observed, blte_code);
         }
     }
     pub fn record_product_diagnostic_absence(&mut self, request: Option<ProductDiagnosticRequest>) {
@@ -458,6 +470,18 @@ impl LocalStore {
     #[cfg(target_os = "linux")]
     pub fn open_db2_70450(client: &Path, options: OpenOptions) -> Result<Self, Error> {
         Self::open_inner(client, options, None, BootstrapTarget::Db2Build70450)
+    }
+
+    /// Explicit supplied-key Linux build70450 bootstrap. The product revision
+    /// decides whether this capability is admitted; disabled revisions continue
+    /// to call `open_db2_70450` and reject caller-supplied keys.
+    #[cfg(target_os = "linux")]
+    pub fn open_db2_70450_with_keys(
+        client: &Path,
+        options: OpenOptions,
+        keys: crate::keys::Keyring,
+    ) -> Result<Self, Error> {
+        Self::open_inner(client, options, Some(keys), BootstrapTarget::Db2Build70450)
     }
 
     fn open_inner(
@@ -578,6 +602,8 @@ impl LocalStore {
             encoding_reference.content_size,
             encoding_reference.encoded_key.into_iter(),
             limits.encoding.max_bytes,
+            false,
+            &mut None,
         )?;
         let parser_rows = limits.encoding.max_entries.min(encoding_bytes.len() / 38);
         budget.phase(add(
@@ -616,6 +642,8 @@ impl LocalStore {
             central.content_size(root_reference.content_key),
             central.encoded_keys(root_reference.content_key),
             limits.root.max_bytes,
+            false,
+            &mut None,
         )?;
         let parser_rows = limits.root.max_entries.min(root_bytes.len() / 20);
         let parser_blocks = limits.root.max_blocks.min(root_bytes.len() / 12);
@@ -659,6 +687,7 @@ impl LocalStore {
             names: None,
             keys,
             product_diagnostic: None,
+            product_diagnostic_blte_code: None,
         })
     }
 
@@ -860,13 +889,14 @@ impl LocalStore {
     // tables. Share all archive I/O, same-CKey alternatives, complete MD5, size
     // caps and the post-read guard (including failed reads) here.
     fn read_selected_ckey(
-        &self,
+        &mut self,
         file_data_id: u32,
         key: [u8; 16],
         max_decoded_bytes: u64,
         external_live_bytes: usize,
         combined_cap: usize,
     ) -> Result<VerifiedFile, Error> {
+        self.product_diagnostic_blte_code = None;
         let budget = Budget {
             limits: Limits {
                 max_memory_bytes: self.limits.max_memory_bytes.min(combined_cap),
@@ -876,6 +906,8 @@ impl LocalStore {
             scratch: Cell::new(0),
         };
         budget.phase(0)?;
+        let mut blte_code = None;
+        let capture_blte_code = self.product_diagnostic.is_some();
         let result = io::Reader {
             dir: &self.data_dir,
             indexes: &self.indexes,
@@ -889,8 +921,13 @@ impl LocalStore {
             self.central.content_size(key),
             self.central.encoded_keys(key),
             max_decoded_bytes.min(self.limits.max_decoded_file_bytes),
+            capture_blte_code,
+            &mut blte_code,
         );
         io::check_guards(&self.guards)?;
+        if matches!(&result, Err(Error::NoLocalEncoding(_))) && capture_blte_code {
+            self.product_diagnostic_blte_code = blte_code;
+        }
         let (bytes, candidate_attempts) = result?;
         Ok(VerifiedFile {
             file_data_id,

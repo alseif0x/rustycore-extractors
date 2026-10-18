@@ -70,14 +70,21 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v15() || plan.is_v16() {
+    let mut store = if plan.is_v15() || plan.is_v16() || plan.is_v17() {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70450(client).map_err(|e| Error::from(e.code()))? != 70450 {
                 return Err("product_build_mismatch".into());
             }
-            // validate_keys rejects any supplied key before this branch.
-            LocalStore::open_db2_70450(client, options)
+            if plan.is_v17() {
+                let Some(keys) = keys else {
+                    return Err("product_keys_required".into());
+                };
+                LocalStore::open_db2_70450_with_keys(client, options, keys)
+            } else {
+                // validate_keys rejects supplied keys for revisions 15 and 16.
+                LocalStore::open_db2_70450(client, options)
+            }
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -147,6 +154,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_v14()
         || plan.is_v15()
         || plan.is_v16()
+        || plan.is_v17()
     {
         return Err("product_platform".into());
     }
@@ -259,7 +267,7 @@ fn extract_inner(
     scratch: Option<&Path>,
 ) -> Result<package::Summary, Error> {
     plan.validate()?;
-    let diagnostic_output = if plan.is_v16() {
+    let diagnostic_output = if plan.is_v16() || plan.is_v17() {
         std::env::var_os("FOREVER_PRODUCT_DIAGNOSTIC")
     } else {
         None
@@ -279,7 +287,7 @@ fn extract_inner(
             )?)
         }
     };
-    let product_diagnostic = if plan.is_v16() {
+    let product_diagnostic = if plan.is_v16() || plan.is_v17() {
         disk::product_diagnostic_for_db2(client, diagnostic_output)?
     } else {
         None
@@ -350,7 +358,7 @@ fn prepare_domain(
 ) -> Result<Option<crate::map_domain::Domain>, Error> {
     // v14 derives its declared domain once from the genuine available Map owner.
     // Do not reopen a complete Map or manufacture strict SourceFacts here.
-    if plan.is_v14() || plan.is_v15() || plan.is_v16() {
+    if plan.is_v14() || plan.is_v15() || plan.is_v16() || plan.is_v17() {
         return Ok(None);
     }
     let Some(requested) = plan.map_domain else {
@@ -529,6 +537,7 @@ fn db2(
         let cap = if plan.is_gt_cameras()
             || plan.is_v10()
             || plan.is_v16()
+            || plan.is_v17()
             || plan.is_available_terrain()
         {
             db2_remaining(total)?
@@ -536,7 +545,7 @@ fn db2(
             DB2_FILE_BYTES
         };
         #[cfg(target_os = "linux")]
-        let diagnostic_request = if plan.is_v16() {
+        let diagnostic_request = if plan.is_v16() || plan.is_v17() {
             store.begin_product_diagnostic_request(
                 ProductDiagnosticRequestKind::Db2Table,
                 Some(entry.id),
@@ -548,7 +557,7 @@ fn db2(
             Ok(file) => file,
             Err(error) => {
                 #[cfg(target_os = "linux")]
-                if plan.is_v16() {
+                if plan.is_v16() || plan.is_v17() {
                     store.record_product_diagnostic_failure(
                         diagnostic_request,
                         error,
