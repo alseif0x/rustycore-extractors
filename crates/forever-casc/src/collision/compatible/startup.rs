@@ -72,6 +72,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Context<'s, 'l, L> {
 
     /// Switch the enclosing product diagnostic stage without releasing this
     /// startup owner or changing its collector/source guards.
+    #[cfg(target_os = "linux")]
     pub fn set_product_diagnostic_phase(
         &mut self,
         phase: crate::local_store::ProductDiagnosticPhase,

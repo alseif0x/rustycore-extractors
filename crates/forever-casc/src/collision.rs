@@ -518,6 +518,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub const fn request_calls(&self) -> usize {
         self.request_calls
     }
+    #[cfg(target_os = "linux")]
     pub(in crate::collision) fn set_product_diagnostic_phase(
         &mut self,
         phase: local_store::ProductDiagnosticPhase,

@@ -851,6 +851,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
     pub(in crate::collision) const fn target(&self) -> Target {
         self.target
     }
+    #[cfg(target_os = "linux")]
     pub(in crate::collision) fn set_product_diagnostic_phase(
         &mut self,
         phase: crate::local_store::ProductDiagnosticPhase,
