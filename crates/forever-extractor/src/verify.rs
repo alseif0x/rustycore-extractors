@@ -88,7 +88,9 @@ fn verify_inner(
         limits.total_bytes = budget.output_bytes;
     }
     #[cfg(target_os = "linux")]
-    if plan.is_available_terrain() {
+    if plan.is_v20() {
+        limits = crate::driver::terrain_v20::package_limits();
+    } else if plan.is_available_terrain() {
         limits = crate::driver::terrain_v12::package_limits();
     }
     let mut facts = Facts::default();
@@ -96,6 +98,10 @@ fn verify_inner(
     let mut link_facts = (!plan.is_available_terrain()
         && (matches!(scope, Scope::Links) || plan.map_domain.is_some()))
     .then(links::Facts::default);
+    #[cfg(target_os = "linux")]
+    if plan.is_v20() {
+        link_facts = None;
+    }
     #[cfg(not(target_os = "linux"))]
     let _ = scope;
     let mut failure = None;
@@ -142,6 +148,11 @@ fn verify_inner(
                 } else {
                     v9::admit_metadata(plan, artifacts)
                 };
+                let admitted = if plan.is_v20() {
+                    crate::driver::terrain_v20::admit_metadata(plan, artifacts)
+                } else {
+                    admitted
+                };
                 admitted.map_err(|error| {
                     metadata_failure = Some(error);
                     package::Error::Schema
@@ -187,6 +198,14 @@ fn verify_inner(
             .finish(plan, context)?;
     }
     #[cfg(target_os = "linux")]
+    if plan.is_v20() {
+        facts
+            .terrain_v20
+            .take()
+            .ok_or("product_terrain_coverage")?
+            .finish(plan, context)?;
+    }
+    #[cfg(target_os = "linux")]
     if plan.is_v12() {
         facts
             .terrain_v12
@@ -208,6 +227,8 @@ struct Facts {
     terrain_v12: Option<crate::driver::terrain_v12::VerifyFacts>,
     #[cfg(target_os = "linux")]
     terrain_v13: Option<crate::driver::terrain_v13::VerifyFacts>,
+    #[cfg(target_os = "linux")]
+    terrain_v20: Option<crate::driver::terrain_v20::VerifyFacts>,
     db2: BTreeSet<String>,
     gt: usize,
     cameras: BTreeSet<u32>,
@@ -276,6 +297,13 @@ impl Facts {
     fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
         if bytes.is_empty() {
             return Err("product_empty_artifact".into());
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v20() {
+            return self
+                .terrain_v20
+                .get_or_insert_with(crate::driver::terrain_v20::VerifyFacts::new)
+                .inspect(artifact, bytes);
         }
         #[cfg(target_os = "linux")]
         if plan.is_v13() {
@@ -634,5 +662,21 @@ mod v19_preflight_tests {
             v9::admit_metadata(&v19, &[]).unwrap_err().code,
             "product_camera_source"
         );
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod v20_preflight_tests {
+    use super::*;
+
+    #[test]
+    fn v20_selects_available_terrain_metadata_preflight() {
+        let v20 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v20/map2.tsv"
+        ))
+        .unwrap();
+        assert!(v20.is_v20());
+        assert!(v20.is_available_terrain());
+        assert!(uses_target_metadata_preflight(&v20));
     }
 }

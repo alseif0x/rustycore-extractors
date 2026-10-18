@@ -157,7 +157,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         )
     })
     };
-    let terrain_capability = if plan.is_v15() || plan.is_v18() {
+    let terrain_capability = if plan.is_v20() {
+        ",\"terrain_source_profile\":\"linux70450-compatible-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"omission_policy\":\"missing-file-only\",\"whole_client_map_coverage\":false"
+    } else if plan.is_v15() || plan.is_v18() {
         ",\"collision_source_profile\":\"linux70450-compatible-gnu15-v2\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
     } else if plan.is_v14() {
         ",\"collision_source_profile\":\"linux70425-compatible-gnu15-v2\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
@@ -206,6 +208,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     plan.contract(),
                     if plan.is_v15() || plan.is_v14() || plan.is_v18() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
+                    } else if plan.is_v20() {
+                        forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE_70450
                     } else if plan.is_v13() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
                     } else if plan.is_v12() {
@@ -219,6 +223,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE_70450
                     } else if plan.is_v14() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE
+                    } else if plan.is_v20() {
+                        forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_PROFILE_70450
                     } else if plan.is_v13() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_PROFILE
                     } else if plan.is_v12() {
@@ -234,6 +240,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             let summary = verify::verify(&plan, path("--output")?, expected)?;
             let scope = if plan.is_v15() || plan.is_v14() || plan.is_v18() {
                 forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
+            } else if plan.is_v20() {
+                forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE_70450
             } else if plan.is_v13() {
                 forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE
             } else if plan.is_v12() {

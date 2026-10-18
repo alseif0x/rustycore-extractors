@@ -422,6 +422,71 @@ fn available_map_coverage_invariant_rejects_inconsistent_ckey_completeness() {
 }
 
 #[test]
+fn available70450_target_error_code_matrix_is_produced_by_each_route_case() {
+    let mut bad_material = files_70450();
+    bad_material[1].2[152] ^= 1;
+    let fixture = CollisionFixture::for_build(&bad_material, 70450);
+    let mut store = open_70450(&fixture);
+    let catalog_failure = available_70450::run_selected(
+        &mut store,
+        &requests()[..1],
+        true,
+        Limits::default(),
+        &mut Stage70450::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(catalog_failure.error, Error::Catalog70450);
+
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    let absent = [plan::TileRequest {
+        map_id: 7,
+        x: 0,
+        y: 0,
+    }];
+    let absent_failure = available_70450::run_selected(
+        &mut store,
+        &absent,
+        true,
+        Limits::default(),
+        &mut Stage70450::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(absent_failure.error, Error::AbsentTile70450);
+
+    let mut bad_wdt = files_70450();
+    bad_wdt[4].2 = wdt(&[(3, 2, 201), (1, 4, 202)], false);
+    let fixture = CollisionFixture::for_build(&bad_wdt, 70450);
+    let mut store = open_70450(&fixture);
+    let routing_failure = available_70450::run_selected(
+        &mut store,
+        &requests()[..1],
+        true,
+        Limits::default(),
+        &mut Stage70450::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(routing_failure.error, Error::FileIdRouting70450);
+
+    let fixture = CollisionFixture::for_build(&files_70450(), 70450);
+    let mut store = open_70450(&fixture);
+    let tiles = requests();
+    let selection_failure = available_70450::run_full_maps(
+        &mut store,
+        plan::Selection::Tiles(&tiles),
+        true,
+        FullMapLimits::default(),
+        &mut Stage70450::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(selection_failure.error, Error::FullMapSelection70450);
+}
+
+#[test]
 fn selected_complete_sources_current_headers_and_fixed_order() {
     let (r, s) = execute(&files(), &requests(), Limits::default());
     let done = r.unwrap();

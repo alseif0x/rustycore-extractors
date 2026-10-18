@@ -1,0 +1,15 @@
+forever-product	20
+build	70450
+locale	esES
+index	contiguous
+root	header-50893-v2
+schema-catalog	wowdbdefs-70450-v1
+decryption	disabled
+components	maps
+terrain	all-available-maps
+pack	true
+navigation	none
+big-base-unit	false
+skip-liquids	false
+maximum-slope	55
+non-steep-slope	55

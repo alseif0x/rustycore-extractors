@@ -58,6 +58,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Build the Rust command-line tool | [Rust quick start](#build-the-rust-product) |
 | Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
 | Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
+| Review the synthetic build-70450 terrain profile | [Product v20 scope](docs/forever-product-v20.md) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -73,7 +74,7 @@ source of truth; the table below summarizes the boundaries.
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
 | DB2 | Build-specific catalogs, decoding, batch extraction and verification; selected real data comparisons | Complete catalog acquisition and the required server consumers |
 | Game tables & cameras | Linux product integration and bounded real extraction; cameras are preserved as raw files | Full target coverage; camera playback is outside raw extraction |
-| Terrain / MAPS | ADT conversion, assembly and readers; a real v13 available-map run verifies 3,322 MAPS and 71 tilelists | Whole-client terrain coverage and world/runtime acceptance |
+| Terrain / MAPS | ADT conversion, assembly and readers; a real v13 available-map run verifies 3,322 MAPS and 71 tilelists; v20 is synthetic-only | Whole-client terrain coverage and world/runtime acceptance |
 | Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Complete current-client acquisition, final product integration and real runtime acceptance |
 | Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Complete real world generation, product integration and runtime acceptance |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
@@ -85,6 +86,7 @@ source of truth; the table below summarizes the boundaries.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
+| **70450** | Linux v15/v18 compatible VMaps, v16/v17 DB2, v19 DB2+GT+cameras, and v20 available-Map terrain have separate profiles. V20 has synthetic route and coverage tests only. | V20's ADT/MAPS wire-format assumption is unproven; no v20 real extraction, whole-world coverage or runtime acceptance is established. |
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
@@ -117,13 +119,22 @@ Linux DB2+GameTables+cameras scope with disabled decryption and
 `wowdbdefs-70450-v1`. It does not claim geometry, full-world resources or
 runtime acceptance. See the [v19 scope](docs/forever-product-v19.md).
 
+Product v20 separately admits only the Linux resident build-70450 terrain
+profile, with disabled decryption and producer-reported available-map coverage.
+Its tests use synthetic inputs only. The lower layer explicitly assumes the
+build-70374 ADT/MAPS wire layout for its build-70450 converter; this assumption
+is not format-parity evidence. No real extraction, full-world coverage, runtime
+acceptance or release gate is established. See
+[the v20 scope](docs/forever-product-v20.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.
 
 See [product scope](docs/forever-product.md),
 [available-map terrain results](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance),
-[70425 source-reader scope](docs/forever-70425.md) and
+[70425 source-reader scope](docs/forever-70425.md),
+[build-70450 v20 terrain scope](docs/forever-product-v20.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
 
 The real terrain result covers its declared available-map selection: two WDTs

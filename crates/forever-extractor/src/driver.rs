@@ -29,6 +29,8 @@ mod execution;
 pub(crate) mod terrain_v12;
 #[cfg(target_os = "linux")]
 pub(crate) mod terrain_v13;
+#[cfg(target_os = "linux")]
+pub(crate) mod terrain_v20;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
@@ -75,6 +77,7 @@ fn open_inner(
         || plan.is_v17()
         || plan.is_v18()
         || plan.is_v19()
+        || plan.is_v20()
     {
         #[cfg(target_os = "linux")]
         {
@@ -87,7 +90,7 @@ fn open_inner(
                 };
                 LocalStore::open_db2_70450_with_keys(client, options, keys)
             } else {
-                // validate_keys rejects supplied keys for disabled-key revisions 15, 16 and 19.
+                // Disabled-key revisions reject supplied keys before this opener.
                 LocalStore::open_db2_70450(client, options)
             }
         }
@@ -136,6 +139,7 @@ fn open_inner(
         return Err("product_build_mismatch".into());
     }
     if !plan.is_available_terrain()
+        && !plan.is_v20()
         && (plan.contains(Component::Terrain) || plan.contains(Component::Collision))
     {
         store
@@ -161,6 +165,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_v16()
         || plan.is_v17()
         || plan.is_v18()
+        || plan.is_v20()
     {
         return Err("product_platform".into());
     }
@@ -327,7 +332,9 @@ fn extract_inner(
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
     let mut package_limits = package::Limits::default();
-    if plan.is_available_terrain() {
+    if plan.is_v20() {
+        package_limits = terrain_v20::package_limits();
+    } else if plan.is_available_terrain() {
         package_limits = terrain_v12::package_limits();
     }
     if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
@@ -406,7 +413,9 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
-        if plan.is_v13() {
+        if plan.is_v20() {
+            terrain_v20::extract(plan, store, run, self.context)
+        } else if plan.is_v13() {
             terrain_v13::extract(plan, store, run, self.context)
         } else if plan.is_v12() {
             terrain_v12::extract(plan, store, run, self.context)
