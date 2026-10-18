@@ -63,10 +63,16 @@ impl Context {
         }
         // Explicit product plans bind their independent profile through
         // plan_sha256. Build 70425 admits v14 collision; build 70450 admits
-        // either v15 collision or v16 DB2, on Linux only.
+        // the exact v15/v18 collision, v16/v17 DB2, or v19 DB2+GT+cameras
+        // masks, on Linux only.
         let product_scope = match self.build {
             70425 => self.components == Component::Collision.bit(),
-            70450 => [Component::Collision.bit(), Component::Db2.bit()].contains(&self.components),
+            70450 => [
+                Component::Collision.bit(),
+                Component::Db2.bit(),
+                Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+            ]
+            .contains(&self.components),
             _ => true,
         };
         if [70425, 70450].contains(&self.build) && (!product_scope || !cfg!(target_os = "linux")) {
@@ -466,10 +472,13 @@ mod product70425_context_tests {
         if cfg!(target_os = "linux") {
             assert_eq!(Context::parse(&c.json()).unwrap(), c);
         }
-        for components in 0..=255 {
-            if components != Component::Collision.bit() {
-                assert!(Context { components, ..c }.validate().is_err());
-            }
+        for components in 0..=u8::MAX {
+            let expected = cfg!(target_os = "linux") && components == Component::Collision.bit();
+            assert_eq!(
+                Context { components, ..c }.validate().is_ok(),
+                expected,
+                "mask {components}"
+            );
         }
     }
 }
@@ -478,7 +487,7 @@ mod product70425_context_tests {
 mod product70450_context_tests {
     use super::*;
     #[test]
-    fn context70450_admits_only_linux_collision_or_db2_masks() {
+    fn context70450_admits_only_the_three_linux_product_masks() {
         let c = Context {
             build: 70450,
             locale: crate::Locale::EsEs,
@@ -487,21 +496,17 @@ mod product70450_context_tests {
             producer_sha256: [3; 32],
             components: Component::Collision.bit(),
         };
-        assert_eq!(c.validate().is_ok(), cfg!(target_os = "linux"));
-        if cfg!(target_os = "linux") {
-            assert_eq!(Context::parse(&c.json()).unwrap(), c);
-        }
-        let db2 = Context {
-            components: Component::Db2.bit(),
-            ..c
-        };
-        assert_eq!(db2.validate().is_ok(), cfg!(target_os = "linux"));
-        if cfg!(target_os = "linux") {
-            assert_eq!(Context::parse(&db2.json()).unwrap(), db2);
-        }
-        for components in 0..=255 {
-            if components != Component::Collision.bit() && components != Component::Db2.bit() {
-                assert!(Context { components, ..c }.validate().is_err());
+        let admitted = [
+            Component::Db2.bit(),
+            Component::Collision.bit(),
+            Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+        ];
+        for components in 0..=u8::MAX {
+            let context = Context { components, ..c };
+            let expected = cfg!(target_os = "linux") && admitted.contains(&components);
+            assert_eq!(context.validate().is_ok(), expected, "mask {components}");
+            if expected {
+                assert_eq!(Context::parse(&context.json()).unwrap(), context);
             }
         }
     }

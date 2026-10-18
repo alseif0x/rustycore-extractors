@@ -112,6 +112,11 @@ Linux compatible GNU15-v2 collision-only scope with caller-supplied keys. It
 does not establish complete key coverage, full-world resources, or runtime
 acceptance. See the [v18 scope](docs/forever-product-v18.md).
 
+Product v19 separately admits only `wow_classic_beta 1.60.1.70450` for the
+Linux DB2+GameTables+cameras scope with disabled decryption and
+`wowdbdefs-70450-v1`. It does not claim geometry, full-world resources or
+runtime acceptance. See the [v19 scope](docs/forever-product-v19.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.

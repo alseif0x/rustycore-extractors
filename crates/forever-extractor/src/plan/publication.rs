@@ -16,6 +16,7 @@ pub enum PublicationProfile {
     Build70450CollisionProvidedKeysV1,
     Build70450Db2OnlyV1,
     Build70450Db2ProvidedKeysV1,
+    Build70450Db2GtCamerasV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -125,6 +126,11 @@ impl PublicationProfile {
             Self::Build70450Db2ProvidedKeysV1 => {
                 (70450, SchemaCatalog::WowDbDefs70450V1, Component::Db2.bit())
             }
+            Self::Build70450Db2GtCamerasV1 => (
+                70450,
+                SchemaCatalog::WowDbDefs70450V1,
+                Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
+            ),
         };
         if plan.build != build {
             return Err("product_plan_build");
@@ -158,8 +164,12 @@ impl PublicationProfile {
         if self == Self::Build70450Db2OnlyV1 && plan.decryption != super::Decryption::Disabled {
             return Err("product_plan_component_scope");
         }
-        if self == Self::Build70450Db2ProvidedKeysV1
-            && plan.decryption != super::Decryption::ProvidedSalsa20V1
+        if self == Self::Build70450Db2ProvidedKeysV1 {
+            if plan.decryption != super::Decryption::ProvidedSalsa20V1 {
+                return Err("product_plan_component_scope");
+            }
+        } else if self == Self::Build70450Db2GtCamerasV1
+            && plan.decryption != super::Decryption::Disabled
         {
             return Err("product_plan_component_scope");
         }

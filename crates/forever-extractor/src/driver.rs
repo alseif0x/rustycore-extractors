@@ -70,7 +70,12 @@ fn open_inner(
         root_layout: plan.root_layout,
         limits: Default::default(),
     };
-    let mut store = if plan.is_v15() || plan.is_v16() || plan.is_v17() || plan.is_v18() {
+    let mut store = if plan.is_v15()
+        || plan.is_v16()
+        || plan.is_v17()
+        || plan.is_v18()
+        || plan.is_v19()
+    {
         #[cfg(target_os = "linux")]
         {
             if forever_casc::admit_db2_70450(client).map_err(|e| Error::from(e.code()))? != 70450 {
@@ -82,7 +87,7 @@ fn open_inner(
                 };
                 LocalStore::open_db2_70450_with_keys(client, options, keys)
             } else {
-                // validate_keys rejects supplied keys for revisions 15 and 16.
+                // validate_keys rejects supplied keys for disabled-key revisions 15, 16 and 19.
                 LocalStore::open_db2_70450(client, options)
             }
         }
@@ -1052,3 +1057,142 @@ mod v9_tests;
 
 #[cfg(test)]
 mod v11_tests;
+
+#[cfg(test)]
+mod v19_reader_tests {
+    use super::*;
+    use std::{
+        fs,
+        path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+
+    struct Lab(PathBuf);
+
+    impl Lab {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "rce-v19-readers-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+
+        fn output(&self) -> PathBuf {
+            self.0.join("output")
+        }
+    }
+
+    impl Drop for Lab {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
+
+    fn put16(bytes: &mut [u8], offset: usize, value: u16) {
+        bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn put32(bytes: &mut [u8], offset: usize, value: u32) {
+        bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    // Same bounded synthetic WDC5 shape used by the existing camera reader tests.
+    fn camera_source(ids: &[u32]) -> Vec<u8> {
+        let mut out = vec![0; 384];
+        out[..4].copy_from_slice(b"WDC5");
+        put32(&mut out, 4, 5);
+        put32(&mut out, 136, ids.len() as u32);
+        put32(&mut out, 140, 5);
+        put32(&mut out, 144, 28);
+        put32(&mut out, 156, cameras::SOURCE_LAYOUT);
+        put32(&mut out, 160, 1);
+        put32(&mut out, 164, ids.len() as u32);
+        put16(&mut out, 174, u16::MAX);
+        put32(&mut out, 176, 5);
+        put32(&mut out, 188, 120);
+        put32(&mut out, 200, 1);
+        put32(&mut out, 212, 384);
+        put32(&mut out, 216, ids.len() as u32);
+        put32(&mut out, 228, ids.len() as u32 * 4);
+        for (field, (offset, count)) in [(0, 3), (96, 1), (128, 1), (160, 1), (192, 1)]
+            .into_iter()
+            .enumerate()
+        {
+            let at = 264 + 24 * field;
+            put16(&mut out, at, offset);
+            put32(&mut out, at + 16, 32);
+            put32(&mut out, at + 20, count);
+        }
+        for &id in ids {
+            let at = out.len();
+            out.resize(at + 28, 0);
+            put32(&mut out, at + 20, id);
+        }
+        for id in 1..=ids.len() as u32 {
+            out.extend_from_slice(&id.to_le_bytes());
+        }
+        put32(&mut out, 152, cameras::CameraContract::TABLE_HASH);
+        out
+    }
+
+    fn numeric_table(columns: usize) -> Vec<u8> {
+        let header = (0..columns)
+            .map(|index| format!("v{index}"))
+            .collect::<Vec<_>>()
+            .join("\t");
+        let first = (0..columns)
+            .map(|index| format!("{index}.5"))
+            .collect::<Vec<_>>()
+            .join("\t");
+        let second = vec!["-0"; columns].join("\t");
+        format!("ignored\t{header}\r\nduplicate\t{first}\r\nduplicate\t{second}\r\n").into_bytes()
+    }
+
+    fn v19_plan() -> Plan {
+        Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v19/disabled.tsv"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn v19_uses_the_shared_game_table_catalog_readers_on_synthetic_rows() {
+        let mut parsed = 0;
+        for table in gt::Table::ALL {
+            if let Some(columns) = table.value_columns() {
+                gt::parse_numeric(&numeric_table(columns), table).unwrap();
+                parsed += 1;
+            }
+        }
+        assert_eq!(parsed, 14);
+        assert_eq!(gt::Table::ALL.len(), 20);
+    }
+
+    #[test]
+    fn v19_camera_plan_uses_shared_reader_with_a_synthetic_sealed_source() {
+        let plan = v19_plan();
+        assert!(plan.is_gt_cameras());
+        let source = camera_source(&[0, 11]);
+        let lab = Lab::new();
+        let context = Context {
+            build: plan.build,
+            locale: plan.locale,
+            components: plan.components,
+            source_sha256: [1; 32],
+            plan_sha256: integrity::digest(plan.render().as_bytes()),
+            producer_sha256: [2; 32],
+        };
+        let mut run = Run::create(&lab.output(), context, &[], Default::default()).unwrap();
+        run.put(Component::Db2, &cameras::source_path(plan.locale), &source)
+            .unwrap();
+        run.finish_component(Component::Db2).unwrap();
+
+        let selected = camera_plan(&plan, &mut run, &source).unwrap();
+        assert_eq!(selected.file_ids(), &[0, 11].into_iter().collect());
+    }
+}
