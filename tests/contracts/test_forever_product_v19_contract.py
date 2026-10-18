@@ -112,16 +112,24 @@ class ProductV19Contract(unittest.TestCase):
 
         driver = (ROOT / "crates/forever-extractor/src/driver.rs").read_text()
         db2_route = driver.split("fn db2(", 1)[1].split("fn game_tables(", 1)[0]
-        self.assertIn("ifplan.is_gt_cameras()||plan.is_v10()", "".join(db2_route.split()))
+        self.assertIn("letcap=db2_read_limit(plan,total)?", "".join(db2_route.split()))
+        db2_cap = driver.split("fn db2_read_limit(", 1)[1].split("fn camera_remaining(", 1)[0]
+        self.assertIn(
+            "ifplan.is_gt_cameras()||plan.is_v10()||plan.is_v16()||plan.is_v17()||plan.is_available_terrain()",
+            "".join(db2_cap.split()),
+        )
         game_tables = driver.split("fn game_tables(", 1)[1].split("fn cameras(", 1)[0]
         self.assertIn("for table in gt::Table::ALL", game_tables)
         self.assertIn("gt::parse_numeric(&bytes,table)", "".join(game_tables.split()))
         cameras = driver.split("fn cameras(", 1)[1].split("fn camera_plan(", 1)[0]
-        self.assertIn("ifproduct.is_gt_cameras(){camera_remaining(total)?}", "".join(cameras.split()))
+        self.assertIn("letlimit=camera_read_limit(product,total)?", "".join(cameras.split()))
+        camera_cap = driver.split("fn camera_read_limit(", 1)[1].split("structTerrainSink", 1)[0]
+        self.assertIn("ifplan.is_gt_cameras(){camera_remaining(total)}", "".join(camera_cap.split()))
         camera_plan = driver.split("fn camera_plan(", 1)[1].split("fn db2_remaining(", 1)[0]
         self.assertIn("cameras::discover(source)?", "".join(camera_plan.split()))
-        self.assertIn("v19_uses_the_shared_game_table_catalog_readers_on_synthetic_rows", driver)
+        self.assertIn("v19_synthetic_numeric_rows_use_the_catalog_parsers", driver)
         self.assertIn("v19_camera_plan_uses_shared_reader_with_a_synthetic_sealed_source", driver)
+        self.assertIn("v19_uses_the_v11_cumulative_db2_and_camera_read_caps", driver)
 
         execution = (ROOT / "crates/forever-extractor/src/driver/execution.rs").read_text()
         compact_execution = "".join(execution.split())
@@ -129,8 +137,13 @@ class ProductV19Contract(unittest.TestCase):
         self.assertIn("Component::Cameras=>work.cameras()", compact_execution)
         verify = (ROOT / "crates/forever-extractor/src/verify.rs").read_text()
         compact_verify = "".join(verify.split())
-        self.assertIn("ifplan.is_gt_cameras()", compact_verify)
+        self.assertIn("ifuses_target_metadata_preflight(plan){package::verify_with_preflight(", compact_verify)
+        self.assertIn(
+            "fnuses_target_metadata_preflight(plan:&Plan)->bool{plan.is_gt_cameras()||plan.is_v10()||plan.is_v16()||plan.is_v17()||plan.is_available_terrain()}",
+            compact_verify,
+        )
         self.assertIn("v9::admit_metadata(plan,artifacts)", compact_verify)
+        self.assertIn("v19_uses_the_same_gt_camera_metadata_preflight_as_v11", verify)
 
     def test_70425_and_70450_context_sets_are_explicit_and_exhaustive(self):
         model = (ROOT / "crates/forever-casc/src/package/model.rs").read_text()

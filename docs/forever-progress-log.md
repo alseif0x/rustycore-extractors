@@ -3532,3 +3532,69 @@ source as unavailable without claiming completeness. Neither was done: no key
 material was supplied or derived, no CDN/TACT or launcher access occurred, the
 client was not updated, and no generic error was relaxed into an omission. The
 Linux complete-extraction objective remains open.
+
+## 2026-10-18 — build-70450 DB2+GT+cameras revision 19 and deferred key investigation
+
+Commit `8bc8b8f` adds the Linux-only build-70450 revision 19 for DB2, game tables
+and cameras, mirroring build-70374 revision 11. It binds build `70450` and
+catalog `wowdbdefs-70450-v1` to exactly the `Db2|GameTables|Cameras` component
+mask (`7`), resident storage and disabled decryption. Supplied keys are refused
+with the existing disabled-key code. The nonempty DB2 selection must resolve
+against that catalog and include `CinematicCamera` (FileDataID `1294214`); no
+terrain, navigation, offmesh or map-domain selection is admitted. The Linux
+package context admits exactly the implemented build-70450 masks: DB2 (`1`;
+revisions 16/17), collision (`16`; revisions 15/18), and DB2+GameTables+Cameras
+(`7`; revision 19). Build 70425 remains limited to its collision mask and the
+70374 context rule is unchanged. The package-context test still iterates every
+u8 mask and round-trips each admitted context. The v19 contract keeps
+`full_extractor_complete:false`.
+
+Recorded local validation for this commit: workspace **3,737 passed, 0 failed,
+26 ignored across 59 suites**; contracts **407 passed**; distribution **166
+passed, 1 skipped**; formatting and Clippy `-D warnings` passed, including the
+`windows-msvc-seal-v2` lint for `x86_64-pc-windows-gnu`. CI for the preceding
+commits was green. **No real-client run was performed for revision 19**: the
+separate key investigation asked that real client reads stay deferred, so v19
+has no real-client evidence of any kind.
+
+The independent v19 audit found no blocking issue. It falsified plan scope with
+an eleven-variant matrix, classified all 31 deleted lines as equal-or-stricter
+replacements, and checked revisions 14–18 and the Windows lint. It raised three
+informational coverage findings, whose fixes are in the same increment: the
+DB2/camera route caps and metadata preflight had been pinned only by source text;
+the build-70450 mask source pin could match the test's own array; and a reader
+test name overstated its coverage. One limitation remains: the twenty GT file
+data IDs come from the pinned reference catalog shared with revision 11 and
+cannot be confirmed from the build-70450 catalog. The gate is fail-closed and
+must be checked when real runs resume.
+
+### Separate key-investigation checkpoint (2026-10-18; investigator-reported)
+
+The investigator's reports are at
+`/home/joe/.local/share/rustycore-key-investigation-70450-20261018-m5ru_zy_/reports/`;
+the reported file names are `resultado.md` and `findings.json`. No report
+contents, key material, cache contents, screenshots or client bytes are copied
+here. As relayed by the investigator, 69 static-key rows were locally readable
+from the collection's key tables (69 rows in one table and 202 in the other); the
+union contains 69 keys, all already public. The three blocked sources request
+two distinct key names: both names occur in the lookup table, but neither is in
+the static keys nor in the complete authenticated public list of 19,705 entries.
+The current build-70374 cache contributes three valid keys, all already public
+and none matching those requests. At the time of that observation, no other
+recent caches were present and no game or launcher process was running.
+
+The observation covered the first blocks of the requests, not exhaustive frame
+coverage of every frame. No key was recovered, and the investigator stated that
+the diagnosis unblocks no extraction. The launcher's session attempt returned
+`BLZBNTBGS0000003C` with a notice that the account had signed in elsewhere; the
+operator was asked about that other session. The launcher was left open and the
+game was not started. `.build.info` and the cache retained their previous hashes.
+
+### Operational consequence
+
+Real client reads, real acceptance and any extraction run remain deferred until
+the investigator reports the client closed and the build reviewed. No client
+was started, modified or updated by this project's agents. The encrypted sources
+remain unresolved, and no revision of this project has demonstrated their
+decryption. No claim is made that keys exist or are obtainable, that decryption
+is possible, or that any component, full-world, runtime or release gate is met.

@@ -63,6 +63,15 @@ pub fn verify_links(
     verify_inner(plan, output, expected, Scope::Links)
 }
 
+#[cfg(target_os = "linux")]
+fn uses_target_metadata_preflight(plan: &Plan) -> bool {
+    plan.is_gt_cameras()
+        || plan.is_v10()
+        || plan.is_v16()
+        || plan.is_v17()
+        || plan.is_available_terrain()
+}
+
 fn verify_inner(
     plan: &Plan,
     output: &Path,
@@ -118,12 +127,7 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if plan.is_gt_cameras()
-        || plan.is_v10()
-        || plan.is_v16()
-        || plan.is_v17()
-        || plan.is_available_terrain()
-    {
+    let verified = if uses_target_metadata_preflight(plan) {
         package::verify_with_preflight(
             output,
             expected,
@@ -603,3 +607,32 @@ fn admit(
 
 #[cfg(test)]
 mod domain_tests;
+
+#[cfg(all(test, target_os = "linux"))]
+mod v19_preflight_tests {
+    use super::*;
+
+    #[test]
+    fn v19_uses_the_same_gt_camera_metadata_preflight_as_v11() {
+        let v19 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v19/disabled.tsv"
+        ))
+        .unwrap();
+        let v11 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v11/disabled.tsv"
+        ))
+        .unwrap();
+        let v18 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v18/all-available-maps.tsv"
+        ))
+        .unwrap();
+
+        assert!(uses_target_metadata_preflight(&v19));
+        assert!(uses_target_metadata_preflight(&v11));
+        assert!(!uses_target_metadata_preflight(&v18));
+        assert_eq!(
+            v9::admit_metadata(&v19, &[]).unwrap_err().code,
+            "product_camera_source"
+        );
+    }
+}

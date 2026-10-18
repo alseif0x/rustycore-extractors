@@ -540,16 +540,7 @@ fn db2(
 ) -> Result<(), Error> {
     let mut total = 0u64;
     for entry in &plan.db2 {
-        let cap = if plan.is_gt_cameras()
-            || plan.is_v10()
-            || plan.is_v16()
-            || plan.is_v17()
-            || plan.is_available_terrain()
-        {
-            db2_remaining(total)?
-        } else {
-            DB2_FILE_BYTES
-        };
+        let cap = db2_read_limit(plan, total)?;
         #[cfg(target_os = "linux")]
         let diagnostic_request = if plan.is_v16() || plan.is_v17() {
             store.begin_product_diagnostic_request(
@@ -622,11 +613,7 @@ fn cameras(product: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), 
     let plan = camera_plan(product, run, &source)?;
     let mut total = source.len();
     for &id in plan.file_ids() {
-        let limit = if product.is_gt_cameras() {
-            camera_remaining(total)?
-        } else {
-            cameras::MAX_FILE_BYTES as u64
-        };
+        let limit = camera_read_limit(product, total)?;
         let bytes = read(store, id, limit)?;
         total = total
             .checked_add(bytes.len())
@@ -669,6 +656,19 @@ fn db2_remaining(total: u64) -> Result<u64, Error> {
         .ok_or_else(|| Error::from("product_db2_total_limit"))
 }
 
+fn db2_read_limit(plan: &Plan, total: u64) -> Result<u64, Error> {
+    if plan.is_gt_cameras()
+        || plan.is_v10()
+        || plan.is_v16()
+        || plan.is_v17()
+        || plan.is_available_terrain()
+    {
+        db2_remaining(total)
+    } else {
+        Ok(DB2_FILE_BYTES)
+    }
+}
+
 fn camera_remaining(total: usize) -> Result<u64, Error> {
     cameras::MAX_TOTAL_BYTES
         .checked_sub(total)
@@ -676,6 +676,14 @@ fn camera_remaining(total: usize) -> Result<u64, Error> {
         .filter(|remaining| *remaining != 0)
         .map(|remaining| remaining as u64)
         .ok_or_else(|| Error::from("camera_policy_limit"))
+}
+
+fn camera_read_limit(plan: &Plan, total: usize) -> Result<u64, Error> {
+    if plan.is_gt_cameras() {
+        camera_remaining(total)
+    } else {
+        Ok(cameras::MAX_FILE_BYTES as u64)
+    }
 }
 
 struct TerrainSink<'a> {
@@ -1161,7 +1169,7 @@ mod v19_reader_tests {
     }
 
     #[test]
-    fn v19_uses_the_shared_game_table_catalog_readers_on_synthetic_rows() {
+    fn v19_synthetic_numeric_rows_use_the_catalog_parsers() {
         let mut parsed = 0;
         for table in gt::Table::ALL {
             if let Some(columns) = table.value_columns() {
@@ -1171,6 +1179,40 @@ mod v19_reader_tests {
         }
         assert_eq!(parsed, 14);
         assert_eq!(gt::Table::ALL.len(), 20);
+    }
+
+    #[test]
+    fn v19_uses_the_v11_cumulative_db2_and_camera_read_caps() {
+        let v19 = v19_plan();
+        let v11 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v11/disabled.tsv"
+        ))
+        .unwrap();
+        assert!(v19.is_gt_cameras());
+        for total in [0, DB2_TOTAL_BYTES - 1] {
+            assert_eq!(db2_read_limit(&v19, total), db2_read_limit(&v11, total));
+        }
+        assert_eq!(db2_read_limit(&v19, DB2_TOTAL_BYTES - 1).unwrap(), 1);
+        assert_eq!(
+            db2_read_limit(&v19, DB2_TOTAL_BYTES).unwrap_err().code,
+            "product_db2_total_limit"
+        );
+        for total in [0, cameras::MAX_TOTAL_BYTES - 1] {
+            assert_eq!(
+                camera_read_limit(&v19, total),
+                camera_read_limit(&v11, total)
+            );
+        }
+        assert_eq!(
+            camera_read_limit(&v19, cameras::MAX_TOTAL_BYTES - 1).unwrap(),
+            1
+        );
+        assert_eq!(
+            camera_read_limit(&v19, cameras::MAX_TOTAL_BYTES)
+                .unwrap_err()
+                .code,
+            "camera_policy_limit"
+        );
     }
 
     #[test]
