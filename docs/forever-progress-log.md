@@ -4384,3 +4384,50 @@ The initial qualification of `1b4ea4e` omitted the contract suite; a later
 source-text pins broken by the dispatch and preflight changes, and they are
 corrected here. In the same validation pass, the distribution suite passed 167
 tests with one skip.
+
+## 2026-10-19: Linux distribution revalidation at the typed-diagnostic revision
+
+The retained run directory is
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/distribution-20261019T125011Z/`;
+builds `a` and `b` each contain 1,027 regular files. The acceptance observed
+HEAD `4936f3b` with `dirty_files=0`, so for the first time the packaged source
+matches a published commit. Builds A and B both exited zero with schema
+`forever-distribution-v1`, 930 inventory files and source SHA-256
+`5bb69a09ecf9a55edfe891cef5fdca6e4c0992229cef76d7aed15bef177f19dd`; both
+archives have SHA-256
+`190b7636b37ad793d2bdd7ba82a5ba2639847893eae4ac0f822223cc4bcb5a34` and both
+packaged binaries have SHA-256
+`ad7f115def525125fa20263f29079a723d246574fbac6e2f75a7561358fa6dfc`. Local
+rehashing confirmed the two archives are byte-identical. Each archive contains
+931 entries (930 inventory files plus the manifest).
+
+`python3 tools/package_forever.py verify --archive <a>/forever-extractor-linux.tar.gz`
+returned `status: verified`, 930 files and a matching binary SHA-256. The first
+moved-source rebuild attempt was rejected with `distribution_input`/
+`toolchain_missing` because the user service did not have `rustup` in `PATH`
+(the invocation omitted `~/.cargo/bin`); that failure is retained. The corrected
+invocation, with `~/.cargo/bin` in `PATH`, ran in
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/distribution-rebuild-20261019T125321Z/`
+over the unpacked archive and returned `status: rebuilt`. Both
+`rebuild2/bin/forever-extractor` and
+`rebuild2/target/release/forever-extractor` have SHA-256
+`ad7f115def525125fa20263f29079a723d246574fbac6e2f75a7561358fa6dfc` and are
+4,271,224 bytes. That directory retains `unpacked` (931 files) and `rebuild2`
+(1,023 files).
+
+CLI smoke on the unpacked binary from the verified archive reports `help_rc=0`,
+`inspect_help_rc=2`, `extract_help_rc=2` and `verify_help_rc=2`; `--version`
+returns `product_usage` (there is no version subcommand). The packaged binary is
+the pure Rust `--no-default-features` build; searching it for `CascOpenFile`
+returned zero matches. Real-extraction acceptance is therefore not bound to this
+package; reproducible packaging and real admission are separate gates.
+
+On the same HEAD, `python3 -B -m unittest discover -s tests/contracts -p 'test_*.py'`
+reported 423 tests OK, and `python3 -B -m unittest discover -s tests/distribution -p 'test_*.py'`
+reported 167 tests OK with one skip.
+
+Archive integrity, byte-for-byte identity and a moved-source rebuild do not
+establish real extraction, runtime acceptance, full-world coverage or publication
+authorization; the package remains a local candidate, and encrypted content
+without an available key keeps routes depending on Map, GameObjectDisplayInfo
+and models blocked.
