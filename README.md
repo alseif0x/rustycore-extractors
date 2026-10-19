@@ -58,7 +58,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Build the Rust command-line tool | [Rust quick start](#build-the-rust-product) |
 | Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
 | Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
-| Review the synthetic build-70450 terrain profile | [Product v20 scope](docs/forever-product-v20.md) |
+| Review build-70450 available-map terrain results | [Product v20 scope](docs/forever-product-v20.md) and [real v20 checkpoint](docs/forever-progress-log.md#2026-10-19-build-70450-full-maps-terrain-v20) |
 | Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
@@ -73,11 +73,11 @@ source of truth; the table below summarizes the boundaries.
 | Component | Implemented and evidenced scope | Still required for complete Forever delivery |
 | --- | --- | --- |
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
-| DB2 | Build-specific catalogs, decoding, batch extraction and verification; selected real data comparisons | Complete catalog acquisition and the required server consumers |
-| Game tables & cameras | Linux product integration and bounded real extraction; cameras are preserved as raw files | Full target coverage; camera playback is outside raw extraction |
-| Terrain / MAPS | ADT conversion, assembly and readers; a real v13 available-map run verifies 3,322 MAPS and 71 tilelists; v20 is synthetic-only | Whole-client terrain coverage and world/runtime acceptance |
-| Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Complete current-client acquisition, final product integration and real runtime acceptance |
-| Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Complete real world generation, product integration and runtime acceptance |
+| DB2 | Build-specific catalogs, decoding, batch extraction and verification; a real v16 esES package extracted and verified 1,055 keylessly readable declarations out of 1,161 | Complete catalog acquisition and required server consumers; the other 106 esES declarations are encrypted without an available key |
+| Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
+| Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check parsed 450 selected tiles | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
+| Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Real 70450 VMaps remain blocked by encrypted required content with no available key; a bounded v15 attempt produced no VMap output. Final product integration and runtime acceptance remain open |
+| Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Real 70450 navigation remains blocked: the esES `Map` input is encrypted, its enUS variant is absent locally, and required VMap inputs are unavailable; no real MMaps or runtime acceptance are established |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
 
@@ -87,7 +87,7 @@ source of truth; the table below summarizes the boundaries.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
-| **70450** | Linux v15/v18 compatible VMaps, v16/v17 DB2, v19 DB2+GT+cameras, v20 available-Map terrain, and v21 map-domain navigation have separate profiles. V20 and v21 have synthetic tests only. | V20's ADT/MAPS wire-format assumption is unproven. V21's target Map table is encrypted under a key-refusing plan and VMap inputs are unavailable; no v21 real extraction, whole-world coverage or runtime acceptance is established. |
+| **70450** | Linux product revisions v15–v21 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. | The other 106 esES DB2 declarations are encrypted; collision/VMaps and navigation/MMaps are blocked by encrypted required content without an available key. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; no whole-client/full-world, parity, complete runtime or release acceptance is established. |
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
@@ -96,13 +96,17 @@ Its coverage is producer-reported and does not claim full encrypted-Map coverage
 See the [v14 scope](docs/forever-product-v14.md).
 
 Product v15 separately admits only `wow_classic_beta 1.60.1.70450` for the
-Linux compatible-VMaps scope. It does not claim real extraction, full-world
-resources, or runtime acceptance. See the
+Linux compatible-VMaps scope. A bounded real map-48 attempt stopped at
+`local_store_no_verified_encoding` and produced no VMap output; it does not
+establish full-world resources or runtime acceptance. See the
 [v15 scope](docs/forever-product-v15.md).
 
 Product v16 separately admits only `wow_classic_beta 1.60.1.70450` for the
-Linux DB2-only scope with disabled decryption and `wowdbdefs-70450-v1`. It does
-not claim collision/VMaps, full-world resources, or runtime acceptance. See the
+Linux DB2-only scope with disabled decryption and `wowdbdefs-70450-v1`. Its real
+esES package extracted and passed offline verification for 1,055 selected,
+keylessly readable declarations; the 106 remaining declarations are encrypted
+without an available key. This does not claim collision/VMaps, full-world
+resources, or complete runtime acceptance. See the
 [v16 scope](docs/forever-product-v16.md).
 
 Product v17 separately admits only `wow_classic_beta 1.60.1.70450` for the
@@ -117,24 +121,35 @@ acceptance. See the [v18 scope](docs/forever-product-v18.md).
 
 Product v19 separately admits only `wow_classic_beta 1.60.1.70450` for the
 Linux DB2+GameTables+cameras scope with disabled decryption and
-`wowdbdefs-70450-v1`. It does not claim geometry, full-world resources or
-runtime acceptance. See the [v19 scope](docs/forever-product-v19.md).
+`wowdbdefs-70450-v1`. Its real package contains the selected `CinematicCamera`
+DB2, 20 verified GameTables and ten verified opaque raw camera files. This does
+not claim geometry, full-world resources or complete runtime acceptance. See
+the [v19 scope](docs/forever-product-v19.md).
 
 Product v20 separately admits only the Linux resident build-70450 terrain
 profile, with disabled decryption and producer-reported available-map coverage.
-Its tests use synthetic inputs only. The lower layer explicitly assumes the
-build-70374 ADT/MAPS wire layout for its build-70450 converter; this assumption
-is not format-parity evidence. No real extraction, full-world coverage, runtime
-acceptance or release gate is established. See
+A real package extracted and passed verification for 3,322 MAPS tiles and 71
+tilelists across the client's available maps; a bounded runtime check parsed 450
+selected tiles. This is not whole-client coverage. The lower-level build-70450
+terrain converter assumes the build-70374 ADT/MAPS wire layout; this is not
+format-parity evidence. Full-world/runtime acceptance and release gates remain
+open. See
 [the v20 scope](docs/forever-product-v20.md).
 
 Product v21 separately admits a Linux build-70450 map-domain navigation profile
 with complete 70450-catalogue Map and liquid readers, leased-disk collision
 storage, MAPS terrain, VMaps and MMaps. Its synthetic full extraction and
-verification tests do not establish a real navigation run: the target Map table
-is encrypted under the key-refusing plan and the required VMap inputs are not
-available. No real navigation evidence or runtime acceptance exists. See the
+verification do not establish a real navigation run. The real canonical enUS
+attempt cannot find a local Map encoding; an esES attempt reaches encrypted Map
+content. Both fail before package creation, and required VMap inputs are
+unavailable. There is no real navigation output or runtime acceptance. See the
 [v21 scope](docs/forever-product-v21.md).
+
+The opt-in `FOREVER_PRODUCT_DIAGNOSTIC` now records typed failures for revisions
+v16–v19 and v21; v20 is deliberately excluded because its terrain path flattens
+the store error before the diagnostic layer. This is diagnostic-only: it does
+not unlock encrypted content, change extraction behavior or close an extraction
+gate. Windows remains deferred.
 
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
