@@ -4528,11 +4528,17 @@ contract review; v21 is unchanged.
 Ancestor closure already exists in
 `crates/forever-casc/src/collision/plan.rs`: `MapSelection::MapAndAncestors`
 at lines 41-44 and 221-332 includes `MissingParent`, `CopiedParent`, and
-`InactiveMap`. The availability reader cannot supply that closure because
-`crates/forever-casc/src/terrain/availability.rs:110-113` does not traverse
-parents. Any profile deriving a materialized domain with parent closure must
-extend that derivation and continue to reject an ancestor in an unavailable
-section.
+`InactiveMap`. The collision family already feeds that closure from an
+available Map source: `crates/forever-casc/src/collision/compatible/world.rs:419-431`
+defines `prepare` as `prepare_selected` with `plan::MapSelection::All`, `:433-440`
+takes a `plan::MapSelection`, `:472-482` calls
+`plan::Maps::from_materialized_selection(owner.rows(), owner.direct_records().len(), selection, ...)`,
+and `crates/forever-casc/src/collision/available_70374.rs:465-505` reads the
+available source and dispatches `db2::read_vmap_maps_70450` for the build-70450
+target. What the available reader does not do is satisfy v21's strict
+`prepare_domain` contract, which is the separate finding above. Any profile that
+derives a materialized domain with parent closure must still reject an ancestor
+in an unavailable section.
 
 ### Global gameobject scope
 
@@ -4546,7 +4552,7 @@ The pinned C++ reference does the same: `ExtractGameobjectModels()` runs before
 `ReadMapTable`/`ParsMapFiles` and has no map filter
 (`src/tools/map_extractor/vmapexport.cpp:713-725` and
 `src/tools/vmap4_extractor/gameobject_extract.cpp:88-117`, reference HEAD
-`02245dcd245e7433e524577656177723d3e4992e2`). Restricting this work by domain
+`02245dcd245e7433e524577656177723d3e4992e`). Restricting this work by domain
 would require a new versioned profile and, while `GameObjectDisplayInfo` and
 models remain encrypted without an available key, would not unblock real
 extraction.
@@ -4576,3 +4582,31 @@ modified.
 Full extraction remains unmet. This entry documents why two apparently
 avoidable blockers remain real blockers under the current contract and records
 the outstanding runtime-integration responsibility.
+
+## 2026-10-19: correction — model selection is not placement-only
+
+`crates/forever-casc/src/collision/assemble/staged/models.rs:5-6` documents the
+selection kernel as "every name BEFORE placement ID deduplication plus every
+successful startup TempList row". Placement rows from the per-map `DirBin` are
+marked `selected = true` around `:700-706`, and every row of the startup TempList
+parsed from `stage.lists().temp_bytes()` is marked `selected = true` at `:713-723`.
+`crates/forever-casc/src/collision/compatible/world.rs:419-440` delegates to
+that kernel. A simple reordering therefore does not remove global models: a
+domain scope requires coherently separated scope, lists, model archive and
+coverage.
+
+Required gameobject display IDs must not be inferred from WDT/ADT without
+justifying the real correspondence: placements use static models, while runtime
+gameobjects can depend on server state.
+
+The global profile v15/v21 stays unchanged. Any new scope must be a versioned
+profile with its own contract, coherently separated
+scope/lists/model-archive/coverage and its own real acceptance.
+
+The independent key investigation advanced without recovering a key (owner
+commit `17484fe`); no key material changed and the four pending names remain
+unavailable.
+
+This correction narrows the remaining work to a domain-scoped model selection
+with separate coverage facts, and does not by itself unblock real extraction
+while the required sources remain encrypted.
