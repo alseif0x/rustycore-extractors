@@ -1446,3 +1446,42 @@ build. Supply authentic neighboring page context when unwind chains cross a
 primary interval, and retain missing-context limits. Code-recovery material
 is not an asset decryption key, and static analysis does not establish that
 the server delivered either requested payload.
+
+#### Corroborating the cached operation with the serializer
+
+A further explicitly selected offline batch reconstructs eleven neighboring
+pages independently, with the same two exact controls and unchanged phase/
+identity policies: eleven successes, zero failures, 14.426 seconds. Together
+with the earlier six target pages this gives 17 authenticated inferred pages
+(69,632 bytes), not full-image acceptance. Each page retains its own metadata
+and reconstruction receipts. Batch manifest:
+`private/hotfix-region-recovery-v1-20261019T103923Z-1885215-55ebedee24/manifest.json`.
+The v11 authored-source inventory contains 100 diagnostic sources and
+corroborates all 86 v10 hashes unchanged.
+
+The new Windows-ABI analysis of serializer `0x4af5c0` succeeds with all final
+input guards true. Evidence
+`ev_794cdf9966ad5eee3b73dc819be99491f026c2776e93988c4b9677299e3319a5`
+shows a 32-byte record header, with the unmodified sixth argument at offset
+28 and payload length separate at offset 24. The reviewed caller supplies
+the same operation value that indexes the status-name table. A private
+comparison confirms the writer's magic matches the cache's record magic;
+no literal bytes are exposed. The strict cache parser reads that operation
+at the same offset. Receipt:
+`reports/cache-operation-serialization-70450-00.json`.
+
+This closes the earlier **unproven numeric-name mapping** for this exact
+client's cached operation: the selected empty operation-4 observations are
+classified **NotPublic** by the client's own code and enum-name table. They
+contain no sixteen-byte key payload. It does not establish the server's
+reason, an account entitlement rule, future publication timing or a way to
+derive an absent key. The heap-state union and activation-event enum remain
+separate facts.
+
+A linear disassembly candidate search across those 17 selected pages finds
+only the known direct dispatcher call `0x4b1a56`, passing event 4, plus the
+already reviewed callback-vector readers. It does not find the event-3
+emitter and makes no global absence claim. Receipt:
+`reports/focused-hotfix-dispatch-xrefs-70450-00.json`. Further work must follow
+references outside that bounded neighborhood, retaining inferred provenance
+and the exact control/identity gates.
