@@ -1902,3 +1902,88 @@ keeps the unavailable-context consumer explicitly non-executable. Inventory:
 `reports/authored-diagnostics-manifest-v16.json`, SHA-256
 `6169818dc17ef204df14c9e5956f5a044ee7723d7d65ab41ef8eca44927a7d7b`.
 None of these results recovers a missing key or closes extraction/runtime gates.
+
+### 2026-10-19 — Four-name live state and continued handler analysis
+
+The expanded, explicitly pinned four-name input is now observed in the current
+Linux session. A new wrapper preserves the original two-name observer and its
+receipt, uses distinct one-shot outputs, and retains numeric state counts.
+All four requested names are present, each has cache state **3**, and all four
+sixteen-byte value fields are zero. All 83 known control names are present in
+state 2 with exact values. The complete bounded walk visits 256 buckets and
+202 nodes, reads 12,560 bytes, and reports no omitted nodes, cycles, read errors
+or byte/time caps. Every identity, source, mapping, control and observer guard
+passes; no candidate key file is produced.
+
+This establishes state 3 for these four entries in this observation. It does
+not distinguish the several callback results that can produce that state,
+prove a fresh server response, or establish why the service marks the retained
+hotfix records `NotPublic`. The older wrapper's aggregate `other` field remains
+unchanged; its private inner receipt separately retains the original two
+numeric states. Receipt:
+`reports/tactkey-cache-four-name-session23756-00-wrapper.json`, SHA-256
+`95c4149e1e09a51ea05c87652a1eab41bd189641c5341b0bad09f530841e1e4b`.
+New wrapper: `run_tactkey_cache_four_names_session23756_once_v2.py`, SHA-256
+`e2dca26a6858fbe5bd3db389f9e7836015d12434bccd675ea9c2d2519c331c11`.
+
+A separate passive attempt preselects the two handler-context pages and
+requires complete RX mappings for both before opening process memory. That
+coverage is unavailable: the attempt reads **zero target bytes and zero control
+bytes**, saves an unavailable receipt and stops. It changes no protections and
+does not force the client to execute the handler. Receipt:
+`reports/callback-context-rx-23756-00.json`, SHA-256
+`bdd4560752d9b5c803c1e1e15b95651e139a137853832d532cd219d31f76343c`.
+Helper: `R/capture_callback_context_rx_v1.py`, SHA-256
+`952f41c13d613b4db402701114367dfeae5c7bf9a81bc81c5ed6646195718a79`.
+
+REA analysis of independently reconstructed `0x4b3200` identifies insertion of
+a store pointer into a global pending-store hash set, with duplicate detection.
+It does not itself send a network request or establish per-row eligibility.
+Evidence:
+`ev_ce116524818b44962048d7800826679bec056298fd8522125882111fae9b0bde`.
+The earlier provider failure for `0x4b18a0` is retained; a new attempt after the
+unrelated provider process disappeared succeeds without permission changes.
+Its reconstructed path handles a transition to value 1, optional cache work,
+callback event 4 and clearing of a separate request-state collection. It does
+not turn event 3 into evidence of key delivery. Evidence:
+`ev_355b620cc6c9ed8c41bb5209c32231ebbc674f349a65406d570e90226631c974`.
+Both dossiers retain their one-page context and unresolved external/indirect
+call limitations; these are static inferences, not observed target execution.
+
+#### A separate canonical-allocation profile supplies the missing context
+
+The original push-only rejection remains valid and retained. A separately
+versioned diagnostic profile adds constraints from four source-metadata
+`UWOP_ALLOC_SMALL` operations. It explicitly hypothesizes the canonical short
+stack-allocation instruction ending at each metadata code offset; this is a
+restrictive compiler-pattern hypothesis, not a universal unwind rule. Only
+version-1, completely decoded, unchained records qualify. The profile retains
+the four-byte/two-function minimum, all original push constraints and all source,
+loader, metadata, calibration and private-artifact guards.
+
+All four page phases are selected before either historical control snapshot is
+opened. Each target and control has exactly one matching phase; both complete
+control pages compare byte-exactly. The first target keeps its prior hash and
+nineteen constraints from five functions. The previously unavailable second
+target now satisfies seventeen byte constraints from four functions: one push
+plus sixteen comparisons from four metadata-derived allocation instructions.
+All guards pass. These are **offline inferred** pages, with no target execution
+or runtime/RX capture claim; they do not provide an asset-decryption key.
+
+Helper: `R/reconstruct_code_pages_unwind_v4_alloc_small.py`, SHA-256
+`518601758b93bc463474bd25068f9604ef2821fd8bfc4156f2eba111a74ea866`.
+Receipt:
+`reports/offline-code-page-reconstruction-v4-alloc-small-20261019T131316Z-86433-3cc02c1d0ba9.json`,
+SHA-256 `22c88200d1349291e6169b76a910e197ee898f4acdc1e34e792a0264c3832019`.
+The former non-executable consumer remains unchanged; a new, specifically typed
+consumer is required for this profile and its wider context.
+
+Further one-page Windows-ABI analyses follow `0x4b10b0`'s nonempty-request route:
+`0x1ab1ee0` serializes through the supplied object's virtual method and forwards
+to `0x1ab1b80`. The latter gates work on connection-object state 5, selects a
+channel and either submits through another virtual interface or queues a copy.
+This narrows the transport path; unresolved virtual calls, opcode classification
+and a missing per-row live request/response trace still limit attribution.
+Evidence:
+`ev_d5cb34508a4ee4b643ee3fe402e460e5568d9dc93219b40ded3ed9f55d85c4ae`
+and `ev_1960a13f0659e1d16ac841e8e8a3d053f8896ee0b9cb1499ed2651f9a85c06c4`.
