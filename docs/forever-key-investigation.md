@@ -1115,3 +1115,169 @@ Reviewed structural conclusions are in
 `reports/world-reviewed-control-flow-700-02.json`. The later authored-source
 inventory, with 74 sources and unchanged prior helper hashes, is
 `reports/authored-diagnostics-manifest-v9.json`.
+
+### Same-session continuation — empty target hotfix observations
+
+A new disk-only audit joins the two private requested lookups to unique
+`TactKeyLookup` row IDs, then selects the corresponding TactKey records in
+the unchanged build-70450 HTFX v9 cache. The strict v2 parser validates each
+record magic and payload boundary and requires eight-byte lookup values.
+All source hashes and metadata remain stable before/after. It examined all
+32,917 records within its 64-MiB, 100,000-record and ten-second limits:
+
+- Both selected rows occur in the cache. All **eight observations have a
+  numeric operation/status byte of 4 and zero payload bytes**, including the
+  latest observation of each row under the recorded push/ordinal ordering.
+- Across the TactKey table there are 490 observations: 14 with byte 1 and
+  16-byte payloads, and 476 with byte 4 and empty payloads.
+- Presence in the static source means presence in **TactKeyLookup**; it does
+  not establish that either key value occurs in static TactKey.
+
+Receipt:
+`reports/audit-target-key-cache-status-v2-20261019T084410Z-1792399450575286177-0.json`.
+The executed v1 and its earlier failed receipts remain retained; v2 was
+created separately rather than changing an executed helper. This is a new
+selection/query against previously audited bytes, not a new cache delivery.
+
+The pinned fork's
+[HotfixRecord enum](https://github.com/advocaite/TrinityCore/blob/e3abffa1e701e7387739e39f35c42071eac2d5c5/src/server/game/DataStores/DB2Stores.h)
+names protocol value 4 `NotPublic`. Its hotfix-connect response path can
+serialize a stored status, whereas its bulk DB-query path defaults to
+`Invalid` and changes an existing record to `Valid`; that handler does not
+assign `NotPublic`. See the pinned
+[handler](https://github.com/advocaite/TrinityCore/blob/e3abffa1e701e7387739e39f35c42071eac2d5c5/src/server/game/Handlers/HotfixHandler.cpp)
+and
+[serializer](https://github.com/advocaite/TrinityCore/blob/e3abffa1e701e7387739e39f35c42071eac2d5c5/src/server/game/Server/Packets/HotfixPackets.cpp).
+This does **not** establish that the cached byte is that exact protocol enum:
+[DBCD's HTFX v9 structure](https://github.com/wowdev/DBCD/blob/e732093f8864240fc5884bd1bba6b02f3dfc0d56/DBCD.IO/Common/HTFXStructs.cs)
+calls it an operation and only treats operation 1 as valid. The independently
+inspected
+[wow.tools.local parser](https://github.com/Marlamin/wow.tools.local/blob/5b2f85db477bd42205fde912ed72b3adadda218a/Utils/DBCacheParser.cs)
+retains the numeric byte. Consequently **`NotPublic` is a candidate semantic
+mapping**, not a proven live server/account decision. The cache operation,
+protocol status, heap-node state 3 and activation event 3 must remain distinct
+until their actual adapters/emitters are traced. The recorded empty payloads
+contain no recoverable key values.
+
+### Callback inventory and readable-alias limits
+
+The offline retained-code inventory authenticates 23 captures intersecting
+the key subsystem. The separate syntax scan checks 7,118 retained bytes,
+finds the already known pending-state write and no explicit immediate-3
+store pattern. This is not a complete dataflow analysis or proof that no
+state-3 writer exists. The query helpers and response adapter are outside
+the retained coverage. Receipts:
+`reports/retained-key-code-inventory-700-00.json` and
+`reports/retained-key-state-writes-700-03.json`; earlier failed/incomplete
+variants remain retained.
+
+Initializer review identifies two other callbacks registered through
+`0x4b1d60`: `0x1f77840` and `0x28fb0e0`. The former has a unique 28-byte
+source exception-directory entry; the latter has no matching entry. Their
+ordinary guarded live capture/sample attempts read zero code bytes, so these
+addresses and registration order do not establish callback roles. A new
+bounded RX reference scan accepted 297 spans / 2,490,368 bytes before a
+subsequent span changed permissions. It corroborates the three initializer
+registration sites but has incomplete image coverage. The separate offline
+scan of 28 authenticated captures / 8,168 bytes finds no additional retained
+emitter/dispatcher references to the activation callback or its two fields.
+Receipts: `reports/event-registration-xrefs-700-00.json` and
+`reports/retained-callback-reference-scan-700-00.json`.
+
+One newly captured readable 64-byte neighborhood at `0x1f0ed0` has a small
+copy/address-management leaf whose reviewed return paths fit within its
+first 29 bytes. Operations 1/2 copy 16 bytes and operation 3 stores a pointer;
+it does not write the key-cache state. There is no source function boundary
+for this leaf, and the neighboring partial code is not a complete function.
+Receipt: `reports/callback-carrier-leaf-sample-700-00.json`.
+
+Metadata inspection found an existing readable shared mapping of the same
+backing object and offset ranges as the protected original function views.
+The new `readable-code-alias-carve-v1` diagnostic preserves that distinct
+provenance: it never reads original protected code addresses, changes page
+permissions, invokes a target function or opens backing-file content. Before
+reading a new target it compares two alias reads of the known 539-byte setup
+control with its authenticated retained capture. It also checks exact
+process creation/binding, source hash/PE, shared object/offset arithmetic,
+mapping stability, two equal target reads and all final guards. It does not
+claim RX capture or automatically establish plaintext.
+
+Two one-function captures passed those guards: the 73-byte response adapter
+at `0x1b8ed40` and the 101-byte registration entry at `0x4b1d60`. Both alias
+ranges equal the corresponding source-file bytes and decode incoherently as
+ordinary Windows functions, including respectively six/four invalid decode
+rows and privileged I/O instructions. The known control still matches.
+Thus a readable alias is **not sufficient to recover the usable code** at
+these entries. No pseudocode or event/state semantics are inferred from
+them. Their manifests remain private; reviewed aggregates are in
+`reports/readable-code-alias-reply70000-1b8ed40.json`,
+`reports/readable-code-alias-eventreg70000-4b1d60.json` and
+`reports/readable-alias-code-review-700-00.json`. The separately prepared
+Windows-ABI alias consumer remains unexecuted.
+
+For another process/build, re-establish all source, creation, PEB and layout
+pins. Reproduce the strict disk join without printing row IDs or values;
+retain numeric cache operations until their client mapping is proved. Any
+future alias capture needs its own truthful schema, a known-byte control and
+all mapping/identity guards; equal source bytes or a readable view alone do
+not admit those bytes as decoded executable code. No requested key has been
+recovered or authenticated, and the event enum and response/state-3 writer
+remain open.
+
+The follow-up cohort audit preserves the v2 parser and compares row sets
+locally. All 476 empty operation-4 observations represent **119 distinct
+rows**, with four records but **one push per row**. The two selected rows
+share that exact profile with the other 117. The 14 operation-1 rows are
+disjoint from those 119. All 133 cache row IDs belong to the 202-row static
+TactKeyLookup universe and none overlaps the 69 direct static TactKey rows.
+This accounts for the previously known 83 available keys and the remaining
+119 rows without providing additional values. It does not prove availability
+for other accounts, an unpublished-content policy or a specific server cause.
+In particular, four retained records must not be presented as four separate
+delivery attempts. Receipt:
+`reports/audit-tactkey-cache-cohorts-v1-20261019T085614Z-1792400174680867889-0.json`.
+
+A read-only remote HEAD check still returns the pinned TACTKeys commit
+`2394fc00248074b9624ebb6749934f7a41a5f09e`; no replacement dictionary was
+downloaded. A bounded source-only check of twelve initializer string-pointer
+RVAs found no matches for a fixed public-term dictionary. It emits only
+length/termination and known-term categories, not client strings, and provides
+no subsystem or event identity. Receipt:
+`reports/public-string-terms-safe-init-string-rvas-00.json`.
+
+The initializer also installs a pointer to `0x211730`. A new independent RX
+carve captured its 389-byte source-bounded extent with all source, creation,
+PE and before/after RX guards true. Windows-ABI REA evidence
+`ev_8f212c87f929692ac1bbc8298f83f5af47d3450a9119aab9e410e9113f88024c`
+returns normally, with an overlapping-global warning. The reviewed body builds
+a local object, invokes three optional indirect hooks and other helpers, and
+cleans up the object. It has no direct reference to the two activation fields
+or direct call to the key-cache iterator; opaque callees remain opaque. Its
+installation alone does not identify it as the retry timer or event emitter.
+Receipt: `reports/installed-neighbor-carve-211730-700-00.json`.
+
+The new field-focused RX scan uses a different explicit target selection with
+the unchanged xref helper. It accepts 103 spans / 704,512 bytes, corroborates
+the four known activation-field references, and then stops at a changed RX
+span. All final identity/source/PE guards pass, but that partial search adds
+no field reader or event emitter and proves no global absence. Receipt:
+`reports/event-field-xrefs-700-00.json`.
+
+The new passive RX-availability observer completed its configured 25-second
+map-sampling window: 2,483 samples, 26.253 seconds including setup/final
+checks, all binding/source/creation/retained-control guards true. The four
+fixed entries started protected and no sample observed complete RX coverage.
+Consequently it made **zero carver attempts and read zero target code bytes**.
+Sampling at intervals of at least ten milliseconds cannot exclude shorter
+transitions or execution through another view; this is not absence-of-query
+evidence. It used no debugger, signal, target invocation or permission change.
+Receipt: `reports/rx-availability-watch-700-00.json`.
+
+The v10 authored-diagnostic inventory records 86 sources, with all 74 v9
+hashes unchanged. It includes the new strict audits, alias tools, retained-code
+scans and observer, distinguishing prepared tools from their executed
+receipts. Keep the full private dossiers and unsuccessful captures. A useful
+continuation must obtain the actual event emitter/response adapter with
+authenticated usable code or trace a real response; repeating the same
+protected carve or calling cache byte 4 a proven server refusal does not
+close either gap. No observer remains running after this bounded window.

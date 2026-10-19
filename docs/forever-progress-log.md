@@ -3919,3 +3919,35 @@ and supplies no complete-image or execution claim. A closing guarded cache
 walk still found both missing entries in state 3 and produced no candidates.
 The v9 helper inventory and exact positive/negative evidence are retained in
 the key-investigation guide and private laboratory.
+
+### Empty hotfix cohort and activation-event investigation
+
+A new strict disk audit joins the two requested lookups to their TactKey
+cache rows without exposing identifiers or values. Both rows have four empty
+operation-byte-4 records, each in one push; they share that profile with 117
+other rows. The 119 empty rows and 14 valid 16-byte cache rows are disjoint,
+belong to the 202-row TactKeyLookup universe and do not overlap the 69 direct
+static TactKey rows. This explains the recorded 83-key ring and missing
+payloads, without establishing why the server withheld or omitted a value.
+The reference protocol calls status 4 `NotPublic`, but its identity with the
+HTFX operation byte is still a hypothesis. Event 3, heap state 3 and cache
+operation 4 remain separate observations.
+
+Retained-code and bounded RX reference scans corroborate the known callback
+registration and activation-field references, with no new emitter identified.
+A 389-byte neighboring installed function was captured with all source/PE/
+creation/RX guards and analyzed with REA's Windows ABI; its body supplies no
+direct iterator call or activation-field references. An already-readable
+shared alias passed exact object/offset, known-control and stability guards
+for the registration and response-adapter extents. Those bytes equal the
+source file and decode incoherently; they do not establish usable callback
+code. A separate 25-second passive RX watch completed 2,483 samples, observed
+no eligible transition and attempted no code capture. Sampling has explicit
+coverage limits and proves no absence of execution or queries.
+
+TACTKeys HEAD still equals the previously pinned source. No requested key,
+complete extraction or runtime acceptance has been obtained. Exact receipts,
+retained failures, the prepared alias analyzer, repeat instructions and the
+86-source v10 inventory are recorded in the key-investigation guide/private
+laboratory. All 74 prior helper hashes remain unchanged; no bounded observer
+remains active.
