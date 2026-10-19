@@ -3906,3 +3906,16 @@ not absence-of-query evidence. The disk hotfix cache is unchanged. New helper
 hashes, exact receipts, retained failures and repeat steps are recorded in the
 key-investigation guide and the private v8 diagnostic manifest. No missing key,
 full extraction or runtime acceptance is claimed.
+
+The later same-session RX search found and independently corroborated a direct
+caller of the key-cache iterator. Its guarded 63-byte Windows-ABI analysis
+shows that input event code 3 starts the iterator and sets a global indicator,
+while event code 4 clears that indicator. This is a numeric activation
+condition; the event's semantic name and its relationship to the separate
+cache-node state 3 remain unproven. The initializer registers this callback,
+but the registration routine remains protected at the selected live extent.
+The search itself stopped at a changed RX mapping after 205 accepted spans
+and supplies no complete-image or execution claim. A closing guarded cache
+walk still found both missing entries in state 3 and produced no candidates.
+The v9 helper inventory and exact positive/negative evidence are retained in
+the key-investigation guide and private laboratory.

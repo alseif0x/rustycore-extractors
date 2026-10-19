@@ -1040,9 +1040,78 @@ PEB base; create a new strict binding; then run new-name cache/predicate probes
 with all original code-hash, PE, RX and stability guards. For split functions,
 inspect source unwind families, capture each authenticated contiguous member
 and use the v4 carrier without filling gaps or rewriting older receipts.
+Another build additionally needs newly established code/layout identities and
+its own admission gates; changing the PID/base does not admit a different build.
 Do not reuse the executed GDB observers unchanged as if they supplied a full
 window. Resolve the iterator's activation and the actual response/state writer
 before assigning a quest, NPC or packet as the trigger. No missing key has
 been recovered or authenticated. Authored-source hashes are in
 `reports/authored-diagnostics-manifest-v8.json`; all captures, keys, raw debugger
 logs and full REA dossiers remain in the private external laboratory.
+
+### Same-session continuation — numeric activation event found
+
+The new `world_refresh_xrefs_700.py` uses the strict current-process binding,
+20-second/4-MiB limits, a three-second final-guard reserve and at most 128
+reported references. It refreshes mapping metadata immediately before and
+after every captured span and decodes only spans that pass both RX checks.
+Failed dumps remain private; protected spans are not read. Its single run
+accepted 205 spans covering **1,232,896 bytes**, then stopped when the next
+planned span was no longer fully RX. All binding, source, creation and runtime
+PE guards passed. The report retains its failure status and incomplete
+coverage: 707 initial spans were found, and 1,003,100 bytes were also outside
+the four-MiB plan. It examined 337,415 instructions with 458 bad decodes and
+reported 41 references. Its 15,300 RIP-relative instructions and zero missing
+target comments are maintained counters, unlike the older Lua-seed helper's
+unused total counters. Receipt: `reports/world-refresh-xrefs-700-00.json`.
+
+One positive result in an accepted span was a direct call from **`0x211614`
+to `0x1b8be40`**. A separate full-extent RX carve independently corroborated
+the containing source range `0x2115f0`–`0x21162f` (63 bytes), with all original
+source/PE/creation/RX guards. Windows-ABI REA evidence
+`ev_8b9262c0b71c0e9a94469e32e69b1f7e88fdf0988ae512ebd8ad145ee0026d90`
+has a normal return and an overlapping-global warning:
+
+- Input event code **3** calls the key-cache iterator immediately, writes
+  5000 to a 32-bit global field at `0x5223e80`, and sets byte `0x524850d` to 1.
+- Input event code **4** changes that field and clears the byte.
+- Other input values return without those actions in the captured region.
+
+This supplies an actual activation callback and its numeric condition. The
+event enum names, the field's timing unit and the event's connection to a
+specific login/world transition are **not established**. Event code 3 and
+key-cache node state 3 belong to different fields; their equal numbers do not
+establish a relationship. The code was analyzed, not invoked by the probe.
+
+Review of the retained initializer-caller dossier confirms that it registers
+the `0x2115f0` callback through `0x4b1d60`. A current-process capture of that
+101-byte registration routine stopped at its RX guard with zero bytes read,
+so its event-dispatch implementation and enum identity remain unresolved.
+The nearby registered 251-byte callback at `0x211630` was captured and
+analyzed: it parses a numeric input, combines local feature bits and selects
+from nine handlers. Its normal-return evidence is
+`ev_2dff45e3fd8d0e5198706ff1089d1f993b92f9013be5609aac61288e73644ece`.
+That structure does not identify it as a key request, network message or a
+command safe to invoke. It was not invoked.
+
+A separate guarded source-only search of the 86,509,776-byte executable found
+no exact preferred-base absolute-pointer occurrences for the iterator, setup
+or response-adapter targets. This negative byte-pattern hypothesis does not
+rule out relocated, computed or dynamically installed references. Receipt:
+`reports/world-source-refresh-pointer-search-700-00.json`. Retained capture
+comparison `reports/world-request-setup-capture-continuity-700-01.json`
+confirms the two 539-byte setup captures are identical; the initial comparison
+missed the older filename because it named an interior requested address.
+
+The closing bounded cache walk, with exact creation identity before/after and
+stable cache/source/PE guards, again found both selected entries in state 3,
+zero available candidates and no private key output. This is an end-point
+observation, not continuous monitoring or proof of no intervening request.
+Receipt: `reports/world-client-cache-final-700-00.json`. Consequently no new
+candidate was passed to the authenticated CASC verifier. The remaining gaps
+are the activation event's semantic identity and the actual query-response
+path/state-3 writer; delivery of either selected key is still unproven.
+Reviewed structural conclusions are in
+`reports/world-reviewed-control-flow-700-02.json`. The later authored-source
+inventory, with 74 sources and unchanged prior helper hashes, is
+`reports/authored-diagnostics-manifest-v9.json`.
