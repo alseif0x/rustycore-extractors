@@ -1415,7 +1415,14 @@ mod v19_reader_tests {
             plan_sha256: integrity::digest(plan.render().as_bytes()),
             producer_sha256: [2; 32],
         };
-        let mut run = Run::create(&lab.output(), context, &[], Default::default()).unwrap();
+        let output = lab.output();
+        let run = Run::create(&output, context, &[], Default::default());
+        if !cfg!(target_os = "linux") {
+            assert_eq!(run.as_ref().err().copied(), Some(package::Error::Context));
+            assert!(!output.exists());
+            return;
+        }
+        let mut run = run.unwrap();
         run.put(Component::Db2, &cameras::source_path(plan.locale), &source)
             .unwrap();
         run.finish_component(Component::Db2).unwrap();
