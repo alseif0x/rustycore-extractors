@@ -4209,3 +4209,20 @@ client bytes entered Git, any report or this log.
 No declaration was decrypted, no key was recovered or published, and this is
 not a format, parity, coverage, runtime or release result. The encrypted
 content remains fatal on every disabled-key route.
+
+## 2026-10-19: byte-reversed public keyring batches remain negative
+
+The five byte-reversed-name batches (`rev-0/4000/8000/12000/16000.keyring`),
+covering the same 19,705 public entries as the verbatim batches above, were run
+against the single-`Map` 1349477 plan (forever-product 17, build 70450,
+esES). All five exited 9 with `local_store_no_verified_encoding`; each
+diagnostic reported `NoLocalEncoding`, `encrypted:1` and
+`blte_encryption_key_unavailable`.
+
+Reversing the name's byte order did not match a key; the BLTE frame's 8-byte
+name remains absent. Nothing was decrypted or recovered, and this is not a
+format, parity, coverage, runtime or release result. The run material remains
+under `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/`
+(directory mode 0700, files mode 0600). The executable-analysis line belongs
+to its current owner and is not duplicated here; the XOR material investigated
+there is not a TACT key and does not block independent components.
