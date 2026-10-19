@@ -31,10 +31,13 @@ or by a complete world extraction.
 | Latest inspected fork key catalog | Neither requested name present | Pinned fork source, not proof about server operators' private keys |
 | Fourteen historical minidumps | No requested name found in declared captured memory | Older builds and limited captured ranges; no current heap coverage |
 
-The current cache SHA-256 is
-`c02fc57d9bfc26ae50e45ed0c046f39d88a1f2dc20d92f7bf8383273de020758`:
-3,334,666 bytes, 32,917 strictly framed HTFX v9 records, declared build 70450.
+The latest inspected cache SHA-256 is
+`4acfe8b7771327bf869d0f6331ee93c0378c09a37465fa9c4b74f1124dca4ec6`:
+3,342,634 bytes, 33,166 strictly framed HTFX v9 records, declared build 70450.
 Source identity and content were checked before and after the read.
+The two selected rows have twelve empty observations in total. The exact
+client's operation-name table and serializer corroborate their operation 4
+as `NotPublic`; this does not establish the server's reason or future delivery.
 
 ## Public sources and pins
 
@@ -1485,3 +1488,69 @@ emitter and makes no global absence claim. Receipt:
 `reports/focused-hotfix-dispatch-xrefs-70450-00.json`. Further work must follow
 references outside that bounded neighborhood, retaining inferred provenance
 and the exact control/identity gates.
+
+#### Third blind page and a wider callback-reference search
+
+A read-only, source/process-bound metadata probe resolves the current store's
+virtual reader to `0x4cf290`. It reads 96 typed metadata bytes plus 1,120 PE
+header bytes, without invoking the getter, traversing rows or reading payloads.
+All identity/mapping guards pass. The interface is present, capacity is eight,
+and the separately inspected storage pointer is null; these fields alone do
+not establish whether either selected row exists.
+Receipt: `private/probe-live-tact-store-metadata-v1-safestore7045000.json`.
+
+The page at `0x4cf000` is then selected independently from 22 unwind
+constraints in eighteen functions. Its phase and reconstructed hash are frozen
+before a new runtime page capture. All 4,096 bytes match the later authenticated
+RX capture exactly, with zero mismatches or relocation patches. Together with
+the earlier two controls this supplies 12,288 independently compared bytes.
+None of these three comparisons crosses the circular material's wrap boundary.
+Receipt: `reports/blind-third-page-runtime-corroboration-700-00.json`.
+REA evidence
+`ev_dc8ea7ca9a6f977d6ffffaa644c39a0045ae6781ba8ca70e48c73cb209388fdf`
+partially explains the reader; its external tail branches remain outside the
+single-page context. The investigation has not invoked it or read row payloads.
+
+A wider offline scan independently reconstructs source-backed text pages using
+all eligible unwind constraints, the same exact controls and a known-page
+calibration. One run admits 9,173 target pages at eight constraints/three
+functions; an explicit second run uses the original four-constraint/two-function
+policy and admits 13,220. The latter leaves 2,282 pages below that threshold
+and one without a unique phase, with two controls accounted for separately.
+These are inferred pages, not runtime captures or complete-image acceptance.
+The first scanner version's final-flag failure is retained; its separate v2
+corrects that report guard. Receipts:
+`reports/scan-offline-hotfix-xrefs-v2-20261019T105603Z-1897540-4f4ad953d2.json`
+and
+`reports/scan-offline-hotfix-xrefs-v2-20261019T105607Z-1897542-d463b127a5.json`.
+
+The scan supports a declared subset of direct-branch and RIP-relative MOV/LEA
+encodings. Lexical hits still need instruction/function-context review; a
+missing hit does not prove absence. A new callback-vector reader at `0x203279`
+contains an inlined traversal that supplies event **3** at `0x203298`. It belongs
+to a chained fragment whose primary function begins at `0x202810`, crossing
+pages `0x202000` and `0x203000`. A separately pinned reconstruction admits both
+pages under the original constraints and exact controls. Instruction review
+finds a byte flag at `0x5222d3a`: the traversal checks it at `0x203268` and clears
+it at `0x2032a8`. The writer and upstream activation condition still need to be
+traced; this observation alone does not name the event or demonstrate delivery
+of either key. Receipt:
+`reports/offline-code-page-reconstruction-v3-20261019T110459Z-1911425-c990aab7dbdc.json`.
+
+The new two-page Windows-ABI carrier succeeds with source/loader/report/raw
+hashes stable before and after. REA evidence
+`ev_5e54e6e1a771f8d5c1d9a06264fb50d8ae19d96625f39b285af2400cd2e7434f`
+corroborates the nonzero-flag gate, callback argument 3 and subsequent clear.
+An independent `.pdata` audit finds six chained intervals belonging to
+`0x202810`, all inside the 8,192-byte context, including an additional fragment
+after the event loop. Neither the decompilation nor the bounded instruction
+audit finds the flag's setter within these pages. This establishes consumption
+of a pending notification; its upstream cause still needs a writer trace.
+Receipts:
+`reports/rea-two-page-event-emitter-v1-safefulleventemitter7045000-202810-two-page.json`
+and `reports/event3-context-audit-700-00.json`.
+
+The other reader at `0x20ebf0` has its own retained single-page reconstruction,
+but its one REA attempt reaches the bounded timeout and is cancelled. It has
+no successful pseudocode evidence and is not retried unchanged. Receipt:
+`private/analyze-one-pinned-page-function-v1-safeothercallbackreader7045000-receipt.json`.
