@@ -1,0 +1,97 @@
+{
+  "contract": "forever-db2-inspection-contract-v1",
+  "version": 1,
+  "command": "inspect-db2",
+  "platform": "linux",
+  "offline": true,
+  "build": 70450,
+  "catalogue": "wowdbdefs-70450-v1",
+  "plan_profiles": "any admitted build-70450 plan with the wowdbdefs-70450-v1 catalogue",
+  "keys": "refused",
+  "extracts_nothing": true,
+  "output": "one new deterministic redacted JSON report; no package or DB2 files",
+  "limits": {
+    "file_data_ids_per_report": 64,
+    "decoded_file_bytes": 16777216,
+    "report_bytes": 4194304
+  },
+  "report": {
+    "schema": "forever-db2-inspection-contract-v1",
+    "top_level_fields": [
+      "schema",
+      "build",
+      "locale",
+      "keyless",
+      "extracts_nothing",
+      "files"
+    ],
+    "declaration_fields": [
+      "file_data_id",
+      "table_name",
+      "total_decoded_size_bytes",
+      "header_magic",
+      "header_version",
+      "header_flags",
+      "section_count",
+      "record_count",
+      "field_count",
+      "total_field_count",
+      "min_id",
+      "max_id",
+      "packed_data_offset",
+      "parent_lookup_count",
+      "record_size",
+      "string_block_size",
+      "column_meta_size",
+      "common_data_size",
+      "pallet_data_size",
+      "compression_kinds",
+      "sections",
+      "classification"
+    ],
+    "section_fields": [
+      "index",
+      "numeric_type",
+      "flags",
+      "record_count",
+      "field_count",
+      "record_size",
+      "string_block_size"
+    ],
+    "classification_fields": [
+      "outcome",
+      "reason_code",
+      "reason"
+    ],
+    "numeric_section_type_codes": {
+      "0": "regular WDC5 record variant; Header.Flags sparse bit clear",
+      "1": "sparse WDC5 record variant; Header.Flags bit 0 set"
+    },
+    "section_flags": "numeric 0/1 indicating whether the section declares a nonzero TACT key lookup; the TACT value is not emitted",
+    "compression_kinds": "sorted unique numeric ColumnMeta compression codes; no column values or data are emitted",
+    "classification_outcomes": [
+      "accepted",
+      "accepted_raw_only",
+      "rejected",
+      "unavailable"
+    ],
+    "forbidden_fields": [
+      "record values",
+      "string values",
+      "payload bytes",
+      "CKey/EKey bytes or hashes",
+      "index prefixes",
+      "archive offsets or spans",
+      "key material",
+      "client paths"
+    ]
+  },
+  "refusals": {
+    "keys": "--keys is refused before client or output access",
+    "output_inside_client_or_git_checkout": "rejected by the shared guarded report-path check",
+    "non_70450_plan": "rejected before opening the local store",
+    "unknown_file_data_id": "rejected against the selected 70450 catalogue"
+  },
+  "inspection_only": "Structural facts and the product DB2 validation classification are diagnostic; this command does not establish row-count parity, native parity, extraction completeness, or runtime compatibility.",
+  "full_extractor_complete": false
+}

@@ -70,6 +70,42 @@ partial availability while keys are unavailable and sets
 `complete_extraction_claim` to false. This is not an extraction, completeness,
 runtime or release claim.
 
+## Redacted build-70450 DB2 structure inspection
+
+The Linux-only `inspect-db2` command resolves one or more file data IDs through
+the same admitted, keyless build-70450 local store. It writes one deterministic
+JSON report to a new output path outside the client and every Git checkout. The
+report includes only the WDC5 magic/version and structural header/section
+numbers, numeric ColumnMeta compression kinds, the complete decoded file size,
+and the product DB2 reader's accepted/rejected/unavailable classification and
+reason. It never emits DB2 records, string values, payload bytes, content keys or
+hashes, index prefixes, archive offsets, or client paths. The command extracts
+nothing and refuses `--keys`, unknown catalogue file data IDs, and a
+non-build-70450 plan.
+
+The report schema has an intentionally pinned field set in
+`forever-db2-inspection-contract-v1.json`. Section `numeric_type` is a report
+code derived from Header.Flags bit 0 (`0` regular, `1` sparse); section `flags`
+is only the numeric presence of a nonzero TACT lookup declaration, never its
+opaque value. `compression_kinds` is a sorted set of numeric ColumnMeta
+compression codes. This inspection is diagnostic only and does not establish
+reader correctness, row-count parity, extraction completeness, or runtime
+compatibility.
+
+```bash
+"$CARGO_TARGET_DIR/release/forever-extractor" inspect-db2 \
+  --plan /absolute/private/build-70450-plan.tsv \
+  --client /absolute/private/WoW-client \
+  --output /absolute/private/external-reports/db2-structure.json \
+  --file-data-id 5152908 --file-data-id 5152111
+```
+
+The sparse `CollectableSource*Sparse` family uses a bounded raw-source
+validation path when its complete parented sparse layout is admitted by the
+build-specific catalogue. This preserves original DB2 bytes without exposing
+decoded rows. An unsupported sparse shape remains a typed rejection; the
+inspector reports it without including file contents.
+
 A bounded DB2/GT/camera example for build 70205/esES follows. Separators are
 literal tabs; the file must end with LF. Names and IDs are public pinned metadata.
 

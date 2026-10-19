@@ -28,6 +28,9 @@ fn main() {
                 println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
                 );
+                println!(
+                    "forever-extractor inspect-db2 --plan PLAN --client CLIENT --output NEW_REPORT --file-data-id FDID [--file-data-id FDID ...] (Linux only; build 70450; extracts nothing; --keys is forbidden)"
+                );
             } else {
                 println!("{json}");
             }
@@ -51,6 +54,7 @@ fn main() {
                 || error.code == "product_probe_profile"
                 || error.code == "product_probe_file_data_id"
                 || error.code == "product_census_limit"
+                || error.code.starts_with("product_db2_inspection_")
                 || error.code == "product_scratch_required"
                 || error.code == "product_scratch_forbidden"
                 || error.code == "product_disk_unsupported"
@@ -74,7 +78,11 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     if command == "verify-links" {
         return Err("product_platform".into());
     }
-    let max_args = if command == "probe-encoding" { 137 } else { 16 };
+    let max_args = if matches!(command, "probe-encoding" | "inspect-db2") {
+        137
+    } else {
+        16
+    };
     if ![
         "inspect",
         "extract",
@@ -83,6 +91,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         "verify-links",
         "probe-encoding",
         "census-db2",
+        "inspect-db2",
     ]
     .contains(&command)
         || args.len() > max_args
@@ -93,7 +102,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
         "verify" | "verify-links" => &["--plan", "--output", "--expect-context"][..],
-        "probe-encoding" => &["--plan", "--client", "--output", "--keys", "--file-data-id"][..],
+        "probe-encoding" | "inspect-db2" => {
+            &["--plan", "--client", "--output", "--keys", "--file-data-id"][..]
+        }
         "census-db2" => &["--plan", "--client", "--output", "--keys"][..],
         _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
     };
@@ -101,12 +112,17 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let mut file_data_ids = Vec::new();
     for pair in args[1..].as_chunks::<2>().0 {
         let key = pair[0].to_str().ok_or("product_usage")?;
-        if command == "probe-encoding" && key == "--file-data-id" {
+        if matches!(command, "probe-encoding" | "inspect-db2") && key == "--file-data-id" {
+            let error = if command == "inspect-db2" {
+                "product_db2_inspection_file_data_id"
+            } else {
+                "product_probe_file_data_id"
+            };
             if file_data_ids.len() == 64 {
-                return Err("product_probe_file_data_id".into());
+                return Err(error.into());
             }
-            let value = pair[1].to_str().ok_or("product_probe_file_data_id")?;
-            file_data_ids.push(parse_file_data_id(value)?);
+            let value = pair[1].to_str().ok_or(error)?;
+            file_data_ids.push(parse_file_data_id(value).map_err(|_| Error::from(error))?);
             continue;
         }
         if !allowed.contains(&key)
@@ -122,25 +138,32 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             .map(PathBuf::as_path)
             .ok_or_else(|| Error::from("product_usage"))
     };
-    if command == "probe-encoding" {
+    if matches!(command, "probe-encoding" | "inspect-db2") {
+        let error = if command == "inspect-db2" {
+            "product_db2_inspection_file_data_id"
+        } else {
+            "product_probe_file_data_id"
+        };
         if file_data_ids.is_empty() {
-            return Err("product_probe_file_data_id".into());
+            return Err(error.into());
         }
         file_data_ids.sort_unstable();
         if file_data_ids.windows(2).any(|pair| pair[0] == pair[1]) {
-            return Err("product_probe_file_data_id".into());
+            return Err(error.into());
         }
     }
     let bytes = input::bytes(path("--plan")?, forever_extractor::MAX_PLAN_BYTES)?;
     let plan =
         Plan::parse(std::str::from_utf8(&bytes).map_err(|_| Error::from("product_plan_format"))?)?;
     *contract = plan.contract();
-    if matches!(command, "probe-encoding" | "census-db2") && options.contains_key("--keys") {
+    if matches!(command, "probe-encoding" | "census-db2" | "inspect-db2")
+        && options.contains_key("--keys")
+    {
         return Err("product_keys_forbidden".into());
     }
     if matches!(
         command,
-        "extract" | "resume" | "probe-encoding" | "census-db2"
+        "extract" | "resume" | "probe-encoding" | "census-db2" | "inspect-db2"
     ) {
         path("--client")?;
         path("--output")?;
@@ -160,7 +183,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_keys_forbidden".into());
     }
     if plan.requires_keys()
-        && !matches!(command, "probe-encoding" | "census-db2")
+        && !matches!(command, "probe-encoding" | "census-db2" | "inspect-db2")
         && !matches!(command, "verify" | "verify-links")
         && (command != "inspect" || options.contains_key("--client"))
         && !options.contains_key("--keys")
@@ -347,6 +370,22 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     driver::census_db2_command(&plan, path("--client")?, path("--output")?)?;
                 return Ok(format!(
                     "{{\"contract\":\"forever-db2-census-contract-v1\",\"status\":\"census_written\",\"catalogue\":\"wowdbdefs-70450-v1\",\"declarations\":{declaration_count},\"keyless\":true,\"complete_extraction_claim\":false}}"
+                ));
+            }
+            #[cfg(not(target_os = "linux"))]
+            return Err("product_platform".into());
+        }
+        if command == "inspect-db2" {
+            #[cfg(target_os = "linux")]
+            {
+                let declaration_count = driver::inspect_db2_command(
+                    &plan,
+                    path("--client")?,
+                    path("--output")?,
+                    &file_data_ids,
+                )?;
+                return Ok(format!(
+                    "{{\"contract\":\"forever-db2-inspection-contract-v1\",\"status\":\"inspection_written\",\"build\":70450,\"declarations\":{declaration_count},\"keyless\":true,\"extracts_nothing\":true}}"
                 ));
             }
             #[cfg(not(target_os = "linux"))]

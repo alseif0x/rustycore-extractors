@@ -43,6 +43,8 @@ pub(crate) mod census_db2;
 mod disk;
 mod execution;
 #[cfg(target_os = "linux")]
+pub(crate) mod inspect_db2;
+#[cfg(target_os = "linux")]
 pub(crate) mod probe_encoding;
 #[cfg(target_os = "linux")]
 pub(crate) mod terrain_v12;
@@ -81,6 +83,19 @@ pub fn probe_encoding_command(
 #[cfg(target_os = "linux")]
 pub fn census_db2_command(plan: &Plan, client: &Path, output: &Path) -> Result<usize, Error> {
     let summary = census_db2::run(plan, client, output)?;
+    Ok(summary.declaration_count)
+}
+
+/// Write a deterministic, redacted structural/classification report for a
+/// bounded set of 70450 DB2 declarations. No DB2 bytes are published.
+#[cfg(target_os = "linux")]
+pub fn inspect_db2_command(
+    plan: &Plan,
+    client: &Path,
+    output: &Path,
+    file_data_ids: &[u32],
+) -> Result<usize, Error> {
+    let summary = inspect_db2::run(plan, client, output, file_data_ids)?;
     Ok(summary.declaration_count)
 }
 
@@ -613,8 +628,17 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
                         | "CollectableSourceVendorSparse"
                 ) =>
         {
-            DecodedTable::validate_catalog_raw_source_bytes(bytes, plan.schema_catalog.id(), name)
-                .map_err(|error| Error::from(error.code()))
+            let validation = if plan.schema_catalog == crate::plan::SchemaCatalog::WowDbDefs70450V1
+            {
+                DecodedTable::validate_catalog_raw_source_bytes_70450(bytes, name)
+            } else {
+                DecodedTable::validate_catalog_raw_source_bytes(
+                    bytes,
+                    plan.schema_catalog.id(),
+                    name,
+                )
+            };
+            validation.map_err(|error| Error::from(error.code()))
         }
         result => result.map_err(|error| Error::from(error.code())),
     }

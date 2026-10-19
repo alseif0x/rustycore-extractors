@@ -290,6 +290,15 @@ enumerates the full 1,161-declaration catalog; encrypted inputs are reported,
 not omitted, and the report never claims complete extraction. It refuses
 `--keys`. See the [product guide](docs/forever-product.md#keyless-build-70450-db2-census).
 
+For selected build-70450 declarations, Linux `inspect-db2` writes a bounded
+redacted structural report plus the product reader's classification. It reports
+header/section facts and numeric compression kinds only; it does not emit rows,
+strings, payloads, hashes, index prefixes or keys, and it extracts nothing. The
+new report must be outside the client and every Git checkout. The command refuses
+`--keys`, unknown file data IDs and non-70450 plans. See the
+[inspection contract](contracts/forever-db2-inspection-contract-v1.json) and
+[product guide](docs/forever-product.md#redacted-build-70450-db2-structure-inspection).
+
 ### Inspect a plan and verify output
 
 The product uses an **explicit canonical TSV plan**. Choose the documented

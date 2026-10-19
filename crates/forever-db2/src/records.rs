@@ -309,11 +309,42 @@ impl DecodedTable {
     /// to UTF-8, and no decoded rows escape. Multi-section files remain
     /// outside this profile. Three separately pinned sparse tables use a
     /// bounded raw-only validator for their parent block; it returns no rows
-    /// or parent associations.
+    /// or parent associations. The legacy API keeps its original catalog list.
     pub fn validate_catalog_raw_source_bytes(
         data: &[u8],
         catalog_id: &str,
         table_name: &str,
+    ) -> Result<(), RecordError> {
+        Self::validate_catalog_raw_source_bytes_impl(data, catalog_id, table_name, false)
+    }
+
+    /// Build-70450-only raw preservation for its three sparse collectable source
+    /// declarations. No row values or parent associations are materialized.
+    pub fn validate_catalog_raw_source_bytes_70450(
+        data: &[u8],
+        table_name: &str,
+    ) -> Result<(), RecordError> {
+        if !matches!(
+            table_name,
+            "CollectableSourceEncounterSparse"
+                | "CollectableSourceQuestSparse"
+                | "CollectableSourceVendorSparse"
+        ) {
+            return Err(RecordError::Unsupported);
+        }
+        Self::validate_catalog_raw_source_bytes_impl(
+            data,
+            catalog::WOWDBDEFS_70450_CATALOG_ID,
+            table_name,
+            true,
+        )
+    }
+
+    fn validate_catalog_raw_source_bytes_impl(
+        data: &[u8],
+        catalog_id: &str,
+        table_name: &str,
+        allow_70450_sparse_parent: bool,
     ) -> Result<(), RecordError> {
         let table = CharacterTable::from_catalog_id(catalog_id, table_name)
             .map_err(|error| {
@@ -341,7 +372,7 @@ impl DecodedTable {
         } else {
             DecodeLimits::DEFAULT
         };
-        let sparse_parent_raw = matches!(
+        let legacy_sparse_parent_raw = matches!(
             (catalog_id, table_name),
             (
                 catalog::WOWDBDEFS_70205_CATALOG_ID
@@ -351,9 +382,19 @@ impl DecodedTable {
                     | "CollectableSourceQuestSparse"
                     | "CollectableSourceVendorSparse"
             )
-        ) && data
-            .get(172..174)
-            .is_some_and(|flags| u16::from_le_bytes([flags[0], flags[1]]) & SPARSE_FLAG != 0);
+        );
+        let target_sparse_parent_raw = allow_70450_sparse_parent
+            && catalog_id == catalog::WOWDBDEFS_70450_CATALOG_ID
+            && matches!(
+                table_name,
+                "CollectableSourceEncounterSparse"
+                    | "CollectableSourceQuestSparse"
+                    | "CollectableSourceVendorSparse"
+            );
+        let sparse_parent_raw = (legacy_sparse_parent_raw || target_sparse_parent_raw)
+            && data
+                .get(172..174)
+                .is_some_and(|flags| u16::from_le_bytes([flags[0], flags[1]]) & SPARSE_FLAG != 0);
         Self::scan_regular_or_logical(
             data,
             table,
