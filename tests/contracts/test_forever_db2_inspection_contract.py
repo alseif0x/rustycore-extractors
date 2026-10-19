@@ -32,6 +32,24 @@ class Db2InspectionContract(unittest.TestCase):
                 "report_bytes": 4 * 1024 * 1024,
             },
         )
+        self.assertEqual(
+            c["reader_policy"],
+            {
+                "high_volume_regular_profile": "wowdbdefs-70450-high-volume-regular-v1",
+                "catalogue": "wowdbdefs-70450-v1",
+                "declarations": [
+                    "ManifestInterfaceData", "ModelFileData", "WMOMinimapTexture"
+                ],
+                "limits": {
+                    "direct_records": 160000,
+                    "copy_pairs": 100000,
+                    "parent_entries": 160000,
+                    "retained_values": 1250000,
+                },
+                "other_declarations_and_builds": "retain the 100000 direct-record, 100000 copy-pair, 100000 parent-entry, and 1000000 retained-value defaults unless another build-specific profile independently admits them",
+                "default_limits_changed": False,
+            },
+        )
 
     def test_redacted_report_field_sets_are_closed_and_documented(self):
         report = self.contract["report"]
@@ -61,6 +79,9 @@ class Db2InspectionContract(unittest.TestCase):
         self.assertEqual(report["numeric_section_type_codes"]["1"],
                          "sparse WDC5 record variant; Header.Flags bit 0 set")
         self.assertIn("TACT value is not emitted", report["section_flags"])
+        self.assertIn("CompressionType", report["compression_kinds"])
+        self.assertIn("byte offset +8", report["compression_kinds"])
+        self.assertIn("range 0..5", report["compression_kinds"])
         forbidden = " ".join(report["forbidden_fields"])
         for phrase in ["payload bytes", "CKey/EKey", "index prefixes", "archive offsets", "key material"]:
             self.assertIn(phrase, forbidden)
@@ -89,6 +110,7 @@ class Db2InspectionContract(unittest.TestCase):
             "output_path_refuses_client_and_git_checkout_descendants",
             "synthetic_sparse_parent_matches_real_shape_and_is_redacted_deterministic",
             "synthetic_unsupported_sparse_common_data_is_reported_as_rejected",
+            "compression_kinds_are_fixed_offset_numeric_codes_filtered_to_reader_range",
         ]:
             self.assertIn(name, inspector)
         for name in [
@@ -106,6 +128,24 @@ class Db2InspectionContract(unittest.TestCase):
         self.assertIn("schema.parent >= 0 && !appended_parent", sparse)
         self.assertIn("sparse parent field is outside the build-70450 raw-source allowlist", inspector)
         self.assertIn("unsupported_record_variant", inspector)
+        sparse_tests = (ROOT / "crates/forever-db2/src/records/sparse/tests.rs").read_text()
+        shared_fixture = (ROOT / "crates/forever-db2/src/records/sparse/synthetic_fixture.rs").read_text()
+        self.assertIn("build70450_sparse_raw_source_allowlist_rejects_nonmembers_exhaustively", sparse_tests)
+        self.assertIn("synthetic_fixture.rs", sparse_tests)
+        self.assertIn("synthetic_fixture.rs", inspector)
+        self.assertNotIn("fn synthetic_parent_sparse", inspector)
+        self.assertIn("empty_parented_sparse_70450", shared_fixture)
+
+    def test_build70450_high_volume_profile_allowlist_and_default_policy_are_pinned(self):
+        records = (ROOT / "crates/forever-db2/src/records.rs").read_text()
+        docs = (ROOT / "docs/forever-product.md").read_text()
+        self.assertIn(
+            '"wowdbdefs-70450-high-volume-regular-v1"', records
+        )
+        self.assertIn("TARGET_HIGH_VOLUME_70450_PROFILE", records)
+        self.assertIn("target_high_volume_limits(catalog_id, table_name)", records)
+        self.assertIn("high_volume_profile_tests", records)
+        self.assertIn("Build-70450 high-volume DB2 profile", docs)
 
 
 if __name__ == "__main__":

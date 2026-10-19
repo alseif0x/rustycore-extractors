@@ -87,8 +87,10 @@ The report schema has an intentionally pinned field set in
 `forever-db2-inspection-contract-v1.json`. Section `numeric_type` is a report
 code derived from Header.Flags bit 0 (`0` regular, `1` sparse); section `flags`
 is only the numeric presence of a nonzero TACT lookup declaration, never its
-opaque value. `compression_kinds` is a sorted set of numeric ColumnMeta
-compression codes. This inspection is diagnostic only and does not establish
+opaque value. `compression_kinds` contains only known strict-reader codes 0..5,
+read from the numeric `CompressionType` u32 at byte offset +8 of each 24-byte
+ColumnMeta entry; unknown values are omitted and remain reader rejections. This
+inspection is diagnostic only and does not establish
 reader correctness, row-count parity, extraction completeness, or runtime
 compatibility.
 
@@ -105,6 +107,25 @@ validation path when its complete parented sparse layout is admitted by the
 build-specific catalogue. This preserves original DB2 bytes without exposing
 decoded rows. An unsupported sparse shape remains a typed rejection; the
 inspector reports it without including file contents.
+
+## Build-70450 high-volume DB2 profile
+
+The build-70450 DB2 reader uses the separately pinned profile
+`wowdbdefs-70450-high-volume-regular-v1` for exactly `ManifestInterfaceData`,
+`ModelFileData`, and `WMOMinimapTexture`, matching the existing high-volume
+allowlist shape for builds 70205, 70338, and 70374. It is limited to the existing
+one-section regular-table reader; sparse, multi-section, and TACT/catalog
+variants do not gain admission through this profile. Schema-declared parent
+lookup keeps the existing bounded checks.
+
+This profile permits at most 160,000 direct records, 100,000 copy pairs,
+160,000 parent entries, and 1,250,000 retained values. The general defaults
+remain 100,000 direct records, 100,000 copy pairs, 100,000 parent entries, and
+1,000,000 retained values. Every other build-70450 declaration and every
+declaration outside the exact allowlist stays on its ordinary policy unless an
+independent profile admits it. This is a reader resource policy, not an
+extraction-completeness or compatibility claim; the name and limits are pinned
+in `forever-db2-inspection-contract-v1.json` for this task's scoped contract.
 
 A bounded DB2/GT/camera example for build 70205/esES follows. Separators are
 literal tabs; the file must end with LF. Names and IDs are public pinned metadata.

@@ -22,6 +22,11 @@ const SPARSE_FLAG: u16 = 1;
 const MAX_REPORT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
+#[cfg(test)]
+mod shared_synthetic_fixture {
+    include!("../../../forever-db2/src/records/sparse/synthetic_fixture.rs");
+    define_synthetic_sparse_fixture!(forever_db2);
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct Summary {
@@ -358,7 +363,10 @@ fn compression_kinds(bytes: &[u8], header: &Header) -> Vec<u32> {
     }
     let mut kinds = BTreeSet::new();
     for index in 0..count {
-        if let Some(kind) = word(bytes, start + index * 24 + 8) {
+        // ColumnMeta::CompressionType is a numeric u32 at byte offset +8.
+        // The strict DB2 reader admits only codes 0..=5, so arbitrary words in
+        // malformed metadata are never surfaced as report values.
+        if let Some(kind @ 0..=5) = word(bytes, start + index * 24 + 8) {
             kinds.insert(kind);
         }
     }
@@ -550,6 +558,7 @@ fn atomic_write(client: &Path, requested: &Path, bytes: &[u8]) -> Result<(), Err
 
 #[cfg(test)]
 mod tests {
+    use super::shared_synthetic_fixture as synthetic_fixture;
     use super::*;
     use std::{
         fs,
@@ -581,46 +590,14 @@ mod tests {
         }
     }
 
-    fn put16(bytes: &mut [u8], offset: usize, value: u16) {
-        bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
-    }
     fn put32(bytes: &mut [u8], offset: usize, value: u32) {
         bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
     }
-    fn synthetic_parent_sparse() -> Vec<u8> {
-        let table = catalog::resolve_for(
-            catalog::WOWDBDEFS_70450_CATALOG_ID,
-            "CollectableSourceEncounterSparse",
-        )
-        .unwrap()
-        .unwrap()
-        .metadata();
-        let mut bytes = vec![0; HEADER_SIZE + table.file_field_count * 4];
-        bytes[..4].copy_from_slice(b"WDC5");
-        put32(&mut bytes, 4, 5);
-        put32(&mut bytes, 136, 0);
-        put32(&mut bytes, 140, table.file_field_count as u32);
-        put32(&mut bytes, 144, 8);
-        put32(&mut bytes, 148, 0);
-        put32(&mut bytes, 152, table.table_hash.unwrap());
-        put32(&mut bytes, 156, table.layout_hash);
-        put32(&mut bytes, 160, 0);
-        put32(&mut bytes, 164, 0);
-        put16(&mut bytes, 172, 0x7);
-        put16(&mut bytes, 174, table.index as u16);
-        put32(&mut bytes, 176, table.file_field_count as u32);
-        put32(&mut bytes, 184, 0);
-        put32(&mut bytes, 200, 0);
-        // Synthetic field metadata only: signed 32-bit then signed 16-bit.
-        put16(&mut bytes, HEADER_SIZE, 0);
-        put16(&mut bytes, HEADER_SIZE + 4, 16);
-        bytes
-    }
-
     #[test]
     fn synthetic_sparse_parent_matches_real_shape_and_is_redacted_deterministic() {
         let plan = Plan::parse(INSPECT_PLAN).unwrap();
-        let bytes = synthetic_parent_sparse();
+        let bytes =
+            synthetic_fixture::empty_parented_sparse_70450("CollectableSourceEncounterSparse");
         let first = inspect_bytes(&plan, 5_152_908, "CollectableSourceEncounterSparse", &bytes);
         let second = inspect_bytes(&plan, 5_152_908, "CollectableSourceEncounterSparse", &bytes);
         assert_eq!(first, second);
@@ -666,7 +643,8 @@ mod tests {
     #[test]
     fn synthetic_unsupported_sparse_common_data_is_reported_as_rejected() {
         let plan = Plan::parse(INSPECT_PLAN).unwrap();
-        let mut bytes = synthetic_parent_sparse();
+        let mut bytes =
+            synthetic_fixture::empty_parented_sparse_70450("CollectableSourceEncounterSparse");
         put32(&mut bytes, 192, 1);
         let facts = inspect_bytes(&plan, 5_152_908, "CollectableSourceEncounterSparse", &bytes);
         assert_eq!(facts.header_flags, Some(0x7));
@@ -680,6 +658,32 @@ mod tests {
             facts.classification.reason,
             "sparse parented layout declares unsupported string, common, or pallet data"
         );
+    }
+
+    #[test]
+    fn compression_kinds_are_fixed_offset_numeric_codes_filtered_to_reader_range() {
+        let field_count = 4;
+        let metadata_start = HEADER_SIZE + field_count * 4;
+        let mut bytes = vec![0; metadata_start + field_count * 24];
+        bytes[..4].copy_from_slice(b"WDC5");
+        put32(&mut bytes, 4, 5);
+        put32(&mut bytes, 140, field_count as u32);
+        put32(&mut bytes, 188, (field_count * 24) as u32);
+        put32(&mut bytes, 200, 0);
+        let codes = [0, 5, 6, 0xfeed_beef];
+        for (index, code) in codes.into_iter().enumerate() {
+            let entry = metadata_start + index * 24;
+            // Neighboring ColumnMeta fields are arbitrary synthetic numbers;
+            // only CompressionType at entry +8 may be reported.
+            put32(&mut bytes, entry, 0xdead_beef);
+            put32(&mut bytes, entry + 4, 0xcafe_babe);
+            put32(&mut bytes, entry + 8, code);
+            put32(&mut bytes, entry + 12, 0xabcd_1234);
+            put32(&mut bytes, entry + 16, 0x9876_5432);
+            put32(&mut bytes, entry + 20, 0x1357_9bdf);
+        }
+        let header = Header::parse(bytes[..HEADER_SIZE].try_into().unwrap()).unwrap();
+        assert_eq!(compression_kinds(&bytes, &header), [0, 5]);
     }
 
     #[test]

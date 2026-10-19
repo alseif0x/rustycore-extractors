@@ -15,6 +15,23 @@
     "decoded_file_bytes": 16777216,
     "report_bytes": 4194304
   },
+  "reader_policy": {
+    "high_volume_regular_profile": "wowdbdefs-70450-high-volume-regular-v1",
+    "catalogue": "wowdbdefs-70450-v1",
+    "declarations": [
+      "ManifestInterfaceData",
+      "ModelFileData",
+      "WMOMinimapTexture"
+    ],
+    "limits": {
+      "direct_records": 160000,
+      "copy_pairs": 100000,
+      "parent_entries": 160000,
+      "retained_values": 1250000
+    },
+    "other_declarations_and_builds": "retain the 100000 direct-record, 100000 copy-pair, 100000 parent-entry, and 1000000 retained-value defaults unless another build-specific profile independently admits them",
+    "default_limits_changed": false
+  },
   "report": {
     "schema": "forever-db2-inspection-contract-v1",
     "top_level_fields": [
@@ -68,7 +85,7 @@
       "1": "sparse WDC5 record variant; Header.Flags bit 0 set"
     },
     "section_flags": "numeric 0/1 indicating whether the section declares a nonzero TACT key lookup; the TACT value is not emitted",
-    "compression_kinds": "sorted unique numeric ColumnMeta compression codes; no column values or data are emitted",
+    "compression_kinds": "sorted unique numeric ColumnMeta CompressionType codes in the strict decoder's accepted range 0..5; each value is read only from the u32 at byte offset +8 of its 24-byte ColumnMeta entry; unknown values are omitted and remain a reader rejection, so this field cannot contain arbitrary payload words",
     "classification_outcomes": [
       "accepted",
       "accepted_raw_only",

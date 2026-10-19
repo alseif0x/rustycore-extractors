@@ -292,12 +292,19 @@ not omitted, and the report never claims complete extraction. It refuses
 
 For selected build-70450 declarations, Linux `inspect-db2` writes a bounded
 redacted structural report plus the product reader's classification. It reports
-header/section facts and numeric compression kinds only; it does not emit rows,
+header/section facts and only compression codes 0–5 from the numeric ColumnMeta
+CompressionType field; it does not emit rows,
 strings, payloads, hashes, index prefixes or keys, and it extracts nothing. The
 new report must be outside the client and every Git checkout. The command refuses
 `--keys`, unknown file data IDs and non-70450 plans. See the
 [inspection contract](contracts/forever-db2-inspection-contract-v1.json) and
 [product guide](docs/forever-product.md#redacted-build-70450-db2-structure-inspection).
+
+The v16/v17 build-70450 DB2 reader also has the pinned
+`wowdbdefs-70450-high-volume-regular-v1` profile for exactly
+`ManifestInterfaceData`, `ModelFileData`, and `WMOMinimapTexture`. It raises only
+those tables to the established bounded high-volume ceilings; default limits
+remain unchanged for every other declaration.
 
 ### Inspect a plan and verify output
 

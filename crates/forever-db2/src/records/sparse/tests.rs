@@ -4,6 +4,10 @@
 use super::*;
 use crate::CharacterTable;
 use std::io::Cursor;
+mod synthetic_fixture {
+    include!("synthetic_fixture.rs");
+    define_synthetic_sparse_fixture!(crate);
+}
 
 fn put32(data: &mut [u8], at: usize, value: u32) {
     data[at..at + 4].copy_from_slice(&value.to_le_bytes());
@@ -15,53 +19,6 @@ fn table() -> CharacterTable {
     CharacterTable::from_catalog("ConversationLine")
         .unwrap()
         .unwrap()
-}
-fn build70450_sparse_parent_empty(name: &str) -> Vec<u8> {
-    let binding = crate::catalog::resolve_for(crate::catalog::WOWDBDEFS_70450_CATALOG_ID, name)
-        .unwrap()
-        .unwrap();
-    let metadata = binding.metadata();
-    let table = CharacterTable::from_catalog_id(crate::catalog::WOWDBDEFS_70450_CATALOG_ID, name)
-        .unwrap()
-        .unwrap();
-    let schema = table.schema();
-    assert_eq!(metadata.file_field_count, schema.fields.len());
-    assert_eq!(metadata.parent_index as usize, schema.fields.len());
-    let payload = HEADER_SIZE + schema.fields.len() * 4;
-    let record_bits: u32 = schema
-        .fields
-        .iter()
-        .map(|field| field.bits() * field.count() as u32)
-        .sum();
-    let mut data = vec![0; payload];
-    data[..4].copy_from_slice(b"WDC5");
-    put32(&mut data, 4, 5);
-    put32(&mut data, 136, 0);
-    put32(&mut data, 140, metadata.file_field_count as u32);
-    put32(&mut data, 144, (record_bits / 8).max(8));
-    put32(&mut data, 148, 0);
-    put32(&mut data, 152, metadata.table_hash.unwrap());
-    put32(&mut data, 156, metadata.layout_hash);
-    put32(&mut data, 160, 0);
-    put32(&mut data, 164, 0);
-    put16(&mut data, 172, 0x7);
-    put16(&mut data, 174, metadata.index as u16);
-    put32(&mut data, 176, metadata.file_field_count as u32);
-    put32(&mut data, 184, 0);
-    put32(&mut data, 188, 0);
-    put32(&mut data, 192, 0);
-    put32(&mut data, 196, 0);
-    put32(&mut data, 200, 0);
-    for (index, field) in schema.fields.iter().enumerate() {
-        let unused_bits = match field {
-            Kind::Unsigned(8, _) | Kind::Signed(8, _) => 24,
-            Kind::Unsigned(16, _) | Kind::Signed(16, _) => 16,
-            _ => 0,
-        };
-        put16(&mut data, HEADER_SIZE + index * 4, unused_bits);
-        put16(&mut data, HEADER_SIZE + index * 4 + 2, u16::MAX);
-    }
-    data
 }
 const UNUSED: [i16; 9] = [0, 0, 0, 0, 16, 16, 24, 24, 24];
 const RAW: [u32; 9] = [
@@ -196,7 +153,7 @@ fn build70450_collectable_sparse_parent_family_validates_raw_only_shape() {
         assert_eq!(binding.metadata().file_data_id, file_id);
         assert_eq!(binding.metadata().parent_index, parent);
         assert_eq!(binding.metadata().file_field_count, fields);
-        let bytes = build70450_sparse_parent_empty(name);
+        let bytes = synthetic_fixture::empty_parented_sparse_70450(name);
         let table =
             CharacterTable::from_catalog_id(crate::catalog::WOWDBDEFS_70450_CATALOG_ID, name)
                 .unwrap()
@@ -215,7 +172,49 @@ fn build70450_collectable_sparse_parent_family_validates_raw_only_shape() {
         );
         assert_eq!(
             DecodedTable::validate_catalog_raw_source_bytes_70450(&bytes, name),
-            Ok(())
+            Ok(()),
+            "raw source validation for {name}"
+        );
+    }
+}
+
+#[test]
+fn build70450_sparse_raw_source_allowlist_rejects_nonmembers_exhaustively() {
+    let bytes = synthetic_fixture::empty_parented_sparse_70450("CollectableSourceEncounterSparse");
+    assert!(
+        crate::catalog::resolve_for(
+            crate::catalog::WOWDBDEFS_70450_CATALOG_ID,
+            "CollectableSourceEncounter"
+        )
+        .unwrap()
+        .is_some()
+    );
+    let error =
+        DecodedTable::validate_catalog_raw_source_bytes_70450(&bytes, "CollectableSourceEncounter")
+            .unwrap_err();
+    assert_eq!(error, RecordError::Unsupported);
+    assert_eq!(error.code(), "unsupported_record_variant");
+
+    for declaration in
+        crate::catalog::tables_for(crate::catalog::WOWDBDEFS_70450_CATALOG_ID).unwrap()
+    {
+        let allowed = matches!(
+            declaration.name,
+            "CollectableSourceEncounterSparse"
+                | "CollectableSourceQuestSparse"
+                | "CollectableSourceVendorSparse"
+        );
+        let expected = if allowed {
+            // Empty input passes the name gate and reaches header parsing.
+            RecordError::Metadata
+        } else {
+            RecordError::Unsupported
+        };
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes_70450(&[], declaration.name),
+            Err(expected),
+            "unexpected raw sparse allowlist membership for {}",
+            declaration.name
         );
     }
 }

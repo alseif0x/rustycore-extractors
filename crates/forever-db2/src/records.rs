@@ -51,8 +51,13 @@ const DEFAULT_MAX_RETAINED_VALUES: usize = 1_000_000;
 const TARGET_HIGH_VOLUME_MAX_DIRECT_RECORDS: u32 = 160_000;
 const TARGET_HIGH_VOLUME_MAX_PARENT_ENTRIES: u32 = 160_000;
 const TARGET_HIGH_VOLUME_MAX_RETAINED_VALUES: usize = 1_250_000;
+const TARGET_HIGH_VOLUME_TABLES: [&str; 3] = [
+    "ManifestInterfaceData",
+    "ModelFileData",
+    "WMOMinimapTexture",
+];
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DecodeLimits {
     max_direct_records: u32,
     max_copy_pairs: u32,
@@ -74,6 +79,21 @@ impl DecodeLimits {
         max_parent_entries: TARGET_HIGH_VOLUME_MAX_PARENT_ENTRIES,
         max_retained_values: TARGET_HIGH_VOLUME_MAX_RETAINED_VALUES,
     };
+}
+
+fn target_high_volume_limits(catalog_id: &str, table_name: &str) -> Option<DecodeLimits> {
+    if matches!(
+        catalog_id,
+        catalog::WOWDBDEFS_70205_CATALOG_ID
+            | catalog::WOWDBDEFS_70338_CATALOG_ID
+            | catalog::WOWDBDEFS_70374_CATALOG_ID
+            | catalog::WOWDBDEFS_70450_CATALOG_ID
+    ) && TARGET_HIGH_VOLUME_TABLES.contains(&table_name)
+    {
+        Some(DecodeLimits::TARGET_HIGH_VOLUME)
+    } else {
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -163,10 +183,10 @@ impl DecodedTable {
     /// parents and physical WDC catalog sections.
     pub const REGULAR_SECTIONS_METADATA_PROFILE: &'static str =
         "forever-db2-regular-sections-metadata-v1";
-    /// Three explicit build-70205/70338/70374 catalog tables may use bounded ceilings of
-    /// 160k direct records, 160k parent entries, and 1.25M retained scalar
-    /// values. The general reader and older product profiles retain their
-    /// existing 100k / 1M ceilings.
+    /// The same three explicit tables in each pinned build-70205/70338/70374/70450
+    /// catalog may use bounded ceilings of 160k direct records, 160k parent
+    /// entries, and 1.25M retained scalar values. The general reader and other
+    /// catalogs retain their existing 100k / 1M ceilings.
     pub const TARGET_HIGH_VOLUME_PROFILE: &'static str = "wowdbdefs-70205-high-volume-regular-v1";
     /// Same bounded table allowlist and limits under the separately pinned
     /// build-70338 schema catalog.
@@ -176,6 +196,10 @@ impl DecodedTable {
     /// build-70374 schema catalog; no older-build acceptance is transferred.
     pub const TARGET_HIGH_VOLUME_70374_PROFILE: &'static str =
         "wowdbdefs-70374-high-volume-regular-v1";
+    /// Same exact three-table allowlist and ceilings under the independently
+    /// pinned build-70450 schema catalog; no prior-build admission is inherited.
+    pub const TARGET_HIGH_VOLUME_70450_PROFILE: &'static str =
+        "wowdbdefs-70450-high-volume-regular-v1";
     /// Policy ceiling, not a WDC5 format limit.
     pub const MAX_REGULAR_SECTIONS: u32 = 16;
 
@@ -236,8 +260,9 @@ impl DecodedTable {
     }
 
     /// Decode a narrow allowlist of high-volume tables from the pinned
-    /// build-70205, build-70338 or build-70374 metadata catalog. Only one-section regular records for
-    /// ManifestInterfaceData, ModelFileData, and WMOMinimapTexture are admitted.
+    /// build-70205, build-70338, build-70374 or build-70450 metadata catalog.
+    /// Only one-section regular records for ManifestInterfaceData, ModelFileData,
+    /// and WMOMinimapTexture are admitted.
     /// Every other table/catalog returns `Ok(None)` so callers retain the
     /// ordinary decoder profile. Sparse, multi-section, and TACT/catalog
     /// variants remain unsupported. Parent lookup is allowed only when the
@@ -248,17 +273,9 @@ impl DecodedTable {
         catalog_id: &str,
         table_name: &str,
     ) -> Result<Option<Self>, RecordError> {
-        if !matches!(
-            catalog_id,
-            catalog::WOWDBDEFS_70205_CATALOG_ID
-                | catalog::WOWDBDEFS_70338_CATALOG_ID
-                | catalog::WOWDBDEFS_70374_CATALOG_ID
-        ) || !matches!(
-            table_name,
-            "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
-        ) {
+        let Some(limits) = target_high_volume_limits(catalog_id, table_name) else {
             return Ok(None);
-        }
+        };
         let header_bytes: &[u8; HEADER_SIZE] = data
             .get(..HEADER_SIZE)
             .and_then(|bytes| bytes.try_into().ok())
@@ -276,13 +293,7 @@ impl DecodedTable {
                 }
             })?
             .ok_or(RecordError::Schema)?;
-        let (decoded, _) = Self::read_impl(
-            data,
-            table,
-            None,
-            TEXT_POLICY_LIMIT,
-            DecodeLimits::TARGET_HIGH_VOLUME,
-        )?;
+        let (decoded, _) = Self::read_impl(data, table, None, TEXT_POLICY_LIMIT, limits)?;
         Ok(Some(decoded))
     }
 
@@ -355,23 +366,8 @@ impl DecodedTable {
                 }
             })?
             .ok_or(RecordError::Schema)?;
-        let limits = if matches!(
-            (catalog_id, table_name),
-            (
-                catalog::WOWDBDEFS_70205_CATALOG_ID,
-                "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
-            ) | (
-                catalog::WOWDBDEFS_70338_CATALOG_ID,
-                "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
-            ) | (
-                catalog::WOWDBDEFS_70374_CATALOG_ID,
-                "ManifestInterfaceData" | "ModelFileData" | "WMOMinimapTexture"
-            )
-        ) {
-            DecodeLimits::TARGET_HIGH_VOLUME
-        } else {
-            DecodeLimits::DEFAULT
-        };
+        let limits =
+            target_high_volume_limits(catalog_id, table_name).unwrap_or(DecodeLimits::DEFAULT);
         let legacy_sparse_parent_raw = matches!(
             (catalog_id, table_name),
             (
@@ -978,5 +974,72 @@ fn parent_in_data_value(kind: Kind, parent_id: u32) -> Result<Value, RecordError
         // A string/float parent field is not a reviewed shape; reject rather
         // than guess a write.
         Kind::String | Kind::StringArray(_) | Kind::Float(_) => Err(RecordError::Schema),
+    }
+}
+
+#[cfg(test)]
+mod high_volume_profile_tests {
+    use super::*;
+
+    #[test]
+    fn high_volume_policy_is_exactly_pinned_for_each_catalog_declaration() {
+        assert_eq!(
+            DecodedTable::TARGET_HIGH_VOLUME_70450_PROFILE,
+            "wowdbdefs-70450-high-volume-regular-v1"
+        );
+        assert_eq!(
+            DecodeLimits::DEFAULT,
+            DecodeLimits {
+                max_direct_records: 100_000,
+                max_copy_pairs: 100_000,
+                max_parent_entries: 100_000,
+                max_retained_values: 1_000_000,
+            }
+        );
+        assert_eq!(
+            DecodeLimits::TARGET_HIGH_VOLUME,
+            DecodeLimits {
+                max_direct_records: 160_000,
+                max_copy_pairs: 100_000,
+                max_parent_entries: 160_000,
+                max_retained_values: 1_250_000,
+            }
+        );
+
+        let catalogs = [
+            catalog::CATALOG_ID,
+            catalog::WOWDBDEFS_70205_CATALOG_ID,
+            catalog::WOWDBDEFS_70338_CATALOG_ID,
+            catalog::WOWDBDEFS_70374_CATALOG_ID,
+            catalog::WOWDBDEFS_70425_CATALOG_ID,
+            catalog::WOWDBDEFS_70450_CATALOG_ID,
+        ];
+        for catalog_id in catalogs {
+            let tables = catalog::tables_for(catalog_id).unwrap();
+            for table in tables {
+                let expected = matches!(
+                    catalog_id,
+                    catalog::WOWDBDEFS_70205_CATALOG_ID
+                        | catalog::WOWDBDEFS_70338_CATALOG_ID
+                        | catalog::WOWDBDEFS_70374_CATALOG_ID
+                        | catalog::WOWDBDEFS_70450_CATALOG_ID
+                ) && TARGET_HIGH_VOLUME_TABLES.contains(&table.name);
+                let selected = target_high_volume_limits(catalog_id, table.name);
+                assert_eq!(
+                    selected,
+                    expected.then_some(DecodeLimits::TARGET_HIGH_VOLUME)
+                );
+                assert_eq!(
+                    selected.unwrap_or(DecodeLimits::DEFAULT),
+                    if expected {
+                        DecodeLimits::TARGET_HIGH_VOLUME
+                    } else {
+                        DecodeLimits::DEFAULT
+                    },
+                    "unexpected policy for {catalog_id} / {}",
+                    table.name
+                );
+            }
+        }
     }
 }
