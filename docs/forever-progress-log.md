@@ -4477,6 +4477,17 @@ groups, 42,337 vertices, 47,175 triangles, 15 liquid groups, and 1,992,541 VMO
 bytes. This is not C++ format parity, RustyCore runtime acceptance, or
 navigation.
 
+A separate bounded offline exercise used the existing `forever-vmap`
+store/query path on the package: one root map, four tiles, 55 models, and 447
+active instances loaded. Twenty-four deterministic rays derived from loaded
+triangles passed local-model, instance, and store intersection checks; there
+were no misses or query errors. The configured 24-query cap was reached, so the
+sweep was not exhaustive. Package and crate-source hashes were stable pre/post.
+Receipt SHA-256:
+`cbdc9a1c64419eb3f89b0a84d714a05dd7f5e23a645d06b26899e1863097e835`. This is
+reader/query evidence only, not native parity, navigation, MMaps, or RustyCore
+runtime acceptance.
+
 Earlier same-plan attempts with `enUS` and the preceding binary failed with
 `local_store_no_verified_encoding` and produced no package. The local sources
 include `esES`; these are retained locale-specific failures, not evidence of an

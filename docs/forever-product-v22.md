@@ -117,6 +117,17 @@ reader reports 55 nonempty models, 77 groups, 42,337 vertices, 47,175 triangles,
 own parser only: it is not parity with the C++ reference, RustyCore runtime
 acceptance, or navigation acceptance.
 
+A separate bounded offline harness exercised this package through the existing
+`forever-vmap` store and query APIs. It loaded one declared root map, four tiles,
+55 models, and 447 active instances. Twenty-four deterministic rays derived
+from loaded triangles were first required to hit their local model; all 24 then
+hit at the instance and store levels, with zero misses or query errors. The
+24-query cap was reached, so this was not an exhaustive sweep. Package and
+crate-source hashes were stable before and after the run. Receipt SHA-256:
+`cbdc9a1c64419eb3f89b0a84d714a05dd7f5e23a645d06b26899e1863097e835`. This
+validates the Rust reader/query path only; it is not native parity, navigation,
+or RustyCore runtime acceptance.
+
 Earlier attempts using `enUS` with the same plan and preceding binary failed
 with `local_store_no_verified_encoding` and produced no package. The local
 installation has `esES` sources; those failures are locale-specific and do not

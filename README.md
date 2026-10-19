@@ -60,7 +60,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
 | Review build-70450 available-map terrain results | [Product v20 scope](docs/forever-product-v20.md) and [real v20 checkpoint](docs/forever-progress-log.md#2026-10-19-build-70450-full-maps-terrain-v20) |
 | Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
-| Review the synthetic build-70450 selected-map geometry profile | [Product v22 scope](docs/forever-product-v22.md) |
+| Review the build-70450 selected-map geometry profile and bounded real query evidence | [Product v22 scope](docs/forever-product-v22.md) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -160,6 +160,9 @@ the preceding binary failed with `local_store_no_verified_encoding` and produced
 no package; those locale-specific failures do not establish an esES blockage.
 There are no MMaps or full-world outputs, and this is not C++ format parity or
 RustyCore runtime acceptance. See the [v22 scope](docs/forever-product-v22.md).
+A separate bounded `forever-vmap` reader/query exercise recorded 24 hits from
+geometry-derived rays; it reached its query cap and was not exhaustive. Details
+and the receipt are in the v22 scope.
 
 The opt-in `FOREVER_PRODUCT_DIAGNOSTIC` now records typed failures for revisions
 v16–v19 and v21; v20 is deliberately excluded because its terrain path flattens
