@@ -3999,3 +3999,121 @@ Three sparse files are accepted raw-only rather than row-decoded. Plan-bounded
 file counts do not imply full-catalogue acquisition. This DB2-only result does
 not establish parity, full-world resources, RustyCore runtime compatibility,
 component completeness, release readiness, or any release gate.
+
+## 2026-10-19: build-70450 v19 DB2, game tables, and cameras
+
+The Linux v19 plan models the repository's own v19 fixture: token 19, build
+70450, esES, `wowdbdefs-70450-v1`, disabled decryption, components `db2,gt,cameras`,
+resident storage, and the single DB2 selection `CinematicCamera` (1294214).
+Plan inspection reported `forever-product-v19`, status `planned`, component
+mask 7, one DB2 declaration, offline true, and plan SHA-256
+`860d9773c976c4bb30167c10c1369f04ebab408bad27c5f8402b563263d32eb4`.
+
+The real extraction exited zero with `selected_producers_complete`. The package
+has 31 files / 165,535 bytes and inventory SHA-256
+`d6abe767c63f02a05620a1d813b1765687131295a6ebe9a35fd721806de9caac`;
+producer SHA-256 is
+`268f9579772d4244288c19a5779fd55653f2efae7366dcf6c1cc201675f51159`, source
+SHA-256 is `8caee5a30da7aa1b0917d04b0cc79f1c214385d853e63d350a73343fe3983c8e`,
+and `full_extractor_complete` remains false. A separate `verify` exited zero
+with scope `artifact_integrity_and_intrinsic_formats` and status `verified`.
+
+Component counts are 20 game-table files / 138,537 bytes and 10 camera files /
+26,296 bytes, plus the 702-byte `CinematicCamera` DB2 source (the one selected
+DB2 artifact). The game-table and camera totals match the historical standalone
+70338 Rust-local run's twenty tables / 138,537 bytes and ten cameras / 26,296
+bytes; the historical DB2 source was 674 bytes rather than 702. This is a
+consistency observation, not a parity proof. All 20 game-table declarations
+resolved and their numeric tables parsed for build 70450, establishing that
+their file data IDs are present in this client. The earlier note remains true:
+those IDs originate in the 3.4.3 reference catalogue, not the 70450 catalogue;
+this acquisition does not change that provenance.
+
+Camera outputs remain opaque component bytes with this revision's
+source-relative discovery. No runtime camera consumption is demonstrated. The
+plan, stdout, package, and verify output are retained outside every checkout at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/gt-cameras-70450/`.
+No key was supplied or recovered. This selected v19 run is not a complete
+extraction, parity, full-world, RustyCore runtime, or release claim; no related
+component or release gate is met by this evidence.
+
+## 2026-10-19: build-70450 full-maps terrain (v20)
+
+The 15-line resident-storage plan at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/terrain-70450/plan-v20-esES.tsv`
+has SHA-256 `8d287c712a0b02e480d7e84f0052a7d09f440fb88acb291df073032ff0dbb7bb`.
+It selects `forever-product-v20`, build 70450/esES, schema catalog
+`wowdbdefs-70450-v1`, disabled decryption and terrain source profile
+`linux70450-compatible-full-maps-available-map-v1`; no `--scratch` is used.
+Extraction exited zero with `selected_producers_complete`, producer-reported
+coverage authentication, missing-file-only omission policy,
+`whole_client_map_coverage=false` and `full_extractor_complete=false`. The package
+contains 3,394 files / 215,659,177 bytes, with inventory SHA-256
+`dc13093f9b61445c21209041e196d82a48edbadafb0753c7555e1b40ae12f8bd`, producer
+SHA-256 `268f9579772d4244288c19a5779fd55653f2efae7366dcf6c1cc201675f51159` and
+source SHA-256 `8caee5a30da7aa1b0917d04b0cc79f1c214385d853e63d350a73343fe3983c8e`.
+
+The package has 71 `{map:04}.tilelist` files, 48 maps with at least one tile and
+3,322 `{map:04}_{x:02}_{y:02}.map` tiles; all 215,659,177 bytes are under
+`maps/`. Each tilelist begins with `MAPS`, version 10, build word 70450 and the
+grid byte. Largest maps by tile count are 1 (988), 0 (736), 169 (256), 3104
+(240), 3065 (81), 2991 (72) and 3021 (60). A separate `verify` exited zero with
+scope `artifact_integrity_intrinsic_formats_and_declared_available_map_omission_coverage_links`
+and status `verified`. The client's `Map` declaration is among the encrypted
+set, so its own map list cannot be enumerated; this run reports available-map
+coverage, not whole-client coverage.
+
+This does not establish parity, runtime acceptance, component completeness or
+release readiness. No key was supplied or recovered, and this single-component
+run is not a complete extraction.
+
+## 2026-10-19: build-70450 collision attempts (v15, map 48)
+
+Two attempts are retained under
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/collision-70450/`.
+The first used `plan-v15-map48.tsv` with every collision budget field at 1 MiB
+(1,048,576); extraction exited 9 with `collision_payload_limit` in component
+`vmaps`. The second used `plan-v15-map48-big.tsv`, all seven collision budget
+fields set to 268,435,456, with plan SHA-256
+`6f16ce7b92bccf917d46f8fc8e783889366b18b1e6db4bb5fdd92b5cd856fc6b`. Inspection
+reported `planned`; extraction exited 9 with
+`local_store_no_verified_encoding` in `vmaps`, and its package contains only
+state: 4 files / 410 bytes.
+
+Raising the resource budget moved the failure from a resource bound to the
+content blocker: map-48 collision closure reaches content whose local encoding
+is not verified, the same encryption blocker previously recorded for gameobject
+model file data ID 7385605. The collision component is blocked by key availability,
+not resources. No VMap output was produced; no coverage or parity is claimed, and
+no key was supplied or recovered.
+
+## 2026-10-19: Linux distribution revalidation
+
+The retained run directory is
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/distribution-20261019T100806Z/`.
+The acceptance observed HEAD `afb59d7482a3861a2de62c1d53ccd4ba5d1ff4f8` and
+`dirty_files=1` (the progress-log change). Builds A and B both exited zero with
+schema `forever-distribution-v1`, 930 manifest files and source SHA-256
+`6d206574dd99cafab356b1047d592b3f36727bbf8085fb2bb22937df5d819f14`; both
+archives have SHA-256
+`ac8e897c7488dd0142d43d70e9ac255ee753666eea03d2eba864f454fc548cdb` and both
+packaged binaries have SHA-256
+`20a567190248dff16724b8ee611b93dac9d3bcf927abdda95ef58b4ec2722ae9`. Local
+rehashing confirmed both archive hashes and the packaged binary hash. Each
+archive contains 931 entries (930 inventory files plus the manifest); the retained
+run directory has 4,008 regular files across `a` (1,027), `b` (1,027), `rebuild`
+(1,023) and `unpacked` (931).
+
+The corrected moved-source rebuild exited zero; both binaries at
+`rebuild/target/release/forever-extractor` and `rebuild/bin/forever-extractor`
+hash to `20a567190248dff16724b8ee611b93dac9d3bcf927abdda95ef58b4ec2722ae9`
+and are 4,270,120 bytes. The suites report 423 tests in 7.460s, OK, and 167
+tests in 15.972s, OK (one skipped). CLI smoke reports `help_rc=0` and
+`inspect_help_rc=2`; overall `acceptance_rc=0`, finished
+`2026-10-19T10:10:13Z`. The earlier retained acceptance log's scripted rebuild
+returned 1 because its caller omitted `--bundle`; the corrected invocation in
+`distribution-20261019T095025Z/rebuild2` reproduced the packaged binary hash.
+
+Archive integrity, byte-identical archives and a moved-source rebuild do not
+establish real extraction, runtime acceptance, Windows support, full-world
+coverage or release authorization; no publication is authorized.
