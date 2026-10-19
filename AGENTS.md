@@ -41,6 +41,11 @@ needed for every task. Add new dated entries there, not here: this file is
 injected into every agent request, so keep it to stable rules and the current
 priority.
 
+For key-source investigation, REA operation, retained negative results and
+repeatable steps after a client/tool version change, read
+`docs/forever-key-investigation.md`. Raw client data and key material stay in
+the external private laboratory described there.
+
 Forever summary: the operator made this repository public, renamed `main` to
 `3.4.3`, and selected `forever` as default on 2026-10-03. Forever's development
 target is modern WoW `1.60.1` Beta x64. Admit each build only through its own
