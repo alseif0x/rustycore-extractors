@@ -719,3 +719,208 @@ earlier complete retained-cache audit found no recognized extension, and the
 220-round live observation found no candidate. No key value has been
 recovered in this checkpoint. A later candidate still requires the frozen
 full-frame and full-file-CKey CASC authentication before being called usable.
+
+### 2026-10-19 — Delivery conditions, live registration and execution counters
+
+The next observations use the same exact build-70450 source hash and private
+laboratory above. They do not recover either requested key. The public selector
+is also the `TactKey` table tag; its match with the extension parser does not
+establish an exclusive `BroadcastText` source, a particular NPC/dialogue, or a
+specific server packet in this client build.
+
+`inspect_key_extension_registry.py` walked the fixed registry at RVA
+`0x52150c0`, with bounded reads and process/source/PE/header guards before and
+after. The initialization flag was one. Eight buckets contained one node;
+the public selector's stored callback target was exactly the authenticated
+writer at RVA `0x1b8b9d0`. Its manager and invoker were in-image code pointers,
+but neither had a source `.pdata` entry. The 1,895-byte walk completed in
+0.645 seconds with stable guards. Receipt:
+`reports/key-extension-registry-00.json`. Registration proves that the
+delivery handler is installed, not that any key payload has arrived.
+
+The Windows-ABI getter dossier and a separate instruction review establish
+these local conditions for the observed query path:
+
+1. The lookup must already have a node in the local cache. An absent node
+   returns without taking this query path.
+2. State 2 serves the stored 16-byte value. States 0 and 3 can reach the
+   interface check; other observed state values return without that query.
+3. The fixed global interface must be non-null and its virtual slot `+8`
+   must return true. Its meaning is still unidentified: presence alone is
+   not proof of a connected or in-world session.
+4. The query callsite supplies the node's 32-bit row-ID field and a callback
+   wrapper. A result of 2 marks state 1 and records a timestamp. This does not
+   yet identify the callee's packet format or the server's delivery policy.
+
+The two selected missing lookups previously had nodes in state 0, so their
+absence alone does not explain the unobserved query. The callee and interface
+leaf remain outside the authenticated executable captures; retain their
+mapping rejections rather than substitute source bytes or guess semantics.
+Reviewed callsite metadata: `reports/getter-query-call-reviewed-00.json`.
+
+`observe_key_execution_counts.py` then used Linux `perf stat` hardware
+execution breakpoints at the exact writer, getter and query-callsite addresses
+for one bounded 20-second interval. All three counts were zero; `task-clock`
+was 6,339.38 milliseconds and all counting percentages were 100. Process
+creation identity, source hash and runtime PE guards remained stable. Receipt:
+`reports/key-execution-counts-safedelivery00.json`. No registers, stack,
+payloads, callchains or `perf.data` were captured, and no client code was
+patched. The observer ended; no continuous monitoring is claimed. These
+counts establish no executions at those addresses during that interval,
+not lifetime absence, a disconnected state, or an impossible delivery.
+
+A bounded RX cross-reference scan found initialization/unregistration code
+and one caller, but no consumer in its selected coverage. It covered
+3,387,392 executable bytes in 383 spans, with 2,054 undecodable positions;
+this is not an all-image control-flow census. Receipt:
+`reports/runtime-delivery-xrefs-00.json`.
+
+The initializer's caller required three authenticated contiguous unwind
+members, covering RVAs `0x2118c0` through `0x211bdc` (796 bytes). The first
+single-member analysis remains retained as truncated. The generic
+`make_linked_windows_carrier_v3.py` accepts 1–16 contiguous captures, verifies
+each hash and common unwind primary, and declares generated PE metadata
+separately. The reviewed runner now accepts that carrier version. Expanded
+Windows-ABI evidence:
+`ev_9058a75b849499acb9c211c1eb26ca40697133595e876c52f275e632d597b446`.
+It has a normal return and retains the overlapping-global-symbol warning.
+
+One callback installed by that caller, RVA `0x211730`, constructs a structured
+object from a 32-bit input. Its 389-byte capture has a normal return:
+`ev_9d0b3c8d17d6b6d71136044a9e19f0c826d1b76189ce247f10f3af74007135f6`.
+Its relationship to the actual key query is unproven. In particular, do not
+label it `DBQueryBulk`, `HotfixRequest`, or a network request from object
+construction alone. A separate 63-byte adapter capture at RVA `0x1bf5d10`
+still ends in truncated-control-flow evidence and has no complete-function
+claim. Their receipts use tags `safeadapter21173000` and
+`safeadapter1bf5d1000`.
+
+Before the next live RTTI/session probes, PID 1184593 ceased to exist. The
+RTTI attempt read zero candidate bytes; the repaired Lua probe records
+`process_identity_unavailable` at `pre_identity`, with post guards explicitly
+unobserved. The initial RTTI helper's generic internal failure is not a
+permission-denial diagnosis. Retained receipts:
+`reports/key-request-rtti-00.json` and
+`reports/lua-session-api-discovery-v2-00.json`. There is no established exit
+cause or confirmed world/session state, and no identical live retry was made.
+
+Two separate source-only diagnostics continued without the exited process:
+
+- `R/discover_lua_registry_static.py` scanned 12,942,900 source `.rdata`
+  bytes and the complete 2,867,316-byte exception directory under stable
+  pre/post source guards. It found the fixed public labels `IsLoggedIn` and
+  `UnitExists`, but no qualifying aligned name/function-pointer pair. This
+  says nothing about the client's live login/world state. Receipt:
+  `reports/lua-registry-static-00.json`.
+- `inspect_source_request_rtti.py` checked the two fixed object candidates
+  using the PE preferred image base. One had no valid in-image RTTI locator;
+  the other is in writable `.data`, outside this read-only RTTI hypothesis.
+  All source guards passed; neither yielded a type identity. Receipt:
+  `reports/source-key-request-rtti-00.json`. A negative static hypothesis
+  does not rule out other runtime type metadata.
+
+Repeatable continuation: first establish a current exact-build process and
+creation identity, then resolve its actual image base. Recreate scoped live
+probes with those verified inputs and new output names; never reuse the old
+PID/base blindly. Resolve the interface predicate and actual query callee
+before attributing a player action or packet. Correlate a bounded execution
+observation with a confirmed session transition and recheck the two nodes.
+Only a newly captured candidate warrants the frozen authenticated CASC check.
+Authored diagnostic hashes are retained in
+`reports/authored-diagnostics-manifest-v6.json`; client captures, dossiers,
+raw diagnostics and all key material remain private outside Git.
+
+### Same-day reentry — captured predicate, unresolved indicator meanings
+
+The operator's continuing launch authorization was used to reopen the exact
+client once through a separate, owned Windows helper with REA's fresh Frida
+provider. The helper first enumerated exact game basenames and found none,
+then used `CreateProcessW` with the exact executable and working directory,
+no arguments and no inherited handles. It closed all returned handles and
+did not attach to or inject into WoW. Receipt:
+`reports/windows-reopen-pinned-client-00.json`.
+
+The new process was Linux PID 1639188, creation ticks 89374969, Windows PID
+2712. Its PEB base was **`0x6ffff0720000`**, different from the earlier base.
+Exact process path, active/creation identity and source PE headers matched
+before/after the helper inspection. That inspection's optional text sample
+failed, so its overall status remains a retained native/parse failure, not
+an entirely successful inspection. Its successful structural-header fields
+were independently checked by the later probes. Receipt:
+`reports/windows-cross-process-identity-2712-00.json`.
+
+The new cache walk again found 202 nodes, the same 69 exact state-2 controls,
+and both selected targets in state 0 with zero value fields. No candidate
+file was created. Receipt: `reports/reopened-client-cache-00.json`.
+Selected-window OCR with stable PID/window guards found the public labels
+`Blizzard`, `Iniciar`, `Sesión`; it does not prove a world session. Battle.net
+was then opened once in the same Wine context through its official launcher;
+the existing game was left untouched. Its library/home window was observed,
+but no successful official game launch or session transition is claimed.
+Receipts: `reports/game-ui-reopened2712-00.json` and
+`reports/windows-launch-official-battlenet-01.json`.
+
+`pinned_live_probe_2712.py` records the new PID/startticks/base overrides and
+runs the existing observers under independent source/PE/creation guards.
+Both inner reports passed their guards. The complete selected runtime
+`.rdata` scan found the same two public Lua labels but no qualifying pointer
+pair; the RTTI candidates yielded no type identity. Receipts:
+`reports/reopened2712-lua-00.json` and
+`reports/reopened2712-rtti-00.json`, with their exclusive `.inner.json`
+reports. The wrapper's post-source `observed.source_sha256` bookkeeping flag
+remains false despite its true hash-result field; rely on the explicit inner
+pre/post hash guards, not that inconsistent wrapper flag. Preserve the
+executed wrapper unchanged; repair it in a new version before future use.
+
+The interface leaf at RVA `0x4eb7b0` was successfully captured as a guarded
+64-byte RX sample in this process. The classifier conservatively stopped at
+its first branch. Separate local review followed both conditional paths
+inside the first 36 bytes: the code checks the pointer stored at global RVA
+`0x50612d8`, then bytes at object offsets `+0xc49` and `+0x7e8`. All three must
+be nonzero for its true return; the other paths return false. Both return
+instructions and their branch targets are inside the captured interval.
+This identifies the structural predicate, **not the meanings of the two
+indicators or their current values**. No `.pdata` boundary exists for this
+leaf; do not promote the 64-byte sample to a source-bounded function claim.
+Evidence: `private/interface-leaf-reopened2712-00.json` and
+`reports/predicate-leaf-reviewed-2712-00.json`.
+
+Page permissions were transient: metadata initially showed these code ranges
+as RX, but subsequent function captures encountered `---s`. Two calls to the
+old carver also stopped before reading because its old PID/base pins did not
+match the new process; this was local stale-input validation, not an OS/MCP
+permission denial. Separate rebound carver/carrier/runner files preserve the
+old files, add the exact new creation-time pin, and retain all source, PE,
+hash, RX and artifact guards. Their two callee capture attempts at RVAs
+`0x1b8e9d0` and `0x1b8e8e0` then stopped at the full-extent RX guard, reading
+zero code bytes. No new carrier or Ghidra analysis was produced for them.
+Receipts: `reports/reopened2712-carve-1b8e9d0.json` and
+`reports/reopened2712-carve-1b8e8e0.json`.
+
+`sample_delivery_predicate_2712.py` was prepared to read only the exact global
+pointer and two individual object bytes, conditional on the live RX sample
+still matching the retained code hash and on stable source/PE/creation and
+interface-chain guards. Its single attempt stopped at `sample_pre` because
+the code was no longer fully RX; it read **zero predicate/chain bytes**.
+Its unobserved post fields are not evidence of source/process changes.
+Receipt: `reports/delivery-predicate-2712-00.json`. No protection was changed,
+no protected-page read was forced, and no identical capture was retried.
+
+The public-Lua-seed RX search completed one bounded scan of 3,394,044 bytes
+in 391 selected spans, with stable source/PE/creation guards, 2,032 bad
+decodes and no matching seed reference. Receipt:
+`reports/runtime-lua-seed-xrefs-2712-00.json`. This is selected mapped coverage,
+not all client code. Its two general RIP-total counters were initialized but
+not maintained by the helper; their zero values are not valid totals. The
+target-matching loop ran, but the receipt supplies no global absence claim.
+Preserve the executed helper and repair counter bookkeeping in a new version
+before reusing it.
+
+The next causal comparison needs a confirmed official login/world transition
+and new observations of those same structural indicators, followed by their
+writers and the actual query callee. The operator was asked to confirm world
+entry after this reopen. There is still no identified player action that
+delivers either selected key and no authenticated recovery. The later
+authored diagnostic source inventory is
+`reports/authored-diagnostics-manifest-v7.json`; it includes prepared variants
+that were not executed, as distinct from the receipts of actual attempts.

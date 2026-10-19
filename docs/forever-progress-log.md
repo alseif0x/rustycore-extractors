@@ -3848,3 +3848,34 @@ observation, not an established fact. The census reports declaration
 availability only; it demonstrates no decryption. No key is claimed to exist
 or be obtainable, no decryption is claimed possible, and no component,
 full-world, runtime, or release gate is met.
+
+## 2026-10-19 — REA delivery registration and bounded execution observation
+
+The exact build-70450 runtime registry was walked with stable source, PE and
+process guards: the public key-extension selector points to the authenticated
+cache writer. A 20-second hardware execution-counter observation then counted
+zero getter, query-callsite and writer executions, with positive task-clock
+and complete counter scheduling. This proves registration and the bounded
+negative observation, not received keys or an identified server trigger.
+
+The getter's local conditions are now documented: existing node, eligible
+cache state, non-null interface and a true virtual predicate before the
+row-ID/callback query path. That predicate and the actual query callee are
+still unidentified. A nearby adapter is not established as a network packet.
+The game process exited before subsequent live type/session probes; separate
+guarded source-only probes yielded no type identity or Lua function pair.
+No missing key, complete extraction, runtime acceptance or new build gate is
+claimed. Detailed receipts, retained limitations and repeatable continuation
+are in `docs/forever-key-investigation.md`, under the delivery-conditions
+checkpoint; raw evidence stays in the private laboratory.
+
+The exact client was subsequently reopened once via REA and an owned Windows
+helper. Its new process/base were independently rebound and verified; both
+target cache entries remained in state 0. A guarded 64-byte capture now shows
+that the interface predicate requires a non-null internal global object and
+two nonzero object bytes. The indicators' meanings and current values are
+unproven: the next narrowly scoped byte probe stopped before reading when the
+code became protected again. Both query-callee captures also stopped at their
+RX guard. Battle.net is open, while a confirmed official world-entry
+transition is still needed. Detailed reentry receipts and the transient-page
+limitation are retained in the key-investigation guide. No key was recovered.
