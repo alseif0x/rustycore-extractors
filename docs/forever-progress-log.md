@@ -4503,3 +4503,76 @@ strict DB2, collision and navigation routes blocked, and
 does not expand coverage: these runs cover the same available client subset, and
 there is still no complete extraction, runtime acceptance or publication
 authorization.
+
+## 2026-10-19: v21 domain blocker, gameobject scope and the runtime build gate
+
+### v21 domain derivation
+
+The `prepare_domain` blocker in v21 is not avoidable within the current
+contract. In `crates/forever-extractor/src/driver.rs:438-519`, profiles v14–v18
+return `Ok(None)` at line 444. For v21, the driver locates `Map` in `plan.db2`
+(:451-456), reads it strictly through
+`read_file_data_id_with_limit(..., DB2_FILE_BYTES)` (:461), rejects an empty
+result or a byte-limit hit (:472-474), validates it with
+`validate_db2(plan, "Map", &bytes)` (:483), and derives the domain with
+`Domain::derive_70450` (:492-497). That calls `map_domain.rs:39-45` and then
+`source::read_vmap_maps_70450(bytes)` at `map_domain.rs:57`; the 70450 path does
+not accept partial sections (`terrain_sources.rs:179-184`). An encrypted
+section byte propagates an error before package creation (`driver.rs:378-386`).
+The v21 invariant is explicit in
+`contracts/forever-product-contract-v21.json:72`: “Availability/partial readers
+are not used for domain derivation”; encrypted or unavailable bytes are fatal.
+Reusing the available-sections reader therefore requires a new versioned
+contract review; v21 is unchanged.
+
+Ancestor closure already exists in
+`crates/forever-casc/src/collision/plan.rs`: `MapSelection::MapAndAncestors`
+at lines 41-44 and 221-332 includes `MissingParent`, `CopiedParent`, and
+`InactiveMap`. The availability reader cannot supply that closure because
+`crates/forever-casc/src/terrain/availability.rs:110-113` does not traverse
+parents. Any profile deriving a materialized domain with parent closure must
+extend that derivation and continue to reject an ancestor in an unavailable
+section.
+
+### Global gameobject scope
+
+Global gameobject scope is a declared product decision, not an accident:
+`gameobject_scope: global-startup-v1` is in
+`contracts/forever-product-contract-v21.json:54` and
+`contracts/forever-product-contract-v15.json:49`. The stage does not receive the
+selected domain (`crates/forever-casc/src/collision/compatible.rs:445-450`)
+and walks all direct rows (`compatible/startup.rs:243-265, 288-297, 344-349`).
+The pinned C++ reference does the same: `ExtractGameobjectModels()` runs before
+`ReadMapTable`/`ParsMapFiles` and has no map filter
+(`src/tools/map_extractor/vmapexport.cpp:713-725` and
+`src/tools/vmap4_extractor/gameobject_extract.cpp:88-117`, reference HEAD
+`02245dcd245e7433e524577656177723d3e4992e2`). Restricting this work by domain
+would require a new versioned profile and, while `GameObjectDisplayInfo` and
+models remain encrypted without an available key, would not unblock real
+extraction.
+
+### Retained real evidence for v15, map 48
+
+`probe-70450-20261019/collision-70450/extract.stdout` records rc 9 with
+`{"status":"failed","code":"collision_payload_limit","component":"vmaps"}`
+under the 1 MiB limits. `extract-big.stdout`, with larger limits, records rc 9
+with `{"status":"failed","code":"local_store_no_verified_encoding","component":"vmaps"}`.
+The earlier typed probe recorded `NoLocalEncoding` with `encrypted=1` on the
+first request of the startup stage. Neither attempt created an output package.
+
+### Runtime integration gate remains pending
+
+`Profile::declared_build` is gated in
+`crates/wow-map/src/terrain/forever.rs:54` and admits only 70170|70205. That
+file is part of uncommitted and untracked work in the runtime repository
+`/home/joe/projects/dream/wow/rustycore`, at commit `544721324` on branch
+`forever-extractor-static-terrain`, which has 22 dirty or untracked entries,
+including `crates/wow-world/tests/production_forever_terrain.rs` and
+`crates/wow-map/src/grid_map.rs`. Expanding the gate is a one-file change, but
+it belongs to that other work and remains an explicit integration responsibility
+pending coordination with its owner. The runtime repository has not been
+modified.
+
+Full extraction remains unmet. This entry documents why two apparently
+avoidable blockers remain real blockers under the current contract and records
+the outstanding runtime-integration responsibility.
