@@ -4273,3 +4273,108 @@ open, and the runtime build gate remains an explicit pending responsibility.
 The harness's key-writing subcommands were not used; no key material was
 generated or appears in the outputs, which also contain no key names, client
 bytes or client paths.
+
+## 2026-10-19: typed diagnostics for build-70450 product revisions
+
+Commit `1b4ea4e` (“Extend the typed product diagnostic to the remaining 70450
+revisions”) extends `FOREVER_PRODUCT_DIAGNOSTIC` to v16/v17/v18/v19/v21; v20 is
+intentionally excluded because its terrain route flattens the store error before
+the assigned diagnostic layer. `prepare_domain` now registers v21's typed `Map`
+read and closes the diagnostic on its error path. For v18/v19/v21 the diagnostic
+sink also rejects paths inside the output package or ancestors containing it,
+alongside existing client/anchor checks. With the variable unset nothing is
+written; exit codes, extraction outputs, limits, omissions, admission and
+contracts are unchanged.
+
+Observed software acceptance: `--lib` 474 tests; v18–v21 CLI 28; v15/v16/v17
+regressions 4/11/17; `product_v21_cli` 12; Clippy with `-D warnings` returned
+0; formatting returned 0. These are the scoped results for this increment, not
+a claim that the full suite ran.
+
+Using the current-tree binary (SHA-256
+`560928c1bbed00dbd5fe3ab1423d16298ebc8b9206bb865c128a001a2d388dec`), the
+canonical v21 plan (build 70450, mask 57, map 2) returned rc 9 and the
+unchanged CLI JSON (`local_store_no_verified_encoding`, `component:null`) in
+both locales. enUS now writes a typed `db2`/`db2_table` diagnostic for file data
+ID 1349477: `NoLocalEncoding`, `missing=1`, `encrypted=0` (no local Map index
+prefix). esES writes `encrypted=1` and
+`blte_code=blte_encrypted_unsupported`; with decryption disabled, no keyring is
+consulted, so this differs from the provided-key route's
+`blte_encryption_key_unavailable`. With the variable unset, rc 9 and the same
+JSON produce no diagnostic file; neither run created a package directory.
+Evidence is retained at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/v21-real-20261019/`
+(`README.txt`, `diag-v21-typed.jsonl`, `diag-v21-esES.jsonl`).
+
+Independent audit status: `passed`, with three non-blocking observations: v20's
+exclusion has no extract-level test (only static review and an inspect test); an
+unanchorable `--output` can yield `product_disk_path`/`product_disk_changed`
+instead of `product_diagnostic_path` when opt-in diagnostics are enabled; and
+the CLI summary remains `component:null` for this domain-preparation failure.
+The verified source reading used the local reference clone
+`/home/joe/projects/dream/wow/rustycore/target/forever-cpp-reference`, remote
+`https://github.com/advocaite/TrinityCore.git`, branch `forever`, HEAD
+`02245dcd245e7433e524577656177723d3e4992e`. Reads were made in read-only mode
+with `GIT_NO_LAZY_FETCH=1` and `GIT_OPTIONAL_LOCKS=0`, so the reference clone
+would neither fetch blobs over the network nor be modified. The clone is partial
+(`blob:none`) and its working tree has deleted files, so blobs were read with
+`git show HEAD:<path>` and `git grep HEAD`. The local reference is configured in
+`.opencode/environment.sh` (`RCE_FOREVER_CASC_REFERENCE`) and documented in
+`docs/opencode-orchestration.md`; earlier failed attempts for this verification
+remain historical only, not active blockers. The flag is
+`CASC_OVERCOME_ENCRYPTED` (`0x00000020`); `CASC_OPEN_OVERCOME_ENCRYPTED` does not
+exist, and the comment at `dep/CascLib/src/CascLib.h:96` says an encrypted block
+without a key is zero-filled and returned as success. The wrapper enables this
+only when requested: `src/tools/extractor_common/CascHandles.h:50-51` gives
+`zerofillEncryptedParts` a default of `false`, and
+`src/tools/extractor_common/CascHandles.cpp:277-278,298-299` applies it when
+opening. Exhaustive enumeration at this pin of every CASC `OpenFile` call site
+under `src/` establishes that the only caller passing `true` is the DB2 path
+(`src/tools/extractor_common/DB2CascFileSource.cpp:25`). Terrain and VMap callers
+pass only two or three arguments and therefore use the default:
+`src/tools/map_extractor/System.cpp:1320` and `:1373`,
+`src/tools/map_extractor/loadlib.cpp:36` and `:63`,
+`src/tools/vmap4_extractor/cascfile.cpp:28` and `:46`, and
+`src/tools/vmap4_extractor/gameobject_extract.cpp:76`. This exclusivity is
+verified by enumerating those call sites at this pin, not inferred from a partial
+grep. In `dep/CascLib/src/CascReadFile.cpp:648-655`, the code comment says “We
+overcome missing decryption key by zeroing the encrypted portions”; it calls
+`memset(..., 0, ...)` and returns `ERROR_SUCCESS` only when
+`dwErrCode == ERROR_FILE_ENCRYPTED && hf->bOvercomeEncrypted`. Actual decryption
+is handled by `case 'E'` at `dep/CascLib/src/CascReadFile.cpp:588-600`.
+
+The public list is fetched at runtime:
+`src/tools/extractor_common/CascHandles.cpp:170-175` (`LoadOnlineTactKeys`)
+downloads `raw.githubusercontent.com:443/wowdev/TACTKeys/master/WoW.txt` once
+and imports it with `CascImportKeysFromString`;
+`src/tools/extractor_common/CascHandles.cpp:205,245` invokes
+`LoadOnlineTactKeys` when opening the store, and failure only prints
+“Failed to load additional online encryption keys, some files might not be
+extracted.” CascLib exposes only import APIs
+(`dep/CascLib/src/CascLib.h:417-418`); this fork does not include a key table.
+It uses only the same public `wowdev/TACTKeys` list already tested with its own
+pin, which has no key for these declarations. In DB2,
+`src/tools/extractor_common/DB2CascFileSource.cpp:70` calls `Process` only when
+`HasTactKey(TactId)` and otherwise omits the section.
+`src/tools/map_extractor/System.cpp:1234-1235` rewrites a section TactId to the
+known marker `DUMMY_KNOWN_TACT_ID` (`0x5452494E49545900`, “TRINITY”,
+`src/common/DataStores/DB2FileLoader.h:71`; treated as known in
+`DB2FileLoader.cpp:118,1928`) only when the key is present.
+`src/tools/map_extractor/System.cpp:1293-1299` counts a file when
+`ExtractDB2File` returns true, skips paths that already exist without recording
+the reason, and prints “Extracted %u files”; accordingly, a file with
+zero-filled frames lacking a key counts as extracted just like a complete one.
+For terrain/VMap, a missing key makes the read fail and the tile/model is
+omitted. Thus the fork uses only the public list already tested negative: DB2
+zero-fills frames without a key and counts them as extracted, while omitting
+encrypted sections without a key; terrain/VMap omit the tile/model when the read
+fails. The fork working (a running game or server) does not prove it has the
+missing content keys; attributing those keys to it would be incorrect. This is
+source reading at that pin, not an execution, and the final state of a fully
+encrypted DB2 file was not traced. `docs/forever-completion.md` already recorded
+the same conclusion at the prior pin
+`8c5325b37dfa155450a9e87f213965f6e6c00afe`; this reading corroborates it at the
+current pin and does not replace it.
+
+This is a diagnostic improvement only: it does not decrypt content, unblock an
+extraction, close any extraction gate, or change policy.
