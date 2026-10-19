@@ -2703,3 +2703,39 @@ legacy-v15 container or `MMapManager` acceptance, filename compatibility,
 cross-tile query behavior, off-mesh completeness, ground MAPS, full-world
 coverage, Trinity parity, RustyCore runtime/server acceptance, Windows support,
 or release acceptance.
+
+## 2026-10-20: VMap model-table growth regression run
+
+Issue #98 corrects `forever-vmap::store::load::append_capacity`: model tables
+reuse spare capacity and grow only when full. Checked item ceilings, fallible
+allocation, conservative old/new allocation overlap and transaction behavior
+remain unchanged. Synthetic cases cover spare capacity, zero/lowered ceilings,
+exact memory boundaries and 24 unique models under a constrained budget.
+
+Final-source validation passed 497 VMap tests, 345 navigation tests (20 ignored)
+and 487 product tests in 168.533 seconds; receipt SHA-256
+`b94a30311dbcd5b5cc3824f8b96ea20090f05e29df8a186bbccbcd6c318465a8`.
+Workspace all-target Clippy with `-D warnings`, scoped formatting, diff checks
+and 434 contract tests also passed. Initial test-only format/lint rejections
+were retained and corrected before final validation.
+
+A fresh bounded offline run on source
+`1c299b797f6c0b2dec7959f774e7ea5c62f405d2` exercised the corrected VMap store
+through the available-selected filesystem owner. Its four nonempty tiles and
+40-byte global totaled 838,116 bytes; all five files independently matched the
+prior output hashes. The 1,331 tracked source snapshots, input/configuration/tool
+checks, binary and all four API guard predicates remained stable. File modes,
+inventory and binary hashes were independently rechecked.
+
+The persistent unit retained the 900-second, 3-GiB, one-CPU and 64-task limits.
+Build took 46.755 seconds, runtime 8.430 seconds, and the parent-recorded total
+including dispatch and post-context checks was 55.580 seconds. Binary SHA-256:
+`0738b7f851df95639f29986f564ad419e5692209c95161dbd65b3b4478450893`.
+Parent receipt: `cb9aacda21bef46c80131c3cd7fa4a680f4def561d86938a82ad305d7743dfeb`;
+worker receipt: `2f1899dcde1d00c7d3c1c237e944b59c1fd648c4f50f9de979a05171bfb033d1`;
+independent review: `e2f8a7889484b978de838be18f09ed2bea21453675c04a4aa2b7e55409d96c0e`.
+
+Coverage remains partial: 73 available direct Map rows in one of four sections,
+one selected map and complete LiquidType input. The terrain tilelist was
+authoritatively empty. This run adds no ground MAPS, CLI profile, native-query,
+server/runtime, full-world, Trinity-parity, Windows or release acceptance.

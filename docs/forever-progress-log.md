@@ -4760,3 +4760,30 @@ coverage, native queries through this owner, legacy-v15 container or
 ground MAPS, full-world coverage, Trinity parity, server/runtime, Windows and
 release acceptance remain open. The earlier real failure and synthetic
 checkpoints above remain historical and unchanged.
+
+## 2026-10-20: bounded VMap table-growth fix and regression evidence
+
+Issue #98 fixes unnecessary capacity doubling in the VMap store's two model
+tables. Spare capacity is reused; policy limits, fallible growth, allocation
+overlap accounting and prepare/commit behavior are preserved. Final validation
+passed 497 VMap, 345 navigation (20 ignored) and 487 product tests in 168.533
+seconds (receipt `b94a30311dbcd5b5cc3824f8b96ea20090f05e29df8a186bbccbcd6c318465a8`).
+All-target workspace Clippy passed in 10.170 seconds
+(`c8b797a22c83310de5db8c549093fa724c97f60502b2ebbc053ed07e6faedb5e`);
+434 contract tests, scoped formatting and diff checks passed
+(`f5f281c1f4d8b98c0ae06e6922c5b907ab6e61fcf0ceadf737bb28e3bd0ac7ce`).
+Earlier test-only formatting/lint rejections are retained as nonfinal evidence.
+
+A fresh offline real-component run on `1c299b797f6c0b2dec7959f774e7ea5c62f405d2`
+produced the same five files (four nonempty tiles and a 40-byte global,
+838,116 bytes) with all hashes equal to the prior output pins. All source,
+configuration, tool, input, binary and API guard checks passed, with the actual
+900-second/3-GiB/one-CPU/64-task unit limits verified. Build/runtime were
+46.755/8.430 seconds; parent total was 55.580 seconds.
+Parent receipt: `cb9aacda21bef46c80131c3cd7fa4a680f4def561d86938a82ad305d7743dfeb`;
+independent review: `e2f8a7889484b978de838be18f09ed2bea21453675c04a4aa2b7e55409d96c0e`.
+
+This is bounded regression evidence for the selected filesystem owner and
+partial Map inventory. No ground MAPS, new CLI profile, native query,
+server/runtime, full-world, Windows or release acceptance is added. See the
+dated regression checkpoint in `docs/forever-navigation.md`.

@@ -185,6 +185,10 @@ empty, and no native query ran through this owner. See the
 [real filesystem-owner checkpoint](docs/forever-navigation.md#2026-10-19-bounded-real-available-selected-filesystem-owner-run)
 for scope and limitations.
 
+The same five outputs were reproduced after fixing unnecessary VMap model-table
+growth, with the existing limits unchanged. See the
+[bounded regression run](docs/forever-navigation.md#2026-10-20-vmap-model-table-growth-regression-run).
+
 A later native SDK probe used the four tiles from the separate manual
 four-tile generation. All four loaded and were removed successfully; 64 of 64
 nearest-poly queries returned distinct polygons. Of 256 bounded route attempts,
