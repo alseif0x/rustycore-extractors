@@ -334,7 +334,7 @@ fn extract_inner(
     scratch: Option<&Path>,
 ) -> Result<package::Summary, Error> {
     plan.validate()?;
-    let diagnostic_output = if plan.is_v16() || plan.is_v17() {
+    let diagnostic_output = if product_diagnostic_supported(plan) {
         std::env::var_os("FOREVER_PRODUCT_DIAGNOSTIC")
     } else {
         None
@@ -354,8 +354,9 @@ fn extract_inner(
             )?)
         }
     };
-    let product_diagnostic = if plan.is_v16() || plan.is_v17() {
-        disk::product_diagnostic_for_db2(client, diagnostic_output)?
+    let product_diagnostic = if product_diagnostic_supported(plan) {
+        let package_output = (plan.is_v18() || plan.is_v19() || plan.is_v21()).then_some(output);
+        disk::product_diagnostic_for_db2(client, diagnostic_output, package_output)?
     } else {
         None
     };
@@ -374,7 +375,15 @@ fn extract_inner(
     // Validate complete Map and all selected projections before creating or
     // resuming package state. Retained compact facts remain charged by each
     // producer; source buffers and graph scratch are dropped here.
-    let domain = prepare_domain(plan, &mut store)?;
+    let domain = match prepare_domain(plan, &mut store) {
+        Ok(domain) => domain,
+        Err(error) => {
+            if diagnostic_enabled {
+                store.finish_product_diagnostic(Some(error.code), false);
+            }
+            return Err(error);
+        }
+    };
     let context = context(plan, &store, producer)?;
     let data = client.join("Data");
     let archives = data.join("data");
@@ -421,6 +430,11 @@ fn extract_inner(
 }
 
 #[cfg(target_os = "linux")]
+fn product_diagnostic_supported(plan: &Plan) -> bool {
+    plan.is_v16() || plan.is_v17() || plan.is_v18() || plan.is_v19() || plan.is_v21()
+}
+
+#[cfg(target_os = "linux")]
 fn prepare_domain(
     plan: &Plan,
     store: &mut LocalStore,
@@ -440,7 +454,25 @@ fn prepare_domain(
             .find(|entry| entry.name == "Map")
             .map(|entry| entry.id)
             .ok_or("product_plan_dependencies")?;
-        read(store, map_file_data_id, DB2_FILE_BYTES)?
+        let diagnostic_request = store.begin_product_diagnostic_request(
+            ProductDiagnosticRequestKind::Db2Table,
+            Some(map_file_data_id),
+        );
+        let file = match store.read_file_data_id_with_limit(map_file_data_id, DB2_FILE_BYTES) {
+            Ok(file) => file,
+            Err(error) => {
+                store.record_product_diagnostic_failure(
+                    diagnostic_request,
+                    error,
+                    matches!(error, forever_casc::local_store::Error::InputChanged),
+                );
+                return Err(Error::from(error.code()));
+            }
+        };
+        if file.bytes.is_empty() || file.bytes.len() as u64 > DB2_FILE_BYTES {
+            return Err("product_file_limit".into());
+        }
+        file.bytes
     } else {
         read(store, terrain::run::MAP_ID, DB2_FILE_BYTES)?
     };
@@ -544,7 +576,7 @@ impl execution::Adapter for LinuxExecution {
                 .preflight
                 .as_ref()
                 .ok_or("product_scratch_required")?
-                .run_compatible_70450(store, run, plan.map_domain, self.context);
+                .run_compatible_70450(store, run, plan.map_domain, self.context, plan.is_v18());
         }
         match &self.preflight {
             Some(disk) => match &self.domain {
@@ -653,7 +685,7 @@ fn db2(
     for entry in &plan.db2 {
         let cap = db2_read_limit(plan, total)?;
         #[cfg(target_os = "linux")]
-        let diagnostic_request = if plan.is_v16() || plan.is_v17() {
+        let diagnostic_request = if product_diagnostic_supported(plan) {
             store.begin_product_diagnostic_request(
                 ProductDiagnosticRequestKind::Db2Table,
                 Some(entry.id),
@@ -665,7 +697,7 @@ fn db2(
             Ok(file) => file,
             Err(error) => {
                 #[cfg(target_os = "linux")]
-                if plan.is_v16() || plan.is_v17() {
+                if product_diagnostic_supported(plan) {
                     store.record_product_diagnostic_failure(
                         diagnostic_request,
                         error,

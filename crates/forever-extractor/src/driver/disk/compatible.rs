@@ -59,30 +59,63 @@ struct ProductDiagnosticSink {
     finished: bool,
 }
 impl ProductDiagnosticSink {
-    fn from_environment(client: &anchors::Chain) -> Result<Option<Self>, Error> {
-        Self::from_optional_output(client, std::env::var_os("FOREVER_PRODUCT_DIAGNOSTIC"))
+    fn from_environment(
+        client: &anchors::Chain,
+        package_output: Option<&Path>,
+    ) -> Result<Option<Self>, Error> {
+        Self::from_optional_output(
+            client,
+            std::env::var_os("FOREVER_PRODUCT_DIAGNOSTIC"),
+            package_output,
+        )
     }
 
     fn from_optional_output(
         client: &anchors::Chain,
         output: Option<OsString>,
+        package_output: Option<&Path>,
     ) -> Result<Option<Self>, Error> {
         let Some(output) = output else {
             return Ok(None);
         };
-        Self::at_path(client, &PathBuf::from(output)).map(Some)
+        Self::at_path(client, &PathBuf::from(output), package_output).map(Some)
     }
 
-    fn at_path(client: &anchors::Chain, output: &Path) -> Result<Self, Error> {
-        anchors::validate(output)?;
-        let leaf = output
+    fn at_path(
+        client: &anchors::Chain,
+        diagnostic_path: &Path,
+        package_output: Option<&Path>,
+    ) -> Result<Self, Error> {
+        anchors::validate(diagnostic_path)?;
+        if let Some(package_output) = package_output {
+            anchors::validate(package_output)?;
+            if diagnostic_path.starts_with(package_output)
+                || package_output.starts_with(diagnostic_path)
+            {
+                return Err("product_diagnostic_path".into());
+            }
+        }
+        let leaf = diagnostic_path
             .file_name()
             .ok_or_else(|| Error::from("product_diagnostic_path"))?
             .to_os_string();
-        let parent_path = output
+        let parent_path = diagnostic_path
             .parent()
             .ok_or_else(|| Error::from("product_diagnostic_path"))?;
         let parent = anchors::Chain::open(parent_path, true)?;
+        if let Some(package_output) = package_output {
+            match std::fs::symlink_metadata(package_output) {
+                Ok(metadata) if metadata.is_dir() => {
+                    let output = anchors::Chain::open(package_output, true)?;
+                    if parent.contains_leaf(&output) {
+                        return Err("product_diagnostic_path".into());
+                    }
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(_) => return Err("product_diagnostic_path".into()),
+            }
+        }
         if parent.contains_leaf(client) {
             return Err("product_diagnostic_path".into());
         }
@@ -284,12 +317,13 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
 pub(in crate::driver) fn product_diagnostic_for_db2(
     client_path: &Path,
     output: Option<OsString>,
+    package_output: Option<&Path>,
 ) -> Result<Option<Box<dyn ProductDiagnosticObserver>>, Error> {
     let Some(output) = output else {
         return Ok(None);
     };
     let client = anchors::Chain::open(client_path, true)?;
-    let sink = ProductDiagnosticSink::at_path(&client, &PathBuf::from(output))?;
+    let sink = ProductDiagnosticSink::at_path(&client, &PathBuf::from(output), package_output)?;
     Ok(Some(Box::new(sink)))
 }
 
@@ -301,7 +335,7 @@ impl Preflight {
         selected: Option<u32>,
         context: Context,
     ) -> Result<(), Error> {
-        self.run_compatible(store, run, selected, context, 70425)
+        self.run_compatible(store, run, selected, context, 70425, false)
     }
     pub(in crate::driver) fn run_compatible_70450(
         &self,
@@ -309,8 +343,9 @@ impl Preflight {
         run: &mut Run,
         selected: Option<u32>,
         context: Context,
+        protect_package_output: bool,
     ) -> Result<(), Error> {
-        self.run_compatible(store, run, selected, context, 70450)
+        self.run_compatible(store, run, selected, context, 70450, protect_package_output)
     }
     fn run_compatible(
         &self,
@@ -319,12 +354,16 @@ impl Preflight {
         selected: Option<u32>,
         context: Context,
         expected_build: u32,
+        protect_package_output: bool,
     ) -> Result<(), Error> {
         if context.build != expected_build {
             return Err("product_build_mismatch".into());
         }
         let result = if expected_build == 70450 {
-            match ProductDiagnosticSink::from_environment(&self.client) {
+            match ProductDiagnosticSink::from_environment(
+                &self.client,
+                protect_package_output.then_some(self.output.as_path()),
+            ) {
                 Ok(diagnostic) => {
                     store.set_product_diagnostic_observer(
                         diagnostic.map(|sink| Box::new(sink) as Box<dyn ProductDiagnosticObserver>),
@@ -562,7 +601,7 @@ mod diagnostic_tests {
     #[test]
     fn unset_diagnostic_option_creates_no_file() {
         let lab = Lab::new();
-        let sink = ProductDiagnosticSink::from_optional_output(&lab.client(), None).unwrap();
+        let sink = ProductDiagnosticSink::from_optional_output(&lab.client(), None, None).unwrap();
         assert!(sink.is_none());
         assert!(!lab.output().exists());
     }
@@ -570,7 +609,7 @@ mod diagnostic_tests {
     #[test]
     fn tolerated_absence_then_terminal_failure_writes_only_the_propagated_cause() {
         let lab = Lab::new();
-        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output()).unwrap();
+        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output(), None).unwrap();
         sink.set_phase(ProductDiagnosticPhase::Startup);
         let absent = sink
             .begin_request(ProductDiagnosticRequestKind::GameObjectModel, Some(2198569))
@@ -627,7 +666,7 @@ mod diagnostic_tests {
     #[test]
     fn all_tolerated_absences_finish_without_a_terminal_record() {
         let lab = Lab::new();
-        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output()).unwrap();
+        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output(), None).unwrap();
         let request = sink
             .begin_request(ProductDiagnosticRequestKind::GameObjectModel, Some(42))
             .unwrap();
@@ -642,8 +681,20 @@ mod diagnostic_tests {
         let client_path = lab.0.join("client");
         let client = anchors::Chain::open(&client_path, true).unwrap();
         let output = client_path.join("diagnostic.json");
-        let result = ProductDiagnosticSink::at_path(&client, &output);
+        let result = ProductDiagnosticSink::at_path(&client, &output, None);
         assert!(matches!(result, Err(error) if error.code == "product_diagnostic_path"));
         assert!(!output.exists());
+    }
+
+    #[test]
+    fn diagnostic_output_inside_package_root_is_refused_without_creation() {
+        let lab = Lab::new();
+        let client = lab.client();
+        let package_output = lab.0.join("reports/package");
+        fs::create_dir(&package_output).unwrap();
+        let diagnostic = package_output.join("diagnostic.json");
+        let result = ProductDiagnosticSink::at_path(&client, &diagnostic, Some(&package_output));
+        assert!(matches!(result, Err(error) if error.code == "product_diagnostic_path"));
+        assert!(!diagnostic.exists());
     }
 }
