@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified 2026-10-19: add selected partial-coverage 70450 navigation plans.
 // Modified 2026-10-19: gate Linux-only navigation helpers and imports.
+// Modified 2026-10-19: share bounded selected-closure preparation with rooted discovery.
 // This file is part of the TrinityCore Project. See AUTHORS for Copyright information.
 // This program is free software; you can redistribute it and/or modify it under
 // the terms of the GNU General Public License as published by the Free Software
@@ -641,6 +642,21 @@ impl AvailableSelectedPlan {
     pub const fn build(&self) -> u32 {
         self.plan.build()
     }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn account_preparation_work(
+        &mut self,
+        additional: u64,
+        ceiling: u64,
+    ) -> Result<(), Error> {
+        self.plan.statistics.work = self
+            .plan
+            .statistics
+            .work
+            .checked_add(additional)
+            .filter(|work| *work <= ceiling)
+            .ok_or(Error::Limit)?;
+        Ok(())
+    }
     pub fn maps(&self) -> &[Map] {
         self.plan.maps()
     }
@@ -659,23 +675,52 @@ impl AvailableSelectedPlan {
 }
 
 #[cfg(target_os = "linux")]
-fn from_available_rows(
+/// Prepared last-direct-ID-wins selected effective-parent closure. Kept
+/// crate-private so rooted discovery can select actual directories without
+/// manufacturing an inventory-complete `Plan` from partial source rows.
+pub(crate) struct SelectedClosure {
+    rows: Vec<DirectRecord<NavigationMapFields>>,
+    ids: Vec<u32>,
+    work: u64,
+    heap_high_water: usize,
+    source_direct_rows: usize,
+    source_copy_pairs: usize,
+}
+#[cfg(target_os = "linux")]
+impl SelectedClosure {
+    pub(crate) fn contains_map(&self, map_id: u32) -> bool {
+        self.ids.binary_search(&map_id).is_ok()
+    }
+    pub(crate) fn retained_heap_bytes(&self) -> Result<usize, Error> {
+        let rows = self
+            .rows
+            .capacity()
+            .checked_mul(size_of::<DirectRecord<NavigationMapFields>>())
+            .ok_or(Error::Limit)?;
+        let ids = self
+            .ids
+            .capacity()
+            .checked_mul(size_of::<u32>())
+            .ok_or(Error::Limit)?;
+        rows.checked_add(ids).ok_or(Error::Limit)
+    }
+    pub(crate) const fn heap_high_water(&self) -> usize {
+        self.heap_high_water
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn prepare_selected_closure(
     rows: &[DirectRecord<NavigationMapFields>],
     copies: &[RecordCopy],
-    sections: &[SectionCoverage],
-    inputs: &[Input<'_>],
     selected_map_id: u32,
     limits: Limits,
-) -> Result<AvailableSelectedPlan, Error> {
+) -> Result<SelectedClosure, Error> {
     limits.validate()?;
     if selected_map_id > i32::MAX as u32 {
         return Err(Error::Selection);
     }
-    if rows.len() > limits.rows
-        || inputs.len() > limits.descriptors
-        || copies.len() > limits.descriptors
-        || sections.len() > limits.descriptors
-    {
+    if rows.len() > limits.rows || copies.len() > limits.descriptors {
         return Err(Error::Limit);
     }
 
@@ -683,8 +728,11 @@ fn from_available_rows(
         limits,
         stats: Statistics::default(),
     };
-    let mut last_by_id = budget.reserve::<(u32, usize)>(rows.len())?;
+    // Direct rows and copy pairs are caller-owned snapshots, but their full
+    // inspection cost is part of this preparation budget.
     budget.charge(rows.len() as u64)?;
+    budget.charge(copies.len() as u64)?;
+    let mut last_by_id = budget.reserve::<(u32, usize)>(rows.len())?;
     for (ordinal, row) in rows.iter().enumerate() {
         last_by_id.push((row.id, ordinal));
     }
@@ -741,6 +789,108 @@ fn from_available_rows(
     budget.sort(closure_ids.len())?;
     closure_ids.sort_unstable();
 
+    let mut closure_rows = budget.reserve::<DirectRecord<NavigationMapFields>>(chain.len())?;
+    for position in &chain {
+        budget.charge(1)?;
+        closure_rows.push(rows[last_by_id[*position].1].clone());
+    }
+    drop(chain);
+    drop(last_by_id);
+
+    let heap_high_water = budget.stats.heap_reservation;
+    Ok(SelectedClosure {
+        rows: closure_rows,
+        ids: closure_ids,
+        work: budget.stats.work,
+        heap_high_water,
+        source_direct_rows: rows.len(),
+        source_copy_pairs: copies.len(),
+    })
+}
+
+#[cfg(target_os = "linux")]
+// This boundary keeps closure, plan, and aggregate heap limits
+// independently admitted.
+#[allow(clippy::too_many_arguments)]
+fn finish_selected_closure(
+    closure: SelectedClosure,
+    sections: &[SectionCoverage],
+    inputs: &[Input<'_>],
+    selected_map_id: u32,
+    limits: Limits,
+    external_work: u64,
+    external_peak_heap: usize,
+    aggregate_heap_limit: usize,
+) -> Result<AvailableSelectedPlan, Error> {
+    if inputs.len() > limits.descriptors
+        || sections.len() > limits.descriptors
+        || closure.heap_high_water > aggregate_heap_limit
+    {
+        return Err(Error::Limit);
+    }
+    let section_copy_work = u64::try_from(sections.len()).map_err(|_| Error::Limit)?;
+    let base_work = closure
+        .work
+        .checked_add(external_work)
+        .and_then(|work| work.checked_add(section_copy_work))
+        .ok_or(Error::Limit)?;
+    if base_work > limits.work {
+        return Err(Error::Limit);
+    }
+    let SelectedClosure {
+        rows: closure_rows,
+        ids: closure_ids,
+        source_direct_rows,
+        source_copy_pairs,
+        ..
+    } = closure;
+
+    let row_bytes = closure_rows
+        .capacity()
+        .checked_mul(size_of::<DirectRecord<NavigationMapFields>>())
+        .ok_or(Error::Limit)?;
+    let ids_bytes = closure_ids
+        .capacity()
+        .checked_mul(size_of::<u32>())
+        .ok_or(Error::Limit)?;
+    let minimum_coverage_bytes = sections
+        .len()
+        .checked_mul(size_of::<SectionCoverage>())
+        .ok_or(Error::Limit)?;
+    let minimum_fixed_heap = external_peak_heap
+        .checked_add(row_bytes)
+        .and_then(|n| n.checked_add(ids_bytes))
+        .and_then(|n| n.checked_add(minimum_coverage_bytes))
+        .ok_or(Error::Limit)?;
+    if minimum_fixed_heap > aggregate_heap_limit {
+        return Err(Error::Limit);
+    }
+    let mut retained_sections = Vec::new();
+    retained_sections
+        .try_reserve_exact(sections.len())
+        .map_err(|_| Error::Allocation)?;
+    retained_sections.extend_from_slice(sections);
+    let coverage_bytes = retained_sections
+        .capacity()
+        .checked_mul(size_of::<SectionCoverage>())
+        .ok_or(Error::Limit)?;
+    let fixed_heap = external_peak_heap
+        .checked_add(row_bytes)
+        .and_then(|n| n.checked_add(ids_bytes))
+        .and_then(|n| n.checked_add(coverage_bytes))
+        .ok_or(Error::Limit)?;
+    if fixed_heap > aggregate_heap_limit {
+        return Err(Error::Limit);
+    }
+
+    let mut budget = Budget {
+        limits: Limits {
+            heap_bytes: aggregate_heap_limit - fixed_heap,
+            work: limits.work - base_work,
+            ..limits
+        },
+        stats: Statistics::default(),
+    };
     let mut input_ids = budget.reserve::<u32>(inputs.len())?;
     for input in inputs {
         budget.charge(1)?;
@@ -749,11 +899,10 @@ fn from_available_rows(
     budget.sort(input_ids.len())?;
     input_ids.sort_unstable();
     input_ids.dedup();
-    for position in &chain {
-        let id = last_by_id[*position].0;
+    for id in &closure_ids {
         budget.search(input_ids.len())?;
-        if input_ids.binary_search(&id).is_err() {
-            return Err(if id == selected_map_id {
+        if input_ids.binary_search(id).is_err() {
+            return Err(if *id == selected_map_id {
                 Error::MissingInventory
             } else {
                 Error::MissingAncestorInventory
@@ -761,17 +910,12 @@ fn from_available_rows(
         }
     }
 
-    let mut closure_rows = budget.reserve::<DirectRecord<NavigationMapFields>>(chain.len())?;
-    for position in &chain {
-        budget.charge(1)?;
-        closure_rows.push(rows[last_by_id[*position].1].clone());
-    }
     let mut closure_input_count = 0usize;
     for input in inputs {
         budget.charge(1)?;
         budget.search(closure_ids.len())?;
         if closure_ids.binary_search(&input.map_id()).is_ok() {
-            closure_input_count += 1;
+            closure_input_count = closure_input_count.checked_add(1).ok_or(Error::Limit)?;
         }
     }
     let mut closure_inputs = budget.reserve::<Input<'_>>(closure_input_count)?;
@@ -782,56 +926,26 @@ fn from_available_rows(
             closure_inputs.push(*input);
         }
     }
-    let source_direct_rows = rows.len();
-    let source_copy_pairs = copies.len();
-    let preprocessing_work = budget.stats.work;
     drop(input_ids);
     drop(closure_ids);
-    drop(chain);
-    drop(last_by_id);
-
-    let scoped_input_bytes = closure_rows
-        .capacity()
-        .checked_mul(size_of::<DirectRecord<NavigationMapFields>>())
-        .and_then(|bytes| {
-            closure_inputs
-                .capacity()
-                .checked_mul(size_of::<Input<'_>>())
-                .and_then(|inputs_bytes| bytes.checked_add(inputs_bytes))
-        })
+    let input_peak_heap = budget.stats.heap_reservation;
+    let plan_heap = external_peak_heap
+        .checked_add(row_bytes)
+        .and_then(|n| n.checked_add(coverage_bytes))
+        .and_then(|n| n.checked_add(input_peak_heap))
         .ok_or(Error::Limit)?;
-    let logical_coverage_bytes = sections
-        .len()
-        .checked_mul(size_of::<SectionCoverage>())
-        .ok_or(Error::Limit)?;
-    let logical_temporary_bytes = scoped_input_bytes
-        .checked_add(logical_coverage_bytes)
-        .ok_or(Error::Limit)?;
-    if logical_temporary_bytes > limits.heap_bytes {
+    if plan_heap > aggregate_heap_limit {
         return Err(Error::Limit);
     }
-
-    let mut retained_sections = Vec::new();
-    retained_sections
-        .try_reserve_exact(sections.len())
-        .map_err(|_| Error::Allocation)?;
-    retained_sections.extend_from_slice(sections);
-    let coverage_bytes = retained_sections
-        .capacity()
-        .checked_mul(size_of::<SectionCoverage>())
-        .ok_or(Error::Limit)?;
-    let temporary_bytes = scoped_input_bytes
-        .checked_add(coverage_bytes)
+    let finish_work = base_work
+        .checked_add(budget.stats.work)
         .ok_or(Error::Limit)?;
     let mut plan_limits = limits;
     plan_limits.work = plan_limits
         .work
-        .checked_sub(preprocessing_work)
+        .checked_sub(finish_work)
         .ok_or(Error::Limit)?;
-    plan_limits.heap_bytes = plan_limits
-        .heap_bytes
-        .checked_sub(temporary_bytes)
-        .ok_or(Error::Limit)?;
+    plan_limits.heap_bytes = aggregate_heap_limit - plan_heap;
     let mut plan = Plan::build_from_rows(
         &closure_rows,
         &closure_inputs,
@@ -842,6 +956,10 @@ fn from_available_rows(
         },
         plan_limits,
     )?;
+    let final_work = finish_work
+        .checked_add(plan.statistics.work)
+        .filter(|work| *work <= limits.work)
+        .ok_or(Error::Limit)?;
     drop(closure_inputs);
     drop(closure_rows);
     let retained_heap = plan
@@ -849,14 +967,15 @@ fn from_available_rows(
         .heap_reservation
         .checked_add(coverage_bytes)
         .ok_or(Error::Limit)?;
-    if retained_heap > limits.heap_bytes {
+    if external_peak_heap
+        .checked_add(retained_heap)
+        .ok_or(Error::Limit)?
+        > aggregate_heap_limit
+    {
         return Err(Error::Limit);
     }
     plan.statistics.heap_reservation = retained_heap;
-    plan.statistics.work = preprocessing_work
-        .checked_add(plan.statistics.work)
-        .filter(|work| *work <= limits.work)
-        .ok_or(Error::Limit)?;
+    plan.statistics.work = final_work;
     Ok(AvailableSelectedPlan {
         plan,
         sections: retained_sections,
@@ -864,6 +983,59 @@ fn from_available_rows(
         source_direct_rows,
         source_copy_pairs,
     })
+}
+
+#[cfg(target_os = "linux")]
+// This forwarding boundary preserves independent closure, plan, and heap
+// budgets.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn from_selected_closure(
+    closure: SelectedClosure,
+    sections: &[SectionCoverage],
+    inputs: &[Input<'_>],
+    selected_map_id: u32,
+    limits: Limits,
+    external_work: u64,
+    external_peak_heap: usize,
+    aggregate_heap_limit: usize,
+) -> Result<AvailableSelectedPlan, Error> {
+    finish_selected_closure(
+        closure,
+        sections,
+        inputs,
+        selected_map_id,
+        limits,
+        external_work,
+        external_peak_heap,
+        aggregate_heap_limit,
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn from_available_rows(
+    rows: &[DirectRecord<NavigationMapFields>],
+    copies: &[RecordCopy],
+    sections: &[SectionCoverage],
+    inputs: &[Input<'_>],
+    selected_map_id: u32,
+    limits: Limits,
+) -> Result<AvailableSelectedPlan, Error> {
+    limits.validate()?;
+    if sections.len() > limits.descriptors {
+        return Err(Error::Limit);
+    }
+    let closure = prepare_selected_closure(rows, copies, selected_map_id, limits)?;
+    let aggregate_heap_limit = limits.heap_bytes;
+    finish_selected_closure(
+        closure,
+        sections,
+        inputs,
+        selected_map_id,
+        limits,
+        0,
+        0,
+        aggregate_heap_limit,
+    )
 }
 
 fn admitted(

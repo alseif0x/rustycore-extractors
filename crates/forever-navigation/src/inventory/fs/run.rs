@@ -71,6 +71,52 @@ impl Default for Limits {
         }
     }
 }
+
+/// Limits for the Linux available-source selected runner. Builder and save
+/// work are debited cumulatively from the counters those stages actually
+/// expose. Other pipeline stages retain their existing per-tile ceilings and
+/// are bounded by the selected tile count; this is not a universal work sum.
+#[derive(Clone, Copy, Debug)]
+pub struct AvailableLimits {
+    pub run: Limits,
+    /// Retained rooted owner plus one pipeline-owned tile context. Terrain and
+    /// static-store providers keep their existing independent ceilings.
+    pub heap_bytes: usize,
+    pub builder_work: u64,
+    pub save_work: u64,
+}
+impl Default for AvailableLimits {
+    fn default() -> Self {
+        let run = Limits {
+            maps: 1,
+            tiles: 4096,
+            ..Default::default()
+        };
+        let max_tiles = 4096u64;
+        Self {
+            run,
+            heap_bytes: 64 * 1024 * 1024 + pipeline::Limits::default().heap_bytes,
+            builder_work: max_tiles * pipeline::Limits::default().builder.work,
+            save_work: max_tiles * pipeline::Limits::default().save.work,
+        }
+    }
+}
+impl AvailableLimits {
+    fn validate(self) -> Result<(), Error> {
+        const MAX_TILES: u64 = 4096;
+        let max = Self::default();
+        self.run.validate()?;
+        if self.run.maps > max.run.maps
+            || self.heap_bytes > max.heap_bytes
+            || self.builder_work > max.builder_work
+            || self.save_work > max.save_work
+            || self.run.tiles > MAX_TILES as usize
+        {
+            return Err(Error::Limit);
+        }
+        Ok(())
+    }
+}
 impl Limits {
     fn validate(self) -> Result<(), Error> {
         let d = Self::default();
@@ -115,6 +161,12 @@ pub struct Completed {
     pub progress: Progress,
     /// Discovery guard calls only; excludes fresh provider/store metadata work.
     pub metadata_calls: u64,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AvailableCompleted {
+    pub completion: Completed,
+    pub builder_work: u64,
+    pub save_work: u64,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -332,6 +384,327 @@ pub fn execute<S: Sink>(
         progress,
         metadata_calls: package.statistics().metadata_calls - calls,
     })
+}
+
+fn available_counts(
+    package: &available::AvailableSelectedPackage,
+    selection: Selection,
+) -> Result<(u32, usize), Error> {
+    let selected = match selection {
+        Selection::Map(map_id) | Selection::Tile { map_id, .. } => map_id,
+        Selection::All => return Err(Error::Selection),
+    };
+    let mut outputs = package.plan().maps().iter().filter(|map| map.is_output());
+    let Some(map) = outputs.next() else {
+        return Err(Error::Selection);
+    };
+    if map.map_id() != selected || outputs.next().is_some() {
+        return Err(Error::Selection);
+    }
+    if let Selection::Tile { tile, .. } = selection
+        && !map.contains(tile)
+    {
+        return Err(Error::Selection);
+    }
+    Ok((
+        selected,
+        if matches!(selection, Selection::Tile { .. }) {
+            1
+        } else {
+            map.tile_count()
+        },
+    ))
+}
+
+/// Executes one explicit selected map or tile from the rooted partial owner.
+/// All callbacks remain provisional until `AvailableCompleted`; an error or
+/// final verification failure invalidates the whole callback batch and latches
+/// the owner against retries. The caller must supply complete LiquidTypes for
+/// the source build; selected map inventory cannot establish completeness.
+pub fn execute_available_selected<S: Sink>(
+    package: &mut available::AvailableSelectedPackage,
+    types: models::LiquidTypes<'_>,
+    connections: &[offmesh::Source],
+    options: Options,
+    limits: AvailableLimits,
+    sink: &mut S,
+) -> Result<AvailableCompleted, Failure<S::Error>> {
+    let mut attempted = false;
+    let result = (|| {
+        let mut progress = Progress::default();
+        let run_error = |error| Failure {
+            cause: Cause::Run(error),
+            progress: Progress::default(),
+        };
+        limits.validate().map_err(run_error)?;
+        if options.selection == Selection::All {
+            return Err(run_error(Error::Selection));
+        }
+        tilebuilder::Config::new(
+            tilebuilder::Request {
+                map_id: 0,
+                tile: Coordinate { row: 0, column: 0 },
+                big_base_unit: options.big_base_unit,
+                slopes: options.slopes,
+            },
+            &crate::Mesh::default(),
+        )
+        .map_err(|error| {
+            run_error(Error::Input(super::Error::Pipeline(
+                pipeline::Error::Builder(error),
+            )))
+        })?;
+        let (map_id, tiles) = available_counts(package, options.selection).map_err(run_error)?;
+        if limits.run.maps < 1
+            || tiles > limits.run.tiles
+            || tiles > 4096
+            || connections.len() > limits.run.global.records
+        {
+            return Err(run_error(Error::Limit));
+        }
+        let retained_heap = package
+            .retained_heap_bytes()
+            .map_err(|error| run_error(Error::Input(error)))?;
+        let remaining_heap = limits
+            .heap_bytes
+            .checked_sub(retained_heap)
+            .ok_or_else(|| run_error(Error::Limit))?;
+        let mut pipeline_limits = limits.run.pipeline;
+        pipeline_limits.heap_bytes = pipeline_limits.heap_bytes.min(remaining_heap);
+        let mut builder_work = limits.builder_work;
+        let mut save_work = limits.save_work;
+        let metadata_start = package.statistics().metadata_calls;
+        attempted = true;
+        package
+            .verify_unchanged()
+            .map_err(|error| run_error(Error::Input(error)))?;
+        let (params, selected_tiles, selected_tile_count) = {
+            let output_map = package
+                .plan()
+                .map(map_id)
+                .filter(|map| map.is_output())
+                .ok_or_else(|| run_error(Error::Selection))?;
+            let mut selected_tiles = [Coordinate { row: 0, column: 0 }; 4096];
+            let mut selected_tile_count = 0usize;
+            for tile in output_map.tiles() {
+                if selected_tile_count >= selected_tiles.len() {
+                    return Err(run_error(Error::Limit));
+                }
+                selected_tiles[selected_tile_count] = tile;
+                selected_tile_count += 1;
+            }
+            (
+                output_map
+                    .params()
+                    .ok_or_else(|| run_error(Error::Selection))?,
+                selected_tiles,
+                selected_tile_count,
+            )
+        };
+        let global = mmap::encode_global(map_id, params, connections, limits.run.global)
+            .map_err(|error| run_error(Error::Output(error)))?;
+        let size = bytes(progress, global.len(), limits.run).map_err(run_error)?;
+        sink.emit(Event::Global {
+            map_id,
+            bytes: &global,
+        })
+        .map_err(|error| Failure {
+            cause: Cause::Sink(error),
+            progress,
+        })?;
+        progress.maps = 1;
+        progress.output_bytes = size;
+        // Release the encoded global before retaining and processing tile data.
+        drop(global);
+
+        for &tile in &selected_tiles[..selected_tile_count] {
+            if !options.selection.tile(tile) {
+                continue;
+            }
+            let mut tile_limits = pipeline_limits;
+            tile_limits.builder.work = tile_limits.builder.work.min(builder_work);
+            tile_limits.save.work = tile_limits.save.work.min(save_work);
+            let request = pipeline::Request {
+                tile: tilebuilder::Request {
+                    map_id,
+                    tile,
+                    big_base_unit: options.big_base_unit,
+                    slopes: options.slopes,
+                },
+                skip_liquids: options.skip_liquids,
+            };
+            let outcome = bound_available_tile(
+                package,
+                types,
+                connections,
+                request,
+                tile_limits,
+                limits.heap_bytes,
+            )
+            .map_err(|error| Failure {
+                cause: Cause::Run(Error::Input(error)),
+                progress,
+            })?;
+            let statistics = match &outcome {
+                pipeline::Outcome::Empty { statistics, .. }
+                | pipeline::Outcome::Tile { statistics, .. } => statistics,
+            };
+            builder_work = builder_work
+                .checked_sub(statistics.builder.work)
+                .ok_or_else(|| Failure {
+                    cause: Cause::Run(Error::Limit),
+                    progress,
+                })?;
+            save_work = save_work
+                .checked_sub(statistics.save.work)
+                .ok_or_else(|| Failure {
+                    cause: Cause::Run(Error::Limit),
+                    progress,
+                })?;
+            let output_len = match &outcome {
+                pipeline::Outcome::Tile { bytes, .. } => bytes.len(),
+                pipeline::Outcome::Empty { .. } => 0,
+            };
+            let size = bytes(progress, output_len, limits.run).map_err(|error| Failure {
+                cause: Cause::Run(error),
+                progress,
+            })?;
+            sink.emit(Event::Tile {
+                map_id,
+                tile,
+                outcome: &outcome,
+            })
+            .map_err(|error| Failure {
+                cause: Cause::Sink(error),
+                progress,
+            })?;
+            progress.tiles += 1;
+            progress.output_bytes = size;
+            match outcome {
+                pipeline::Outcome::Tile { .. } => progress.written_tiles += 1,
+                pipeline::Outcome::Empty { .. } => progress.empty_tiles += 1,
+            }
+        }
+        package.verify_unchanged().map_err(|error| Failure {
+            cause: Cause::Run(Error::Input(error)),
+            progress,
+        })?;
+        debug_assert_eq!(progress.tiles, tiles);
+        let completion = Completed {
+            selection: options.selection,
+            progress,
+            metadata_calls: package.statistics().metadata_calls - metadata_start,
+        };
+        Ok(AvailableCompleted {
+            completion,
+            builder_work: limits.builder_work - builder_work,
+            save_work: limits.save_work - save_work,
+        })
+    })();
+    if attempted && let Err(failure) = &result {
+        let reason = match &failure.cause {
+            Cause::Run(Error::Input(error)) => *error,
+            _ => super::Error::Failed,
+        };
+        package.latch_failure(reason);
+    }
+    result
+}
+
+fn bound_available_tile(
+    package: &mut available::AvailableSelectedPackage,
+    types: models::LiquidTypes<'_>,
+    connections: &[offmesh::Source],
+    request: pipeline::Request,
+    mut limits: pipeline::Limits,
+    aggregate_heap_limit: usize,
+) -> Result<pipeline::Outcome, super::Error> {
+    if package.failed {
+        return Err(package.failure_error());
+    }
+    package.begin_metadata_operation()?;
+    let mut parents = Vec::new();
+    let count = package.plan().parent_rows().count();
+    package
+        .budget
+        .reserve(&mut parents, count, package.budget.limits.store.max_maps)?;
+    parents.extend(package.plan().parent_rows());
+    let retained_heap = package.retained_heap_bytes()?;
+    limits.heap_bytes = limits.heap_bytes.min(
+        aggregate_heap_limit
+            .checked_sub(retained_heap)
+            .ok_or(super::Error::Limit)?,
+    );
+    let result = (|| {
+        package.guard.verify_roots(&mut package.budget)?;
+        let limits_source = package.budget.limits;
+        let terrain = terrain::load::fs::RootedSource::new(
+            package.guard.path(0),
+            limits_source.terrain_source,
+        )
+        .map_err(super::Error::TerrainSource)?;
+        let collision =
+            store::fs::RootedSource::new(package.guard.path(1), limits_source.collision_source)
+                .map_err(super::Error::CollisionSource)?;
+        let binding = RefCell::new(Binding {
+            guard: &package.guard,
+            budget: &mut package.budget,
+        });
+        let mut terrain = Terrain {
+            source: terrain,
+            binding: &binding,
+        };
+        let mut collision = store::StaticStore::new(
+            Collision {
+                source: collision,
+                binding: &binding,
+            },
+            &parents,
+            store::Options {
+                load_path_only_models: true,
+                ..Default::default()
+            },
+            limits_source.store,
+        )
+        .map_err(super::Error::Store)?;
+        pipeline::run_available_selected(
+            &package.plan,
+            &mut pipeline::Sources {
+                terrain: &mut terrain,
+                collision: &mut collision,
+            },
+            types,
+            connections,
+            request,
+            limits,
+        )
+        .map_err(super::Error::Pipeline)
+    })();
+    package.budget.release(&parents);
+    drop(parents);
+    let after = if !result.as_ref().is_err_and(|error| error.changed()) {
+        package.begin_metadata_operation()?;
+        package.guard.verify_roots(&mut package.budget)
+    } else {
+        Ok(())
+    };
+    if let Err(error) = &after
+        && error.changed()
+    {
+        package.latch_failure(*error);
+    }
+    if let Err(error) = &result
+        && error.changed()
+    {
+        package.latch_failure(*error);
+    }
+    match result {
+        Err(error) => Err(error),
+        Ok(outcome) => {
+            after?;
+            Ok(outcome)
+        }
+    }
 }
 
 struct Binding<'a> {

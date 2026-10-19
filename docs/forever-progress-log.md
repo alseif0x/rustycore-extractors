@@ -4601,3 +4601,162 @@ Format parity with the C++/TrinityCore reference, RustyCore runtime consumption,
 navigation/MMaps, full-world or whole-client coverage, Windows, and release
 publication remain unproven. This v22 acceptance is independent of and does not
 transfer acceptance from v14, v15, v18, or v21.
+
+
+## 2026-10-19: selected navigation four-tile generation checkpoint
+
+Producer `6eb2f65` passed a bounded offline run over all four selected tiles.
+Four nonempty MMap tiles plus a 40-byte global total 838,116 bytes; save/reread,
+framing, exact output inventory, input/source/harness/binary guards and parent
+context checks passed. The previous tile remains byte-identical. Receipt
+SHA-256: `8f97cfb8d1aa745b7139c477480f6306589da6896eb2706db4c7bd5ae9022ea5`.
+The selected partial-source coverage and complete LiquidType facts retain their
+existing scopes. Native cross-tile queries, selected filesystem product wiring,
+a v23 CLI, full-world/server acceptance and release acceptance remain open.
+See the dated four-tile checkpoint in `docs/forever-navigation.md`.
+
+## 2026-10-19: available-selected Linux filesystem API and validation
+
+A separate Linux-only library candidate adds
+`inventory::fs::available::AvailableSelectedPackage::open_70450` and
+`inventory::fs::run::execute_available_selected` for one explicit map or tile
+from available build-70450 Map records. The owner retains a partial
+`AvailableSelectedPlan` and cannot promote it to a complete-source plan. It
+requires rooted inventory for the selected map and each active ancestor,
+rejects `Selection::All`, admits at most one output map and 4,096 selected
+tiles, and distinguishes a valid authoritative empty tilelist from missing or
+malformed input. The caller remains responsible for complete `LiquidTypes`.
+
+Output callbacks stay provisional until `AvailableCompleted`; post-start
+failures latch the owner. Pipeline/source errors preserve their exact typed
+cause for a retry, while sink and output failures retain the generic `Failed`
+state. Metadata, closure/planning, builder/save work and retained-owner limits
+are cumulative where the implementation exposes counters; other pipeline
+stages retain per-tile ceilings over the bounded tile count. This is not a
+universal measured work sum or total RSS claim. The complete-source filesystem
+`Package` and `run::execute` paths are unchanged.
+
+Final offline validation of the source set identified by source-manifest
+SHA-256 `9ad9bdbff8417c416226f6b8c391a473988e9692ab3d974823246cae86bc70a1`
+reported 343 navigation-library tests passed, 20 ignored, and 487 product tests
+passed. The navigation suite took 51.79 seconds, the product suite 72.60
+seconds, and the combined run exited 0 in 143.693 seconds with unchanged source
+hashes. Its receipt SHA-256 is
+`54eb35d288498d5fcec432cced593ead21df456a73bab912b841ec57fe9aa238`.
+Workspace Clippy with `--all-targets -- -D warnings` passed in 29.732 seconds;
+receipt SHA-256 `e546b9f66aed069e59fe03a13c469d4dc10b58a4dca6084034134b8659fe2d17`.
+The full contract suite passed 434 cases in 6.999 seconds, the full formatting
+check passed, and `git diff --check` passed after trailing blank lines were
+removed.
+
+The earlier four-tile real generation at `6eb2f65` came from a separate manual
+harness and did not use this filesystem owner. The native query proofs are also
+separate from this API. No real-data filesystem-backed run, CLI profile,
+complete-source v21 acceptance, full-world/server/runtime acceptance, Windows
+support, or release acceptance is established. See the dated filesystem API
+section in `docs/forever-navigation.md`.
+
+## 2026-10-19: native SDK probe across four selected tiles
+
+The bounded native SDK probe loaded, verified present, and removed all four
+MMap tiles from the earlier separate manual generation, using the original v16
+headers and exact unchanged Detour v7 payloads. The legacy-v15 tile container
+reader rejected each v16 header as expected. The adapter did not rewrite the
+inputs and did not use the new available-selected filesystem owner.
+
+All 64 geometry-derived nearest-poly candidates resolved to distinct native
+polygons. A bounded set of 256 route attempts returned 163 complete paths; 93
+retained `target_not_last_poly`. At least one complete route traversed multiple
+loaded tiles. These results preserve the negative outcomes and are not an
+exhaustive tile-pair or route sweep.
+
+The four tiles plus their 40-byte global total 838,116 bytes. Producer and
+consumer source were `6eb2f65`; the existing SDK integration source was
+`5447213`, with prior work preserved. Source, workspace, harness, toolchain,
+input, binary and query guards passed. The offline build took 19.039 seconds,
+the native call 0.232 seconds (0.222 seconds in the probe), and the command
+20.141 seconds total under a 900-second / 3-GiB / 100%-CPU service limit.
+
+The native binary SHA-256 is
+`f35c50d5ca2c9f7edc70f5ec7bd24b4b3ec12c563840171cccfae1b0e8f3a99b`. The
+receipt SHA-256 is
+`517f0953d988d87c4073eeeaf1f4b03899fa5e5736c1de7230e8cab15b8d74d9`; the
+independent review SHA-256 is
+`515c6727018514004d00c55e2e11c7b7b6b0b79db965081cccffb6dc3211810a`.
+
+This establishes a bounded cross-tile path through the native adapter for the
+loaded tiles. It does not establish legacy `MMapManager` or filename acceptance,
+server/gameplay behavior, native Trinity parity, off-mesh completeness,
+full-world coverage, a CLI profile, or acceptance of the separate filesystem
+owner. See the dated four-tile native checkpoint in
+`docs/forever-navigation.md`.
+
+## 2026-10-19: synthetic validation of selected-filesystem growth fix
+
+The retained bounded real-package open failed closed with
+`navigation_discovery_limit` before output; resource/input checks and source,
+input and tool guards remained stable. Retained failure receipt SHA-256:
+`f465eac9414f6c972b2faeeb90a59b410e2031711f772dcd82feb220a794ecfe`. A
+separate bounded diagnostic run using an instrumented source copy and the same
+read-only inputs stopped after owner open. It identified unconditional
+capacity doubling in `fs::Budget::grow` even while capacity remained. That run
+had stable guards, no outputs, and receipt
+`cbd057599f6c9553031adbb5c113a5aaaa68b70b0e5a0c2691d9633c41914aec`.
+
+The fix grows only when full without raising policy limits. The focused growth
+regression passed (one test, 2.391 seconds; receipt
+`e828afd6ee45edf5211936e65da6bf670c3484ba3f382077cf8462e327b0f434`). After a
+format-only wrap, final validation passed: 345 navigation tests passed with 20
+ignored and 487 product tests passed (127.161 seconds total; receipt
+`8688d49cc10e14d9a595ba98a12f34f3a2983a59265a65c47e05aa6629b390a6`);
+workspace all-target Clippy with `-D warnings` passed in 3.983 seconds (receipt
+`1bbb6b95c932810c2d181aee0d13f4fb5382564481ccc4ef9e9d92b6baa074c4`); and
+434 contract tests passed in 6.871 seconds; scoped formatting and diff checks
+also passed
+(receipt `4cee4411c340b784914884b0aab2bbf48ac34c9451e68c62ae593a5238c33cfa`).
+New synthetic tests exercise growth ceilings and 64 irrelevant entries for both
+complete-source and available-selected owners. Pre/post context and resource
+guards were verified.
+
+This is synthetic validation only. A real filesystem-owner rerun remains
+pending, and no package output or new real acceptance is claimed. Manual real
+tile generation and native SDK query evidence remain separate from this owner.
+
+## 2026-10-19: bounded real available-selected filesystem-owner run
+
+A real bounded run on source commit
+`d0aa69ca0fc0fdf8c7b16e7db1dd760f2a516f02` passed through the Linux
+build-70450 `AvailableSelectedPackage::open_70450` owner and
+`execute_available_selected` runner. It admitted one selected direct Map row,
+one map and four tiles. Available Map inventory remained partial, with 73
+direct rows across one of four sections; the complete `LiquidType` input had
+57 entries.
+
+Strict input parsing, exclusive `0600` staging, rereads, exact inventory and
+all four API guard predicates passed. Snapshots of all 1,331 tracked source
+files, plus configuration, tool, input and binary checks, remained unchanged. The run emitted five files (one 40-byte
+global and four nonempty MMap tiles), totaling 838,116 bytes. Each of the five
+files independently matched the corresponding output from the earlier
+separate manual-generation run. Producer binary SHA-256:
+`15f8d862c2ef2f804b01bacf60f36f37a3f16099694f6122a92307cee14a0858`.
+
+The selected terrain tilelist was authoritatively empty, so the run provides no
+ground MAPS proof. It did not run native queries. The prior native SDK query
+probe remains evidence for its separate consumer and manual inputs only; output
+identity does not transfer that query result to this filesystem-owner run.
+
+The bounded persistent unit was limited to 900 seconds, 3 GiB, one CPU and 64
+tasks. Build time was 46.758 seconds and owner runtime was 8.933 seconds. The
+parent-recorded total duration, including dispatch and post-context checks, was
+56.094 seconds. Parent receipt SHA-256:
+`01dedb51a671e9296597f195f595032aede55d073b2896ba263e8488583e4650`; worker
+receipt SHA-256:
+`9c3e34588b55613429b85061f38f123491897211b947ce1e6ad35c7a55762ecf`.
+
+This is bounded acceptance for the selected filesystem owner and byte-stable
+outputs on the admitted partial inventory. CLI integration, complete-source
+coverage, native queries through this owner, legacy-v15 container or
+`MMapManager`, filename compatibility, cross-tile query behavior, off-mesh,
+ground MAPS, full-world coverage, Trinity parity, server/runtime, Windows and
+release acceptance remain open. The earlier real failure and synthetic
+checkpoints above remain historical and unchanged.

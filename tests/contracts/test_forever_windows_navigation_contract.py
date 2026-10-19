@@ -2,6 +2,7 @@
 # Authored 2026-10-11: original static Windows navigation source checks.
 # Modified 2026-10-12: retain import pins and admit one reviewed test-only delta.
 # Modified 2026-10-19: retain exact inverse for Linux-only Windows-lint cfg gates.
+# Modified 2026-10-19: retain exact inverse for rooted Linux available inventory factoring.
 """Source consistency only; no runtime, client reads or actual NTFS proof."""
 import ast
 import hashlib
@@ -130,6 +131,36 @@ class WindowsNavigationContract(unittest.TestCase):
             'Linux Plan admission adds only build 70450; builds 70170 and 70205 retain their prior gate and non-Linux build-70450 admission remains rejected',
         )
         inventory_current = (ROOT / inventory_path).read_bytes()
+        fs_delta = self.c['reviewed_linux_selected_filesystem_inventory_delta']
+        self.assertEqual(fs_delta['path'], inventory_path)
+        self.assertEqual(fs_delta['baseline_revision'], '6eb2f657e6ae90dc4db8de420353ffc042ebafad')
+        self.assertEqual(fs_delta['baseline_sha256'], 'dcfa037709d1b4f66ecee282e8effa7442a7e28787a9814e3cbca5603cb35f18')
+        self.assertTrue(fs_delta['exact_inverse_required'])
+        fs_fixture_bytes = (ROOT / fs_delta['fixture']).read_bytes()
+        self.assertEqual(hashlib.sha256(fs_fixture_bytes).hexdigest(), fs_delta['fixture_sha256'])
+        fs_fixture = json.loads(fs_fixture_bytes)
+        self.assertEqual(fs_fixture['schema'], 'forever-selected-navigation-fs-inventory-source-delta-v1')
+        self.assertEqual(fs_fixture['path'], inventory_path)
+        self.assertEqual(fs_fixture['baseline_revision'], fs_delta['baseline_revision'])
+        self.assertEqual(fs_fixture['baseline_sha256'], fs_delta['baseline_sha256'])
+        self.assertEqual(fs_fixture['candidate_sha256'], fs_delta['candidate_sha256'])
+        self.assertEqual(fs_fixture['scope'], fs_delta['scope'])
+        self.assertEqual(hashlib.sha256(inventory_current).hexdigest(), fs_delta['candidate_sha256'])
+        fs_restored_lines = inventory_current.decode('utf-8').splitlines(keepends=True)
+        for hunk in reversed(fs_fixture['hunks']):
+            after_lines = hunk['after_lines']
+            before_lines = hunk['before_lines']
+            self.assertTrue(after_lines or before_lines)
+            matches = [
+                index
+                for index in range(len(fs_restored_lines) - len(after_lines) + 1)
+                if fs_restored_lines[index:index + len(after_lines)] == after_lines
+            ]
+            self.assertEqual(len(matches), 1, 'each Linux filesystem delta hunk must invert exactly once')
+            start = matches[0]
+            fs_restored_lines[start:start + len(after_lines)] = before_lines
+        inventory_after_fs = ''.join(fs_restored_lines).encode('utf-8')
+        self.assertEqual(hashlib.sha256(inventory_after_fs).hexdigest(), fs_delta['baseline_sha256'])
         cfg_delta = self.c['reviewed_windows_lint_cfg_inventory_delta']
         self.assertEqual(cfg_delta['path'], inventory_path)
         self.assertEqual(cfg_delta['baseline_revision'], 'e93dc7bfe6db8a72a357e759d006fdcea3447d62')
@@ -144,8 +175,8 @@ class WindowsNavigationContract(unittest.TestCase):
         self.assertEqual(cfg_fixture['baseline_sha256'], cfg_delta['baseline_sha256'])
         self.assertEqual(cfg_fixture['candidate_sha256'], cfg_delta['candidate_sha256'])
         self.assertEqual(cfg_fixture['scope'], cfg_delta['scope'])
-        self.assertEqual(hashlib.sha256(inventory_current).hexdigest(), cfg_delta['candidate_sha256'])
-        cfg_restored_lines = inventory_current.decode('utf-8').splitlines(keepends=True)
+        self.assertEqual(hashlib.sha256(inventory_after_fs).hexdigest(), cfg_delta['candidate_sha256'])
+        cfg_restored_lines = inventory_after_fs.decode('utf-8').splitlines(keepends=True)
         for hunk in reversed(cfg_fixture['hunks']):
             after_lines = hunk['after_lines']
             before_lines = hunk['before_lines']
@@ -209,7 +240,7 @@ class WindowsNavigationContract(unittest.TestCase):
             admission['previous_sha256'],
         )
         self.assertEqual(hashlib.sha256(inventory).hexdigest(), admission['current_sha256'])
-        reviewed[inventory_path] = cfg_delta['candidate_sha256']
+        reviewed[inventory_path] = fs_delta['candidate_sha256']
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)

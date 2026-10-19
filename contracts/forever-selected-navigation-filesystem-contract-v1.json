@@ -1,0 +1,69 @@
+{
+  "contract": "forever-selected-navigation-filesystem-contract-v1",
+  "version": 1,
+  "scope": {
+    "product_line": "forever",
+    "client_build": 70450,
+    "platform": "linux",
+    "api_only": true,
+    "selection": "one explicit direct map or one tile of that map",
+    "source_owner": "AvailableSelectedPackage retaining AvailableSelectedPlan and section coverage",
+    "new_registry_dependencies": []
+  },
+  "admission": {
+    "selected_row": "last physical direct row wins",
+    "parent_closure": "only selected map and its actual effective-parent chain; copies never supply direct rows or parents",
+    "filesystem": "actual rooted map and vmap inventories are required for the selected map and every active ancestor",
+    "empty_terrain": "a present, valid empty tilelist is authoritative; missing or malformed lookup fails closed",
+    "mutable_inputs": "rooted no-follow identities are checked at admission and run boundaries; detected mutation latches the owner",
+    "selection_failures": "unknown, copy-only, All, and out-of-owner map/tile selections reject before runtime input reads or callbacks",
+    "liquid_types": "caller must provide complete build-70450 LiquidTypes; selected map coverage cannot establish completeness"
+  },
+  "bounded_execution": {
+    "output_maps": 1,
+    "selected_output_tiles": 4096,
+    "output_bytes": "cumulative per execute_available_selected call",
+    "metadata_calls": "cumulative across admission, verification, and one run; each stage receives only its remaining allowance",
+    "planning_work": "cumulative deterministic closure and Plan charges, plus separately counted rooted metadata calls; discovery entries, descriptors, and tilelist bytes retain independent ceilings",
+    "builder_save_work": "cumulative builder.work and save.work counters within one run; remaining allowance is applied to each tile call before pipeline execution",
+    "other_pipeline_work": "existing per-tile stage ceilings remain; bounded by at most 4096 selected tiles, not represented as a universal measured work sum",
+    "heap": "retained rooted owner and plan plus at most one fresh pipeline tile context; provider and static-store ceilings remain separately enforced; no total RSS claim",
+    "failure": "a failed run latches the owner; no retry or budget reset is admitted"
+  },
+  "preserved_interfaces": {
+    "complete_filesystem_package": "inventory::fs::Package and inventory::fs::run::execute keep their existing complete-source API",
+    "partial_plan": "available owner exposes AvailableSelectedPlan only and has no conversion or accessor to complete Plan",
+    "pipeline": "reuses pipeline::run_available_selected",
+    "distribution": "no CLI, dependency, or distribution recipe change"
+  },
+  "error_codes": {
+    "latched_failed_owner": "navigation_discovery_failed"
+  },
+  "counter_coverage_gaps": [
+    "availability-source decoding is bounded and reported by its existing reader before this filesystem owner receives AvailableRecords",
+    "directory iteration, path parsing, and sorting have entry/name/descriptor ceilings but are not reported as one universal work counter"
+  ],
+  "synthetic_validation_requirements": [
+    "selected last-direct-ID-wins closure and real ancestor inventories",
+    "unknown and copy-only selection reject before rooted filesystem access",
+    "missing, malformed, empty, and symlink inventory distinctions fail closed",
+    "mutation and metadata, descriptor, heap, planning-work, output, and per-run stage limits",
+    "typed selected runner rejects All and invalid selection before reads or callbacks",
+    "sink failure and final verification failure retain provisional callback semantics and latch the owner",
+    "complete Package and execute path remain available"
+  ],
+  "validation_commands_for_review": [
+    "cargo test --offline --locked -p forever-navigation inventory::fs::available --target x86_64-unknown-linux-gnu",
+    "cargo test --offline --locked -p forever-navigation inventory::fs::run --target x86_64-unknown-linux-gnu",
+    "python3 -B -m unittest discover -s tests/contracts -p 'test_forever_selected_navigation_filesystem_contract.py' -v",
+    "python3 -B -m unittest discover -s tests/contracts -p 'test_forever_windows_navigation_contract.py' -v"
+  ],
+  "non_claims": [
+    "no MMapManager acquisition, legacy container reader, filename-manager, or filesystem parity claim",
+    "no complete-source or full-world coverage claim",
+    "no off-mesh-source completeness or LiquidTypes completeness claim",
+    "no native Detour parity, RustyCore runtime, server build admission, or release acceptance claim",
+    "no Windows filesystem support or Windows runtime acceptance claim",
+    "no universal aggregate execution-work or process RSS measurement claim"
+  ]
+}

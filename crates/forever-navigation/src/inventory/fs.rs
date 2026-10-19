@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: grow bounded inventory vectors geometrically only when full.
 // Authored 2026-10-11: complete local canonical navigation package discovery.
 //! Linux immutable-directory profile for original producer names (four-digit
 //! map IDs and 0..63 tiles). No CASC, network, implicit download or publication.
@@ -10,6 +11,7 @@ use crate::{models, offmesh, pipeline, terrain, tilebuilder::Coordinate};
 use forever_db2::terrain_sources::{DirectRecord, NavigationMapFields, SourceRecords};
 use forever_vmap::store;
 use std::{fs, mem::size_of, os::unix::ffi::OsStrExt, path::Path};
+pub mod available;
 mod guard;
 pub mod run;
 use crate::terrain::load::fs::hash;
@@ -24,6 +26,7 @@ pub enum Error {
     Kind,
     Io,
     InputChanged,
+    Failed,
     Inventory(super::Error),
     TerrainSource(terrain::load::SourceError),
     CollisionSource(store::SourceError),
@@ -59,6 +62,7 @@ impl Error {
             Self::Kind => "navigation_discovery_file_kind",
             Self::Io => "navigation_discovery_io",
             Self::InputChanged => "navigation_discovery_input_changed",
+            Self::Failed => "navigation_discovery_failed",
             Self::Inventory(e) => e.code(),
             Self::TerrainSource(e) => match e {
                 terrain::load::SourceError::Io => "navigation_terrain_source_io",
@@ -229,11 +233,16 @@ impl Budget {
     }
     fn grow<T>(&mut self, v: &mut Vec<T>, ceiling: usize) -> Result<(), Error> {
         let needed = v.len().checked_add(1).ok_or(Error::Limit)?;
-        self.reserve(
-            v,
-            needed.max(v.capacity().saturating_mul(2)).min(ceiling),
-            ceiling,
-        )?;
+        if needed > ceiling {
+            return Err(Error::Limit);
+        }
+        if needed > v.capacity() {
+            self.reserve(
+                v,
+                needed.max(v.capacity().saturating_mul(2)).min(ceiling),
+                ceiling,
+            )?;
+        }
         if needed > v.capacity() || needed > ceiling {
             return Err(Error::Limit);
         }
