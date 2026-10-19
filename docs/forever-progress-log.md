@@ -4610,3 +4610,40 @@ unavailable.
 This correction narrows the remaining work to a domain-scoped model selection
 with separate coverage facts, and does not by itself unblock real extraction
 while the required sources remain encrypted.
+
+## 2026-10-19: RustyCore consumes the packaged candidate's terrain (round 3)
+
+The external harness at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/runtime-consumption-20261019/target/debug/runtime-consumption-probe`
+was compiled against the runtime at `/home/joe/projects/dream/wow/rustycore`
+as read-only path dependencies, using runtime commit `544721324` on branch
+`forever-extractor-static-terrain`. The runtime tree was not modified.
+
+The inputs were real v20 packages produced by the packaged binary with SHA-256
+`ad7f115def525125fa20263f29079a723d246574fbac6e2f75a7561358fa6dfc` in
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/packaged-real-v20-20261019T125937Z/`
+(`package-map1` and `package-map0`). For maps 1 and 0, the harness ran
+`terrain-check <package> <map> 1000`. For each tile it compared extractor
+acceptance (`forever_terrain::maps::verify_70450`) with acceptance by the
+runtime's own reader (`wow_map::grid_map::GridMap::parse`); at 25 points per
+tile it compared the live path
+`LiveTerrainHeights::grid_height_like_cpp(map,x,y)` against
+`GridMap::get_height(x,y)`, and checked each height against the tile's declared
+range.
+
+Observed results:
+
+- Map 1: `tiles=988 our_verify_ok=988 runtime_parsed=988 points=24700 invalid_holes=8 live_vs_parsed_disagreements=0 points_outside_declared_range=0`.
+- Map 0: `tiles=736 our_verify_ok=736 runtime_parsed=736 points=18400 invalid_holes=14 live_vs_parsed_disagreements=0 points_outside_declared_range=0`.
+
+`invalid_holes` counts sampled points where the runtime grid reports
+`INVALID_HEIGHT` because the point falls in a hole; these points still produced
+no disagreement with the live height path. In total, the runtime's own terrain
+reader and live height path consumed 1,724 tiles and 43,100 points from the
+packaged candidate output, with zero disagreements and zero points outside the
+declared ranges. This exceeds round 1's 450 tiles / 11,250 points.
+
+This links real runtime consumption to the packaged candidate for the available
+terrain component. It does not establish the runtime build gate (`Profile::declared_build`
+still rejects 70450), navigation/MMaps, collision/VMaps, full-world coverage,
+complete runtime parity, or publication authorization.
