@@ -1281,3 +1281,168 @@ continuation must obtain the actual event emitter/response adapter with
 authenticated usable code or trace a real response; repeating the same
 protected carve or calling cache byte 4 a proven server refusal does not
 close either gap. No observer remains running after this bounded window.
+
+### Offline code-recovery model: independent byte-exact corroboration
+
+A new route follows the author's primary
+[analysis of lazy code encryption in another Blizzard title](https://pwn.dog/posts/16-kilobytes-in-the-clear/):
+compare known runtime code with its encrypted file bytes, then look for the
+resulting XOR material in the adjacent loader. This supplied a hypothesis,
+not acceptance for WoW. No patching, protection change, debugger attachment
+or new network key source was used to investigate it.
+
+The local `WowB_loader.dll` is 41,341,648 bytes, AMD64/PE32+, SHA-256
+`f7cefe21ed6933d1fdaac02bb755186d5f98481449f6f27230b0ccf693615e71`.
+Its layout was read and hashed before/after; the report exposes only PE
+metadata and allowlisted public-symbol matches. Source and loader remain
+read-only. Receipt: `reports/loader-layout-v1-safeloader7045000.json`.
+
+The new offline XOR probe uses the authenticated 539-byte setup and 257-byte
+getter captures. All 33/17 selected overlapping 32-/64-byte fragments have
+exact matches at coherent positions in the loader, and none in the source
+executable. These are two captures of the same code page, not fifty
+independent pages. Full source/loader hashes and metadata match before/after
+the bounded 255,702,848-byte read. Receipt:
+`reports/code-xor-material-v1-20261019T095653Z-1840994-d61d4dbd2404.json`.
+
+Two new complete aligned RX page captures, at `0x1b8b000` and `0x211000`,
+provide separate ground truth. All original source/PE/process/RX guards pass
+for both 4,096-byte ranges. The input-selection record explicitly changes
+the unchanged sampler's neighborhood sizes and byte cap; its original
+256-byte template labels remain retained in receipt 00. Receipt
+`reports/plaintext-reference-pages-700-01.json` corrects those labels without
+changing capture sizes, bytes, hashes or guards. No whole-function extent
+is inferred from these page samples.
+
+A source-only lexical loader scan finds candidate references enclosing a
+16-KiB region containing the observed XOR material. It hits its 256-reference
+limit, includes overlapping REX/no-REX candidates and is not a verified
+complete disassembly. The one fixed circular-region hypothesis was recorded
+**before** the full-page comparison in
+`reports/preregistered-loader-pad-hypothesis-700-00.json`. The earlier
+contiguous-window verifier remains retained with `relocation_entry_limit`;
+it selected zero candidates and establishes no negative cipher result.
+
+The separate circular verifier authenticates that preregistration, source,
+loader, page report, manifest and raw hashes. Each page independently uses
+only its first 64 XOR bytes to select a unique position in the fixed region;
+the remaining 4,032 bytes are excluded from selection. Both reconstructions
+then match **every byte** of their 4,096-byte runtime captures: 8,192 bytes
+total, including all 8,064 reserved bytes, with zero mismatches or relocation
+patches. Every final guard passes. Neither selected page requires wrapping,
+so this run does not independently validate a wrap crossing. Receipt:
+`reports/code-pad-cycle-validation-v1-20261019T100623Z-1855621-b9cec9166fab.json`.
+
+This corroborates a code-recovery model for those exact two pages and that
+exact executable/loader pair. It does **not** recover either TACT asset key,
+authenticate every unobserved code page, identify the event enum or establish
+the server's policy. Material bytes, page contents and full dossiers remain
+private. A further reconstruction must select an unobserved page's position
+without using unknown plaintext and retain its inferred provenance; it must
+not masquerade as an RX runtime capture.
+
+The next diagnostic selects each page's phase from source unwind metadata,
+using all eligible `UWOP_PUSH_NONVOL` terminal-byte constraints. Its two
+allowed encodings are an explicit instruction-encoding hypothesis, not a
+guarantee supplied by the unwind ABI. It searches all 16,384 phases and
+requires a unique result with at least four constraints from two functions;
+it neither ranks partial matches nor derives the phase from the RVA.
+Control phases are frozen before opening their retained plaintext pages.
+Both independently selected controls again match all 8,192 captured bytes,
+with zero mismatches. The historical cycle receipt authenticates only those
+two control pages; it contains neither pending target page's phase.
+
+All input hashes, metadata and evidence/helper guards pass before either
+target page is written. The page at `0x4b1000` has one phase satisfying 13
+constraints from seven functions; `0x1b8e000` has one satisfying 16 constraints
+from thirteen functions. Their private 4,096-byte artifacts are explicitly
+`offline_inferred_reconstruction`, with no runtime/RX or target-execution
+claim. Receipt:
+`reports/offline-code-page-reconstruction-v1-20261019T101759Z-1867925-36712395f7b4.json`.
+The source/loader two-pass budget is 255,702,848 bytes; elapsed time is 0.628
+seconds. These reconstructions permit further bounded static analysis, but
+do not themselves identify the response status or recover a TACT key.
+
+#### Following the reconstructed response path
+
+The Windows-ABI carrier consumer keeps its first failed version and a
+redacted `TypeError` receipt; a separate v2 corrects a string/integer RVA
+conversion. Initial v2 analyses include only a primary `.pdata` interval.
+Those intervals can end in the middle of a chained function, causing
+`halt_baddata` or analysis of synthetic zero padding. Such output is **not**
+evidence of bad reconstruction. The separate v3 consumer supplies the whole
+authenticated page as context, fixes only its synthetic PE entry-point header,
+and retains explicit page-boundary/whole-function limitations.
+
+The reconstructed response adapter at `0x1b8ed40` tail-jumps to `0x1b8b770`.
+That destination belongs to the authenticated retained RX control page, so a
+new, separately typed carrier analyzes the actual historical page rather
+than inventing a runtime function-carve receipt. REA evidence
+`ev_a7fcb70d99054f02913f758346158ff6c8afb0af932c75d11891778e6c8029d8`
+corroborates the instruction-level state setter: for a found cache entry
+whose state is not already 2, callback results **1, 3 and 4 store state 3**.
+Results **0 and 2 copy sixteen payload bytes, store state 2 and call
+`0x1b8e7b0`**. Other result values leave it unchanged. Thus heap state 3
+alone cannot distinguish a local miss, invalidation and a non-public result;
+it remains distinct from activation event 3.
+Receipt:
+`reports/retained-control-page-function-v1-safestatereply7045000-1b8b770.json`.
+
+With full page context, reconstructed `0x1b8e9d0` calls generic query
+`0x4baa90`, queues the callback and returns 2 for a pending result, or invokes
+it immediately with 0 for a present row and 1 for a missing row. Generic
+`0x4baa90` distinguishes an existing row, a per-store sentinel and eligibility
+to enqueue a remote request. These are reviewed static paths, not an observed
+request/response trace for either selected row. Evidence:
+`ev_cd397394dcdffac64cebd9734a1043b4ce31c4c61c9f08e68ba1b0909339da47`
+and
+`ev_016edda28b55efbb03f626285d42bc73802f74b3fd474b1168c593a23f8bbd37`.
+
+`0x4b1d60` appends callbacks to the vector at `0x6c32418`, using count
+`0x6c32420` and capacity `0x6c32428`; the full-context analysis returns normally.
+A bounded search of the reconstructed neighboring pages finds readers in
+`0x4b10b0`, `0x4b08a0` and generic dispatcher `0x4b0850`. The reviewed paths
+broadcast events 0/2 and 1 respectively. A direct call at `0x4b1a56` supplies
+event **4**, not 3. This does not yet identify the activation-event-3 emitter.
+One REA attempt on `0x4b18a0` failed during provider cleanup because a live
+process's ownership environment was unreadable (`EACCES`); retain it as a
+failed analysis, without pseudocode evidence. Read-only follow-up found that
+process gone and Ghidra available; no permission change or forced cleanup was
+performed. Receipts include
+`reports/offline-event-vector-xrefs-700-01.json`, receipt 02 and
+`reports/rea-offline-reconstructed-page-v3-safeeventtransition7045000-4b18a0.json`.
+
+The operation-indexed label table referenced by reconstructed `0x4b08a0`
+is source-file-backed at `0x414b928`. A bounded source-only comparison emits
+only allowlisted public enum suffixes, never arbitrary strings. Indices
+0–4 match **NotSet, Valid, Delete, Invalid, NotPublic**, sharing the same
+unreported normalized prefix. Source hash and metadata are stable before/
+after. This corroborates the exact client's name for index 4; tracing the
+serializer and the selected rows remains separate from identifying that
+label. The first whole-label dictionary attempt, which matched nothing, is
+retained alongside the qualified-suffix comparison.
+Receipt: `reports/source-status-labels-70450-01.json`.
+
+#### Cache refresh during the investigation
+
+The cache subsequently changes to 3,342,634 bytes, SHA-256
+`4acfe8b7771327bf869d0f6331ee93c0378c09a37465fa9c4b74f1124dca4ec6`.
+An explicit input-selection record pins that new snapshot for the unchanged
+strict version-9/build-70450 parser. All source/integrity guards pass. The
+two selected rows now have twelve observations total, all operation 4 with
+zero payload, and their latest observations are still empty. The table-wide
+totals are 714 empty operation-4 records and the same fourteen operation-1
+records with sixteen-byte payloads. These observations still do not count
+delivery attempts or supply a new key candidate.
+Receipt:
+`reports/audit-target-key-cache-status-v2-20261019T103348Z-1792406028015115865-0.json`.
+
+For a new client/tool version, preserve these private receipts and failures.
+Repin both executable and loader; independently authenticate new controls;
+preregister any candidate code-material region before full-page comparison;
+select phases from the declared constraints and require exact control
+calibration. Never transfer these phases or byte-acceptance claims to another
+build. Supply authentic neighboring page context when unwind chains cross a
+primary interval, and retain missing-context limits. Code-recovery material
+is not an asset decryption key, and static analysis does not establish that
+the server delivered either requested payload.
