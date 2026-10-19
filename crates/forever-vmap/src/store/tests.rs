@@ -889,3 +889,38 @@ fn loaded_models_skips_path_only_null_and_rejects_poisoned_store() {
     assert!(s.verify_source().is_err());
     assert!(matches!(s.loaded_models(1), Err(Error::Poisoned)));
 }
+
+// Modified 2026-10-20: synthetic model-table growth regression.
+#[test]
+fn many_unique_models_grow_tables_only_when_full() {
+    const MEMORY_CAP: usize = 512 * 1024; // Constrained budget exposes unnecessary table growth.
+    let source = Fake::default();
+    let model_bytes = m2();
+    let mut rows = Vec::new();
+    for id in 1..=24 {
+        let name = format!("model-{id:02}");
+        rows.push(row(id, 1, name.as_bytes(), bounds()));
+        source
+            .0
+            .borrow_mut()
+            .files
+            .insert(format!("model/{name}"), model_bytes.clone());
+    }
+    add_map(&source, 1, &rows.concat());
+
+    let mut store = StaticStore::new(
+        source,
+        &[parent(1, None)],
+        Options::default(),
+        Limits {
+            max_memory_bytes: MEMORY_CAP,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let report = store.load_tile(1, 0, 0).unwrap();
+
+    assert_eq!(report.new_models, 24);
+    assert_eq!(store.stats().models, 24);
+    assert!(store.stats().peak_bytes <= MEMORY_CAP);
+}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: prepare-all/commit-once static tile transactions.
+// Modified 2026-10-20: reserve model tables only when capacity is exhausted.
 use super::*;
 
 struct Pending {
@@ -240,6 +241,9 @@ fn append_capacity<T>(v: &mut Vec<T>, memory: &mut Memory, ceiling: usize) -> Re
     let needed = add(v.len(), 1)?;
     if needed > ceiling {
         return Err(Error::Limit);
+    }
+    if needed <= v.capacity() {
+        return Ok(());
     }
     memory.reserve(v, needed.max(v.capacity().saturating_mul(2)).min(ceiling))
 }
@@ -572,4 +576,100 @@ pub(super) fn prepare<S: Source>(
     }
     plan.added = models.added;
     Ok(plan)
+}
+
+#[cfg(test)]
+mod append_capacity_tests {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn spare_capacity_does_not_reserve_or_charge_again() {
+        let mut values = Vec::<usize>::with_capacity(8);
+        values.push(1);
+        let capacity = values.capacity();
+        assert!(capacity > values.len());
+        let accounted = capacity * size_of::<usize>();
+        let mut memory = Memory::new(accounted, accounted);
+
+        append_capacity(&mut values, &mut memory, capacity.saturating_mul(2)).unwrap();
+
+        assert_eq!(values.capacity(), capacity);
+        assert_eq!(memory.live, accounted);
+        assert_eq!(memory.peak, accounted);
+    }
+
+    #[test]
+    fn zero_item_ceiling_rejects_empty_vec_before_reservation() {
+        let mut values = Vec::<usize>::with_capacity(8);
+        let capacity = values.capacity();
+        assert_eq!(values.len(), 0);
+        let accounted = capacity * size_of::<usize>();
+        let mut memory = Memory::new(accounted, accounted);
+
+        assert_eq!(
+            append_capacity(&mut values, &mut memory, 0),
+            Err(Error::Limit)
+        );
+        assert_eq!(values.len(), 0);
+        assert_eq!(values.capacity(), capacity);
+        assert_eq!(memory.live, accounted);
+        assert_eq!(memory.peak, accounted);
+    }
+
+    #[test]
+    fn lowered_item_ceiling_rejects_before_reservation() {
+        let mut values = Vec::<usize>::with_capacity(8);
+        values.push(1);
+        let capacity = values.capacity();
+        let accounted = capacity * size_of::<usize>();
+        let mut memory = Memory::new(accounted, accounted);
+
+        let lowered_ceiling = values.len();
+        assert_eq!(
+            append_capacity(&mut values, &mut memory, lowered_ceiling),
+            Err(Error::Limit)
+        );
+        assert_eq!(values.len(), 1);
+        assert_eq!(values.capacity(), capacity);
+        assert_eq!(memory.live, accounted);
+        assert_eq!(memory.peak, accounted);
+    }
+
+    #[test]
+    fn growth_obeys_exact_memory_boundary_and_one_byte_short_fails() {
+        fn initial() -> Vec<usize> {
+            vec![1]
+        }
+
+        let mut exact_values = initial();
+        let old_capacity = exact_values.capacity();
+        let requested = (exact_values.len() + 1).max(old_capacity.saturating_mul(2));
+        let item_ceiling = requested;
+        let old_bytes = old_capacity * size_of::<usize>();
+        let requested_bytes = requested * size_of::<usize>();
+        let exact_limit = old_bytes + requested_bytes;
+        let mut exact_memory = Memory::new(old_bytes, exact_limit);
+
+        append_capacity(&mut exact_values, &mut exact_memory, item_ceiling).unwrap();
+
+        assert!(exact_values.capacity() >= requested);
+        assert_eq!(
+            exact_memory.live,
+            old_bytes + (exact_values.capacity() - old_capacity) * size_of::<usize>()
+        );
+        assert_eq!(exact_memory.peak, exact_limit);
+
+        let mut short_values = initial();
+        assert_eq!(short_values.capacity(), old_capacity);
+        let mut short_memory = Memory::new(old_bytes, exact_limit - 1);
+        assert_eq!(
+            append_capacity(&mut short_values, &mut short_memory, item_ceiling),
+            Err(Error::Limit)
+        );
+        assert_eq!(short_values.len(), 1);
+        assert_eq!(short_values.capacity(), old_capacity);
+        assert_eq!(short_memory.live, old_bytes);
+        assert_eq!(short_memory.peak, old_bytes);
+    }
 }
