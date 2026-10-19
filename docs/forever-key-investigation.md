@@ -1693,3 +1693,109 @@ v2 sources added. The value-probe implementation remains outside this frozen
 inventory while it is being prepared. Inventory:
 `reports/authored-diagnostics-manifest-v13.json`, SHA-256
 `77f09385222487816f798d17ef2fd2b51c759f18b8c48a80f42bf6fa5ca01d21`.
+
+
+#### Alternate row lookup inspected without invoking it
+
+The first collection's bounds miss is not itself a null-return proof. The
+retained reader evidence shows a tail transfer from `0x4cf35a` to `0x4c3770`,
+passing `collection + 0xd0`. A new one-page pipeline reconstructs `0x4c3000`
+with all controls intact, but the existing function consumer rejects the
+requested destination because **zero** `.pdata` entries cover it. No REA
+attempt starts for that rejected consumer. The failure and its offline
+postmortem remain retained; no function boundary is invented to bypass it.
+
+A separate bounded instruction review of that authenticated inferred page
+identifies an array pointer and QWORD count, sixteen-byte entries, a uint32
+key at entry offset zero, and a QWORD return field at offset eight. Its
+lower-bound search returns zero on an empty array or missing key. These
+instructions support the metadata layout; they do not name its class or
+establish hotfix semantics. Corrected structural receipt:
+`reports/outofbounds-4c3770-followup-structural-audit-01.json`, SHA-256
+`7c3936892f4e77d6c2dc52f9fcf1f09878a68583c670113a8e602adda30890f2`.
+
+The new read-only v3 probe pins that layout, the successful v2 baseline and
+the fresh Linux identity, and repeats all source/process/PE/RX/mapping guards.
+It reads only the alternate entries' four-byte key fields, never their
+QWORD return fields or pointed-to payloads. The count cap is 256 and the
+explicit total typed-metadata cap is 8,192 bytes for both indexes. Three
+identical key sets are required and must be strictly ascending.
+
+This live observation succeeds with every guard true: primary index 69
+entries, selected rows both outside its range; alternate array **14 entries,
+zero selected matches and two selected misses**. Total typed reads are 1,172
+bytes. Thus neither of these two observed reader paths supplies the selected
+rows at this observation. This remains a bounded instant, without an
+all-memory, upstream-server or permanent-absence claim. Receipt:
+`private/probe-live-tact-index-presence-v3-safealternate7045000.json`, SHA-256
+`5538e373215f3e2286e8b7126eb5f8c9e9eb4993360e859e712ab0a8d0bad1b9`.
+
+#### Public-value experiment: corrected calibration premise
+
+An independent review corrects a prior private working assumption: the old
+round-00 lookup file records **three events, two distinct names, three misses
+and zero hits**, not three distinct names with one hit. Its SHA-256 is
+`03631658dcc370f21f48cf8550b449d969558fbbb8eb3e82321169b60c479453`.
+The old three-object run therefore provides no known-positive encrypted
+frame. The new probe's parser and report now distinguish event count from
+unique-name count and retain this correction.
+
+The first private value-probe snapshot is frozen separately, preserving 400
+source files and notices. It adds a diagnostic encoded-record accessor behind
+the existing local ROOT/ENCODING/index selection and archive guards; no
+public-value loop reopens the client. Capture is capped at the three selected
+objects, one retained record per object, 64 MiB each. A public/base known-key
+Z frame must pass complete Rust decoding and an independent, pinned Python
+stdlib/libz comparison before any value sweep. Candidate acceptance still
+requires complete decoding and the expected full-file CKey MD5. The probe
+cannot classify a plausible mode byte as a recovered key.
+
+The reviewed source compiles offline with the pinned Rust 1.98.0; no tests or
+product dependency changes are made. Source tree SHA-256:
+`97cf1857fc7c59c90274ad3b55b28e90a9c4a516ba60f4501385c934e796872a`.
+Manifest: `value-probe/source-pins.json`, SHA-256
+`86254f9642690b208af4966b43b696b57d32624c646905afb4030f0daca278fb`.
+Build receipt: `value-probe/reports/build-00.json`. This establishes only a
+built diagnostic; execution and calibration need their own retained result.
+
+
+The first execution completes in 33.526 seconds under the owned persistent
+user unit `rustycore-public-value-probe-70450-20261019-00`. All 400 source hashes
+and all pinned dictionary/keyring/lookup inputs remain unchanged; all client
+store guards pass. Unlike the old 69-key first-failure log, this capture with
+the 83-key ring exposes a genuine known-public encrypted frame in
+GameObjectDisplayInfo, descriptor index 3. It passes complete Rust Z-frame
+validation and the independent Python/libz stream, size and SHA-256 comparison.
+This is a single-frame calibration, not complete-object acceptance.
+
+The sweep then actually runs. Each selected missing name present in an object
+receives all 19,704 distinct public values: Map 19,704 for one name;
+GameObjectDisplayInfo 19,704 for the other; Model 19,704 for the first. Absent
+names are not tested against unrelated frames. There are 198 plausible N-mode
+prefixes (63 Map, 74 GameObjectDisplayInfo, 61 Model), zero fully validated Z
+candidates, 135 complete-file CKey attempts and **zero complete proofs**.
+No candidate or attempt cap is reached. The 74 GameObjectDisplayInfo and 61
+Model leads all receive full decoding, exact size and CKey checks; neither
+provides a recovered key in the implemented N/Z paths. Recursive/unknown modes
+remain unsupported, so this is not a universal statement about every possible
+BLTE mode or key transformation.
+
+Map's 63 N-prefix leads remain inconclusive as standalone Map candidates:
+its captured object contains two additional encrypted frames outside the
+83-key base ring. Their names' public-dictionary membership is not classified
+in v1, and full-file verification is deliberately skipped without all other
+keys. The two selected missing names are shared across these object tests,
+but the report must retain this Map-specific limitation. No provisional or
+combined proof is reported. Result:
+`value-probe/reports/value-probe-00.json`, SHA-256
+`a754d6b4795f3c851cfef3276706f0bacaeb16d05416456497de0f28cebf0b4e`.
+Run receipt: `value-probe/reports/run-00.json`. The authenticated records were
+process-local and were not retained by v1; a new question about additional
+frame names needs a separately versioned capture, not an invented conclusion
+from the redacted report.
+
+The v14 authored-source inventory preserves all 112 v13 records and adds the
+frozen index v3 and value-probe launcher, for 114 sources. It references the
+separate 400-file value-probe manifest rather than duplicating its enumeration.
+Inventory: `reports/authored-diagnostics-manifest-v14.json`, SHA-256
+`ac759696f4610bb62a7e5d47491e2cfe089c05a4469c569410fb25dc1e080d5a`.
