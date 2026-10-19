@@ -273,6 +273,13 @@ network access unless the locked dependencies are already cached; client
 acquisition remains local. This build selects the Rust product, without the
 optional native acquisition prototype.
 
+For a Linux build-70450 keyless availability survey, `census-db2` accepts an
+admitted revision-16-or-later plan using `wowdbdefs-70450-v1` and writes one
+redacted report to a new path outside the client and every Git checkout. It
+enumerates the full 1,161-declaration catalog; encrypted inputs are reported,
+not omitted, and the report never claims complete extraction. It refuses
+`--keys`. See the [product guide](docs/forever-product.md#keyless-build-70450-db2-census).
+
 ### Inspect a plan and verify output
 
 The product uses an **explicit canonical TSV plan**. Choose the documented

@@ -3711,3 +3711,34 @@ pinned runtime for memory comparison. **No key was recovered, no decryption was
 demonstrated, nothing is unblocked, and the goal is not complete.** No claim is
 made that a needed key exists or is obtainable, that decryption is possible, or
 that any component, full-world, runtime or release gate is met.
+
+## 2026-10-19 — distribution revalidation and build-70450 census preparation
+
+At source HEAD `1aad025`, two fresh builds of the frozen shipped source, using
+the pinned Rust 1.98.0 toolchain, an explicit epoch and the admitted registry
+cache, produced byte-identical archives with SHA-256
+`766d31ee3e10e351028e9954190ae4bfff141a6f0de8c38b3c1f544dc6425981`. Archive
+`verify` returned 0 and unpacking succeeded. The packaged executable
+`bin/forever-extractor` is 4,221,440 bytes with SHA-256
+`492e22e76131b14771859aa859a06961d8fbe49508c023d3a2344119a7b5b5f2`.
+A moved-source offline rebuild from the unpacked bundle reproduced that exact
+binary hash and size. Packaged `--help` exits 0 and `inspect --help` exits 2;
+the workspace binary reproduces both results, so this is existing command
+behavior, not a packaging defect.
+
+The first rebuild attempt was rejected as `distribution_input`: the caller
+passed the bundle's `source` subdirectory rather than the unpacked bundle root.
+This was a caller error, not a product defect; the corrected invocation
+succeeded. Contract tests report 411, and distribution tests report 167 with
+one skip. The tree was clean before and after this acceptance. This revalidates
+the reproducible-package gate for the current source only; real extraction,
+full-world operation and runtime acceptance remain open.
+
+Five ready build-70450 keyless probe plans are retained outside every checkout
+under `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/plans/`:
+two revision-17 plans (Map and GameObjectDisplayInfo, separately for esES and
+enUS), two revision-15 collision-domain plans for the gameobject model (one per
+locale), and one revision-20 all-available-maps plan. None was executed because
+the client is in use. Their purpose is to distinguish a wrong locale-variant
+selection from genuine key encryption; they emit no key material. No client,
+keys or network were accessed for this checkpoint.

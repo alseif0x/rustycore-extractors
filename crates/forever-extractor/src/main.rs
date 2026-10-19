@@ -22,6 +22,9 @@ fn main() {
                 println!(
                     "Linux v20 selects build-70450 available-map terrain-only output; probe-encoding reports metadata/read diagnostics only."
                 );
+                println!(
+                    "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
+                );
             } else {
                 println!("{json}");
             }
@@ -44,6 +47,7 @@ fn main() {
                 || error.code == "product_keys_forbidden"
                 || error.code == "product_probe_profile"
                 || error.code == "product_probe_file_data_id"
+                || error.code == "product_census_limit"
                 || error.code == "product_scratch_required"
                 || error.code == "product_scratch_forbidden"
                 || error.code == "product_disk_unsupported"
@@ -75,6 +79,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         "verify",
         "verify-links",
         "probe-encoding",
+        "census-db2",
     ]
     .contains(&command)
         || args.len() > max_args
@@ -86,6 +91,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         "inspect" => &["--plan", "--client", "--keys"][..],
         "verify" | "verify-links" => &["--plan", "--output", "--expect-context"][..],
         "probe-encoding" => &["--plan", "--client", "--output", "--keys", "--file-data-id"][..],
+        "census-db2" => &["--plan", "--client", "--output", "--keys"][..],
         _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
     };
     let mut options = BTreeMap::new();
@@ -126,10 +132,13 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let plan =
         Plan::parse(std::str::from_utf8(&bytes).map_err(|_| Error::from("product_plan_format"))?)?;
     *contract = plan.contract();
-    if command == "probe-encoding" && options.contains_key("--keys") {
+    if matches!(command, "probe-encoding" | "census-db2") && options.contains_key("--keys") {
         return Err("product_keys_forbidden".into());
     }
-    if matches!(command, "extract" | "resume" | "probe-encoding") {
+    if matches!(
+        command,
+        "extract" | "resume" | "probe-encoding" | "census-db2"
+    ) {
         path("--client")?;
         path("--output")?;
     } else if matches!(command, "verify" | "verify-links") {
@@ -148,7 +157,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_keys_forbidden".into());
     }
     if plan.requires_keys()
-        && command != "probe-encoding"
+        && !matches!(command, "probe-encoding" | "census-db2")
         && !matches!(command, "verify" | "verify-links")
         && (command != "inspect" || options.contains_key("--client"))
         && !options.contains_key("--keys")
@@ -318,6 +327,18 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     "{{\"contract\":\"{}\",\"status\":\"probe_complete\",\"file_data_ids\":{count},\"trace_sha256\":\"{}\",\"offline\":true,\"full_extractor_complete\":false}}",
                     plan.contract(),
                     integrity::hex(&trace_sha256),
+                ));
+            }
+            #[cfg(not(target_os = "linux"))]
+            return Err("product_platform".into());
+        }
+        if command == "census-db2" {
+            #[cfg(target_os = "linux")]
+            {
+                let declaration_count =
+                    driver::census_db2_command(&plan, path("--client")?, path("--output")?)?;
+                return Ok(format!(
+                    "{{\"contract\":\"forever-db2-census-contract-v1\",\"status\":\"census_written\",\"catalogue\":\"wowdbdefs-70450-v1\",\"declarations\":{declaration_count},\"keyless\":true,\"complete_extraction_claim\":false}}"
                 ));
             }
             #[cfg(not(target_os = "linux"))]

@@ -24,7 +24,7 @@ pub(crate) struct Summary {
 
 /// Reject path aliases and Git checkouts before opening the admitted client.
 /// This mirrors the product diagnostic's external-file and client-root guards.
-fn output_path(client: &Path, output: &Path) -> Result<PathBuf, Error> {
+pub(super) fn output_path(client: &Path, output: &Path) -> Result<PathBuf, Error> {
     let raw = output.as_os_str().as_encoded_bytes();
     if !output.is_absolute()
         || raw.len() > 4096
@@ -51,6 +51,22 @@ fn output_path(client: &Path, output: &Path) -> Result<PathBuf, Error> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(output),
         _ => Err("product_diagnostic_path".into()),
     }
+}
+
+pub(super) fn open_keyless_store_70450(plan: &Plan, client: &Path) -> Result<LocalStore, Error> {
+    if forever_casc::admit_db2_70450(client).map_err(|error| Error::from(error.code()))? != 70450 {
+        return Err("product_build_mismatch".into());
+    }
+    LocalStore::open_db2_70450(
+        client,
+        OpenOptions {
+            locale: plan.locale,
+            index_layouts: [plan.index_layout; 16],
+            root_layout: plan.root_layout,
+            limits: Default::default(),
+        },
+    )
+    .map_err(|error| Error::from(error.code()))
 }
 
 fn checked_directory(path: &Path, reject_git: bool) -> Result<PathBuf, Error> {
@@ -119,19 +135,7 @@ pub(crate) fn run(
         return Err("product_probe_file_data_id".into());
     }
     let output = output_path(client, output)?;
-    if forever_casc::admit_db2_70450(client).map_err(|error| Error::from(error.code()))? != 70450 {
-        return Err("product_build_mismatch".into());
-    }
-    let store = LocalStore::open_db2_70450(
-        client,
-        OpenOptions {
-            locale: plan.locale,
-            index_layouts: [plan.index_layout; 16],
-            root_layout: plan.root_layout,
-            limits: Default::default(),
-        },
-    )
-    .map_err(|error| Error::from(error.code()))?;
+    let store = open_keyless_store_70450(plan, client)?;
     let report = store
         .probe_file_data_ids(file_data_ids, Default::default())
         .map_err(|error| match error {

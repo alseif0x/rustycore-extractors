@@ -23,6 +23,8 @@ use inventory::windows as navigation_input;
 use std::path::Path;
 
 #[cfg(target_os = "linux")]
+pub(crate) mod census_db2;
+#[cfg(target_os = "linux")]
 mod disk;
 mod execution;
 #[cfg(target_os = "linux")]
@@ -58,6 +60,13 @@ pub fn probe_encoding_command(
 ) -> Result<(usize, [u8; 32]), Error> {
     let summary = probe_encoding::run(plan, client, output, file_data_ids)?;
     Ok((summary.file_data_ids, summary.trace_sha256))
+}
+
+/// Write the Linux-only all-declaration keyless DB2 availability census.
+#[cfg(target_os = "linux")]
+pub fn census_db2_command(plan: &Plan, client: &Path, output: &Path) -> Result<usize, Error> {
+    let summary = census_db2::run(plan, client, output)?;
+    Ok(summary.declaration_count)
 }
 
 /// Explicit v2 capability only. The original open entry point never enables

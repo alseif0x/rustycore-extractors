@@ -44,6 +44,32 @@ and explicitly specified ROOT/index layouts, builds the local metadata store
 and returns its context. This is not an availability survey. `--help` documents
 the available commands; every ordinary result/error is path-free JSON.
 
+## Keyless build-70450 DB2 census
+
+The Linux-only `census-db2` diagnostic walks every declaration in the pinned
+`wowdbdefs-70450-v1` catalog for an admitted build-70450 plan at revision 16 or
+later that carries that catalog. The catalog currently contains 1,161
+declarations; the report records the count and preserves declaration order. It
+uses the plan locale and ROOT/index layouts and the same keyless ROOT resolver
+and complete-read candidate checks as the extractor and `probe-encoding`.
+
+```bash
+"$CARGO_TARGET_DIR/release/forever-extractor" census-db2 \
+  --plan /absolute/private/build-70450-plan.tsv \
+  --client /absolute/private/WoW-client \
+  --output /absolute/private/external-reports/db2-census.json
+```
+
+The output parent must already exist and the new report must be outside the
+client and all Git checkouts. The command refuses `--keys`, creates no component
+or package, and records one typed result for every declaration: fully readable,
+encrypted without an available key, unavailable, or unsupported/unknown. An
+encrypted candidate is not treated as an omittable absence. Policy-bounded
+results may classify a declaration as unsupported/unknown. The schema expects
+partial availability while keys are unavailable and sets
+`complete_extraction_claim` to false. This is not an extraction, completeness,
+runtime or release claim.
+
 A bounded DB2/GT/camera example for build 70205/esES follows. Separators are
 literal tabs; the file must end with LF. Names and IDs are public pinned metadata.
 

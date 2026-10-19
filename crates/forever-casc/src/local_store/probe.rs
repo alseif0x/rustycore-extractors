@@ -127,6 +127,10 @@ pub struct Report {
     pub locale_mask: u32,
     pub build_info_tags: String,
     pub files: Vec<FileTrace>,
+    /// Conservative total of indexed encoded spans considered by the probe.
+    /// This is budget accounting, not an observed archive-byte count, and is
+    /// deliberately excluded from serialized trace output.
+    pub candidate_bytes_considered: u64,
 }
 
 impl Report {
@@ -612,6 +616,7 @@ impl LocalStore {
             locale_mask: locale_mask(self.locale),
             build_info_tags: self.build.tags.clone(),
             files,
+            candidate_bytes_considered: candidate_bytes,
         })
     }
 }
