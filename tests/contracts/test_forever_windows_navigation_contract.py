@@ -128,7 +128,48 @@ class WindowsNavigationContract(unittest.TestCase):
             admission['scope'],
             'Linux Plan admission adds only build 70450; builds 70170 and 70205 retain their prior gate and non-Linux build-70450 admission remains rejected',
         )
-        inventory = (ROOT / inventory_path).read_bytes()
+        inventory_current = (ROOT / inventory_path).read_bytes()
+        linux_delta = self.c['reviewed_linux_selected_navigation_inventory_delta']
+        self.assertEqual(linux_delta['path'], inventory_path)
+        self.assertEqual(
+            linux_delta['baseline_revision'],
+            'c8a86b289c463fca7b9dd5ab6d22c275f75faa81',
+        )
+        self.assertEqual(linux_delta['baseline_sha256'], admission['current_sha256'])
+        self.assertEqual(pins[inventory_path], linux_delta['baseline_sha256'])
+        self.assertEqual(
+            linux_delta['scope'],
+            'Linux build-70450 selected partial-coverage navigation owner and cumulative preprocessing accounting; no Windows behavior or acceptance change',
+        )
+        self.assertTrue(linux_delta['exact_inverse_required'])
+        fixture_path = ROOT / linux_delta['fixture']
+        fixture_bytes = fixture_path.read_bytes()
+        self.assertEqual(hashlib.sha256(fixture_bytes).hexdigest(), linux_delta['fixture_sha256'])
+        fixture = json.loads(fixture_bytes)
+        self.assertEqual(fixture['schema'], 'forever-selected-navigation-source-delta-v1')
+        self.assertEqual(fixture['path'], inventory_path)
+        self.assertEqual(fixture['baseline_revision'], linux_delta['baseline_revision'])
+        self.assertEqual(fixture['baseline_sha256'], linux_delta['baseline_sha256'])
+        self.assertEqual(fixture['candidate_sha256'], linux_delta['candidate_sha256'])
+        self.assertEqual(fixture['scope'], linux_delta['scope'])
+        self.assertEqual(hashlib.sha256(inventory_current).hexdigest(), linux_delta['candidate_sha256'])
+        restored_lines = inventory_current.decode('utf-8').splitlines(keepends=True)
+        hunks = fixture['hunks']
+        self.assertTrue(hunks)
+        for hunk in reversed(hunks):
+            after_lines = hunk['after_lines']
+            before_lines = hunk['before_lines']
+            self.assertTrue(after_lines or before_lines)
+            matches = [
+                index
+                for index in range(len(restored_lines) - len(after_lines) + 1)
+                if restored_lines[index:index + len(after_lines)] == after_lines
+            ]
+            self.assertEqual(len(matches), 1, 'each Linux delta hunk must invert exactly once')
+            start = matches[0]
+            restored_lines[start:start + len(after_lines)] = before_lines
+        inventory = ''.join(restored_lines).encode('utf-8')
+        self.assertEqual(hashlib.sha256(inventory).hexdigest(), linux_delta['baseline_sha256'])
         before_admission = b'if !matches!(build, 70170 | 70205) {'
         after_admission = b'if !matches!(build, 70170 | 70205) && !(cfg!(target_os = "linux") && build == 70450) {'
         self.assertEqual(inventory.count(after_admission), 1)
@@ -137,7 +178,7 @@ class WindowsNavigationContract(unittest.TestCase):
             admission['previous_sha256'],
         )
         self.assertEqual(hashlib.sha256(inventory).hexdigest(), admission['current_sha256'])
-        reviewed[inventory_path] = admission['current_sha256']
+        reviewed[inventory_path] = linux_delta['candidate_sha256']
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)

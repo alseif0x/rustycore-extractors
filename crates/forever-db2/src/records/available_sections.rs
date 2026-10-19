@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: add explicit 70450 navigation projection.
 //! Bounded regular available-section reader, independent of CASC. Physical
 //! extents and global metadata admit before rows. Logical string coordinates
 //! retain omitted sections exactly as DB2FileLoaderRegularImpl::LoadTableData;
@@ -80,6 +81,20 @@ pub(crate) fn read_gameobjects(
     )?;
     match rows {
         Collected::GameObject(records) => Ok(AvailableRecords { records, sections }),
+        _ => Err(RecordError::Schema),
+    }
+}
+pub(crate) fn read_navigation_maps_70450(
+    input: &impl Source,
+) -> Result<AvailableRecords<terrain::NavigationMapFields>, RecordError> {
+    let (rows, sections) = read(
+        input,
+        "Map",
+        Collector::Navigation(Vec::new()),
+        Target::Build70450,
+    )?;
+    match rows {
+        Collected::Navigation(records) => Ok(AvailableRecords { records, sections }),
         _ => Err(RecordError::Schema),
     }
 }

@@ -2340,3 +2340,47 @@ External laboratory reports; all generated data is synthetic and remains private
 | `navigation-world-debug-20261011T123907Z-e3bc2ba7.json` | `2faa2d2bed7a882ec1c24a1952c66a3cb89e39e701f4c492ce7294761df0fdf1` |
 | `navigation-world-release-20261011T124135Z-4f44f912.json` | `673fdeb209c866f7e1f100ab2039a85bb59105891e16e8d5c19fa9fd6da0ec40` |
 | `navigation-workspace-20261011T123316Z-ecfb79d7.json` | `f6eacc6c6705fc82fdf79ff3668ab250e63f225e1a73dc93ed6379da2aac1013` |
+
+## 2026-10-19: selected navigation from available 70450 records
+
+The Linux API surface now includes an explicitly partial-capable build-70450
+path. `forever_db2::availability::read_navigation_maps_70450`
+returns `AvailableRecords<NavigationMapFields>` under the
+`wowdbdefs-70450-available-navigation-v1` reader profile and
+`wowdbdefs-70450-v1` catalog. It preserves admitted direct-row order and
+duplicate IDs, copy pairs as metadata, and each section's coverage state. It
+does not replay copies, synthesize bytes for unavailable source ranges, or
+promote omitted sections to empty data. Callers remain responsible for binding
+a stable authenticated source whose range reads contain the requested bytes.
+
+`inventory::AvailableSelectedPlan::from_available_70450` builds the
+`navigation-selected-available-70450-linux-v1` plan from direct rows only. It
+uses the final direct row for a duplicate ID, then follows the effective-parent
+chain through admitted direct rows. A selected ID found only in copy metadata,
+a missing active parent, a cycle, a depth violation, or a missing required
+inventory descriptor rejects the plan. The selected map is the sole output;
+ancestors provide context. The owner keeps section coverage and partial source
+counts attached and has no public conversion into the complete-source `Plan`.
+Callers must establish complete inventories for the selected domain; this API
+does not certify that an available snapshot covers the whole catalog.
+
+`pipeline::run_available_selected` accepts that owner together with `Sources`,
+`LiquidTypes`, off-mesh sources, `Request`, and `Limits`. It reuses the existing
+single-tile pipeline and shared private kernel. It rejects a request outside the
+selected output before reading terrain or collision sources, retains source
+verification, and accounts work and heap against the existing cumulative limits
+with downward reductions. Callers still provide authenticated acquisition,
+complete selected-domain and ancestor inventories, the complete build-70450
+`LiquidType` source (so a genuinely absent ID is distinguishable from a row the
+caller omitted), and authoritative evidence for terrain absence; an I/O failure
+must not become an absence result.
+
+The library implementation and synthetic validation are checked: DB2 has 458
+passes / 0 failures / 1 ignore, navigation has 329 passes / 0 failures / 20
+ignores, all-target Clippy with warnings denied passes for both crates, and the
+focused formatting, diff and 430-contract checks pass. These are software and
+synthetic results. This remains a library API boundary, not a CLI profile and
+not admission to product v21 when Map coverage is partial. No real MMap result
+or v23 CLI profile exists yet, and this makes no full-world, native-parity,
+RustyCore-runtime, Windows, or release claim. See
+`contracts/forever-selected-navigation-contract-v1.json`.

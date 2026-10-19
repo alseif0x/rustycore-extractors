@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: add selected partial-coverage 70450 navigation plans.
 // This file is part of the TrinityCore Project. See AUTHORS for Copyright information.
 // This program is free software; you can redistribute it and/or modify it under
 // the terms of the GNU General Public License as published by the Free Software
@@ -19,8 +20,16 @@ use crate::{
     mmap,
     tilebuilder::{self, Coordinate},
 };
-use forever_db2::terrain_sources::{DirectRecord, NavigationMapFields, SourceRecords};
+use forever_db2::{
+    availability::{AvailableRecords, SectionCoverage},
+    terrain_sources::{DirectRecord, NavigationMapFields, RecordCopy, SourceRecords},
+};
 use std::mem::size_of;
+
+/// Linux-only profile for selected navigation from the explicit 70450
+/// available-section reader. Coverage remains attached to its result owner.
+pub const SELECTED_AVAILABLE_70450_LINUX_PROFILE: &str =
+    "navigation-selected-available-70450-linux-v1";
 
 pub mod fs;
 #[cfg(windows)]
@@ -39,8 +48,11 @@ pub enum Error {
     TileList,
     Selection,
     MissingInventory,
+    MissingAncestorInventory,
     EmptyAncestor,
     Params,
+    SelectedCopyOnly,
+    UnavailableAncestor,
 }
 impl Error {
     pub const fn code(self) -> &'static str {
@@ -56,8 +68,13 @@ impl Error {
             Self::TileList => "navigation_inventory_tile_list",
             Self::Selection => "navigation_inventory_selection",
             Self::MissingInventory => "navigation_inventory_missing_ancestor_inventory",
+            Self::MissingAncestorInventory => {
+                "navigation_inventory_missing_active_ancestor_inventory"
+            }
             Self::EmptyAncestor => "navigation_inventory_empty_ancestor_inventory",
             Self::Params => "navigation_inventory_navmesh_params",
+            Self::SelectedCopyOnly => "navigation_inventory_selected_map_copy_only",
+            Self::UnavailableAncestor => "navigation_inventory_active_ancestor_unavailable",
         }
     }
 }
@@ -177,6 +194,9 @@ impl Budget {
     fn sort(&mut self, n: usize) -> Result<(), Error> {
         self.charge(n as u64 * (usize::BITS - n.max(1).leading_zeros()) as u64)
     }
+    fn search(&mut self, n: usize) -> Result<(), Error> {
+        self.charge((usize::BITS - n.max(1).leading_zeros()) as u64)
+    }
 }
 #[derive(Clone, Copy)]
 struct Node {
@@ -280,6 +300,19 @@ impl Plan {
     /// This API cannot authenticate provenance or descriptor/file associations.
     /// Last physical duplicate ID wins, including map zero. No WDT-zero filter.
     pub fn from_rows(
+        rows: &[DirectRecord<NavigationMapFields>],
+        inputs: &[Input<'_>],
+        build: u32,
+        options: Options,
+        limits: Limits,
+    ) -> Result<Self, Error> {
+        Self::build_from_rows(rows, inputs, build, options, limits)
+    }
+
+    /// Private plan constructor shared by the complete-source API and the
+    /// explicitly scoped available-source owner. The latter supplies only the
+    /// selected map's last-direct rows and its complete active-ancestor chain.
+    fn build_from_rows(
         rows: &[DirectRecord<NavigationMapFields>],
         inputs: &[Input<'_>],
         build: u32,
@@ -530,6 +563,304 @@ impl Plan {
         }))
     }
 }
+
+/// A selected 70450 plan built from an explicitly partial-capable availability
+/// snapshot. Its section coverage and profile remain attached; this owner has
+/// no conversion into the complete-source `Plan` API.
+pub struct AvailableSelectedPlan {
+    plan: Plan,
+    sections: Vec<SectionCoverage>,
+    profile: &'static str,
+    source_direct_rows: usize,
+    source_copy_pairs: usize,
+}
+impl AvailableSelectedPlan {
+    /// Build only the requested map and its complete effective-parent chain
+    /// from direct rows admitted by the 70450 Linux available-section reader.
+    /// Copy pairs are retained as a count only and never resolve parent IDs.
+    #[cfg(target_os = "linux")]
+    pub fn from_available_70450(
+        source: &AvailableRecords<NavigationMapFields>,
+        inputs: &[Input<'_>],
+        selected_map_id: u32,
+        limits: Limits,
+    ) -> Result<Self, Error> {
+        from_available_rows(
+            source.direct_records(),
+            source.copies(),
+            source.sections(),
+            inputs,
+            selected_map_id,
+            limits,
+        )
+    }
+
+    #[cfg(all(test, target_os = "linux"))]
+    pub(crate) fn from_available_rows_for_test(
+        rows: &[DirectRecord<NavigationMapFields>],
+        copies: &[RecordCopy],
+        sections: &[SectionCoverage],
+        inputs: &[Input<'_>],
+        selected_map_id: u32,
+        limits: Limits,
+    ) -> Result<Self, Error> {
+        from_available_rows(rows, copies, sections, inputs, selected_map_id, limits)
+    }
+
+    pub const fn profile(&self) -> &'static str {
+        self.profile
+    }
+    pub fn sections(&self) -> &[SectionCoverage] {
+        &self.sections
+    }
+    /// Internal pipeline access keeps the partial-coverage owner attached at
+    /// the API boundary while reusing the established plan execution path.
+    pub(crate) fn inventory_plan(&self) -> &Plan {
+        &self.plan
+    }
+    pub fn all_sections_admitted(&self) -> bool {
+        self.sections
+            .iter()
+            .all(|section| section.state == forever_db2::availability::SectionState::Admitted)
+    }
+    /// Direct rows in the availability snapshot before selected-closure
+    /// filtering. This is scoped metadata, not a whole-file row count claim.
+    pub const fn source_direct_rows(&self) -> usize {
+        self.source_direct_rows
+    }
+    /// Copy pairs are reported as inspection metadata; no copy is used to
+    /// select the map or resolve a parent.
+    pub const fn source_copy_pairs(&self) -> usize {
+        self.source_copy_pairs
+    }
+    pub const fn build(&self) -> u32 {
+        self.plan.build()
+    }
+    pub fn maps(&self) -> &[Map] {
+        self.plan.maps()
+    }
+    pub fn map(&self, id: u32) -> Option<&Map> {
+        self.plan.map(id)
+    }
+    pub const fn statistics(&self) -> Statistics {
+        self.plan.statistics()
+    }
+    pub fn parent_rows(&self) -> impl Iterator<Item = forever_vmap::store::MapParent> + '_ {
+        self.plan.parent_rows()
+    }
+    pub fn ancestors(&self, id: u32) -> Result<impl Iterator<Item = u32> + '_, Error> {
+        self.plan.ancestors(id)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn from_available_rows(
+    rows: &[DirectRecord<NavigationMapFields>],
+    copies: &[RecordCopy],
+    sections: &[SectionCoverage],
+    inputs: &[Input<'_>],
+    selected_map_id: u32,
+    limits: Limits,
+) -> Result<AvailableSelectedPlan, Error> {
+    limits.validate()?;
+    if selected_map_id > i32::MAX as u32 {
+        return Err(Error::Selection);
+    }
+    if rows.len() > limits.rows
+        || inputs.len() > limits.descriptors
+        || copies.len() > limits.descriptors
+        || sections.len() > limits.descriptors
+    {
+        return Err(Error::Limit);
+    }
+
+    let mut budget = Budget {
+        limits,
+        stats: Statistics::default(),
+    };
+    let mut last_by_id = budget.reserve::<(u32, usize)>(rows.len())?;
+    budget.charge(rows.len() as u64)?;
+    for (ordinal, row) in rows.iter().enumerate() {
+        last_by_id.push((row.id, ordinal));
+    }
+    budget.sort(last_by_id.len())?;
+    last_by_id
+        .sort_unstable_by(|left, right| left.0.cmp(&right.0).then_with(|| right.1.cmp(&left.1)));
+    last_by_id.dedup_by_key(|entry| entry.0);
+    budget.search(last_by_id.len())?;
+    let selected_position = match last_by_id.binary_search_by_key(&selected_map_id, |entry| entry.0)
+    {
+        Ok(position) => position,
+        Err(_) => {
+            let mut selected_is_copy = false;
+            for copy in copies {
+                budget.charge(1)?;
+                selected_is_copy |= copy.new_id == selected_map_id;
+            }
+            if selected_is_copy {
+                return Err(Error::SelectedCopyOnly);
+            }
+            return Err(Error::UnknownMap);
+        }
+    };
+
+    let mut chain = budget.reserve::<usize>(limits.depth.min(last_by_id.len()))?;
+    let mut at = selected_position;
+    loop {
+        budget.charge(1 + chain.len() as u64)?;
+        if chain.contains(&at) {
+            return Err(Error::Cycle);
+        }
+        if chain.len() >= limits.depth {
+            return Err(Error::Depth);
+        }
+        chain.push(at);
+        let row = &rows[last_by_id[at].1];
+        let parent_id = row.fields.effective_parent();
+        match parent_id {
+            -1 => break,
+            0.. => {
+                budget.search(last_by_id.len())?;
+                at = last_by_id
+                    .binary_search_by_key(&(parent_id as u32), |entry| entry.0)
+                    .map_err(|_| Error::UnavailableAncestor)?;
+            }
+            _ => return Err(Error::Parent),
+        }
+    }
+
+    let mut closure_ids = budget.reserve::<u32>(chain.len())?;
+    for position in &chain {
+        closure_ids.push(last_by_id[*position].0);
+    }
+    budget.sort(closure_ids.len())?;
+    closure_ids.sort_unstable();
+
+    let mut input_ids = budget.reserve::<u32>(inputs.len())?;
+    for input in inputs {
+        budget.charge(1)?;
+        input_ids.push(input.map_id());
+    }
+    budget.sort(input_ids.len())?;
+    input_ids.sort_unstable();
+    input_ids.dedup();
+    for position in &chain {
+        let id = last_by_id[*position].0;
+        budget.search(input_ids.len())?;
+        if input_ids.binary_search(&id).is_err() {
+            return Err(if id == selected_map_id {
+                Error::MissingInventory
+            } else {
+                Error::MissingAncestorInventory
+            });
+        }
+    }
+
+    let mut closure_rows = budget.reserve::<DirectRecord<NavigationMapFields>>(chain.len())?;
+    for position in &chain {
+        budget.charge(1)?;
+        closure_rows.push(rows[last_by_id[*position].1].clone());
+    }
+    let mut closure_input_count = 0usize;
+    for input in inputs {
+        budget.charge(1)?;
+        budget.search(closure_ids.len())?;
+        if closure_ids.binary_search(&input.map_id()).is_ok() {
+            closure_input_count += 1;
+        }
+    }
+    let mut closure_inputs = budget.reserve::<Input<'_>>(closure_input_count)?;
+    for input in inputs {
+        budget.charge(1)?;
+        budget.search(closure_ids.len())?;
+        if closure_ids.binary_search(&input.map_id()).is_ok() {
+            closure_inputs.push(*input);
+        }
+    }
+    let source_direct_rows = rows.len();
+    let source_copy_pairs = copies.len();
+    let preprocessing_work = budget.stats.work;
+    drop(input_ids);
+    drop(closure_ids);
+    drop(chain);
+    drop(last_by_id);
+
+    let scoped_input_bytes = closure_rows
+        .capacity()
+        .checked_mul(size_of::<DirectRecord<NavigationMapFields>>())
+        .and_then(|bytes| {
+            closure_inputs
+                .capacity()
+                .checked_mul(size_of::<Input<'_>>())
+                .and_then(|inputs_bytes| bytes.checked_add(inputs_bytes))
+        })
+        .ok_or(Error::Limit)?;
+    let logical_coverage_bytes = sections
+        .len()
+        .checked_mul(size_of::<SectionCoverage>())
+        .ok_or(Error::Limit)?;
+    let logical_temporary_bytes = scoped_input_bytes
+        .checked_add(logical_coverage_bytes)
+        .ok_or(Error::Limit)?;
+    if logical_temporary_bytes > limits.heap_bytes {
+        return Err(Error::Limit);
+    }
+
+    let mut retained_sections = Vec::new();
+    retained_sections
+        .try_reserve_exact(sections.len())
+        .map_err(|_| Error::Allocation)?;
+    retained_sections.extend_from_slice(sections);
+    let coverage_bytes = retained_sections
+        .capacity()
+        .checked_mul(size_of::<SectionCoverage>())
+        .ok_or(Error::Limit)?;
+    let temporary_bytes = scoped_input_bytes
+        .checked_add(coverage_bytes)
+        .ok_or(Error::Limit)?;
+    let mut plan_limits = limits;
+    plan_limits.work = plan_limits
+        .work
+        .checked_sub(preprocessing_work)
+        .ok_or(Error::Limit)?;
+    plan_limits.heap_bytes = plan_limits
+        .heap_bytes
+        .checked_sub(temporary_bytes)
+        .ok_or(Error::Limit)?;
+    let mut plan = Plan::build_from_rows(
+        &closure_rows,
+        &closure_inputs,
+        70450,
+        Options {
+            map: Some(selected_map_id),
+            ..Options::default()
+        },
+        plan_limits,
+    )?;
+    drop(closure_inputs);
+    drop(closure_rows);
+    let retained_heap = plan
+        .statistics
+        .heap_reservation
+        .checked_add(coverage_bytes)
+        .ok_or(Error::Limit)?;
+    if retained_heap > limits.heap_bytes {
+        return Err(Error::Limit);
+    }
+    plan.statistics.heap_reservation = retained_heap;
+    plan.statistics.work = preprocessing_work
+        .checked_add(plan.statistics.work)
+        .filter(|work| *work <= limits.work)
+        .ok_or(Error::Limit)?;
+    Ok(AvailableSelectedPlan {
+        plan,
+        sections: retained_sections,
+        profile: SELECTED_AVAILABLE_70450_LINUX_PROFILE,
+        source_direct_rows,
+        source_copy_pairs,
+    })
+}
+
 fn admitted(
     index: usize,
     nodes: &[Node],

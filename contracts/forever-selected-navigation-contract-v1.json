@@ -1,0 +1,104 @@
+{
+  "contract": "forever-selected-navigation-contract-v1",
+  "version": 1,
+  "scope": {
+    "product_line": "forever",
+    "client_build": 70450,
+    "platform": "linux",
+    "api_only": true,
+    "cli_profile": false
+  },
+  "reader": {
+    "api": "forever_db2::availability::read_navigation_maps_70450",
+    "return_type": "AvailableRecords<NavigationMapFields>",
+    "profile": "wowdbdefs-70450-available-navigation-v1",
+    "catalog": "wowdbdefs-70450-v1",
+    "source_contract": "Caller supplies a stable authenticated decoded-address-space source. Every requested range must be present at its exact length; unavailable ranges fail. The source must not synthesize bytes for holes. The reader does not authenticate the source or establish CKey/EKey validity.",
+    "rows": "Admitted direct rows retain source order and duplicate IDs. Navigation applies source-direct last-ID-wins when constructing the selected map closure.",
+    "copies": "Copy pairs and section coverage remain inspection metadata. Copies do not create or replace navigation parent rows.",
+    "coverage": "AvailableRecords keeps per-section admitted/unknown-tact state attached. Omitted sections are not converted to empty data, and partial coverage is not upgraded to complete coverage."
+  },
+  "selected_plan": {
+    "owner": "forever_navigation::inventory::AvailableSelectedPlan",
+    "constructor": "AvailableSelectedPlan::from_available_70450",
+    "profile": "navigation-selected-available-70450-linux-v1",
+    "platform_gate": "linux",
+    "selection": "The requested map must be a direct row in the admitted available snapshot. Duplicate direct IDs resolve to the last source row. A copy-only selected ID is rejected.",
+    "parent_closure": "Follow NavigationMapFields::effective_parent from the selected direct row and require every non-root parent to resolve to an admitted direct row. The effective parent is parent_map_id when nonnegative; otherwise cosmetic_parent_map_id. Only the selected map is an output; its effective-parent ancestors are context.",
+    "rejections": [
+      "unknown selected direct row",
+      "copy-only selected ID",
+      "missing effective-parent row",
+      "cycle or depth limit",
+      "missing inventory descriptor for selected map or active ancestor",
+      "invalid parent, coordinates, tile list, or navigation parameters",
+      "cumulative work or heap reservation beyond caller limits"
+    ],
+    "coverage_boundary": "The owner retains section coverage and partial source counts; it does not turn an incomplete available snapshot into a complete catalog. Callers must establish that the supplied inventory covers the requested domain. A missing row or inventory needed by the selected closure fails closed."
+  },
+  "pipeline": {
+    "api": "forever_navigation::pipeline::run_available_selected",
+    "arguments": [
+      "AvailableSelectedPlan",
+      "Sources",
+      "LiquidTypes",
+      "offmesh sources",
+      "Request",
+      "Limits"
+    ],
+    "behavior": "Reuses the established single-tile pipeline and shared private kernel. It emits at most the requested selected map/tile; ancestor maps remain lookup context. A map/tile outside the selected output is rejected before terrain or collision source reads. Existing source verification and downward cumulative work/heap limit reductions remain in force.",
+    "caller_obligations": [
+      "authenticate and acquire the DB2 source before constructing the available snapshot",
+      "provide complete inventories for the selected map and all active ancestors",
+      "provide the complete build-70450 LiquidType source so genuinely absent IDs can be distinguished from caller-omitted rows",
+      "establish terrain absence from authoritative inventory; do not translate I/O errors into absence"
+    ]
+  },
+  "synthetic_contract_examples": {
+    "duplicate_direct_id": {
+      "rows_in_source_order": [
+        {"ordinal": 0, "id": 7, "effective_parent": 10},
+        {"ordinal": 1, "id": 10, "effective_parent": -1},
+        {"ordinal": 2, "id": 7, "effective_parent": 11},
+        {"ordinal": 3, "id": 11, "effective_parent": -1}
+      ],
+      "selected_id": 7,
+      "expected_direct_winner_ordinal": 2,
+      "expected_output_map_ids": [7],
+      "expected_ancestor_context_ids": [11]
+    },
+    "copy_only_selected_id": {
+      "direct_ids": [10],
+      "copy_new_ids": [7],
+      "selected_id": 7,
+      "expected_result": "navigation_inventory_selected_map_copy_only"
+    },
+    "missing_active_parent": {
+      "direct_rows": [{"id": 7, "effective_parent": 10}],
+      "selected_id": 7,
+      "expected_result": "navigation_inventory_active_ancestor_unavailable"
+    }
+  },
+  "error_codes": {
+    "copy_only_selection": "navigation_inventory_selected_map_copy_only",
+    "missing_active_parent": "navigation_inventory_active_ancestor_unavailable",
+    "missing_selected_inventory": "navigation_inventory_missing_ancestor_inventory",
+    "missing_active_ancestor_inventory": "navigation_inventory_missing_active_ancestor_inventory",
+    "parent_cycle": "navigation_inventory_parent_cycle",
+    "parent_depth": "navigation_inventory_parent_depth",
+    "policy_budget": "navigation_inventory_policy_limit"
+  },
+  "non_claims": [
+    "no CLI profile or Map-partial v21 admission",
+    "no complete-world coverage claim",
+    "no native parity claim",
+    "no RustyCore runtime acceptance claim",
+    "no Windows or release authorization"
+  ],
+  "validation_requirements": [
+    "synthetic reader coverage for admitted and omitted sections, exact range failures, direct-row order, duplicates, and copy metadata",
+    "synthetic selected-plan coverage for last-direct-ID-wins, copy-only rejection, effective-parent closure, missing rows and inventories, cycles, depth, and cumulative work/heap limits",
+    "synthetic pipeline coverage for selected output ownership, ancestor-only context, pre-read rejection outside the selected tile, source verification, and downward work/heap limits",
+    "contract checks that keep caller source completeness/authentication obligations and the non-claims aligned with the public API"
+  ]
+}

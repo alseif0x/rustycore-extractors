@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: add explicit 70450 navigation availability reader.
 //! Explicit build-70374/70425 available-section projections. This module performs no
 //! acquisition or cryptographic authentication. Its caller must bind a stable,
 //! authenticated source whose `range` never returns synthesized hole bytes.
@@ -8,6 +9,7 @@ use crate::{RecordError, records::available_sections, terrain_sources as source}
 pub const PROFILE: &str = "wowdbdefs-70374-available-sections-disabled-v1";
 pub const PROFILE_70425: &str = "wowdbdefs-70425-available-sections-disabled-v1";
 pub const PROFILE_70450: &str = "wowdbdefs-70450-available-sections-disabled-v1";
+pub const PROFILE_NAVIGATION_70450: &str = "wowdbdefs-70450-available-navigation-v1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Unavailable;
@@ -234,6 +236,15 @@ pub fn read_gameobject_display_info_70450(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::GameObjectFields>, RecordError> {
     available_sections::read_gameobjects(input, available_sections::Target::Build70450)
+}
+
+/// Explicit 70450 navigation Map projection. Direct rows, duplicate order,
+/// copy pairs and per-section availability are retained without applying
+/// copies or claiming whole-file coverage.
+pub fn read_navigation_maps_70450(
+    input: &impl Source,
+) -> Result<AvailableRecords<source::NavigationMapFields>, RecordError> {
+    available_sections::read_navigation_maps_70450(input)
 }
 
 #[cfg(test)]

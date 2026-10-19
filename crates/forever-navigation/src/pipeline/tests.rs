@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: source-to-final selection, lifecycle and bounded failures.
+// Modified 2026-10-19: test selected available-plan pipeline entry.
 use super::*;
 use crate::{
     inventory::{Input, Options},
     tilebuilder::Coordinate,
 };
-use forever_db2::terrain_sources::{DirectRecord, NavigationMapFields};
+use forever_db2::{
+    availability::{SectionCoverage, SectionState},
+    terrain_sources::{DirectRecord, NavigationMapFields},
+};
+use forever_terrain::{
+    height::{self, HeightSection},
+    maps::{self, AreaSection, MapSections},
+};
 #[derive(Default)]
 struct Terrain {
     bytes: Option<Vec<u8>>,
@@ -98,6 +106,52 @@ fn plan(terrain: bool, collision: bool) -> inventory::Plan {
     )
     .unwrap()
 }
+#[cfg(target_os = "linux")]
+fn available_plan(terrain: bool, collision: bool) -> inventory::AvailableSelectedPlan {
+    let rows = [DirectRecord {
+        id: 1,
+        fields: NavigationMapFields {
+            map_type: 0,
+            instance_type: 0,
+            parent_map_id: -1,
+            cosmetic_parent_map_id: -1,
+            flags: 0,
+        },
+    }];
+    let mut bytes = vec![b'0'; 4108];
+    bytes[..4].copy_from_slice(b"MAPS");
+    bytes[4..8].copy_from_slice(&10u32.to_le_bytes());
+    bytes[8..12].copy_from_slice(&70450u32.to_le_bytes());
+    bytes[4107] = b'1';
+    let mut inputs = Vec::new();
+    if terrain {
+        inputs.push(Input::Terrain {
+            map_id: 1,
+            bytes: &bytes,
+        });
+    }
+    if collision {
+        inputs.push(Input::CollisionTile {
+            map_id: 1,
+            tile: request().tile.tile,
+        });
+    }
+    let sections = [SectionCoverage {
+        ordinal: 0,
+        declared_records: 1,
+        declared_copies: 0,
+        state: SectionState::Admitted,
+    }];
+    inventory::AvailableSelectedPlan::from_available_rows_for_test(
+        &rows,
+        &[],
+        &sections,
+        &inputs,
+        1,
+        Default::default(),
+    )
+    .unwrap()
+}
 fn collision(p: &inventory::Plan) -> store::StaticStore<Absent> {
     store::StaticStore::new(
         Absent,
@@ -107,6 +161,44 @@ fn collision(p: &inventory::Plan) -> store::StaticStore<Absent> {
             ..Default::default()
         },
         Default::default(),
+    )
+    .unwrap()
+}
+#[cfg(target_os = "linux")]
+fn available_collision(p: &inventory::AvailableSelectedPlan) -> store::StaticStore<Absent> {
+    store::StaticStore::new(
+        Absent,
+        &p.parent_rows().collect::<Vec<_>>(),
+        store::Options {
+            load_path_only_models: true,
+            ..Default::default()
+        },
+        Default::default(),
+    )
+    .unwrap()
+}
+#[cfg(target_os = "linux")]
+fn flat_map_70450() -> Vec<u8> {
+    let v9 = vec![0.0f32.to_bits(); height::V9_COUNT];
+    let v8 = vec![0.0f32.to_bits(); height::V8_COUNT];
+    let height = HeightSection::from_bits(
+        &v9,
+        &v8,
+        height::Options::default(),
+        None,
+        height::MAX_SECTION_BYTES,
+    )
+    .unwrap();
+    let area = AreaSection::from_ids(&[42; 256]);
+    maps::assemble_70450(
+        70450,
+        MapSections {
+            area: &area,
+            height: &height,
+            liquid: None,
+            holes: None,
+        },
+        maps::MAX_MAP_BYTES,
     )
     .unwrap()
 }
@@ -348,6 +440,132 @@ fn parent_mismatch_rejects_before_io() {
     ));
     assert_eq!(t.reads, 0);
     assert_eq!(t.verifies, 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn available_selected_pipeline_runs_its_output_tile() {
+    let p = available_plan(true, false);
+    let mut terrain = Terrain {
+        bytes: Some(flat_map_70450()),
+        ..Default::default()
+    };
+    let mut collision = available_collision(&p);
+    let result = run_available_selected(
+        &p,
+        &mut Sources {
+            terrain: &mut terrain,
+            collision: &mut collision,
+        },
+        models::LiquidTypes::new(&[]).unwrap(),
+        &[],
+        request(),
+        Limits::default(),
+    )
+    .unwrap();
+    assert!(matches!(
+        result,
+        Outcome::Empty {
+            reason: EmptyReason::NoVertices,
+            ..
+        }
+    ));
+    assert_eq!(terrain.reads, 1);
+    assert_eq!(terrain.verifies, 4);
+    assert_eq!(collision.stats().tiles, 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn available_selected_pipeline_rejects_requests_outside_its_output() {
+    let p = available_plan(true, false);
+    let mut terrain = Terrain::default();
+    let mut collision = available_collision(&p);
+    let mut wrong_map = request();
+    wrong_map.tile.map_id = 2;
+    assert!(matches!(
+        run_available_selected(
+            &p,
+            &mut Sources {
+                terrain: &mut terrain,
+                collision: &mut collision,
+            },
+            models::LiquidTypes::new(&[]).unwrap(),
+            &[],
+            wrong_map,
+            Limits::default(),
+        ),
+        Err(Error::Selection)
+    ));
+    let mut wrong_tile = request();
+    wrong_tile.tile.tile.row = 1;
+    assert!(matches!(
+        run_available_selected(
+            &p,
+            &mut Sources {
+                terrain: &mut terrain,
+                collision: &mut collision,
+            },
+            models::LiquidTypes::new(&[]).unwrap(),
+            &[],
+            wrong_tile,
+            Limits::default(),
+        ),
+        Err(Error::Selection)
+    ));
+    assert_eq!(terrain.reads, 0);
+    assert_eq!(terrain.verifies, 0);
+    assert_eq!(collision.stats().maps, 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn available_selected_pipeline_keeps_limits_before_io() {
+    let p = available_plan(true, false);
+    let mut terrain = Terrain::default();
+    let mut collision = available_collision(&p);
+    let mut limits = Limits::default();
+    limits.heap_bytes += 1;
+    assert!(matches!(
+        run_available_selected(
+            &p,
+            &mut Sources {
+                terrain: &mut terrain,
+                collision: &mut collision,
+            },
+            models::LiquidTypes::new(&[]).unwrap(),
+            &[],
+            request(),
+            limits,
+        ),
+        Err(Error::Limit)
+    ));
+    assert_eq!(terrain.reads, 0);
+    assert_eq!(terrain.verifies, 0);
+    assert_eq!(collision.stats().maps, 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn available_selected_pipeline_keeps_promised_collision_strict() {
+    let p = available_plan(false, true);
+    let mut terrain = Terrain::default();
+    let mut collision = available_collision(&p);
+    assert!(matches!(
+        run_available_selected(
+            &p,
+            &mut Sources {
+                terrain: &mut terrain,
+                collision: &mut collision,
+            },
+            models::LiquidTypes::new(&[]).unwrap(),
+            &[],
+            request(),
+            Limits::default(),
+        ),
+        Err(Error::Store(store::Error::MissingTree))
+    ));
+    assert_eq!(collision.stats().tiles, 0);
 }
 
 #[cfg(target_os = "linux")]

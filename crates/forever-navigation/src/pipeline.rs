@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-11: bounded single-tile source-to-final navigation composition.
+// Modified 2026-10-19: add selected available-plan pipeline entry.
 //! Executes terrain ancestor lookup, checked VMap selection, compaction,
 //! connection selection, all 625 subtiles and the original fresh-navmesh save.
 //! Returns an owned complete MMap or an explicit empty outcome. Publication,
@@ -164,13 +165,64 @@ pub fn run<T: terrain::load::Source, V: store::Source>(
     types: models::LiquidTypes<'_>,
     connections: &[offmesh::Source],
     request: Request,
+    limits: Limits,
+) -> Result<Outcome, Error> {
+    run_inner(plan, None, sources, types, connections, request, limits)
+}
+
+/// Runs one output tile from a plan built by the Linux 70450 selected-map
+/// available-section owner. Only its single output map is eligible; ancestors
+/// remain available to terrain and collision readers as context.
+#[cfg(target_os = "linux")]
+pub fn run_available_selected<T: terrain::load::Source, V: store::Source>(
+    plan: &inventory::AvailableSelectedPlan,
+    sources: &mut Sources<'_, T, V>,
+    types: models::LiquidTypes<'_>,
+    connections: &[offmesh::Source],
+    request: Request,
+    limits: Limits,
+) -> Result<Outcome, Error> {
+    limits.validate()?;
+    let selected_map_id = selected_output_map(plan.maps())?;
+    run_inner(
+        plan.inventory_plan(),
+        Some(selected_map_id),
+        sources,
+        types,
+        connections,
+        request,
+        limits,
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn selected_output_map(maps: &[inventory::Map]) -> Result<u32, Error> {
+    let mut outputs = maps.iter().filter(|map| map.is_output());
+    let selected = outputs.next().ok_or(Error::Selection)?.map_id();
+    if outputs.next().is_some() {
+        return Err(Error::Selection);
+    }
+    Ok(selected)
+}
+
+fn run_inner<T: terrain::load::Source, V: store::Source>(
+    plan: &inventory::Plan,
+    selected_map_id: Option<u32>,
+    sources: &mut Sources<'_, T, V>,
+    types: models::LiquidTypes<'_>,
+    connections: &[offmesh::Source],
+    request: Request,
     mut limits: Limits,
 ) -> Result<Outcome, Error> {
     limits.validate()?;
     let r = request.tile;
     let map = plan
         .map(r.map_id)
-        .filter(|m| m.is_output() && m.contains(r.tile))
+        .filter(|m| {
+            m.is_output()
+                && selected_map_id.is_none_or(|selected| selected == m.map_id())
+                && m.contains(r.tile)
+        })
         .ok_or(Error::Selection)?;
     let params = map.params().ok_or(Error::Selection)?;
     tilebuilder::Config::new(r, &Mesh::default()).map_err(Error::Builder)?;

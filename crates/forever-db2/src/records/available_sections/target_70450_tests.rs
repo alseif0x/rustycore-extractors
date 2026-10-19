@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: add synthetic navigation projection controls.
 //! Authored 2026-10-18: synthetic70450 sections; no client inputs.
 use super::*;
+use crate::terrain_sources::RecordCopy;
 
 fn table70450(name: &str) -> CharacterTable {
     let table = CharacterTable::from_catalog_id(crate::catalog::WOWDBDEFS_70450_CATALOG_ID, name)
@@ -117,6 +119,98 @@ fn available70450_preserves_direct_godi_order_and_vmap_copy_policy() {
         [7, 8]
     );
     assert_eq!(vmap.direct_records().len(), 1);
+}
+
+#[test]
+fn available70450_navigation_preserves_order_signed_fields_and_copy_metadata() {
+    assert_eq!(
+        available::PROFILE_NAVIGATION_70450,
+        "wowdbdefs-70450-available-navigation-v1"
+    );
+    let mut spec = spec70450("Map", &[7, 7, 9], 1);
+    vmap_short(&mut spec, 0, 13, -1);
+    vmap_short(&mut spec, 0, 14, 5);
+    vmap_short(&mut spec, 1, 13, i16::MIN);
+    vmap_short(&mut spec, 1, 14, 0);
+    vmap_short(&mut spec, 2, 13, 7);
+    vmap_short(&mut spec, 2, 14, -2);
+    let map_type_at = field_offset(&spec, 7) as usize / 8;
+    let instance_at = field_offset(&spec, 8) as usize / 8;
+    spec.records[1][map_type_at] = 3;
+    spec.records[1][instance_at] = 0x80;
+    spec.copies = vec![(20, 7), (21, 20)];
+    let input = fixture70450("Map", vec![spec], &[false]);
+
+    let available = available::read_navigation_maps_70450(&input).unwrap();
+    assert_eq!(
+        available
+            .direct_records()
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+        [7, 7, 9]
+    );
+    assert_eq!(
+        available.direct_records()[1].fields,
+        crate::terrain_sources::NavigationMapFields {
+            map_type: 3,
+            instance_type: i8::MIN,
+            parent_map_id: i16::MIN,
+            cosmetic_parent_map_id: 0,
+            flags: 0,
+        }
+    );
+    assert_eq!(available.direct_records()[0].fields.effective_parent(), 5);
+    assert_eq!(available.direct_records()[2].fields.effective_parent(), 7);
+    assert_eq!(
+        available.copies(),
+        [
+            RecordCopy {
+                new_id: 20,
+                source_id: 7,
+            },
+            RecordCopy {
+                new_id: 21,
+                source_id: 20,
+            },
+        ]
+    );
+    assert_eq!(available.sections()[0].declared_records, 3);
+    assert_eq!(available.sections()[0].declared_copies, 2);
+    assert!(available.all_sections_admitted());
+}
+
+#[test]
+fn available70450_navigation_omits_unknown_tact_payload_and_keeps_coverage() {
+    let mut omitted = spec70450("Map", &[5, 6], 0);
+    omitted.copies = vec![(20, 5)];
+    let admitted = spec70450("Map", &[9], 1);
+    let mut input = fixture70450("Map", vec![omitted, admitted], &[true, false]);
+    let hole = payload(&input, 0);
+    input.holes.push(hole.clone());
+
+    let available = available::read_navigation_maps_70450(&input).unwrap();
+    assert_eq!(
+        available
+            .direct_records()
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+        [9]
+    );
+    assert_eq!(available.copies().len(), 0);
+    assert_eq!(available.sections()[0].declared_records, 2);
+    assert_eq!(available.sections()[0].declared_copies, 1);
+    assert_eq!(available.sections()[0].state, SectionState::UnknownTact);
+    assert_eq!(available.sections()[1].state, SectionState::Admitted);
+    assert!(!available.all_sections_admitted());
+    assert!(
+        input
+            .reads
+            .borrow()
+            .iter()
+            .all(|range| range.end <= hole.start || range.start >= hole.end)
+    );
 }
 
 #[test]

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: cover selected available-section plan behavior.
 // Authored 2026-10-11: synthetic directory inventories and source graphs.
 use super::*;
 fn row(id: u32, parent: i16, cosmetic: i16) -> DirectRecord<NavigationMapFields> {
@@ -29,6 +30,29 @@ fn plan(
     options: Options,
 ) -> Result<Plan, Error> {
     Plan::from_rows(rows, inputs, 70205, options, Limits::default())
+}
+
+fn selected_plan(
+    rows: &[DirectRecord<NavigationMapFields>],
+    copies: &[RecordCopy],
+    inputs: &[Input<'_>],
+    selected: u32,
+) -> Result<AvailableSelectedPlan, Error> {
+    let sections = [
+        SectionCoverage {
+            ordinal: 0,
+            declared_records: rows.len() as u32,
+            declared_copies: copies.len() as u32,
+            state: forever_db2::availability::SectionState::Admitted,
+        },
+        SectionCoverage {
+            ordinal: 1,
+            declared_records: 3,
+            declared_copies: 1,
+            state: forever_db2::availability::SectionState::UnknownTact,
+        },
+    ];
+    from_available_rows(rows, copies, &sections, inputs, selected, Limits::default())
 }
 #[test]
 fn union_is_unique_sorted_and_keeps_empty_entries() {
@@ -253,6 +277,342 @@ fn missing_and_empty_ancestor_inventory_are_distinct_errors() {
     ] {
         assert!(matches!(plan(&rows,&inputs,Options::default()),Err(e) if e==error));
     }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_keeps_coverage_and_only_last_direct_parent_closure() {
+    let rows = [
+        row(1, -1, -1),
+        row(5, -1, 99),  // overwritten duplicate: its invalid parent is inactive.
+        row(3, 999, -1), // outside the selected closure and not validated as an ancestor.
+        row(5, -1, 1),
+        row(9, -1, 5), // ParentMapID < 0 activates signed effective cosmetic parent 5.
+    ];
+    let copies = [
+        RecordCopy {
+            new_id: 50,
+            source_id: 1,
+        },
+        RecordCopy {
+            new_id: 51,
+            source_id: 50,
+        },
+    ];
+    let root_tiles = list(70450, &[(0, 0)]);
+    let parent_tiles = list(70450, &[(1, 1)]);
+    let selected_tiles = list(70450, &[(2, 2)]);
+    let unrelated_tiles = list(70450, &[(9, 9)]);
+    let inputs = [
+        Input::Terrain {
+            map_id: 9,
+            bytes: &selected_tiles,
+        },
+        Input::Terrain {
+            map_id: 1,
+            bytes: &root_tiles,
+        },
+        Input::Terrain {
+            map_id: 3,
+            bytes: &unrelated_tiles,
+        },
+        Input::Terrain {
+            map_id: 404,
+            bytes: b"unrelated malformed inventory is outside the selected closure",
+        },
+        Input::Terrain {
+            map_id: 5,
+            bytes: &parent_tiles,
+        },
+    ];
+
+    let selected = selected_plan(&rows, &copies, &inputs, 9).unwrap();
+    assert_eq!(selected.profile(), SELECTED_AVAILABLE_70450_LINUX_PROFILE);
+    assert_eq!(selected.build(), 70450);
+    assert_eq!(selected.source_direct_rows(), rows.len());
+    assert_eq!(selected.source_copy_pairs(), copies.len());
+    assert_eq!(selected.sections().len(), 2);
+    assert!(!selected.all_sections_admitted());
+    assert_eq!(
+        selected.maps().iter().map(Map::map_id).collect::<Vec<_>>(),
+        [1, 5, 9]
+    );
+    assert_eq!(selected.map(9).unwrap().root_map_id(), 1);
+    assert!(selected.map(9).unwrap().is_output());
+    assert!(!selected.map(1).unwrap().is_output());
+    assert!(!selected.map(5).unwrap().is_output());
+    assert_eq!(
+        selected.ancestors(9).unwrap().collect::<Vec<_>>(),
+        [9, 5, 1]
+    );
+    assert_eq!(
+        selected
+            .parent_rows()
+            .map(|parent| (parent.map_id, parent.parent))
+            .collect::<Vec<_>>(),
+        [(1, None), (5, Some(1)), (9, Some(5))]
+    );
+    assert_eq!(selected.map(9).unwrap().tile_count(), 1);
+    assert!(
+        selected
+            .map(9)
+            .unwrap()
+            .contains(Coordinate { row: 2, column: 2 })
+    );
+    assert!(
+        !selected
+            .map(9)
+            .unwrap()
+            .contains(Coordinate { row: 9, column: 9 })
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_rejects_copy_only_selection_and_parent_sources() {
+    let root = [row(1, -1, -1)];
+    let list = list(70450, &[(0, 0)]);
+    let selected_copy = [RecordCopy {
+        new_id: 9,
+        source_id: 1,
+    }];
+    assert_eq!(
+        selected_plan(
+            &root,
+            &selected_copy,
+            &[Input::Terrain {
+                map_id: 1,
+                bytes: &list,
+            }],
+            9,
+        )
+        .err(),
+        Some(Error::SelectedCopyOnly)
+    );
+
+    let child = [row(9, 5, -1)];
+    let copied_parent = [RecordCopy {
+        new_id: 5,
+        source_id: 9,
+    }];
+    assert_eq!(
+        selected_plan(
+            &child,
+            &copied_parent,
+            &[Input::Terrain {
+                map_id: 9,
+                bytes: &list,
+            }],
+            9,
+        )
+        .err(),
+        Some(Error::UnavailableAncestor)
+    );
+    assert_eq!(
+        selected_plan(&root, &[], &[], 88).err(),
+        Some(Error::UnknownMap)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_requires_inventory_for_every_active_ancestor() {
+    let rows = [row(1, -1, -1), row(5, 1, -1), row(9, 5, -1)];
+    let root_tiles = list(70450, &[(0, 0)]);
+    let selected_tiles = list(70450, &[(1, 1)]);
+    assert_eq!(
+        selected_plan(
+            &rows,
+            &[],
+            &[
+                Input::Terrain {
+                    map_id: 1,
+                    bytes: &root_tiles,
+                },
+                Input::Terrain {
+                    map_id: 9,
+                    bytes: &selected_tiles,
+                },
+            ],
+            9,
+        )
+        .err(),
+        Some(Error::MissingAncestorInventory)
+    );
+    assert_eq!(
+        selected_plan(
+            &rows,
+            &[],
+            &[Input::Terrain {
+                map_id: 9,
+                bytes: &selected_tiles,
+            }],
+            9,
+        )
+        .err(),
+        Some(Error::MissingAncestorInventory)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_checks_cycle_depth_coordinates_and_root_params() {
+    let tile_list = list(70450, &[(0, 0)]);
+    assert_eq!(
+        selected_plan(
+            &[row(1, 2, -1), row(2, 1, -1)],
+            &[],
+            &[Input::Terrain {
+                map_id: 1,
+                bytes: &tile_list,
+            }],
+            1,
+        )
+        .err(),
+        Some(Error::Cycle)
+    );
+    let chain = [row(1, -1, -1), row(5, 1, -1), row(9, 5, -1)];
+    let shallow = Limits {
+        depth: 2,
+        ..Limits::default()
+    };
+    assert_eq!(
+        from_available_rows(
+            &chain,
+            &[],
+            &[],
+            &[
+                Input::Terrain {
+                    map_id: 1,
+                    bytes: &tile_list,
+                },
+                Input::Terrain {
+                    map_id: 5,
+                    bytes: &tile_list,
+                },
+                Input::Terrain {
+                    map_id: 9,
+                    bytes: &tile_list,
+                },
+            ],
+            9,
+            shallow,
+        )
+        .err(),
+        Some(Error::Depth)
+    );
+    let bad_parent = [row(9, -1, -2)];
+    assert_eq!(
+        selected_plan(
+            &bad_parent,
+            &[],
+            &[Input::Terrain {
+                map_id: 9,
+                bytes: &tile_list,
+            }],
+            9,
+        )
+        .err(),
+        Some(Error::Parent)
+    );
+    assert_eq!(
+        selected_plan(
+            &[row(9, -1, -1)],
+            &[],
+            &[Input::CollisionTile {
+                map_id: 9,
+                tile: Coordinate { row: 64, column: 0 },
+            }],
+            9,
+        )
+        .err(),
+        Some(Error::Coordinates)
+    );
+    assert_eq!(
+        selected_plan(
+            &[row(1, -1, -1), row(9, 1, -1)],
+            &[],
+            &[
+                Input::CollisionMap { map_id: 1 },
+                Input::Terrain {
+                    map_id: 9,
+                    bytes: &tile_list,
+                },
+            ],
+            9,
+        )
+        .err(),
+        Some(Error::EmptyAncestor)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_charges_preprocessing_and_planning_to_one_work_budget() {
+    let rows = [row(9, -1, -1)];
+    let tiles = list(70450, &[(0, 0)]);
+    let inputs = [Input::Terrain {
+        map_id: 9,
+        bytes: &tiles,
+    }];
+    let complete = selected_plan(&rows, &[], &inputs, 9).unwrap();
+    let planning_only = Plan::from_rows(
+        &rows,
+        &inputs,
+        70450,
+        Options {
+            map: Some(9),
+            ..Options::default()
+        },
+        Limits::default(),
+    )
+    .unwrap();
+    let planning_work = planning_only.statistics().work;
+    let preprocessing_work = complete
+        .statistics()
+        .work
+        .checked_sub(planning_work)
+        .unwrap();
+    assert!(planning_work > 0);
+    assert!(preprocessing_work > 0);
+
+    // Either phase fits this budget by itself, but their combined work does not.
+    let split_budget = Limits {
+        work: planning_work.max(preprocessing_work),
+        ..Limits::default()
+    };
+    assert_eq!(
+        from_available_rows(&rows, &[], &[], &inputs, 9, split_budget).err(),
+        Some(Error::Limit)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn selected_available_plan_preflights_section_coverage_heap() {
+    let rows = [row(9, -1, -1)];
+    let tiles = list(70450, &[(0, 0)]);
+    let inputs = [Input::Terrain {
+        map_id: 9,
+        bytes: &tiles,
+    }];
+    let sections = vec![
+        SectionCoverage {
+            ordinal: 0,
+            declared_records: 0,
+            declared_copies: 0,
+            state: forever_db2::availability::SectionState::Admitted,
+        };
+        8192
+    ];
+    let small_heap = Limits {
+        heap_bytes: 4096,
+        ..Limits::default()
+    };
+    assert_eq!(
+        from_available_rows(&rows, &[], &sections, &inputs, 9, small_heap).err(),
+        Some(Error::Limit)
+    );
 }
 #[test]
 fn graph_rejects_cycles_missing_parents_invalid_sentinels_and_depth() {

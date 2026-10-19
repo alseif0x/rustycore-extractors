@@ -7,6 +7,35 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### Linux build-70450 selected navigation library — 2026-10-19
+
+`forever_db2::availability::read_navigation_maps_70450`,
+`inventory::AvailableSelectedPlan::from_available_70450`, and
+`pipeline::run_available_selected` now provide the explicitly partial-capable
+library path documented in `docs/forever-navigation.md` and
+`contracts/forever-selected-navigation-contract-v1.json`. The reader retains
+section coverage, direct-row order, and copy metadata; the selected owner uses
+direct rows and keeps the active-parent closure attached to a single-map
+output. The pipeline reuses the established single-tile execution path.
+
+Synthetic/software validation closes at DB2 458 passed / 0 failed / 1 ignored
+(serial-03, DB2 portion), navigation 329 passed / 0 failed / 20 ignored
+(navigation-serial-03), all-target Clippy with `-D warnings` for both crates,
+scoped formatting, diff checks, and 430/430 repository contracts. The Windows
+navigation source guard still reconstructs its historical inventory baseline
+byte-for-byte by inverting the separately recorded, exact Linux-only source
+delta; existing Windows pins and deferred Windows acceptance remain unchanged.
+
+Initial failures and their corrections remain recorded: a missing test import,
+a synthetic fixture expectation, selecting the legacy assembler instead of
+`assemble_70450` (corrected without retagging), a verification-count expectation
+aligned to the existing four-check flow, Clippy style findings, and the
+historical Windows inventory hash check closed by the reversible delta above.
+This closes the selected navigation library's current synthetic/software
+checkpoint only. There is no real MMap result or v23 CLI profile yet; complete
+world coverage, native parity, RustyCore runtime acceptance, Windows support,
+and release gates remain open.
+
 
 ### GNU15 complete no-collision WMO correction — 2026-10-17
 

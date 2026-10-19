@@ -176,6 +176,16 @@
     "current_sha256": "3953e798ee1b22a1d9bca7646ed9ff2366fe5ab25651af05c6aea447ed4125fd",
     "scope": "Linux Plan admission adds only build 70450; builds 70170 and 70205 retain their prior gate and non-Linux build-70450 admission remains rejected"
   },
+  "reviewed_linux_selected_navigation_inventory_delta": {
+    "path": "crates/forever-navigation/src/inventory.rs",
+    "baseline_revision": "c8a86b289c463fca7b9dd5ab6d22c275f75faa81",
+    "baseline_sha256": "3953e798ee1b22a1d9bca7646ed9ff2366fe5ab25651af05c6aea447ed4125fd",
+    "candidate_sha256": "1973ea452608f49bbc7aa3cba8910d4282cbdc9e5bf9584836d791f68edf5389",
+    "fixture": "tests/contracts/fixtures/forever-selected-navigation-v1/inventory-linux-delta.json",
+    "fixture_sha256": "584bc10bc99d12b3add70657c069cb348a0fc867a068a028cd731e1ad9199752",
+    "scope": "Linux build-70450 selected partial-coverage navigation owner and cumulative preprocessing accounting; no Windows behavior or acceptance change",
+    "exact_inverse_required": true
+  },
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",
