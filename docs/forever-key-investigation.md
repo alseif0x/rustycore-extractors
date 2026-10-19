@@ -559,3 +559,163 @@ per-run addresses or the 69-control result as acceptance for another build.
 
 Full Linux extraction, complete geometry/world resources and RustyCore runtime
 acceptance remain open. REA investigation does not waive those gates.
+
+### Cache writers, code boundaries and the raw-import ABI
+
+The next directed executable-page scan used separate typed seeds for the
+bucket count, bucket-array pointer and neighboring cache headers. It retained
+42 instruction references in the readable/executable coverage. Source `.pdata`
+entries bounded five additional captures (318, 257, 1,315, 1,450 and 399 bytes).
+All five byte ranges were fully readable/executable and passed the retained
+identity/header guards. REA/Ghidra returned evidence for each in 9–12 seconds.
+The corresponding aggregate receipts are
+`reports/cache-function-carve-<rva>-00.json` and
+`reports/rea-carved-safecache<rva>00.json` in the private laboratory.
+
+The 318-byte range writes the observed cache node fields; the 257-byte range
+checks state 2 and a 16-byte value length before copying the value. These are
+code observations, not an observed delivery of either missing key. In
+particular, no incoming network-handler role has been established for the
+writer: a local cache loader is still a possibility.
+
+Two larger captures produce bad-instruction/control-flow warnings and depend
+on registers initialized outside their selected entry. A `.pdata` range is
+not sufficient proof that an isolated artifact contains an entire logical
+function. Follow its `UNWIND_INFO`, including supported chained records, and
+inspect incoming control-flow references before assigning a complete role.
+Retain the original warnings; do not hide missing ranges with zero-filled
+client-code claims.
+
+There is also a reproducible ABI limitation in the original raw imports.
+REA 6.7.0's `src/ghidra/GhidraRawBinaryLanguage.ts` selects
+`x86:LE:64:default` with compiler specification `gcc` for `x86_64` raw binary.
+This mapping was checked against the retained
+[official REA source](https://github.com/morluto/rea/blob/a80575c73652d8b43d7340654a48bd20a4eb966d/src/ghidra/GhidraRawBinaryLanguage.ts).
+That generic convention does not establish the Windows x64 parameter mapping
+of this PE client. A returned `__stdcall` label is not an independent ABI
+attestation. Preserve addresses, field offsets and positive-control evidence,
+but verify parameter assignments under the Windows compiler specification.
+Any generated PE carrier used for that comparison must be labeled synthetic,
+retain the exact captured-code hash/range and identify generated headers and
+padding separately. It is a private analysis artifact, never a reconstructed
+complete client or an executable to launch.
+
+A separate helper sent only bounded `WM_NULL` messages to the authenticated
+visible WoW and Battle.net windows. Both responded (33 ms and 1 ms). The
+reviewed result is `reports/windows-message-responsiveness-reviewed-00.json`.
+This establishes window-dispatcher responsiveness at that observation; it
+does not establish rendered gameplay, a world session, successful account
+authentication or the cause of any earlier injection failure.
+
+### Windows-ABI comparison and completed watch
+
+The two non-chained entries were reanalyzed using private synthetic PE32+
+carriers and the explicit REA settings below. The original function bytes,
+runtime addresses and hashes were preserved; generated carrier headers and
+alignment padding were separately declared. Neither carrier was executed.
+
+```text
+REA_GHIDRA_LANGUAGE_ID=x86:LE:64:default
+REA_GHIDRA_COMPILER_SPEC_ID=windows
+```
+
+The local Ghidra installation provides `x86-64-win.cspec`. REA returned
+successful evidence with the Windows analysis profile and `__fastcall`
+prototypes in approximately 12 seconds per function. The writer at RVA
+`0x1b8b9d0` now has a coherent one-input prototype: two reads of 8 and 16
+bytes into local buffers, then a lookup/insert and a state-2 value assignment.
+The getter at RVA `0x1b8bb10` has three inferred arguments: lookup pointer,
+output buffer and output size. Its available branch copies 16 bytes from
+node offset `0x1c`; unavailable states follow a separate interface path.
+External callees remain opaque, so the 8/16-byte reads do not by themselves
+establish file, packet or server origin. Types and names remain inferred.
+
+The authored tools are `make_windows_abi_carrier.py` and
+`R/run_windows_carrier_rea.py` in the current laboratory. The first consumes
+the **full private carve manifest**, not the shorter aggregate receipt. The
+second consumes the new carrier receipt. Each invocation requires a fresh
+tag, verifies hashes/permissions and retains the full dossier privately.
+Use `rea function <carrier> <entry> --provider ghidra` without the raw-binary
+options; the explicit language/compiler settings apply to the PE import.
+Original raw-import evidence remains retained with its original limitation.
+
+The bounded provenance scan subsequently confirmed `CHAININFO` for the two
+larger suspect entries and found one direct getter call plus two callback
+address references. It examined 3,682,304 mapped executable bytes and
+16,426,976 mapped read-only data bytes with stable guards and no cap hit.
+The scan is linear decoding of selected mappings, not complete image control
+flow. Its 2,382 bad decodes remain explicit. No aligned writer/getter pointer
+was found in that selected read-only data coverage; this is not global
+absence. The exact result is `reports/cache-function-provenance-00.json`.
+
+The twenty-minute cache watch has now ended normally at its deadline:
+**220 complete walks, one unchanged aggregate state, zero candidate rounds**.
+All walks retained the 69 exact controls and both requested entries in state
+0. Its final result is `deadline_no_candidates`, not authenticated recovery.
+The owned unit is inactive. Do not describe the observer as still running,
+and do not renew an unchanged observation without a meaningful new input.
+
+A passive selected-window OCR attempt also retained the actual UMU wrapper
+class (`steam_app_default.steam_app_default`), exact game PID and stable
+window identity. It produced no allowlisted session labels or public error
+codes. This inability to read a session state does not prove a disconnected
+client or a hung renderer. The operator's world/session confirmation remains
+unanswered at this checkpoint.
+
+Following a secondary unwind entry back to its primary is only half of the
+boundary check: other entries may also chain to that primary, including a
+later epilogue. The first three contiguous registration captures formed a
+694-byte region and still produced a truncated-control-flow warning. A
+bounded source-metadata census in the declared nearby RVA interval found two
+additional adjacent members of the same unwind family. Retain the 694-byte
+evidence as incomplete and authenticate each additional capture separately.
+Do not change the old receipt into a complete-function claim.
+
+The getter's non-null global interface was also checked without calling it.
+A bounded pointer walk found an object, an in-image vtable and an in-image
+code target for slot `+8`. The code target had no source `.pdata` entry. A
+separate maximum-64-byte leaf sample stopped **before reading code** because
+the complete selected range was not mapped readable/executable. No code
+artifact or instruction classification was produced by that attempt. Its
+early-exit post-guard fields are unobserved, not proof that the process or
+source changed. These results establish neither a true/false interface return
+value nor a connected/world state. Retained aggregate receipts are
+`reports/key-interface-presence-00.json` and
+`reports/interface-leaf-classification-00.json`.
+
+### Verified callback registration matches the public key extension
+
+Five separately authenticated contiguous captures now cover the observed
+registration region from RVA `0x1b8dae0` through `0x1b8de17` (823 bytes).
+Each secondary entry's source `UNWIND_INFO` path was checked against the same
+primary. `make_linked_windows_carrier_v2.py` preserves all five hashes, rejects
+gaps/overlap and declares generated PE metadata separately. The updated
+`R/run_windows_carrier_rea.py` verifies each constituent hash against its
+actual carrier byte range before analysis. Both older receipts remain intact.
+
+REA/Ghidra returned the expanded Windows-ABI dossier in 12.133 seconds:
+`ev_9de623a2e790ecbbe9b089b071d670ce83858dc73ef86d18a862035a7edbda92`.
+This version has a normal return and no truncated-control-flow/bad-instruction
+warning; its overlapping-global-symbol warning remains. This is acceptance
+of the selected analysis region, not an all-image function-family census or
+runtime extraction acceptance. Its receipt is
+`reports/rea-windows-carrier-saferegistration01.json`.
+
+The recovered code registers the exact getter address with another interface
+and places the exact writer address into a callback registry. A separate local
+comparison found that the writer's registry selector equals the public
+`BroadcastText` key-extension tag recognized by the pinned
+[wow.tools.local parser](https://github.com/Marlamin/wow.tools.local/blob/5b2f85db477bd42205fde912ed72b3adadda218a/Controllers/KeyController.cs).
+The match occurs in the selector comparison and store, not just as an
+unattributed nearby literal. The 8-byte lookup / 16-byte value reads also
+match that parser's extension layout. The reviewed comparison is
+`reports/registration-broadcast-extension-comparison-00.json`.
+
+This links the observed runtime cache writer to a known key-extension format
+and gives a concrete delivery path to investigate. It does **not** establish
+that the current client received such an extension, that either missing
+lookup was delivered, or that this account can obtain it on demand. The
+earlier complete retained-cache audit found no recognized extension, and the
+220-round live observation found no candidate. No key value has been
+recovered in this checkpoint. A later candidate still requires the frozen
+full-frame and full-file-CKey CASC authentication before being called usable.
