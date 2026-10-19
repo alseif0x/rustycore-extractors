@@ -4419,8 +4419,11 @@ CLI smoke on the unpacked binary from the verified archive reports `help_rc=0`,
 `inspect_help_rc=2`, `extract_help_rc=2` and `verify_help_rc=2`; `--version`
 returns `product_usage` (there is no version subcommand). The packaged binary is
 the pure Rust `--no-default-features` build; searching it for `CascOpenFile`
-returned zero matches. Real-extraction acceptance is therefore not bound to this
-package; reproducible packaging and real admission are separate gates.
+returned zero matches. The packaged binary is the pure Rust `--no-default-features`
+build; searching it for `CascOpenFile` returned zero matches. It nevertheless
+reads the real client through the Rust local store: a bounded real acceptance
+was executed with exactly this binary, recorded in the entry below. Reproducible
+packaging and full real admission remain separate gates.
 
 On the same HEAD, `python3 -B -m unittest discover -s tests/contracts -p 'test_*.py'`
 reported 423 tests OK, and `python3 -B -m unittest discover -s tests/distribution -p 'test_*.py'`
@@ -4431,3 +4434,50 @@ establish real extraction, runtime acceptance, full-world coverage or publicatio
 authorization; the package remains a local candidate, and encrypted content
 without an available key keeps routes depending on Map, GameObjectDisplayInfo
 and models blocked.
+
+## 2026-10-19: bounded real acceptance with the packaged candidate
+
+Producer: the verified archive from
+`distribution-20261019T125011Z`, unpacked at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/distribution-rebuild-20261019T125321Z/unpacked/bin/forever-extractor`,
+SHA-256 `ad7f115def525125fa20263f29079a723d246574fbac6e2f75a7561358fa6dfc`,
+4,271,224 bytes; source HEAD `4936f3b`, clean tree.
+
+Run directory:
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/packaged-real-v20-20261019T125937Z/`
+(retains `README.txt`, both plans, the four stdout files and both packages).
+
+Profile: forever-product v20, build 70450, locale esES, index contiguous, root
+header-50893-v2, decryption disabled, components `maps`, pack true.
+
+Plan `map:48`: `inspect` rc 0 with `status: admitted` and
+`availability_checked: false`; `extract` rc 0 with
+`status: selected_producers_complete` and a verified package of 2 files / 4,756
+bytes; `verify` rc 0 and `verify-links` rc 0, both `status: verified`.
+`maps/0048.tilelist` is the zero-tilelist case (WDT unavailable, MAIN unknown)
+admitted by the v20 omission policy, so this plan yields no tiles.
+
+Plan `map:0`: `extract` rc 0 with `status: selected_producers_complete` and a
+verified package of 738 files / 57,366,499 bytes; `verify` rc 0 and `verify-links`
+rc 0, both `status: verified`.
+
+Every run reports `whole_client_map_coverage: false` and
+`full_extractor_complete: false`. Each package context carries `producer_sha256`
+equal to the packaged binary hash above, so the real output is bound to the
+reproducible candidate; the two plan hashes are
+`4569cab86a6a0c9960250e5948d04853d64034d3f26b723409fd114c8134844b` (`map:48`)
+and `031b823c2e0c58d32be7e359ba053cb0ec4d065861e3978b7d53173ddc56d2cc`
+(`map:0`).
+
+Parity against the earlier real run produced with the previous candidate
+(`20a567190248dff16724b8ee611b93dac9d3bcf927abdda95ef58b4ec2722ae9`): 737 of
+the 738 artifacts published for map 0 are byte-identical to
+`probe-70450-20261019/terrain-70450/package-v20-esES/maps`; the only differing
+file is `compatible-terrain-coverage-v2.tsv`, which records the selection scope
+(`map:0` versus `all-available-maps`). The `0000.tilelist` is byte-identical.
+
+This is a bounded single-map real read bound to the packaged candidate, not
+full-world coverage, not a complete extraction, not runtime acceptance and not
+publication authorization; encrypted content without an available key keeps the
+strict DB2, collision and navigation routes blocked, and
+`whole_client_map_coverage` stays false.
