@@ -1,0 +1,105 @@
+{
+  "contract": "forever-product-v21",
+  "version": 21,
+  "publication_profile": "Build70450NavigationV1",
+  "builds": [
+    70450
+  ],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify",
+    "verify-links"
+  ],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 57,
+    "components": [
+      "db2",
+      "maps",
+      "vmaps",
+      "mmaps"
+    ],
+    "admitted_70450_component_masks": [
+      1,
+      7,
+      8,
+      16,
+      57
+    ],
+    "decryption": "disabled",
+    "keys": "refused",
+    "storage": "linux-leased-append-disk-world-v1",
+    "collision_budget_fields": [
+      "raw-bytes",
+      "wdt-bytes",
+      "cache-bytes",
+      "placement-bytes",
+      "vmo-bytes",
+      "map-bytes",
+      "output-bytes"
+    ],
+    "required_db2_entries": {
+      "Map": 1349477,
+      "LiquidType": 1371380
+    },
+    "map_domain": {
+      "profile": "map-and-ancestors-v1",
+      "selection": "map:<canonical-u32>",
+      "gameobject_scope": "global-startup-v1",
+      "placement_ids": "selected-closure-serial-ids-v1"
+    },
+    "terrain": "map:<same-map-domain-id>",
+    "navigation": "map:<same-map-domain-id>",
+    "offmesh": {
+      "profile": "inline-f32-bits-v1",
+      "allowed_only_with_navigation": true,
+      "connection_map_id": "must-equal-map-domain-id"
+    },
+    "fixtures": [
+      "navigation-map2.tsv",
+      "navigation-map2-offmesh.tsv"
+    ],
+    "tile_subsets": false
+  },
+  "source_profile": "linux70450-map-domain-navigation-v1",
+  "source_policy": {
+    "map_domain": "The selected Map file is decoded completely and independently through the wowdbdefs-70450-v1 VMap, terrain, and navigation projections. Unknown schemas, encrypted/unavailable bytes, structural errors, and projection disagreement are fatal before package output creation. Availability/partial readers are not used for domain derivation.",
+    "dependencies": "Map and LiquidType are required complete build-specific DB2 inputs. Terrain and VMap products are required for a selected map and its ancestors; missing or unsupported inputs fail closed.",
+    "real_run_requirement": "A real run requires the complete build-70450 Map table, which is currently encrypted under this key-refusing profile, plus the selected terrain and VMap inputs. No keys are accepted; therefore the current real-client run is not runnable.",
+    "terrain_stage_status": "The complete Terrain runner dispatches Map, LiquidMaterial, LiquidObject, and LiquidType through the build-70450 catalogue readers. The synthetic end-to-end extraction exercises these readers and emits MAPS, VMaps, and MMaps; no real client run is claimed.",
+    "real_navigation_evidence": "none",
+    "native_failure_parity": false
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2,
+    "terrain_tile": "maps/<map-min-width4>_<row-width2>_<column-width2>.map",
+    "terrain_tilelist": "maps/<map-min-width4>.tilelist",
+    "collision_tree": "vmaps/<map-min-width4>/<map-min-width4>.vmtree",
+    "navigation_global": "mmaps/<map-min-width4>.mmap",
+    "navigation_tile": "mmaps/<map-min-width4>_<row-width2>_<column-width2>.mmtile"
+  },
+  "verification": {
+    "profile": "linux70450-map-domain-navigation-product-v1",
+    "scope": "package integrity, complete 70450 Map domain projections, 70450 terrain/tilelist formats, VMap framing and MMap global/tile framing",
+    "source_authentication": "Offline package verification checks retained artifact integrity and declared domain relationships; it is not an independent client snapshot or real-runtime acceptance.",
+    "navigation_runtime_claim": false
+  },
+  "excluded": [
+    "provided keys",
+    "Windows product support",
+    "real build-70450 navigation extraction",
+    "complete real VMap input coverage",
+    "RustyCore runtime acceptance",
+    "release acceptance"
+  ],
+  "legacy_preservation": "Revisions 8 and 14 through 20 retain their existing plan and publication behavior; v21 is a separate build-70450 Linux capability.",
+  "full_extractor_complete": false
+}

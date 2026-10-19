@@ -1,0 +1,31 @@
+forever-product	21
+build	70450
+locale	enUS
+index	contiguous
+root	header-50893-v2
+schema-catalog	wowdbdefs-70450-v1
+decryption	disabled
+collision-storage	linux-leased-append-disk-world-v1
+collision-raw-bytes	1048576
+collision-wdt-bytes	1048576
+collision-cache-bytes	1048576
+collision-placement-bytes	1048576
+collision-vmo-bytes	1048576
+collision-map-bytes	1048576
+collision-output-bytes	1048576
+map-domain	map-and-ancestors-v1
+map-id	2
+gameobject-scope	global-startup-v1
+placement-ids	selected-closure-serial-ids-v1
+components	db2,maps,vmaps,mmaps
+terrain	map:2
+pack	true
+navigation	map:2
+big-base-unit	false
+skip-liquids	false
+maximum-slope	55
+non-steep-slope	55
+offmesh	inline-f32-bits-v1
+offmesh-connection	2	0	0	00000000	00000000	00000000	3f800000	3f800000	3f800000	3f000000	0	1	1
+db2	LiquidType	1371380
+db2	Map	1349477

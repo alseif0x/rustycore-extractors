@@ -59,6 +59,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Prepare an extraction plan or verify a package | [Product guide](docs/forever-product.md) |
 | Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
 | Review the synthetic build-70450 terrain profile | [Product v20 scope](docs/forever-product-v20.md) |
+| Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -86,7 +87,7 @@ source of truth; the table below summarizes the boundaries.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
-| **70450** | Linux v15/v18 compatible VMaps, v16/v17 DB2, v19 DB2+GT+cameras, and v20 available-Map terrain have separate profiles. V20 has synthetic route and coverage tests only. | V20's ADT/MAPS wire-format assumption is unproven; no v20 real extraction, whole-world coverage or runtime acceptance is established. |
+| **70450** | Linux v15/v18 compatible VMaps, v16/v17 DB2, v19 DB2+GT+cameras, v20 available-Map terrain, and v21 map-domain navigation have separate profiles. V20 and v21 have synthetic tests only. | V20's ADT/MAPS wire-format assumption is unproven. V21's target Map table is encrypted under a key-refusing plan and VMap inputs are unavailable; no v21 real extraction, whole-world coverage or runtime acceptance is established. |
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
@@ -127,6 +128,14 @@ is not format-parity evidence. No real extraction, full-world coverage, runtime
 acceptance or release gate is established. See
 [the v20 scope](docs/forever-product-v20.md).
 
+Product v21 separately admits a Linux build-70450 map-domain navigation profile
+with complete 70450-catalogue Map and liquid readers, leased-disk collision
+storage, MAPS terrain, VMaps and MMaps. Its synthetic full extraction and
+verification tests do not establish a real navigation run: the target Map table
+is encrypted under the key-refusing plan and the required VMap inputs are not
+available. No real navigation evidence or runtime acceptance exists. See the
+[v21 scope](docs/forever-product-v21.md).
+
 Older builds retain their own recorded results. Evidence is tied to the
 specific source collection, tool and profile: a matching build number alone
 does not transfer acceptance to a changed installation.
@@ -134,7 +143,8 @@ does not transfer acceptance to a changed installation.
 See [product scope](docs/forever-product.md),
 [available-map terrain results](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance),
 [70425 source-reader scope](docs/forever-70425.md),
-[build-70450 v20 terrain scope](docs/forever-product-v20.md) and
+[build-70450 v20 terrain scope](docs/forever-product-v20.md),
+[build-70450 v21 navigation scope](docs/forever-product-v21.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
 
 The real terrain result covers its declared available-map selection: two WDTs

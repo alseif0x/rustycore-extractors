@@ -64,7 +64,8 @@ impl Context {
         // Explicit product plans bind their independent profile through
         // plan_sha256. Build 70425 admits v14 collision; build 70450 admits
         // v15/v18 collision (16), v16/v17 DB2 (1), v19 DB2+GT+cameras (7),
-        // or v20 terrain (8), each only for an implemented revision and Linux.
+        // v20 terrain (8), or v21 DB2+Terrain+Collision+Navigation (57), each
+        // only for an implemented revision and Linux.
         let product_scope = match self.build {
             70425 => self.components == Component::Collision.bit(),
             70450 => [
@@ -72,6 +73,10 @@ impl Context {
                 Component::Db2.bit(),
                 Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
                 Component::Terrain.bit(),
+                Component::Db2.bit()
+                    | Component::Terrain.bit()
+                    | Component::Collision.bit()
+                    | Component::Navigation.bit(),
             ]
             .contains(&self.components),
             _ => true,
@@ -489,12 +494,12 @@ mod product70450_context_tests {
     use super::*;
 
     // The v19 contract source pin retains this old identifier; the exhaustive
-    // test below now includes v20's implemented Terrain mask as a fourth entry.
+    // test below now includes the later implemented product masks.
     const V19_CONTEXT_TEST_IDENTIFIER: &str =
         "context70450_admits_only_the_three_linux_product_masks";
 
     #[test]
-    fn context70450_admits_only_the_four_linux_implemented_product_masks() {
+    fn context70450_admits_only_the_five_linux_implemented_product_masks() {
         assert_eq!(
             V19_CONTEXT_TEST_IDENTIFIER,
             "context70450_admits_only_the_three_linux_product_masks"
@@ -507,12 +512,17 @@ mod product70450_context_tests {
             producer_sha256: [3; 32],
             components: Component::Collision.bit(),
         };
-        // v16/v17 DB2, v15/v18 collision, v19 DB2+GT+cameras, v20 Terrain.
+        // v16/v17 DB2, v15/v18 collision, v19 DB2+GT+cameras, v20 Terrain,
+        // v21 DB2+Terrain+Collision+Navigation.
         let admitted = [
             Component::Db2.bit(),
             Component::Collision.bit(),
             Component::Db2.bit() | Component::GameTables.bit() | Component::Cameras.bit(),
             Component::Terrain.bit(),
+            Component::Db2.bit()
+                | Component::Terrain.bit()
+                | Component::Collision.bit()
+                | Component::Navigation.bit(),
         ];
         for components in 0..=u8::MAX {
             let context = Context { components, ..c };

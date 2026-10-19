@@ -35,22 +35,33 @@ pub(super) fn validate(plan: &Plan) -> Result<(), &'static str> {
     let Some(id) = plan.map_domain else {
         return Ok(());
     };
-    if ![70170, 70205].contains(&plan.build)
-        || plan.schema_catalog != SchemaCatalog::PinnedMetadataV1
-        || !matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_))
-    {
+    let scope = if plan.is_v21() {
+        plan.build == 70450 && plan.schema_catalog == SchemaCatalog::WowDbDefs70450V1
+    } else {
+        [70170, 70205].contains(&plan.build)
+            && plan.schema_catalog == SchemaCatalog::PinnedMetadataV1
+    };
+    if !scope || !matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_)) {
         return Err("product_plan_map_domain_scope");
     }
+    let navigation = if plan.is_v21() {
+        Component::Navigation.bit()
+    } else {
+        0
+    };
     if ![Component::Db2, Component::Terrain, Component::Collision]
         .into_iter()
         .all(|component| plan.contains(component))
+        || plan.components & navigation != navigation
         || !plan.db2.iter().any(|entry| entry.name == "Map")
+        || (plan.is_v21() && !plan.db2.iter().any(|entry| entry.name == "LiquidType"))
     {
         return Err("product_plan_map_domain_dependencies");
     }
     if plan.terrain != Selection::Map(id)
         || !matches!(plan.navigation, Selection::None | Selection::Map(_))
         || matches!(plan.navigation, Selection::Map(map) if map != id)
+        || (plan.is_v21() && plan.navigation != Selection::Map(id))
     {
         return Err("product_plan_map_domain_selection");
     }

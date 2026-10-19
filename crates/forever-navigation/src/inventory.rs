@@ -287,7 +287,7 @@ impl Plan {
         limits: Limits,
     ) -> Result<Self, Error> {
         limits.validate()?;
-        if !matches!(build, 70170 | 70205) {
+        if !matches!(build, 70170 | 70205) && !(cfg!(target_os = "linux") && build == 70450) {
             return Err(Error::Build);
         }
         if rows.len() > limits.rows || inputs.len() > limits.descriptors {

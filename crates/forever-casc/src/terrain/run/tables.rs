@@ -28,14 +28,14 @@ impl liquid::LiquidLookup for Tables {
     }
 }
 impl<S: Sink> Runner<'_, S> {
-    pub(super) fn tables(&mut self) -> Result<Tables, Error> {
-        let (maps, map_facts) = self.map_table()?;
-        let (materials, material_facts) = self.material_table()?;
+    pub(super) fn tables(&mut self, build: u32) -> Result<Tables, Error> {
+        let (maps, map_facts) = self.map_table(build)?;
+        let (materials, material_facts) = self.material_table(build)?;
         // The pinned startup loads/replays this table. Its values are unused by
         // conversion, so release them after validation rather than retaining a
         // second unused lookup for the entire extraction.
-        let object_facts = self.object_table()?;
-        let (types, type_facts) = self.type_table()?;
+        let object_facts = self.object_table(build)?;
+        let (types, type_facts) = self.type_table(build)?;
         Ok(Tables {
             maps,
             materials,
@@ -45,9 +45,15 @@ impl<S: Sink> Runner<'_, S> {
     }
     fn map_table(
         &mut self,
+        build: u32,
     ) -> Result<(Vec<source::DirectRecord<source::MapFields>>, TableFacts), Error> {
         let file = self.table_file(Step::Map, MAP_ID, true)?;
-        let rows = source::read_map(&file.bytes).map_err(Error::Db2)?;
+        let rows = if build == 70450 {
+            source::read_map_70450(&file.bytes)
+        } else {
+            source::read_map(&file.bytes)
+        }
+        .map_err(Error::Db2)?;
         let mut facts = self.table_facts(&file, &rows)?;
         let maps = rows.materialize().map_err(Error::Db2)?;
         facts.materialized_rows = maps.len();
@@ -63,9 +69,15 @@ impl<S: Sink> Runner<'_, S> {
     }
     fn material_table(
         &mut self,
+        build: u32,
     ) -> Result<(Vec<(u32, source::LiquidMaterialFields)>, TableFacts), Error> {
         let file = self.table_file(Step::Material, MATERIAL_ID, false)?;
-        let rows = source::read_liquid_materials(&file.bytes).map_err(Error::Db2)?;
+        let rows = if build == 70450 {
+            source::read_liquid_materials_70450(&file.bytes)
+        } else {
+            source::read_liquid_materials(&file.bytes)
+        }
+        .map_err(Error::Db2)?;
         let mut facts = self.table_facts(&file, &rows)?;
         let rows = compact(
             rows.materialize().map_err(Error::Db2)?,
@@ -75,9 +87,14 @@ impl<S: Sink> Runner<'_, S> {
         self.retain(capacity(&rows)?)?;
         Ok((rows, facts))
     }
-    fn object_table(&mut self) -> Result<TableFacts, Error> {
+    fn object_table(&mut self, build: u32) -> Result<TableFacts, Error> {
         let file = self.table_file(Step::Object, OBJECT_ID, false)?;
-        let rows = source::read_liquid_objects(&file.bytes).map_err(Error::Db2)?;
+        let rows = if build == 70450 {
+            source::read_liquid_objects_70450(&file.bytes)
+        } else {
+            source::read_liquid_objects(&file.bytes)
+        }
+        .map_err(Error::Db2)?;
         let mut facts = self.table_facts(&file, &rows)?;
         let rows = rows.materialize().map_err(Error::Db2)?;
         if rows.len() > self.limits.max_lookup_rows {
@@ -86,9 +103,17 @@ impl<S: Sink> Runner<'_, S> {
         facts.materialized_rows = rows.len();
         Ok(facts)
     }
-    fn type_table(&mut self) -> Result<(Vec<(u32, source::LiquidTypeFields)>, TableFacts), Error> {
+    fn type_table(
+        &mut self,
+        build: u32,
+    ) -> Result<(Vec<(u32, source::LiquidTypeFields)>, TableFacts), Error> {
         let file = self.table_file(Step::Type, TYPE_ID, true)?;
-        let rows = source::read_liquid_types(&file.bytes).map_err(Error::Db2)?;
+        let rows = if build == 70450 {
+            source::read_liquid_types_70450(&file.bytes)
+        } else {
+            source::read_liquid_types(&file.bytes)
+        }
+        .map_err(Error::Db2)?;
         let mut facts = self.table_facts(&file, &rows)?;
         let rows = compact(
             rows.materialize().map_err(Error::Db2)?,

@@ -23,6 +23,9 @@ fn main() {
                     "Linux v20 selects build-70450 available-map terrain-only output; probe-encoding reports metadata/read diagnostics only."
                 );
                 println!(
+                    "Linux v21 selects build-70450 DB2+Terrain+VMap+MMap navigation for one map and ancestors with complete keyless Map/LiquidType reads; real inputs are not accepted yet."
+                );
+                println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
                 );
             } else {
@@ -227,8 +230,13 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     } else {
         ""
     };
+    let navigation_capability = if plan.is_v21() {
+        ",\"navigation_source_profile\":\"linux70450-map-domain-navigation-v1\",\"complete_navigation_input_claim\":false"
+    } else {
+        ""
+    };
     let capability = format!(
-        "{schema_capability}{decryption_capability}{collision_storage_capability}{offmesh_capability}{map_domain_capability}{terrain_capability}"
+        "{schema_capability}{decryption_capability}{collision_storage_capability}{offmesh_capability}{map_domain_capability}{terrain_capability}{navigation_capability}"
     );
     if command == "inspect" && !options.contains_key("--client") {
         if options.contains_key("--keys") {

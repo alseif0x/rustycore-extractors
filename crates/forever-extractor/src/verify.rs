@@ -334,11 +334,19 @@ impl Facts {
                 if name == "Map"
                     && let Some(requested) = plan.map_domain
                 {
-                    self.domain = Some(crate::map_domain::Domain::derive(
-                        bytes,
-                        requested,
-                        plan.contains(Component::Navigation),
-                    )?);
+                    self.domain = Some(if plan.is_v21() {
+                        crate::map_domain::Domain::derive_70450(
+                            bytes,
+                            requested,
+                            plan.contains(Component::Navigation),
+                        )?
+                    } else {
+                        crate::map_domain::Domain::derive(
+                            bytes,
+                            requested,
+                            plan.contains(Component::Navigation),
+                        )?
+                    });
                 }
                 if name == "Map"
                     && plan
@@ -346,8 +354,12 @@ impl Facts {
                         .as_ref()
                         .is_some_and(|connections| !connections.is_empty())
                 {
-                    let source = forever_db2::terrain_sources::read_navigation_maps(bytes)
-                        .map_err(|error| Error::from(error.code()))?;
+                    let source = if plan.is_v21() {
+                        forever_db2::terrain_sources::read_navigation_maps_70450(bytes)
+                    } else {
+                        forever_db2::terrain_sources::read_navigation_maps(bytes)
+                    }
+                    .map_err(|error| Error::from(error.code()))?;
                     if source.direct_records().is_empty() {
                         return Err("product_offmesh_empty_map".into());
                     }
@@ -409,8 +421,12 @@ impl Facts {
                     if path != &format!("maps/{id:04}.tilelist") {
                         return Err("product_artifact_name".into());
                     }
-                    terrain::tilelist::verify(bytes, plan.build)
-                        .map_err(|_| Error::from("product_tilelist"))?;
+                    (if plan.build == 70450 {
+                        terrain::tilelist::verify_70450(bytes, plan.build)
+                    } else {
+                        terrain::tilelist::verify(bytes, plan.build)
+                    })
+                    .map_err(|_| Error::from("product_tilelist"))?;
                 } else {
                     let (map, x, y) = terrain_map_name(path)?;
                     if plan.map_domain.is_some() {
@@ -418,8 +434,12 @@ impl Facts {
                     } else {
                         admit(plan.terrain, map, Some((x, y)), false)?;
                     }
-                    forever_terrain::maps::verify(bytes, plan.build, 128 * 1024 * 1024)
-                        .map_err(|e| Error::from(e.code()))?;
+                    (if plan.build == 70450 {
+                        forever_terrain::maps::verify_70450(bytes, plan.build, 128 * 1024 * 1024)
+                    } else {
+                        forever_terrain::maps::verify(bytes, plan.build, 128 * 1024 * 1024)
+                    })
+                    .map_err(|e| Error::from(e.code()))?;
                 }
             }
             Component::Collision => {

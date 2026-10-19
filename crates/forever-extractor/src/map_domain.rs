@@ -30,10 +30,35 @@ pub(crate) struct Domain {
 }
 impl Domain {
     pub(crate) fn derive(bytes: &[u8], requested: u32, navigation: bool) -> Result<Self, Error> {
+        Self::derive_inner(bytes, requested, navigation, false)
+    }
+
+    /// Strict build-70450 domain derivation. Every projection is a complete
+    /// source decode through the separately pinned 70450 Map catalog; this path
+    /// never uses the partial available-section readers.
+    pub(crate) fn derive_70450(
+        bytes: &[u8],
+        requested: u32,
+        navigation: bool,
+    ) -> Result<Self, Error> {
+        Self::derive_inner(bytes, requested, navigation, true)
+    }
+
+    fn derive_inner(
+        bytes: &[u8],
+        requested: u32,
+        navigation: bool,
+        build_70450: bool,
+    ) -> Result<Self, Error> {
         if bytes.len() > MAX_MAP_BYTES {
             return Err("product_map_domain_limit".into());
         }
-        let snapshot = source::read_vmap_maps(bytes).map_err(|e| Error::from(e.code()))?;
+        let snapshot = if build_70450 {
+            source::read_vmap_maps_70450(bytes)
+        } else {
+            source::read_vmap_maps(bytes)
+        }
+        .map_err(|e| Error::from(e.code()))?;
         let direct = snapshot.direct_records().len();
         let rows = snapshot.materialize().map_err(|e| Error::from(e.code()))?;
         let maps = plan::Maps::from_materialized_selection(
@@ -66,9 +91,13 @@ impl Domain {
         drop(rows);
         // Terrain replays copies and removes WDT-zero rows. Admission requires
         // exactly the same selected identities; unselected rows stay validated.
-        let terrain = source::read_map(bytes)
-            .and_then(|table| table.materialize())
-            .map_err(|e| Error::from(e.code()))?;
+        let terrain = (if build_70450 {
+            source::read_map_70450(bytes)
+        } else {
+            source::read_map(bytes)
+        })
+        .and_then(|table| table.materialize())
+        .map_err(|e| Error::from(e.code()))?;
         for entry in &entries {
             let mut matching = terrain.iter().filter(|row| row.id == entry.id);
             let row = matching.next().ok_or("product_map_domain_projection")?;
@@ -78,8 +107,12 @@ impl Domain {
         }
         drop(terrain);
         if navigation {
-            let snapshot =
-                source::read_navigation_maps(bytes).map_err(|e| Error::from(e.code()))?;
+            let snapshot = if build_70450 {
+                source::read_navigation_maps_70450(bytes)
+            } else {
+                source::read_navigation_maps(bytes)
+            }
+            .map_err(|e| Error::from(e.code()))?;
             for entry in &entries {
                 let mut matching = snapshot
                     .direct_records()

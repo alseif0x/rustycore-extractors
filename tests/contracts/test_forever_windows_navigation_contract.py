@@ -77,11 +77,41 @@ class WindowsNavigationContract(unittest.TestCase):
         self.assertEqual(order['historical_import_sha256'], pins[path])
         self.assertFalse(order['behavior_changed'])
         current = (ROOT / path).read_bytes()
+        gate = self.c['reviewed_build70450_map_verifier_correction']
+        self.assertEqual(gate['path'], path)
+        self.assertEqual(gate['previous_sha256'], order['current_sha256'])
+        self.assertEqual(
+            gate['current_sha256'],
+            '1ea7f6e6c4fad539a113a4e710560e8aa499d1a3513991833ce163d897e91699',
+        )
+        self.assertEqual(
+            gate['scope'],
+            'Linux source loading dispatches only build 70450 to the explicit verify_70450 path; every other build, including Windows, retains the generic verifier',
+        )
+        self.assertEqual(hashlib.sha256(current).hexdigest(), gate['current_sha256'])
+        prior_current = current
+        for added, previous in [
+            (
+                b'verify_map(&bytes, plan.build(), limits.file_bytes)',
+                b'maps::verify(&bytes, plan.build(), limits.file_bytes)',
+            ),
+            (
+                b'map: verify_map(&file.bytes, build, maps::MAX_MAP_BYTES).expect("complete checked terrain"),',
+                b'map: maps::verify(&file.bytes, build, maps::MAX_MAP_BYTES)\n            .expect("complete checked terrain"),',
+            ),
+            (
+                b"fn verify_map(\n    bytes: &[u8],\n    build: u32,\n    max_bytes: usize,\n) -> Result<maps::MapView<'_>, maps::Error> {\n    #[cfg(target_os = \"linux\")]\n    if build == 70450 {\n        maps::verify_70450(bytes, build, max_bytes)\n    } else {\n        maps::verify(bytes, build, max_bytes)\n    }\n    #[cfg(not(target_os = \"linux\"))]\n    {\n        maps::verify(bytes, build, max_bytes)\n    }\n}\n",
+                b'',
+            ),
+        ]:
+            self.assertEqual(prior_current.count(added), 1)
+            prior_current = prior_current.replace(added, previous, 1)
+        self.assertEqual(hashlib.sha256(prior_current).hexdigest(), gate['previous_sha256'])
         before = b'#[cfg(windows)]\npub mod windows;\n#[cfg(test)]\nmod tests;'
         after = b'#[cfg(test)]\nmod tests;\n#[cfg(windows)]\npub mod windows;'
-        self.assertEqual(current.count(after), 1)
-        self.assertEqual(hashlib.sha256(current.replace(after, before)).hexdigest(), pins[path])
-        reviewed[path] = order['current_sha256']
+        self.assertEqual(prior_current.count(after), 1)
+        self.assertEqual(hashlib.sha256(prior_current.replace(after, before)).hexdigest(), pins[path])
+        reviewed[path] = gate['current_sha256']
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)

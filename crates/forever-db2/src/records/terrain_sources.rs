@@ -166,6 +166,32 @@ pub fn read_navigation_maps(
         _ => Err(RecordError::Schema),
     }
 }
+/// Complete terrain Map projection through the separately pinned build70450
+/// Map catalog. This does not admit available sections or partial data.
+pub fn read_map_70450(data: &[u8]) -> Result<SourceRecords<MapFields>, RecordError> {
+    match read_maps_70450(data, Role::Map)? {
+        Collected::Map(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
+/// Complete VMap Map projection through the separately pinned build70450
+/// catalog, including its build-specific table hash.
+pub fn read_vmap_maps_70450(data: &[u8]) -> Result<SourceRecords<VMapFields>, RecordError> {
+    match read_maps_70450(data, Role::VMap)? {
+        Collected::VMap(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
+/// Complete navigation Map projection through the separately pinned build70450
+/// catalog, including its build-specific table hash.
+pub fn read_navigation_maps_70450(
+    data: &[u8],
+) -> Result<SourceRecords<NavigationMapFields>, RecordError> {
+    match read_maps_70450(data, Role::Navigation)? {
+        Collected::Navigation(rows) => Ok(rows),
+        _ => Err(RecordError::Schema),
+    }
+}
 /// Validate the complete closed GameObjectDisplayInfo profile and collect direct
 /// physical records in order, including duplicate IDs/FDIDs and zero FDIDs.
 /// The native GetRecordCount/GetRecord loop never replays copies. This type has
@@ -486,6 +512,18 @@ pub(super) fn read_liquids_70450(
         .map_err(|_| RecordError::Schema)?
         .ok_or(RecordError::Schema)?;
     read_selected(data, table, collector, text_limit)
+}
+fn read_maps_70450(data: &[u8], role: Role) -> Result<Collected, RecordError> {
+    let collector = match role {
+        Role::Map => Collector::Map(Vec::new()),
+        Role::VMap => Collector::VMap(Vec::new()),
+        Role::Navigation => Collector::Navigation(Vec::new()),
+        _ => return Err(RecordError::Schema),
+    };
+    let table = CharacterTable::from_catalog_id(super::catalog::WOWDBDEFS_70450_CATALOG_ID, "Map")
+        .map_err(|_| RecordError::Schema)?
+        .ok_or(RecordError::Schema)?;
+    read_selected(data, table, collector, TEXT_POLICY_LIMIT)
 }
 fn read_selected(
     data: &[u8],

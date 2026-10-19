@@ -18,6 +18,7 @@ pub enum PublicationProfile {
     Build70450Db2OnlyV1,
     Build70450Db2ProvidedKeysV1,
     Build70450Db2GtCamerasV1,
+    Build70450NavigationV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -119,12 +120,39 @@ impl PublicationProfile {
             }
             return Ok(());
         }
+        if self == Self::Build70450NavigationV1 {
+            if plan.build != 70450 {
+                return Err("product_plan_build");
+            }
+            if plan.schema_catalog != SchemaCatalog::WowDbDefs70450V1 {
+                return Err("product_plan_schema_catalog");
+            }
+            let components = Component::Db2.bit()
+                | Component::Terrain.bit()
+                | Component::Collision.bit()
+                | Component::Navigation.bit();
+            if plan.components != components
+                || !matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_))
+                || plan.decryption != super::Decryption::Disabled
+                || plan.map_domain.is_none()
+                || !plan.db2.iter().any(|entry| entry.name == "Map")
+                || !plan.db2.iter().any(|entry| entry.name == "LiquidType")
+            {
+                return Err("product_plan_component_scope");
+            }
+            let map_id = plan.map_domain.ok_or("product_plan_map_domain")?;
+            if plan.terrain != Selection::Map(map_id) || plan.navigation != Selection::Map(map_id) {
+                return Err("product_plan_map_domain_selection");
+            }
+            return Ok(());
+        }
         let (build, catalog, components) = match self {
             Self::Legacy
             | Self::Build70425CompatibleCollisionV1
             | Self::Build70450CompatibleCollisionV1
             | Self::Build70450CollisionProvidedKeysV1
-            | Self::Build70450CompatibleTerrainV1 => {
+            | Self::Build70450CompatibleTerrainV1
+            | Self::Build70450NavigationV1 => {
                 unreachable!("profile returned above")
             }
             Self::Build70338Db2GtCamerasV1 => (

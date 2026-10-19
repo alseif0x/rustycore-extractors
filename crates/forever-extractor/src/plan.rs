@@ -201,6 +201,7 @@ impl Plan {
             "18" => 18,
             "19" => 19,
             "20" => 20,
+            "21" => 21,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -234,7 +235,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=20 => match field(&mut lines, "schema-catalog")? {
+            15..=21 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -250,14 +251,14 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=20 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=21 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18)
+        let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18 | 21)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
@@ -288,7 +289,7 @@ impl Plan {
                 return Err("product_plan_collision_coverage");
             }
             domain
-        } else if version == 8 {
+        } else if matches!(version, 8 | 21) {
             Some(map_domain::parse(&mut lines)?)
         } else {
             None
@@ -320,7 +321,10 @@ impl Plan {
         if maximum_slope > 90 || non_steep_slope > 90 {
             return Err("product_plan_slopes");
         }
-        let offmesh = if version == 6 || (version == 8 && navigation != Selection::None) {
+        let offmesh = if version == 6
+            || (version == 8 && navigation != Selection::None)
+            || (version == 21 && navigation != Selection::None)
+        {
             if field(&mut lines, "offmesh")? != OFFMESH_PROFILE {
                 return Err("product_plan_offmesh");
             }
@@ -364,6 +368,8 @@ impl Plan {
                 PublicationProfile::Build70450Db2GtCamerasV1
             } else if version == 20 {
                 PublicationProfile::Build70450CompatibleTerrainV1
+            } else if version == 21 {
+                PublicationProfile::Build70450NavigationV1
             } else if version == 16 {
                 PublicationProfile::Build70450Db2OnlyV1
             } else if version == 15 {
@@ -416,10 +422,12 @@ impl Plan {
             map_domain::validate(self)?;
         }
         if let Some(connections) = &self.offmesh {
-            if self.schema_catalog != SchemaCatalog::PinnedMetadataV1
-                || ![70170, 70205].contains(&self.build)
-                || !self.contains(Component::Navigation)
-            {
+            let legacy = self.schema_catalog == SchemaCatalog::PinnedMetadataV1
+                && [70170, 70205].contains(&self.build);
+            let build_70450 = self.is_v21()
+                && self.build == 70450
+                && self.schema_catalog == SchemaCatalog::WowDbDefs70450V1;
+            if !(legacy || build_70450) || !self.contains(Component::Navigation) {
                 return Err("product_plan_offmesh_scope");
             }
             if connections.len() > MAX_OFFMESH_CONNECTIONS {
@@ -440,6 +448,7 @@ impl Plan {
             && !self.is_v18()
             && !self.is_v19()
             && !self.is_v20()
+            && !self.is_v21()
         {
             return Err("product_plan_build");
         }
@@ -470,6 +479,7 @@ impl Plan {
             && !self.is_v18()
             && !self.is_v19()
             && !self.is_v20()
+            && !self.is_v21()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -569,6 +579,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v21() {
+            return 21;
+        }
         if self.is_v20() {
             return 20;
         }
@@ -629,6 +642,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v21() {
+            return "forever-product-v21";
+        }
         if self.is_v20() {
             return "forever-product-v20";
         }
@@ -765,6 +781,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build70450 compatible map-domain navigation publication.
+    pub const fn is_v21(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450NavigationV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -827,7 +851,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=20, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=21, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -952,3 +976,6 @@ mod v19_tests;
 
 #[cfg(test)]
 mod v20_tests;
+
+#[cfg(test)]
+mod v21_tests;

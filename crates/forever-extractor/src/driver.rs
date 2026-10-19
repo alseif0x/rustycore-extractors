@@ -22,6 +22,18 @@ use inventory::fs as navigation_input;
 use inventory::windows as navigation_input;
 use std::path::Path;
 
+#[cfg(all(test, target_os = "linux"))]
+// These private CASC algorithms are included as test-only fixture kernels; the
+// exact source is also included by the collision fixture module.
+#[allow(clippy::duplicate_mod)]
+#[path = "../../forever-casc/src/local_index/jenkins.rs"]
+mod v21_test_jenkins;
+#[cfg(all(test, target_os = "linux"))]
+// See the matching Jenkins fixture module above.
+#[allow(clippy::duplicate_mod)]
+#[path = "../../forever-casc/src/blte/md5.rs"]
+mod v21_test_md5;
+
 #[cfg(target_os = "linux")]
 pub(crate) mod census_db2;
 #[cfg(target_os = "linux")]
@@ -102,6 +114,7 @@ fn open_inner(
         || plan.is_v18()
         || plan.is_v19()
         || plan.is_v20()
+        || plan.is_v21()
     {
         #[cfg(target_os = "linux")]
         {
@@ -190,6 +203,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_v17()
         || plan.is_v18()
         || plan.is_v20()
+        || plan.is_v21()
     {
         return Err("product_platform".into());
     }
@@ -401,7 +415,23 @@ fn prepare_domain(
     let Some(requested) = plan.map_domain else {
         return Ok(None);
     };
-    let bytes = read(store, terrain::run::MAP_ID, DB2_FILE_BYTES)?;
+    let bytes = if plan.is_v21() {
+        let map_file_data_id = plan
+            .db2
+            .iter()
+            .find(|entry| entry.name == "Map")
+            .map(|entry| entry.id)
+            .ok_or("product_plan_dependencies")?;
+        read(store, map_file_data_id, DB2_FILE_BYTES)?
+    } else {
+        read(store, terrain::run::MAP_ID, DB2_FILE_BYTES)?
+    };
+    if plan.is_v21() {
+        // Validate complete build-specific DB2 decoding before the common
+        // package is created. The domain projections below also use strict
+        // 70450 readers; partial availability APIs are never admitted here.
+        validate_db2(plan, "Map", &bytes)?;
+    }
     let peak = crate::map_domain::PREPARATION_BYTES
         .checked_add(bytes.capacity().saturating_sub(bytes.len()))
         .and_then(|n| n.checked_add(store.stats().resident_bytes))
@@ -409,8 +439,29 @@ fn prepare_domain(
     if peak > 2 * 1024 * 1024 * 1024 {
         return Err("product_map_domain_limit".into());
     }
-    let domain =
-        crate::map_domain::Domain::derive(&bytes, requested, plan.contains(Component::Navigation))?;
+    let domain = if plan.is_v21() {
+        crate::map_domain::Domain::derive_70450(
+            &bytes,
+            requested,
+            plan.contains(Component::Navigation),
+        )?
+    } else {
+        crate::map_domain::Domain::derive(&bytes, requested, plan.contains(Component::Navigation))?
+    };
+    if plan.is_v21() {
+        let liquid_file_data_id = plan
+            .db2
+            .iter()
+            .find(|entry| entry.name == "LiquidType")
+            .map(|entry| entry.id)
+            .ok_or("product_plan_dependencies")?;
+        let liquid = read(store, liquid_file_data_id, DB2_FILE_BYTES)?;
+        validate_db2(plan, "LiquidType", &liquid)?;
+        let records = forever_db2::terrain_sources::read_liquid_types_70450(&liquid)
+            .map_err(|error| Error::from(error.code()))?;
+        let _ = models::liquid::Table::from_source(&records, Default::default())
+            .map_err(|error| Error::from(error.code()))?;
+    }
     store
         .verify_unchanged()
         .map_err(|e| Error::from(e.code()))?;
@@ -846,25 +897,45 @@ fn mmaps(
 ) -> Result<(), Error> {
     use forever_db2::{catalog, terrain_sources};
     use navigation_input::run::{self as nav, Cause};
-    let map = read(
-        store,
-        catalog::find("Map").unwrap().file_data_id,
-        DB2_FILE_BYTES,
-    )?;
+    let map_file_data_id = if plan.is_v21() {
+        plan.db2
+            .iter()
+            .find(|entry| entry.name == "Map")
+            .map(|entry| entry.id)
+            .ok_or("product_plan_dependencies")?
+    } else {
+        catalog::find("Map").unwrap().file_data_id
+    };
+    let map = read(store, map_file_data_id, DB2_FILE_BYTES)?;
     if let Some(domain) = domain {
         domain.verify_source(&map)?;
     }
-    let source = terrain_sources::read_navigation_maps(&map).map_err(|e| Error::from(e.code()))?;
+    let source = if plan.is_v21() {
+        terrain_sources::read_navigation_maps_70450(&map)
+    } else {
+        terrain_sources::read_navigation_maps(&map)
+    }
+    .map_err(|e| Error::from(e.code()))?;
     let connections = navigation_connections(plan, source.direct_records().is_empty())?;
     if domain.is_some() {
         drop(map);
     }
-    let liquid = read(
-        store,
-        catalog::find("LiquidType").unwrap().file_data_id,
-        DB2_FILE_BYTES,
-    )?;
-    let liquid = terrain_sources::read_liquid_types(&liquid).map_err(|e| Error::from(e.code()))?;
+    let liquid_file_data_id = if plan.is_v21() {
+        plan.db2
+            .iter()
+            .find(|entry| entry.name == "LiquidType")
+            .map(|entry| entry.id)
+            .ok_or("product_plan_dependencies")?
+    } else {
+        catalog::find("LiquidType").unwrap().file_data_id
+    };
+    let liquid = read(store, liquid_file_data_id, DB2_FILE_BYTES)?;
+    let liquid = if plan.is_v21() {
+        terrain_sources::read_liquid_types_70450(&liquid)
+    } else {
+        terrain_sources::read_liquid_types(&liquid)
+    }
+    .map_err(|e| Error::from(e.code()))?;
     let types = models::liquid::Table::from_source(&liquid, Default::default())
         .map_err(|e| Error::from(e.code()))?;
     let selection = match plan.navigation {
@@ -1269,5 +1340,543 @@ mod v19_reader_tests {
 
         let selected = camera_plan(&plan, &mut run, &source).unwrap();
         assert_eq!(selected.file_ids(), &[0, 11].into_iter().collect());
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod v21_navigation_tests {
+    use super::*;
+    use forever_db2::catalog::{self, FieldType};
+    use forever_navigation::mmap;
+    use std::{
+        fs,
+        os::unix::fs::PermissionsExt,
+        path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    const V21: &str =
+        include_str!("../../../tests/contracts/fixtures/forever-product-v21/navigation-map2.tsv");
+    static NEXT_LAB: AtomicU64 = AtomicU64::new(0);
+
+    struct Lab(PathBuf);
+    impl Lab {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "rce-v21-navigation-{}-{}",
+                std::process::id(),
+                NEXT_LAB.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+        fn scratch(&self, name: &str) -> PathBuf {
+            let path = self.0.join(name);
+            fs::create_dir(&path).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+            path
+        }
+    }
+    impl Drop for Lab {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
+
+    fn hex16(value: [u8; 16]) -> String {
+        value.iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+    fn put16(bytes: &mut [u8], at: usize, value: u16) {
+        bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+    }
+    fn put32(bytes: &mut [u8], at: usize, value: u32) {
+        bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+    fn write_value(bytes: &mut [u8], at: usize, size: usize, value: i64) {
+        bytes[at..at + size].copy_from_slice(&value.to_le_bytes()[..size]);
+    }
+
+    fn field_width(kind: FieldType) -> usize {
+        match kind {
+            FieldType::String
+            | FieldType::NonLocalizedString
+            | FieldType::Int
+            | FieldType::Float => 32,
+            FieldType::Byte => 8,
+            FieldType::Short => 16,
+            FieldType::Long => 64,
+        }
+    }
+
+    fn synthetic_db2(name: &str, row_id: u32, bad_table_hash: bool) -> Vec<u8> {
+        let metadata = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
+            .unwrap()
+            .unwrap()
+            .metadata();
+        assert_eq!(metadata.field_count, metadata.file_field_count);
+        let fields = &metadata.fields[..metadata.file_field_count];
+        let mut offsets = Vec::new();
+        let mut bit_offset = 0usize;
+        for field in fields {
+            offsets.push(bit_offset);
+            bit_offset += field_width(field.kind) * usize::from(field.array_size);
+        }
+        let record_size = bit_offset.div_ceil(8).max(8);
+        let mut record = vec![0; record_size];
+        for (field_index, field) in fields.iter().enumerate() {
+            if matches!(
+                field.kind,
+                FieldType::String | FieldType::NonLocalizedString
+            ) {
+                for array_index in 0..usize::from(field.array_size) {
+                    let at = offsets[field_index] / 8 + array_index * 4;
+                    put32(&mut record, at, u32::try_from(record_size - at).unwrap());
+                }
+            }
+        }
+        if name == "Map" {
+            for (field, value) in [(13, -1), (14, -1), (21, 100)] {
+                let at = offsets[field] / 8;
+                let size = field_width(fields[field].kind) / 8;
+                write_value(&mut record, at, size, value);
+            }
+        }
+
+        const HEADER: usize = 204;
+        const SECTION: usize = 40;
+        let section_at = HEADER;
+        let column_meta_at = HEADER + SECTION + fields.len() * 4;
+        let record_at = column_meta_at + fields.len() * 24;
+        let string_table = b"synthetic\0";
+        let id_table_bytes = if metadata.index < 0 { 4 } else { 0 };
+        let mut bytes = vec![0; record_at];
+        bytes[..4].copy_from_slice(b"WDC5");
+        put32(&mut bytes, 4, 5);
+        put32(&mut bytes, 136, 1);
+        put32(&mut bytes, 140, fields.len() as u32);
+        put32(&mut bytes, 144, record_size as u32);
+        put32(&mut bytes, 148, string_table.len() as u32);
+        put32(
+            &mut bytes,
+            152,
+            metadata.table_hash.unwrap_or(0) ^ u32::from(bad_table_hash),
+        );
+        put32(&mut bytes, 156, metadata.layout_hash);
+        put32(&mut bytes, 160, 0);
+        put32(&mut bytes, 164, 1000);
+        bytes[174..176].copy_from_slice(&metadata.index.to_le_bytes());
+        put32(&mut bytes, 176, metadata.field_count as u32);
+        put32(&mut bytes, 188, (fields.len() * 24) as u32);
+        put32(&mut bytes, 200, 1);
+        put32(&mut bytes, section_at + 8, record_at as u32);
+        put32(&mut bytes, section_at + 12, 1);
+        put32(&mut bytes, section_at + 16, string_table.len() as u32);
+        put32(&mut bytes, section_at + 24, id_table_bytes as u32);
+        for (field_index, field) in fields.iter().enumerate() {
+            let at = column_meta_at + field_index * 24;
+            put16(&mut bytes, at, offsets[field_index] as u16);
+            put32(&mut bytes, at + 16, field_width(field.kind) as u32);
+            put32(&mut bytes, at + 20, u32::from(field.array_size));
+        }
+        bytes.extend_from_slice(&record);
+        bytes.extend_from_slice(string_table);
+        if metadata.index < 0 {
+            bytes.extend_from_slice(&row_id.to_le_bytes());
+        } else {
+            let index = usize::try_from(metadata.index).unwrap();
+            put32(
+                &mut bytes[record_at..record_at + record_size],
+                offsets[index] / 8,
+                row_id,
+            );
+        }
+        bytes
+    }
+
+    fn root_file(rows: &[(u32, [u8; 16])]) -> Vec<u8> {
+        let mut bytes = b"TSFM".to_vec();
+        for value in [20_u32, 2, rows.len() as u32, 0] {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        for (file_data_id, ckey) in rows {
+            for value in [1_u32, 2, 0x1000_0000, 0] {
+                bytes.extend_from_slice(&value.to_le_bytes());
+            }
+            bytes.push(0);
+            bytes.extend_from_slice(&file_data_id.to_le_bytes());
+            bytes.extend_from_slice(ckey);
+        }
+        bytes
+    }
+    fn encoding_file(rows: &[([u8; 16], u32, [u8; 16])]) -> Vec<u8> {
+        let mut page = Vec::new();
+        for (ckey, size, ekey) in rows {
+            page.extend_from_slice(&1_u16.to_le_bytes());
+            page.extend_from_slice(&size.to_be_bytes());
+            page.extend_from_slice(ckey);
+            page.extend_from_slice(ekey);
+        }
+        assert!(page.len() < 1024);
+        page.resize(1024, 0);
+        let mut bytes = b"EN\x01\x10\x10".to_vec();
+        bytes.extend_from_slice(&1_u16.to_be_bytes());
+        bytes.extend_from_slice(&1_u16.to_be_bytes());
+        bytes.extend_from_slice(&1_u32.to_be_bytes());
+        bytes.extend_from_slice(&0_u32.to_be_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&0_u32.to_be_bytes());
+        bytes.extend_from_slice(&rows[0].0);
+        bytes.extend_from_slice(&v21_test_md5::digest(&page));
+        bytes.extend_from_slice(&page);
+        bytes
+    }
+    fn index_entry(key: [u8; 16], offset: u64, size: u32) -> [u8; 18] {
+        let mut row = [0; 18];
+        row[..9].copy_from_slice(&key[..9]);
+        row[9..14].copy_from_slice(&offset.to_be_bytes()[3..]);
+        row[14..].copy_from_slice(&size.to_le_bytes());
+        row
+    }
+    fn index_file(bucket: u8, rows: &[[u8; 18]]) -> Vec<u8> {
+        let mut bytes = vec![0; 32];
+        bytes[..4].copy_from_slice(&16_u32.to_le_bytes());
+        bytes[8..10].copy_from_slice(&7_u16.to_le_bytes());
+        bytes[10] = bucket;
+        bytes[12..16].copy_from_slice(&[4, 5, 9, 30]);
+        let hash = v21_test_jenkins::hashlittle(&bytes[8..24], 0);
+        bytes[4..8].copy_from_slice(&hash.to_le_bytes());
+        bytes.extend_from_slice(&u32::try_from(rows.len() * 18).unwrap().to_le_bytes());
+        let mut checksum = (0, 0);
+        for row in rows {
+            checksum = v21_test_jenkins::hashlittle2(row, checksum.0, checksum.1);
+        }
+        bytes.extend_from_slice(&checksum.0.to_le_bytes());
+        for row in rows {
+            bytes.extend_from_slice(row);
+        }
+        bytes
+    }
+
+    #[derive(Clone, Copy)]
+    enum MapMode {
+        Normal,
+        Encrypted,
+        Missing,
+    }
+    struct CascFixture {
+        path: PathBuf,
+    }
+    impl CascFixture {
+        fn new(
+            lab: &Lab,
+            map_mode: MapMode,
+            bad_map_hash: bool,
+            bad_liquid_hash: bool,
+            extra_files: &[(u32, Vec<u8>)],
+        ) -> Self {
+            let map_table = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, "Map")
+                .unwrap()
+                .unwrap();
+            let liquid_table =
+                catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, "LiquidType")
+                    .unwrap()
+                    .unwrap();
+            let map_file_data_id = map_table.metadata().file_data_id;
+            let liquid_file_data_id = liquid_table.metadata().file_data_id;
+            let map_bytes = synthetic_db2("Map", 2, bad_map_hash);
+            let liquid_bytes = synthetic_db2("LiquidType", 7, bad_liquid_hash);
+            let map_ckey = v21_test_md5::digest(&map_bytes);
+            let liquid_ckey = v21_test_md5::digest(&liquid_bytes);
+            const MAP_EKEY: [u8; 16] = [0x55; 16];
+            const LIQUID_EKEY: [u8; 16] = [0x66; 16];
+
+            let mut roots = vec![(liquid_file_data_id, liquid_ckey)];
+            let mut routes = vec![(liquid_ckey, liquid_bytes.len() as u32, LIQUID_EKEY)];
+            let mut records = vec![(LIQUID_EKEY, normal_record(&liquid_bytes))];
+            if !matches!(map_mode, MapMode::Missing) {
+                roots.push((map_file_data_id, map_ckey));
+                routes.push((map_ckey, map_bytes.len() as u32, MAP_EKEY));
+                let record = match map_mode {
+                    MapMode::Normal => normal_record(&map_bytes),
+                    MapMode::Encrypted => encrypted_record(),
+                    MapMode::Missing => unreachable!(),
+                };
+                records.push((MAP_EKEY, record));
+            }
+            for (index, (file_data_id, contents)) in extra_files.iter().enumerate() {
+                let ckey = v21_test_md5::digest(contents);
+                let ekey = [0x80 + index as u8; 16];
+                roots.push((*file_data_id, ckey));
+                routes.push((ckey, contents.len() as u32, ekey));
+                records.push((ekey, normal_record(contents)));
+            }
+
+            const ROOT_EKEY: [u8; 16] = [0x33; 16];
+            const ENCODING_EKEY: [u8; 16] = [0x44; 16];
+            let root = root_file(&roots);
+            let root_ckey = v21_test_md5::digest(&root);
+            let mut all_routes = vec![(root_ckey, root.len() as u32, ROOT_EKEY)];
+            all_routes.extend(routes);
+            let encoding = encoding_file(&all_routes);
+            let encoding_ckey = v21_test_md5::digest(&encoding);
+            records.push((ROOT_EKEY, normal_record(&root)));
+            records.push((ENCODING_EKEY, normal_record(&encoding)));
+
+            let config = format!(
+                "root = {}\nencoding = {} {}\nencoding-size = {} {}\nbuild-uid = wow_classic_beta\nbuild-name = synthetic-1.60.1.70450\n",
+                hex16(root_ckey),
+                hex16(encoding_ckey),
+                hex16(ENCODING_EKEY),
+                encoding.len(),
+                encoding.len() + 39
+            )
+            .into_bytes();
+            let config_ckey = v21_test_md5::digest(&config);
+            let config_name = hex16(config_ckey);
+            let path = lab.0.join(format!(
+                "client-{}",
+                NEXT_LAB.fetch_add(1, Ordering::Relaxed)
+            ));
+            let data = path.join("Data/data");
+            let config_dir = path
+                .join("Data/config")
+                .join(&config_name[..2])
+                .join(&config_name[2..4]);
+            fs::create_dir_all(&data).unwrap();
+            fs::create_dir_all(&config_dir).unwrap();
+            fs::write(config_dir.join(&config_name), &config).unwrap();
+            fs::write(
+                path.join(".build.info"),
+                format!(
+                    "Product!STRING:0|Active!DEC:1|Version!STRING:0|Build Key!HEX:16|CDN Key!HEX:16|Tags!STRING:0\nwow_classic_beta|1|1.60.1.70450|{}|{}|enUS\n",
+                    hex16(config_ckey),
+                    hex16([0x21; 16])
+                ),
+            )
+            .unwrap();
+            let mut archive = Vec::new();
+            let mut index_rows = Vec::new();
+            for (ekey, record) in records {
+                let offset = archive.len() as u64;
+                archive.extend_from_slice(&[0xa5; 30]);
+                archive.extend_from_slice(&record);
+                index_rows.push(index_entry(
+                    ekey,
+                    offset,
+                    u32::try_from(30 + record.len()).unwrap(),
+                ));
+            }
+            index_rows.sort_unstable_by_key(|row| row[..9].to_vec());
+            fs::write(data.join("data.000"), archive).unwrap();
+            for bucket in 0..16_u8 {
+                let rows = if bucket == 0 {
+                    index_rows.clone()
+                } else {
+                    vec![index_entry([0xe0 + bucket; 16], 0, 39)]
+                };
+                fs::write(
+                    data.join(format!("{bucket:02x}00000001.idx")),
+                    index_file(bucket, &rows),
+                )
+                .unwrap();
+            }
+            Self { path }
+        }
+    }
+
+    fn normal_record(bytes: &[u8]) -> Vec<u8> {
+        let mut record = b"BLTE\0\0\0\0N".to_vec();
+        record.extend_from_slice(bytes);
+        record
+    }
+    fn encrypted_record() -> Vec<u8> {
+        let mut record = b"BLTE\0\0\0\0E\x08".to_vec();
+        record.extend([0x91; 8]);
+        record.push(4);
+        record.extend([1, 2, 3, 4]);
+        record.extend([b'S', 0x72]);
+        record
+    }
+
+    fn v21_plan() -> Plan {
+        Plan::parse(V21).unwrap()
+    }
+
+    fn chunk(tag: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+        let mut bytes: Vec<_> = tag.iter().rev().copied().collect();
+        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(payload);
+        bytes
+    }
+
+    fn synthetic_wdt() -> Vec<u8> {
+        let mut mphd = vec![0; 32];
+        put32(&mut mphd, 0, 0x200);
+        let mut main = vec![0; 64 * 64 * 8];
+        put32(&mut main, 0, 1);
+        let mut maid = vec![0; 64 * 64 * 32];
+        put32(&mut maid, 0, 200);
+        put32(&mut maid, 4, 201);
+        let mut bytes = chunk(b"MVER", &18_u32.to_le_bytes());
+        bytes.extend_from_slice(&chunk(b"MPHD", &mphd));
+        bytes.extend_from_slice(&chunk(b"MAIN", &main));
+        bytes.extend_from_slice(&chunk(b"MAID", &maid));
+        bytes
+    }
+
+    fn synthetic_adt() -> Vec<u8> {
+        let mut header = vec![0; 128];
+        put32(&mut header, 52, 42);
+        put32(&mut header, 112, 2.0_f32.to_bits());
+        let mut heights = vec![0; 145 * 4];
+        for index in 0..145 {
+            put32(&mut heights, index * 4, (index as f32 * 0.125).to_bits());
+        }
+        let mut cell = header;
+        cell.extend_from_slice(&chunk(b"MCVT", &heights));
+        let mut bytes = chunk(b"MVER", &18_u32.to_le_bytes());
+        bytes.extend_from_slice(&chunk(b"MCNK", &cell));
+        bytes
+    }
+
+    #[test]
+    fn v21_domain_path_rejects_a_hash_the_pinned_path_accepts() {
+        let mut bytes = synthetic_db2("Map", 2, false);
+        let original_hash = u32::from_le_bytes(bytes[152..156].try_into().unwrap());
+        bytes[152..156].copy_from_slice(&(original_hash ^ 1).to_le_bytes());
+
+        assert!(forever_db2::terrain_sources::read_navigation_maps(&bytes).is_ok());
+        let target_error = match forever_db2::terrain_sources::read_navigation_maps_70450(&bytes) {
+            Ok(_) => panic!("70450 reader accepted a foreign Map hash"),
+            Err(error) => error,
+        };
+        assert_eq!(target_error.code(), "unsupported_table_schema");
+        assert!(crate::map_domain::Domain::derive(&bytes, 2, true).is_ok());
+        assert_eq!(
+            crate::map_domain::Domain::derive_70450(&bytes, 2, true)
+                .err()
+                .unwrap()
+                .code,
+            "unsupported_table_schema"
+        );
+    }
+
+    #[test]
+    fn v21_unavailable_or_encrypted_map_fails_before_creating_package_output() {
+        let plan = v21_plan();
+        for (mode, expected) in [
+            (MapMode::Encrypted, "local_store_no_verified_encoding"),
+            (MapMode::Missing, "file_unavailable"),
+        ] {
+            let lab = Lab::new();
+            let fixture = CascFixture::new(&lab, mode, false, false, &[]);
+            let output = lab.0.join("package");
+            let scratch = lab.scratch("scratch");
+            let error = extract_disk(
+                &plan,
+                &fixture.path,
+                &output,
+                [0x77; 32],
+                false,
+                None,
+                &scratch,
+            )
+            .unwrap_err();
+            assert_eq!(error.code, expected, "mode {expected}");
+            assert!(!output.exists(), "failed domain admission created output");
+        }
+    }
+
+    #[test]
+    fn v21_navigation_producer_uses_the_70450_map_reader() {
+        let lab = Lab::new();
+        let fixture = CascFixture::new(&lab, MapMode::Normal, true, false, &[]);
+        let plan = v21_plan();
+        let mut store = open(&plan, &fixture.path).unwrap();
+        let output = lab.0.join("package");
+        let context = context(&plan, &store, [0x79; 32]).unwrap();
+        let mut run = Run::create(&output, context, &[], Default::default()).unwrap();
+        let error = mmaps(&plan, &mut store, &output, &mut run, None).unwrap_err();
+        assert_eq!(error.code, "unsupported_table_schema");
+        assert!(!output.join("mmaps").exists());
+    }
+
+    #[test]
+    fn v21_full_extract_emits_and_verifies_all_components_and_mmap_containers() {
+        let lab = Lab::new();
+        let mut extra_files = vec![
+            (100, synthetic_wdt()),
+            (200, synthetic_adt()),
+            (201, synthetic_adt()),
+        ];
+        for name in ["LiquidMaterial", "LiquidObject", "GameObjectDisplayInfo"] {
+            let table = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
+                .unwrap()
+                .unwrap();
+            extra_files.push((table.metadata().file_data_id, synthetic_db2(name, 1, false)));
+        }
+        let fixture = CascFixture::new(&lab, MapMode::Normal, false, false, &extra_files);
+        let plan = v21_plan();
+        let output = lab.0.join("package");
+        let scratch = lab.scratch("scratch");
+        let summary = extract_disk(
+            &plan,
+            &fixture.path,
+            &output,
+            [0x79; 32],
+            false,
+            None,
+            &scratch,
+        )
+        .unwrap();
+        assert_eq!(summary.context.components, 57);
+        for path in [
+            "dbc/enUS/Map.db2",
+            "dbc/enUS/LiquidType.db2",
+            "maps/0002.tilelist",
+            "maps/0002_00_00.map",
+            "vmaps/GameObjectModels.dtree",
+            "vmaps/0002/0002.vmtree",
+            "mmaps/0002.mmap",
+            "mmaps/0002_00_00.mmtile",
+        ] {
+            assert!(output.join(path).is_file(), "missing {path}");
+        }
+
+        let global = fs::read(output.join("mmaps/0002.mmap")).unwrap();
+        assert_eq!(
+            u32::from_le_bytes(global[..4].try_into().unwrap()),
+            mmap::MAGIC
+        );
+        assert_eq!(
+            u32::from_le_bytes(global[4..8].try_into().unwrap()),
+            mmap::VERSION
+        );
+        assert_eq!(
+            mmap::GlobalView::parse(&global, 2, Default::default())
+                .unwrap()
+                .sources()
+                .count(),
+            0
+        );
+
+        let tile = fs::read(output.join("mmaps/0002_00_00.mmtile")).unwrap();
+        assert_eq!(
+            u32::from_le_bytes(tile[..4].try_into().unwrap()),
+            mmap::MAGIC
+        );
+        assert_eq!(
+            u32::from_le_bytes(tile[8..12].try_into().unwrap()),
+            mmap::VERSION
+        );
+        let view = mmap::TileView::parse(&tile, Default::default()).unwrap();
+        assert!(!view.payload().is_empty());
+        assert_eq!(
+            tile.len() - 20,
+            u32::from_le_bytes(tile[12..16].try_into().unwrap()) as usize
+        );
+
+        let verified = crate::verify::verify(&plan, &output, Some(summary.context)).unwrap();
+        assert_eq!(verified, summary);
     }
 }

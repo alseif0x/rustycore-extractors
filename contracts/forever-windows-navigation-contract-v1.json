@@ -164,10 +164,16 @@
     "behavior_changed": false,
     "scope": "rustfmt module declaration ordering only; exact inverse restores the historical imported bytes; does not transfer historical Windows runtime acceptance"
   },
+  "reviewed_build70450_map_verifier_correction": {
+    "path": "crates/forever-navigation/src/terrain/load.rs",
+    "previous_sha256": "affdf95789ae3e27204237c34a83a13817b2ec931f1d8a600a9ad9fc1e5eb3d7",
+    "current_sha256": "1ea7f6e6c4fad539a113a4e710560e8aa499d1a3513991833ce163d897e91699",
+    "scope": "Linux source loading dispatches only build 70450 to the explicit verify_70450 path; every other build, including Windows, retains the generic verifier"
+  },
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",
-    "crates/forever-navigation/src/inventory.rs": "13946d3a1df2e99deed0faebe57a715ff99dff3213c50bee018a772c968f1a00",
+    "crates/forever-navigation/src/inventory.rs": "3953e798ee1b22a1d9bca7646ed9ff2366fe5ab25651af05c6aea447ed4125fd",
     "crates/forever-navigation/src/inventory/windows.rs": "34478c4da953be0f26f8cf8b663c73d529b05bbfaf81356c41d9879143565b40",
     "crates/forever-navigation/src/inventory/windows/guard.rs": "c9cfd8e0fabc155120945b22c3bcffeeac0843fa29b5a2f9da54fe0906980fd5",
     "crates/forever-navigation/src/inventory/windows/run.rs": "5941c934ccb4406adf4d04db0b85b52fdd9393ba08fefba9ae67a92b7b1db38b",

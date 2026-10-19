@@ -100,6 +100,7 @@ impl Limits {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     InvalidLimits,
+    UnsupportedBuild,
     Limit,
     Allocation,
     Sink,
@@ -113,6 +114,7 @@ impl Error {
     pub fn code(self) -> &'static str {
         match self {
             Self::InvalidLimits => "terrain_run_invalid_limits",
+            Self::UnsupportedBuild => "terrain_run_unsupported_build",
             Self::Limit => "terrain_run_policy_limit",
             Self::Allocation => "terrain_run_allocation",
             Self::Sink => "terrain_run_sink",
@@ -240,7 +242,10 @@ impl<S: Sink> Runner<'_, S> {
         self.limits.validate()?;
         self.store.verify_unchanged().map_err(Error::Store)?;
         let build = self.store.build().build;
-        let tables = self.tables()?;
+        if !matches!(build, 70170 | 70205 | 70450) {
+            return Err(Error::UnsupportedBuild);
+        }
+        let tables = self.tables(build)?;
         self.step = Step::Admission;
         // Reserve both policies before their first allocation; caller data is
         // already charged in retained. Future reads reuse this same reservation.
@@ -276,7 +281,7 @@ impl<S: Sink> Runner<'_, S> {
                 .map_err(Error::Plan)?;
             drop(wdt);
             drop(file);
-            let mut list = tilelist::TileList::new(build).map_err(|_| Error::InvalidLimits)?;
+            let mut list = tilelist_for_build(build)?;
             for tile in tiles.tiles() {
                 let (id, name) = match tile.source() {
                     plan::TileSource::Absent => continue,
@@ -297,9 +302,17 @@ impl<S: Sink> Runner<'_, S> {
                     build,
                     pack,
                 };
-                let output =
+                let output = if build == 70450 {
+                    conversion::convert_adt_70450(
+                        &file.bytes,
+                        &tables,
+                        context,
+                        self.limits.conversion,
+                    )
+                } else {
                     conversion::convert_adt(&file.bytes, &tables, context, self.limits.conversion)
-                        .map_err(Error::Conversion)?;
+                }
+                .map_err(Error::Conversion)?;
                 self.output(output.bytes().len())?;
                 self.sink
                     .tile(context, self.facts(&file), &output)
@@ -397,4 +410,34 @@ impl<S: Sink> Runner<'_, S> {
 }
 fn add(a: usize, b: usize) -> Result<usize, Error> {
     a.checked_add(b).ok_or(Error::Limit)
+}
+
+fn tilelist_for_build(build: u32) -> Result<tilelist::TileList, Error> {
+    match build {
+        70170 | 70205 => tilelist::TileList::new(build).map_err(|_| Error::InvalidLimits),
+        70450 => tilelist::TileList::new_70450(build).map_err(|_| Error::InvalidLimits),
+        _ => Err(Error::UnsupportedBuild),
+    }
+}
+
+#[cfg(test)]
+mod build_gate_tests {
+    use super::*;
+
+    #[test]
+    fn build_specific_tilelists_preserve_older_headers_and_reject_unknowns() {
+        for build in [70170, 70205, 70450] {
+            let list = tilelist_for_build(build).unwrap();
+            assert_eq!(&list.bytes()[8..12], &build.to_le_bytes());
+            if build == 70450 {
+                tilelist::verify_70450(list.bytes(), build).unwrap();
+            } else {
+                tilelist::verify(list.bytes(), build).unwrap();
+            }
+        }
+        assert!(matches!(
+            tilelist_for_build(70374),
+            Err(Error::UnsupportedBuild)
+        ));
+    }
 }

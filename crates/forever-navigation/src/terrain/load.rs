@@ -235,7 +235,7 @@ fn find<S: Source>(
                 memory.live -= bytes.capacity();
             }
             Presence::Present => {
-                maps::verify(&bytes, plan.build(), limits.file_bytes).map_err(Error::Map)?;
+                verify_map(&bytes, plan.build(), limits.file_bytes).map_err(Error::Map)?;
                 stats.found_files += 1;
                 return Ok(Some(File {
                     bytes,
@@ -250,11 +250,26 @@ fn find<S: Source>(
 }
 fn region<'a>(file: &'a File, build: u32) -> super::Region<'a> {
     super::Region {
-        map: maps::verify(&file.bytes, build, maps::MAX_MAP_BYTES)
-            .expect("complete checked terrain"),
+        map: verify_map(&file.bytes, build, maps::MAX_MAP_BYTES).expect("complete checked terrain"),
         row: file.tile.row,
         column: file.tile.column,
         portion: file.portion,
+    }
+}
+fn verify_map(
+    bytes: &[u8],
+    build: u32,
+    max_bytes: usize,
+) -> Result<maps::MapView<'_>, maps::Error> {
+    #[cfg(target_os = "linux")]
+    if build == 70450 {
+        maps::verify_70450(bytes, build, max_bytes)
+    } else {
+        maps::verify(bytes, build, max_bytes)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        maps::verify(bytes, build, max_bytes)
     }
 }
 /// Load only a selected output tile. Center first; missing or triangle-empty
