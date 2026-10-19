@@ -23,13 +23,16 @@ use inventory::windows as navigation_input;
 use std::path::Path;
 
 #[cfg(all(test, target_os = "linux"))]
-// These private CASC algorithms are included as test-only fixture kernels; the
-// exact source is also included by the collision fixture module.
+// CASC intentionally exports neither helper; the exact original source is
+// included here to author a local synthetic archive, and is also used by the
+// collision fixture module (cloning these cryptographic/checksum algorithms
+// into another test implementation would be less auditable).
 #[allow(clippy::duplicate_mod)]
 #[path = "../../forever-casc/src/local_index/jenkins.rs"]
 mod v21_test_jenkins;
 #[cfg(all(test, target_os = "linux"))]
-// See the matching Jenkins fixture module above.
+// See the matching Jenkins fixture module above; both allowances cover only
+// duplicate test-only source inclusion, not production code or test assertions.
 #[allow(clippy::duplicate_mod)]
 #[path = "../../forever-casc/src/blte/md5.rs"]
 mod v21_test_md5;
@@ -1799,6 +1802,50 @@ mod v21_navigation_tests {
         let error = mmaps(&plan, &mut store, &output, &mut run, None).unwrap_err();
         assert_eq!(error.code, "unsupported_table_schema");
         assert!(!output.join("mmaps").exists());
+    }
+
+    #[test]
+    fn v21_terrain_runner_uses_build70450_liquid_material_reader() {
+        let lab = Lab::new();
+        let mut extra_files = vec![
+            (100, synthetic_wdt()),
+            (200, synthetic_adt()),
+            (201, synthetic_adt()),
+        ];
+        for name in ["LiquidMaterial", "LiquidObject", "GameObjectDisplayInfo"] {
+            let table = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
+                .unwrap()
+                .unwrap();
+            extra_files.push((
+                table.metadata().file_data_id,
+                synthetic_db2(name, 1, name == "LiquidMaterial"),
+            ));
+        }
+        let foreign_material = synthetic_db2("LiquidMaterial", 1, true);
+        assert!(forever_db2::terrain_sources::read_liquid_materials(&foreign_material).is_ok());
+        let target_error =
+            match forever_db2::terrain_sources::read_liquid_materials_70450(&foreign_material) {
+                Ok(_) => panic!("70450 liquid material reader accepted a foreign hash"),
+                Err(error) => error,
+            };
+        assert_eq!(target_error.code(), "unsupported_table_schema");
+
+        let fixture = CascFixture::new(&lab, MapMode::Normal, false, false, &extra_files);
+        let plan = v21_plan();
+        let output = lab.0.join("package");
+        let scratch = lab.scratch("scratch");
+        let error = extract_disk(
+            &plan,
+            &fixture.path,
+            &output,
+            [0x7a; 32],
+            false,
+            None,
+            &scratch,
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "unsupported_table_schema");
+        assert_eq!(error.component, Some(Component::Terrain));
     }
 
     #[test]

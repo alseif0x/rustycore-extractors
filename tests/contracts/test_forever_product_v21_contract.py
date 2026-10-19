@@ -75,9 +75,10 @@ class ProductV21Contract(unittest.TestCase):
             ["offmesh-connection\t2\t0\t0\t00000000\t00000000\t00000000\t3f800000\t3f800000\t3f800000\t3f000000\t0\t1\t1"],
         )
 
-    def test_domain_and_runtime_gates_are_bound_to_complete_70450_readers(self):
+    def test_source_contains_explicit_build70450_reader_dispatches(self):
         root = ROOT
         driver = (root / "crates/forever-extractor/src/driver.rs").read_text()
+        plan_source = (root / "crates/forever-extractor/src/plan.rs").read_text()
         domain = (root / "crates/forever-extractor/src/map_domain.rs").read_text()
         domain_plan = (root / "crates/forever-extractor/src/plan/map_domain.rs").read_text()
         verify = (root / "crates/forever-extractor/src/verify.rs").read_text()
@@ -95,6 +96,7 @@ class ProductV21Contract(unittest.TestCase):
         self.assertIn("Domain::derive_70450", driver)
         self.assertIn("read_navigation_maps_70450", driver)
         self.assertIn("read_navigation_maps_70450", verify)
+        self.assertIn("metadata.file_data_id != entry.id", plan_source)
         self.assertIn("plan.terrain != Selection::Map(id)", domain_plan)
         self.assertIn("plan.navigation != Selection::Map(id)", domain_plan)
         self.assertIn("connection.map_id != id", domain_plan)
@@ -119,8 +121,10 @@ class ProductV21Contract(unittest.TestCase):
         navigation_tests = driver.split("mod v21_navigation_tests {", 1)[1]
         for name in [
             "v21_fails_closed_on_foreign_build_catalog_and_incomplete_navigation_inputs",
+            "v21_declared_map_and_liquidtype_ids_are_catalog_bound",
             "v21_domain_path_rejects_a_hash_the_pinned_path_accepts",
             "v21_navigation_producer_uses_the_70450_map_reader",
+            "v21_terrain_runner_uses_build70450_liquid_material_reader",
             "v21_unavailable_or_encrypted_map_fails_before_creating_package_output",
             "v21_full_extract_emits_and_verifies_all_components_and_mmap_containers",
         ]:

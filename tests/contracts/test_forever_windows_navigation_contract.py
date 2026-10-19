@@ -112,6 +112,32 @@ class WindowsNavigationContract(unittest.TestCase):
         self.assertEqual(prior_current.count(after), 1)
         self.assertEqual(hashlib.sha256(prior_current.replace(after, before)).hexdigest(), pins[path])
         reviewed[path] = gate['current_sha256']
+        admission = self.c['reviewed_build70450_inventory_admission_correction']
+        inventory_path = 'crates/forever-navigation/src/inventory.rs'
+        self.assertEqual(admission['path'], inventory_path)
+        self.assertEqual(
+            admission['previous_sha256'],
+            '13946d3a1df2e99deed0faebe57a715ff99dff3213c50bee018a772c968f1a00',
+        )
+        self.assertEqual(admission['current_sha256'], pins[inventory_path])
+        self.assertEqual(
+            admission['current_sha256'],
+            '3953e798ee1b22a1d9bca7646ed9ff2366fe5ab25651af05c6aea447ed4125fd',
+        )
+        self.assertEqual(
+            admission['scope'],
+            'Linux Plan admission adds only build 70450; builds 70170 and 70205 retain their prior gate and non-Linux build-70450 admission remains rejected',
+        )
+        inventory = (ROOT / inventory_path).read_bytes()
+        before_admission = b'if !matches!(build, 70170 | 70205) {'
+        after_admission = b'if !matches!(build, 70170 | 70205) && !(cfg!(target_os = "linux") && build == 70450) {'
+        self.assertEqual(inventory.count(after_admission), 1)
+        self.assertEqual(
+            hashlib.sha256(inventory.replace(after_admission, before_admission, 1)).hexdigest(),
+            admission['previous_sha256'],
+        )
+        self.assertEqual(hashlib.sha256(inventory).hexdigest(), admission['current_sha256'])
+        reviewed[inventory_path] = admission['current_sha256']
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
             self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)

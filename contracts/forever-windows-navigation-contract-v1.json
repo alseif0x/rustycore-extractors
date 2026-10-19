@@ -170,6 +170,12 @@
     "current_sha256": "1ea7f6e6c4fad539a113a4e710560e8aa499d1a3513991833ce163d897e91699",
     "scope": "Linux source loading dispatches only build 70450 to the explicit verify_70450 path; every other build, including Windows, retains the generic verifier"
   },
+  "reviewed_build70450_inventory_admission_correction": {
+    "path": "crates/forever-navigation/src/inventory.rs",
+    "previous_sha256": "13946d3a1df2e99deed0faebe57a715ff99dff3213c50bee018a772c968f1a00",
+    "current_sha256": "3953e798ee1b22a1d9bca7646ed9ff2366fe5ab25651af05c6aea447ed4125fd",
+    "scope": "Linux Plan admission adds only build 70450; builds 70170 and 70205 retain their prior gate and non-Linux build-70450 admission remains rejected"
+  },
   "validated_import_sha256": {
     "Cargo.lock": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
     "crates/forever-navigation/Cargo.toml": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",

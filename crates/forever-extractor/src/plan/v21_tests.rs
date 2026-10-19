@@ -41,6 +41,22 @@ fn v21_identity_and_scope_are_canonical_and_build_bound() {
     assert_eq!(
         plan.db2
             .iter()
+            .find(|entry| entry.name == "Map")
+            .unwrap()
+            .id,
+        forever_casc::terrain::run::MAP_ID
+    );
+    assert_eq!(
+        plan.db2
+            .iter()
+            .find(|entry| entry.name == "LiquidType")
+            .unwrap()
+            .id,
+        forever_casc::terrain::run::TYPE_ID
+    );
+    assert_eq!(
+        plan.db2
+            .iter()
             .map(|entry| entry.name.as_str())
             .collect::<Vec<_>>(),
         ["LiquidType", "Map"]
@@ -57,6 +73,21 @@ fn v21_offmesh_records_are_canonical_and_bound_to_the_selected_map() {
     assert_eq!(Plan::parse(&plan.render()), Ok(plan));
     let missing_profile = V21_OFFMESH.replace("offmesh\tinline-f32-bits-v1\n", "");
     assert!(Plan::parse(&missing_profile).is_err());
+}
+
+#[test]
+fn v21_declared_map_and_liquidtype_ids_are_catalog_bound() {
+    let base = plan();
+    for (name, foreign_id) in [("Map", 1_349_478), ("LiquidType", 1_371_381)] {
+        let mut variant = base.clone();
+        variant
+            .db2
+            .iter_mut()
+            .find(|entry| entry.name == name)
+            .unwrap()
+            .id = foreign_id;
+        assert_eq!(variant.validate(), Err("product_plan_schema"), "{name}");
+    }
 }
 
 #[test]

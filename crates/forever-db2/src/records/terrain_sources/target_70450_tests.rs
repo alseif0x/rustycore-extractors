@@ -185,51 +185,6 @@ fn map70450_readers_bind_catalog_for_terrain_vmap_and_navigation() {
 }
 
 #[test]
-fn map70450_readers_bind_catalog_for_terrain_vmap_and_navigation_projections() {
-    let target = table70450("Map");
-    let pinned = table("Map");
-    let CharacterTable::Catalog(binding) = target else {
-        panic!("expected build-specific Map catalog binding");
-    };
-    assert_eq!(
-        binding.catalog_id(),
-        crate::catalog::WOWDBDEFS_70450_CATALOG_ID
-    );
-    assert_ne!(target, pinned);
-    assert_eq!(target.file_id(), 1_349_477);
-    assert_eq!(target.schema().hash, Some(0xBD84_CD62));
-    assert_eq!(target.schema().layout, 0xD43A_FAC3);
-
-    let mut spec = spec70450("Map", &[2]);
-    set_word(&mut spec, 0, 21, 100);
-    set_short(&mut spec, 0, 13, -1);
-    set_short(&mut spec, 0, 14, -1);
-    let bytes = assemble(target, &spec);
-    let map = terrain::read_map_70450(&bytes).unwrap();
-    let vmap = terrain::read_vmap_maps_70450(&bytes).unwrap();
-    let navigation = terrain::read_navigation_maps_70450(&bytes).unwrap();
-    assert_eq!(map.direct_records()[0].id, 2);
-    assert_eq!(map.direct_records()[0].fields.wdt_file_data_id, 100);
-    assert_eq!(vmap.direct_records()[0].fields.wdt_file_data_id, 100);
-    assert_eq!(vmap.direct_records()[0].fields.parent_map_id, -1);
-    assert_eq!(navigation.direct_records()[0].id, 2);
-    assert_eq!(navigation.direct_records()[0].fields.effective_parent(), -1);
-
-    // The legacy Map schema has no table-hash gate; all v21 projections must
-    // therefore select the pinned 70450 catalog explicitly.
-    let mut foreign_hash = bytes.clone();
-    foreign_hash[152..156].copy_from_slice(&0xAABB_CCDDu32.to_le_bytes());
-    assert!(terrain::read_map_70450(&foreign_hash).is_err());
-    assert!(terrain::read_vmap_maps_70450(&foreign_hash).is_err());
-    assert!(terrain::read_navigation_maps_70450(&foreign_hash).is_err());
-    assert!(terrain::read_navigation_maps(&foreign_hash).is_ok());
-
-    for length in 0..bytes.len() {
-        assert!(terrain::read_navigation_maps_70450(&bytes[..length]).is_err());
-    }
-}
-
-#[test]
 fn liquid70450_hash_layout_and_physical_shape_gates_remain_strict() {
     for name in ["LiquidMaterial", "LiquidType"] {
         let valid = assemble(table70450(name), &spec70450(name, &[7]));
