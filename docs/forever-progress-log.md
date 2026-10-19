@@ -4601,3 +4601,92 @@ Format parity with the C++/TrinityCore reference, RustyCore runtime consumption,
 navigation/MMaps, full-world or whole-client coverage, Windows, and release
 publication remain unproven. This v22 acceptance is independent of and does not
 transfer acceptance from v14, v15, v18, or v21.
+
+
+## 2026-10-19: selected navigation four-tile generation checkpoint
+
+Producer `6eb2f65` passed a bounded offline run over all four selected tiles.
+Four nonempty MMap tiles plus a 40-byte global total 838,116 bytes; save/reread,
+framing, exact output inventory, input/source/harness/binary guards and parent
+context checks passed. The previous tile remains byte-identical. Receipt
+SHA-256: `8f97cfb8d1aa745b7139c477480f6306589da6896eb2706db4c7bd5ae9022ea5`.
+The selected partial-source coverage and complete LiquidType facts retain their
+existing scopes. Native cross-tile queries, selected filesystem product wiring,
+a v23 CLI, full-world/server acceptance and release acceptance remain open.
+See the dated four-tile checkpoint in `docs/forever-navigation.md`.
+
+## 2026-10-19: available-selected Linux filesystem API and validation
+
+A separate Linux-only library candidate adds
+`inventory::fs::available::AvailableSelectedPackage::open_70450` and
+`inventory::fs::run::execute_available_selected` for one explicit map or tile
+from available build-70450 Map records. The owner retains a partial
+`AvailableSelectedPlan` and cannot promote it to a complete-source plan. It
+requires rooted inventory for the selected map and each active ancestor,
+rejects `Selection::All`, admits at most one output map and 4,096 selected
+tiles, and distinguishes a valid authoritative empty tilelist from missing or
+malformed input. The caller remains responsible for complete `LiquidTypes`.
+
+Output callbacks stay provisional until `AvailableCompleted`; post-start
+failures latch the owner. Pipeline/source errors preserve their exact typed
+cause for a retry, while sink and output failures retain the generic `Failed`
+state. Metadata, closure/planning, builder/save work and retained-owner limits
+are cumulative where the implementation exposes counters; other pipeline
+stages retain per-tile ceilings over the bounded tile count. This is not a
+universal measured work sum or total RSS claim. The complete-source filesystem
+`Package` and `run::execute` paths are unchanged.
+
+Final offline validation of the source set identified by source-manifest
+SHA-256 `9ad9bdbff8417c416226f6b8c391a473988e9692ab3d974823246cae86bc70a1`
+reported 343 navigation-library tests passed, 20 ignored, and 487 product tests
+passed. The navigation suite took 51.79 seconds, the product suite 72.60
+seconds, and the combined run exited 0 in 143.693 seconds with unchanged source
+hashes. Its receipt SHA-256 is
+`54eb35d288498d5fcec432cced593ead21df456a73bab912b841ec57fe9aa238`.
+Workspace Clippy with `--all-targets -- -D warnings` passed in 29.732 seconds;
+receipt SHA-256 `e546b9f66aed069e59fe03a13c469d4dc10b58a4dca6084034134b8659fe2d17`.
+The full contract suite passed 434 cases in 6.999 seconds, the full formatting
+check passed, and `git diff --check` passed after trailing blank lines were
+removed.
+
+The earlier four-tile real generation at `6eb2f65` came from a separate manual
+harness and did not use this filesystem owner. The native query proofs are also
+separate from this API. No real-data filesystem-backed run, CLI profile,
+complete-source v21 acceptance, full-world/server/runtime acceptance, Windows
+support, or release acceptance is established. See the dated filesystem API
+section in `docs/forever-navigation.md`.
+
+## 2026-10-19: native SDK probe across four selected tiles
+
+The bounded native SDK probe loaded, verified present, and removed all four
+MMap tiles from the earlier separate manual generation, using the original v16
+headers and exact unchanged Detour v7 payloads. The legacy-v15 tile container
+reader rejected each v16 header as expected. The adapter did not rewrite the
+inputs and did not use the new available-selected filesystem owner.
+
+All 64 geometry-derived nearest-poly candidates resolved to distinct native
+polygons. A bounded set of 256 route attempts returned 163 complete paths; 93
+retained `target_not_last_poly`. At least one complete route traversed multiple
+loaded tiles. These results preserve the negative outcomes and are not an
+exhaustive tile-pair or route sweep.
+
+The four tiles plus their 40-byte global total 838,116 bytes. Producer and
+consumer source were `6eb2f65`; the existing SDK integration source was
+`5447213`, with prior work preserved. Source, workspace, harness, toolchain,
+input, binary and query guards passed. The offline build took 19.039 seconds,
+the native call 0.232 seconds (0.222 seconds in the probe), and the command
+20.141 seconds total under a 900-second / 3-GiB / 100%-CPU service limit.
+
+The native binary SHA-256 is
+`f35c50d5ca2c9f7edc70f5ec7bd24b4b3ec12c563840171cccfae1b0e8f3a99b`. The
+receipt SHA-256 is
+`517f0953d988d87c4073eeeaf1f4b03899fa5e5736c1de7230e8cab15b8d74d9`; the
+independent review SHA-256 is
+`515c6727018514004d00c55e2e11c7b7b6b0b79db965081cccffb6dc3211810a`.
+
+This establishes a bounded cross-tile path through the native adapter for the
+loaded tiles. It does not establish legacy `MMapManager` or filename acceptance,
+server/gameplay behavior, native Trinity parity, off-mesh completeness,
+full-world coverage, a CLI profile, or acceptance of the separate filesystem
+owner. See the dated four-tile native checkpoint in
+`docs/forever-navigation.md`.

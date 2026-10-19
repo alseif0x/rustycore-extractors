@@ -209,5 +209,15 @@
     "fixture_sha256": "dca8219f4953c5053f4f3bbe021c5497842ad8209964609da9ad41aca0767867",
     "scope": "Linux-only selected-navigation imports/helpers are cfg-gated for Windows lint; no Windows behavior or feature change",
     "exact_inverse_required": true
+  },
+  "reviewed_linux_selected_filesystem_inventory_delta": {
+    "path": "crates/forever-navigation/src/inventory.rs",
+    "baseline_revision": "6eb2f657e6ae90dc4db8de420353ffc042ebafad",
+    "baseline_sha256": "dcfa037709d1b4f66ecee282e8effa7442a7e28787a9814e3cbca5603cb35f18",
+    "candidate_sha256": "4cc9e2ee32bfa25dd513841b87a06183c16da51e91237c800fa9e600c06fe3e8",
+    "fixture": "tests/contracts/fixtures/forever-selected-navigation-v1/inventory-linux-fs-available-delta.json",
+    "fixture_sha256": "62dd7f111ba65924a2f2b6337e4b53de4b6c75d811e2a87c101936a67d9cbecc",
+    "scope": "Linux-only rooted available-selected closure preparation and shared bounded planning accounting; no Windows behavior or acceptance change",
+    "exact_inverse_required": true
   }
 }

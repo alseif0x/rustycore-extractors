@@ -10,6 +10,7 @@ use crate::{models, offmesh, pipeline, terrain, tilebuilder::Coordinate};
 use forever_db2::terrain_sources::{DirectRecord, NavigationMapFields, SourceRecords};
 use forever_vmap::store;
 use std::{fs, mem::size_of, os::unix::ffi::OsStrExt, path::Path};
+pub mod available;
 mod guard;
 pub mod run;
 use crate::terrain::load::fs::hash;
@@ -24,6 +25,7 @@ pub enum Error {
     Kind,
     Io,
     InputChanged,
+    Failed,
     Inventory(super::Error),
     TerrainSource(terrain::load::SourceError),
     CollisionSource(store::SourceError),
@@ -59,6 +61,7 @@ impl Error {
             Self::Kind => "navigation_discovery_file_kind",
             Self::Io => "navigation_discovery_io",
             Self::InputChanged => "navigation_discovery_input_changed",
+            Self::Failed => "navigation_discovery_failed",
             Self::Inventory(e) => e.code(),
             Self::TerrainSource(e) => match e {
                 terrain::load::SourceError::Io => "navigation_terrain_source_io",
