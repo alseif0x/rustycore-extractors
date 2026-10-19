@@ -981,6 +981,53 @@ fn parent_in_data_value(kind: Kind, parent_id: u32) -> Result<Value, RecordError
 mod high_volume_profile_tests {
     use super::*;
 
+    fn high_volume_numeric_fixture(catalog_id: &str, count: u32) -> Vec<u8> {
+        const NAME: &str = "WMOMinimapTexture";
+        let declaration = catalog::resolve_for(catalog_id, NAME).unwrap().unwrap();
+        let metadata = declaration.metadata();
+        let fields = metadata.file_field_count;
+        assert_eq!(fields, 4);
+        let record_size = 16_usize;
+        let columns_start = HEADER_SIZE + crate::SECTION_SIZE + fields * 4;
+        let data_start = columns_start + fields * 24;
+        let mut data = vec![0; data_start];
+        data[..4].copy_from_slice(b"WDC5");
+        put32(&mut data, 4, 5);
+        put32(&mut data, 136, count);
+        put32(&mut data, 140, fields as u32);
+        put32(&mut data, 144, record_size as u32);
+        put32(&mut data, 152, metadata.table_hash.unwrap());
+        put32(&mut data, 156, metadata.layout_hash);
+        put32(&mut data, 160, 1);
+        put32(&mut data, 164, count);
+        put16(&mut data, 174, metadata.index as u16);
+        put32(&mut data, 176, fields as u32);
+        put32(&mut data, 188, (fields * 24) as u32);
+        put32(&mut data, 200, 1);
+        for index in 0..fields {
+            let at = columns_start + 24 * index;
+            put16(&mut data, at, (index * 32) as u16);
+            put32(&mut data, at + 16, 32);
+            put32(&mut data, at + 20, 1);
+        }
+        put32(&mut data, 204 + 8, data_start as u32);
+        put32(&mut data, 204 + 12, count);
+        put32(&mut data, 204 + 24, count * 4);
+        data.resize(data_start + record_size * count as usize, 0);
+        for id in 1..=count {
+            data.extend(id.to_le_bytes());
+        }
+        data
+    }
+
+    fn put16(data: &mut [u8], at: usize, value: u16) {
+        data[at..at + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn put32(data: &mut [u8], at: usize, value: u32) {
+        data[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
     #[test]
     fn high_volume_policy_is_exactly_pinned_for_each_catalog_declaration() {
         assert_eq!(
@@ -1014,6 +1061,11 @@ mod high_volume_profile_tests {
             catalog::WOWDBDEFS_70425_CATALOG_ID,
             catalog::WOWDBDEFS_70450_CATALOG_ID,
         ];
+        let expected_tables = [
+            "ManifestInterfaceData",
+            "ModelFileData",
+            "WMOMinimapTexture",
+        ];
         for catalog_id in catalogs {
             let tables = catalog::tables_for(catalog_id).unwrap();
             for table in tables {
@@ -1023,7 +1075,7 @@ mod high_volume_profile_tests {
                         | catalog::WOWDBDEFS_70338_CATALOG_ID
                         | catalog::WOWDBDEFS_70374_CATALOG_ID
                         | catalog::WOWDBDEFS_70450_CATALOG_ID
-                ) && TARGET_HIGH_VOLUME_TABLES.contains(&table.name);
+                ) && expected_tables.contains(&table.name);
                 let selected = target_high_volume_limits(catalog_id, table.name);
                 assert_eq!(
                     selected,
@@ -1041,5 +1093,67 @@ mod high_volume_profile_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn build_70450_high_volume_profile_accepts_160k_and_keeps_70425_defaults() {
+        const COUNT: u32 = 160_000;
+        let target_catalog = catalog::WOWDBDEFS_70450_CATALOG_ID;
+        let non_target_catalog = catalog::WOWDBDEFS_70425_CATALOG_ID;
+        let name = "WMOMinimapTexture";
+        let target = high_volume_numeric_fixture(target_catalog, COUNT);
+        let target_table = CharacterTable::from_catalog_id(target_catalog, name)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(DecodeLimits::DEFAULT.max_direct_records, 100_000);
+        assert_eq!(DecodeLimits::TARGET_HIGH_VOLUME.max_direct_records, 160_000);
+        assert_eq!(
+            DecodedTable::read(&target, target_table).err(),
+            Some(RecordError::Limit)
+        );
+        let decoded =
+            DecodedTable::read_target_high_volume_from_catalog(&target, target_catalog, name)
+                .unwrap()
+                .unwrap();
+        assert_eq!(decoded.rows().len(), COUNT as usize);
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(&target, target_catalog, name),
+            Ok(())
+        );
+        drop(decoded);
+
+        let over_limit = high_volume_numeric_fixture(target_catalog, COUNT + 1);
+        assert_eq!(
+            DecodedTable::read_target_high_volume_from_catalog(&over_limit, target_catalog, name)
+                .err(),
+            Some(RecordError::Limit)
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(&over_limit, target_catalog, name),
+            Err(RecordError::Limit)
+        );
+
+        let other_build = high_volume_numeric_fixture(non_target_catalog, COUNT);
+        let other_table = CharacterTable::from_catalog_id(non_target_catalog, name)
+            .unwrap()
+            .unwrap();
+        assert!(
+            DecodedTable::read_target_high_volume_from_catalog(
+                &other_build,
+                non_target_catalog,
+                name
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert_eq!(
+            DecodedTable::read(&other_build, other_table).err(),
+            Some(RecordError::Limit)
+        );
+        assert_eq!(
+            DecodedTable::validate_catalog_raw_source_bytes(&other_build, non_target_catalog, name),
+            Err(RecordError::Limit)
+        );
     }
 }

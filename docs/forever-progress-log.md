@@ -3951,3 +3951,51 @@ retained failures, the prepared alias analyzer, repeat instructions and the
 86-source v10 inventory are recorded in the key-investigation guide/private
 laboratory. All 74 prior helper hashes remain unchanged; no bounded observer
 remains active.
+
+## 2026-10-19: build-70450 readable-plan DB2 extraction and verification
+
+The Linux v16 product ran offline with decryption disabled against the installed
+build-70450 client, using the retained esES plan
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/extract-readable/plan-readable-esES.tsv`.
+That plan selects exactly 1,055 catalogue declarations reported keylessly
+readable for this installation's locale; it is not the full 1,161-declaration
+catalogue. The extraction finished with `selected_producers_complete`. Its
+package contains 1,055 files / 24,044,516 bytes, with inventory SHA-256
+`1d2be9dd573d2a251d439347f1fad632e7b1c7d41da001d224df3dc9722a224b`.
+
+A separate offline `verify` invocation accepted the same package. The verification
+scope is `artifact_integrity_and_intrinsic_formats`; package status is
+`verified`. The reported context is build 70450 / esES, DB2-only, decryption
+disabled, source SHA-256 `8caee5a30da7aa1b0917d04b0cc79f1c214385d853e63d350a73343fe3983c8e`,
+plan SHA-256 `b867896e1d7ab28c87ccfb65c11573a2d8b86c01c85c6db0d943e56b726f962e`,
+and producer SHA-256 `b42ffaeb29a63353e6027cbb2284d54e362a6a6f9f9454004713eaa9c37c4584`.
+Verification independently reports the same 1,055 files / 24,044,516 bytes
+and inventory SHA-256. Package and run logs are retained outside every checkout
+under `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/extract-readable/`.
+The earlier 187-file and 570-file partial outputs remain retained.
+
+The initial run stopped after 187 tables at `CollectableSourceEncounterSparse`
+(5152908), `unsupported_record_variant`. Redacted structural inspection reported
+WDC5 version 5, flags 7, zero sections and records, two fields, record size 8,
+and 212 decoded bytes. Its appended-parent sparse layout remains unsupported by
+strict row decoding. The three `CollectableSource*Sparse` declarations now use
+the scoped build-70450 raw-source path: validation preserves the selected DB2
+source bytes without materializing rows or claiming decoded-row support.
+
+The next run stopped after 570 tables at `ManifestInterfaceData` (1375801) with
+`record_policy_limit`: build 70450 had not been admitted to the existing
+high-volume regular-table allowlist. The committed build-70450 profile now
+matches that allowlist shape for `ManifestInterfaceData`, `ModelFileData`, and
+`WMOMinimapTexture`, using 160,000 direct records, 100,000 copy pairs, 160,000
+parent entries, and 1,250,000 retained values. Defaults are unchanged and the
+per-file and per-package byte bounds were not raised. The rerun then completed
+the full selected 1,055-declaration plan.
+
+This is the first real complete extraction and intrinsic-format verification
+for the keylessly readable declarations selected by this plan, not for the
+entire DB2 component or catalogue. The remaining 106 declarations are reported
+encrypted with no available key; no decryption or key recovery is demonstrated.
+Three sparse files are accepted raw-only rather than row-decoded. Plan-bounded
+file counts do not imply full-catalogue acquisition. This DB2-only result does
+not establish parity, full-world resources, RustyCore runtime compatibility,
+component completeness, release readiness, or any release gate.
