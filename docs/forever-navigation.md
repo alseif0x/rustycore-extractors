@@ -2379,8 +2379,28 @@ The library implementation and synthetic validation are checked: DB2 has 458
 passes / 0 failures / 1 ignore, navigation has 329 passes / 0 failures / 20
 ignores, all-target Clippy with warnings denied passes for both crates, and the
 focused formatting, diff and 430-contract checks pass. These are software and
-synthetic results. This remains a library API boundary, not a CLI profile and
-not admission to product v21 when Map coverage is partial. No real MMap result
-or v23 CLI profile exists yet, and this makes no full-world, native-parity,
-RustyCore-runtime, Windows, or release claim. See
+synthetic results from the earlier e93 source checkpoint. Linux e93 debug and
+release CI passed; Windows CI reported a cfg-lint failure and has not yet been
+revalidated after its correction.
+
+A separate bounded Linux harness at frozen source `e93dc7b` processed one real
+selected tile. It emitted a
+367,280-byte `.mmtile` and a 40-byte MMap global; save/reread was byte-identical
+and framing parsers passed. The tile SHA-256 is
+`28ca4e65a9bfbdcaa42847e1d85ebf8a1904ed87271dc50225763f56a75872bb`, the global
+SHA-256 is `3564d4da656c6f7fc8dd53604fdac41e60e59e8b91f850b7c71816d9b31ebc12`,
+and the bounded harness receipt is
+`cf779020b3e44fbeb11f89a7d1faa5ac7252ed147d469b9e250340a725ab6847`. The
+pipeline took 34.799 seconds; total harness time was 64.715 seconds and total
+orchestration time was 65.616 seconds. Source, package, harness, and binary
+guards were stable. The Map snapshot used the partial available-Map owner; its
+encoded source bytes were authenticated, but full Map CKey verification was not
+established. The complete build-70450 `LiquidType` read did verify its CKey.
+
+This demonstrates one selected-tile MMap write/read path, not native-query or
+runtime acceptance. It is not a CLI profile and does not admit product v21 when
+Map coverage is partial. No off-mesh input, full-world output, v23 CLI profile,
+native parity, complete RustyCore runtime, Windows acceptance, or release
+authorization is established. The next steps are native consumer integration,
+a product CLI profile, and reproducible packaging. See
 `contracts/forever-selected-navigation-contract-v1.json`.

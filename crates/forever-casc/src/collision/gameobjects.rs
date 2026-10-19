@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified by the RustyCore Extractors project, 2026-10-19.
+// Modified 2026-10-19: gate engine-parts handoff to its Linux-only caller.
 // Authored 2026-10-11: complete offline GameObject startup using existing readers.
 //! GameObject startup precedes liquid-table loading in the pinned extractor
 //! (02245dcd245e7433e524577656177723d3e4992e, vmapexport.cpp:713-723).
@@ -268,6 +269,7 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
     pub fn collector_mut(&mut self) -> &mut Extractor<'store, 'lookup, L> {
         &mut self.collector
     }
+    #[cfg(target_os = "linux")]
     pub(super) fn into_engine_parts(self) -> (EngineData, Extractor<'store, 'lookup, L>) {
         let Data {
             source: _,

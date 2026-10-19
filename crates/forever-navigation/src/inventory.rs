@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified 2026-10-19: add selected partial-coverage 70450 navigation plans.
+// Modified 2026-10-19: gate Linux-only navigation helpers and imports.
 // This file is part of the TrinityCore Project. See AUTHORS for Copyright information.
 // This program is free software; you can redistribute it and/or modify it under
 // the terms of the GNU General Public License as published by the Free Software
@@ -20,9 +21,11 @@ use crate::{
     mmap,
     tilebuilder::{self, Coordinate},
 };
+#[cfg(target_os = "linux")]
+use forever_db2::{availability::AvailableRecords, terrain_sources::RecordCopy};
 use forever_db2::{
-    availability::{AvailableRecords, SectionCoverage},
-    terrain_sources::{DirectRecord, NavigationMapFields, RecordCopy, SourceRecords},
+    availability::SectionCoverage,
+    terrain_sources::{DirectRecord, NavigationMapFields, SourceRecords},
 };
 use std::mem::size_of;
 
@@ -194,6 +197,7 @@ impl Budget {
     fn sort(&mut self, n: usize) -> Result<(), Error> {
         self.charge(n as u64 * (usize::BITS - n.max(1).leading_zeros()) as u64)
     }
+    #[cfg(target_os = "linux")]
     fn search(&mut self, n: usize) -> Result<(), Error> {
         self.charge((usize::BITS - n.max(1).leading_zeros()) as u64)
     }
@@ -615,6 +619,7 @@ impl AvailableSelectedPlan {
     }
     /// Internal pipeline access keeps the partial-coverage owner attached at
     /// the API boundary while reusing the established plan execution path.
+    #[cfg(target_os = "linux")]
     pub(crate) fn inventory_plan(&self) -> &Plan {
         &self.plan
     }

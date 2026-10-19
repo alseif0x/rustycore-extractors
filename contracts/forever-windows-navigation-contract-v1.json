@@ -199,5 +199,15 @@
     "crates/forever-navigation/src/terrain/load/windows.rs": "f32c7b498ff461eb107016bab3993a5a5e28b795e0dd2fa1743e7da6d601f7ae",
     "crates/forever-navigation/src/terrain/load/windows/tests.rs": "56ff0049c76d7cb2039e703b5dba5885dda0f1e4a7c4d733175e7e9a0a63c680",
     "docs/forever-windows-navigation-readers.md": "94c386e8521fa8567279fdc53be9d5f509f4844b60a2f260ad000707859e137c"
+  },
+  "reviewed_windows_lint_cfg_inventory_delta": {
+    "path": "crates/forever-navigation/src/inventory.rs",
+    "baseline_revision": "e93dc7bfe6db8a72a357e759d006fdcea3447d62",
+    "baseline_sha256": "1973ea452608f49bbc7aa3cba8910d4282cbdc9e5bf9584836d791f68edf5389",
+    "candidate_sha256": "dcfa037709d1b4f66ecee282e8effa7442a7e28787a9814e3cbca5603cb35f18",
+    "fixture": "tests/contracts/fixtures/forever-selected-navigation-v1/inventory-windows-lint-cfg-delta.json",
+    "fixture_sha256": "dca8219f4953c5053f4f3bbe021c5497842ad8209964609da9ad41aca0767867",
+    "scope": "Linux-only selected-navigation imports/helpers are cfg-gated for Windows lint; no Windows behavior or feature change",
+    "exact_inverse_required": true
   }
 }

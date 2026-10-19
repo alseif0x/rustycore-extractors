@@ -1,0 +1,61 @@
+{
+  "baseline_revision": "e93dc7bfe6db8a72a357e759d006fdcea3447d62",
+  "baseline_sha256": "1973ea452608f49bbc7aa3cba8910d4282cbdc9e5bf9584836d791f68edf5389",
+  "candidate_sha256": "dcfa037709d1b4f66ecee282e8effa7442a7e28787a9814e3cbca5603cb35f18",
+  "hunks": [
+    {
+      "before_lines": [
+        "// Modified 2026-10-19: add selected partial-coverage 70450 navigation plans.\n"
+      ],
+      "after_lines": [
+        "// Modified 2026-10-19: add selected partial-coverage 70450 navigation plans.\n",
+        "// Modified 2026-10-19: gate Linux-only navigation helpers and imports.\n"
+      ],
+      "before_start_line": 2,
+      "after_start_line": 2
+    },
+    {
+      "before_lines": [
+        "use forever_db2::{\n",
+        "    availability::{AvailableRecords, SectionCoverage},\n",
+        "    terrain_sources::{DirectRecord, NavigationMapFields, RecordCopy, SourceRecords},\n",
+        "};\n"
+      ],
+      "after_lines": [
+        "#[cfg(target_os = \"linux\")]\n",
+        "use forever_db2::{availability::AvailableRecords, terrain_sources::RecordCopy};\n",
+        "use forever_db2::{\n",
+        "    availability::SectionCoverage,\n",
+        "    terrain_sources::{DirectRecord, NavigationMapFields, SourceRecords},\n",
+        "};\n"
+      ],
+      "before_start_line": 24,
+      "after_start_line": 24
+    },
+    {
+      "before_lines": [
+        "    fn search(&mut self, n: usize) -> Result<(), Error> {\n"
+      ],
+      "after_lines": [
+        "    #[cfg(target_os = \"linux\")]\n",
+        "    fn search(&mut self, n: usize) -> Result<(), Error> {\n"
+      ],
+      "before_start_line": 200,
+      "after_start_line": 200
+    },
+    {
+      "before_lines": [
+        "    pub(crate) fn inventory_plan(&self) -> &Plan {\n"
+      ],
+      "after_lines": [
+        "    #[cfg(target_os = \"linux\")]\n",
+        "    pub(crate) fn inventory_plan(&self) -> &Plan {\n"
+      ],
+      "before_start_line": 622,
+      "after_start_line": 622
+    }
+  ],
+  "path": "crates/forever-navigation/src/inventory.rs",
+  "schema": "forever-windows-lint-cfg-inverse-delta-v1",
+  "scope": "Linux-only selected-navigation imports/helpers are cfg-gated for Windows lint; no Windows behavior or feature change"
+}

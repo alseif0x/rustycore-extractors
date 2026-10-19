@@ -7,6 +7,33 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### Linux build-70450 selected-tile MMap update — 2026-10-19
+
+A bounded Linux harness at frozen source `e93dc7b` processed one real selected
+tile and emitted a
+367,280-byte `.mmtile` plus a 40-byte MMap global. Save/reread was byte-exact,
+and framing parsers passed. Tile SHA-256:
+`28ca4e65a9bfbdcaa42847e1d85ebf8a1904ed87271dc50225763f56a75872bb`;
+global SHA-256:
+`3564d4da656c6f7fc8dd53604fdac41e60e59e8b91f850b7c71816d9b31ebc12`;
+receipt SHA-256:
+`cf779020b3e44fbeb11f89a7d1faa5ac7252ed147d469b9e250340a725ab6847`.
+Pipeline time was 34.799 seconds, total harness time 64.715 seconds, and
+orchestration time 65.616 seconds. Source, package, harness and binary guards
+remained stable.
+
+The Map snapshot used the partial available-Map owner. Its encoded source bytes
+were authenticated, but full Map CKey verification was not established. The
+complete build-70450 `LiquidType` read did verify its CKey. This is evidence for
+one selected-tile save/reread and framing path only; it does not establish
+native query/runtime behavior, off-mesh coverage, full-world coverage, a v23 CLI
+profile, Windows acceptance or release readiness. Linux e93 debug and release
+CI passed. Windows CI reported a cfg-lint failure; its correction remains
+unvalidated by a new Windows CI run. Next steps are native consumer integration,
+a product CLI profile, and reproducible packaging. This update supersedes the
+historical “no real MMap result” status recorded in the checkpoint immediately
+below; that checkpoint is preserved as written.
+
 ### Linux build-70450 selected navigation library — 2026-10-19
 
 `forever_db2::availability::read_navigation_maps_70450`,

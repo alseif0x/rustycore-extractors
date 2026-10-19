@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified 2026-10-19: cover selected available-section plan behavior.
+// Modified 2026-10-19: keep Linux-only selected fixture helper scoped.
 // Authored 2026-10-11: synthetic directory inventories and source graphs.
 use super::*;
 fn row(id: u32, parent: i16, cosmetic: i16) -> DirectRecord<NavigationMapFields> {
@@ -32,6 +33,7 @@ fn plan(
     Plan::from_rows(rows, inputs, 70205, options, Limits::default())
 }
 
+#[cfg(target_os = "linux")]
 fn selected_plan(
     rows: &[DirectRecord<NavigationMapFields>],
     copies: &[RecordCopy],
