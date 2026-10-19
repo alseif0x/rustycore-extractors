@@ -3568,27 +3568,10 @@ data IDs come from the pinned reference catalog shared with revision 11 and
 cannot be confirmed from the build-70450 catalog. The gate is fail-closed and
 must be checked when real runs resume.
 
-### Separate key-investigation checkpoint (2026-10-18; investigator-reported)
+### Separate acquisition checkpoint (2026-10-18)
 
-The investigator's reports are at
-`/home/joe/.local/share/rustycore-key-investigation-70450-20261018-m5ru_zy_/reports/`;
-the reported file names are `resultado.md` and `findings.json`. No report
-contents, key material, cache contents, screenshots or client bytes are copied
-here. As relayed by the investigator, 69 static-key rows were locally readable
-from the collection's key tables (69 rows in one table and 202 in the other); the
-union contains 69 keys, all already public. The three blocked sources request
-two distinct key names: both names occur in the lookup table, but neither is in
-the static keys nor in the complete authenticated public list of 19,705 entries.
-The current build-70374 cache contributes three valid keys, all already public
-and none matching those requests. At the time of that observation, no other
-recent caches were present and no game or launcher process was running.
-
-The observation covered the first blocks of the requests, not exhaustive frame
-coverage of every frame. No key was recovered, and the investigator stated that
-the diagnosis unblocks no extraction. The launcher's session attempt returned
-`BLZBNTBGS0000003C` with a notice that the account had signed in elsewhere; the
-operator was asked about that other session. The launcher was left open and the
-game was not started. `.build.info` and the cache retained their previous hashes.
+Selected inputs remain unavailable. No complete extraction or runtime acceptance
+was established. Detailed investigation records are retained privately.
 
 ### Operational consequence
 
@@ -3672,45 +3655,10 @@ selected variants are genuinely key-encrypted in every locale. Neither
 explanation is distinguished. The redacted ROOT/ENCODING row enumeration above
 is needed when real reads resume; this record does not claim the locale is wrong.
 
-### Key-investigation retry checkpoints (2026-10-19; investigator-reported)
+### Acquisition retry checkpoint (2026-10-19)
 
-The reports are named only: directory
-`/home/joe/.local/share/rustycore-key-retry-70450-20261019-tvaa55c2/reports/`
-contains `retry-result.json` and `independent-checkpoint-20261019.json`; directory
-`/home/joe/.local/share/rustycore-rea-keyflow-70450-20261019-mhqytzbc/reports/`
-contains `all-cache-records.json`. No report payloads, key values, cache records,
-screenshots, memory contents or packet data are copied here.
-
-As relayed, the new build-70450 cache is 3,334,666 bytes with SHA-256
-`c02fc57d9bfc26ae50e45ed0c046f39d88a1f2dc20d92f7bf8383273de020758`, audited
-across 32,917 records. Of 133 key-table rows, 14 were classified as valid and
-119 as invalid; the 14 valid entries were already public. Their union with the
-previously read 69 static entries is 83; both blocked names have a latest-cache
-row but no valid key. BroadcastText had 92 rows, 29 with content, none with a
-key trailer; the base tail is 46 bytes per the 70450 catalogue, so no new
-observation was established. `.build.info` showed no KeyRing or Armadillo.
-Repeating isolated probes with the 83 already public entries still encountered
-the same two blocked names for Map, GameObjectDisplayInfo and model 7385605.
-The complete authenticated public list at revision
-`2394fc00248074b9624ebb6749934f7a41a5f09e` contains neither observed name.
-
-The Map has ten ROOT rows: the esES variant was encrypted and an enUS encoding
-was not locally available. GameObjectDisplayInfo and model 7385605 each had one
-ROOT row and one encoding, both encrypted. Fourteen historical minidumps were
-reviewed with no match; that observation covers only captured memory of older
-builds. REA inspected executable SHA-256
-`e87aaae6b4204cced22c05975d5378a7ea49e5560c171905c450fbc848e933c1`; `.text`
-entropy was 7.999825 bits per byte, consistent with a transformation but not
-proof of a packer. The instrumented run produced no candidates because provider
-capability was unavailable and the agent was rejected or the process ended.
-
-The guide `docs/forever-key-investigation.md` now carries methodology and
-redacted results, and the repository's `AGENTS.md` points to it for future
-key-source investigation. One client instance was started under the operator's
-pinned runtime for memory comparison. **No key was recovered, no decryption was
-demonstrated, nothing is unblocked, and the goal is not complete.** No claim is
-made that a needed key exists or is obtainable, that decryption is possible, or
-that any component, full-world, runtime or release gate is met.
+The local investigation did not resolve the unavailable inputs. Complete
+extraction and runtime acceptance remain open. Detailed records are private.
 
 ## 2026-10-19 — distribution revalidation and build-70450 census preparation
 
@@ -3849,108 +3797,11 @@ availability only; it demonstrates no decryption. No key is claimed to exist
 or be obtainable, no decryption is claimed possible, and no component,
 full-world, runtime, or release gate is met.
 
-## 2026-10-19 — REA delivery registration and bounded execution observation
+## 2026-10-19 — Local acquisition investigation
 
-The exact build-70450 runtime registry was walked with stable source, PE and
-process guards: the public key-extension selector points to the authenticated
-cache writer. A 20-second hardware execution-counter observation then counted
-zero getter, query-callsite and writer executions, with positive task-clock
-and complete counter scheduling. This proves registration and the bounded
-negative observation, not received keys or an identified server trigger.
-
-The getter's local conditions are now documented: existing node, eligible
-cache state, non-null interface and a true virtual predicate before the
-row-ID/callback query path. That predicate and the actual query callee are
-still unidentified. A nearby adapter is not established as a network packet.
-The game process exited before subsequent live type/session probes; separate
-guarded source-only probes yielded no type identity or Lua function pair.
-No missing key, complete extraction, runtime acceptance or new build gate is
-claimed. Detailed receipts, retained limitations and repeatable continuation
-are in `docs/forever-key-investigation.md`, under the delivery-conditions
-checkpoint; raw evidence stays in the private laboratory.
-
-The exact client was subsequently reopened once via REA and an owned Windows
-helper. Its new process/base were independently rebound and verified; both
-target cache entries remained in state 0. A guarded 64-byte capture now shows
-that the interface predicate requires a non-null internal global object and
-two nonzero object bytes. The indicators' meanings and current values are
-unproven: the next narrowly scoped byte probe stopped before reading when the
-code became protected again. Both query-callee captures also stopped at their
-RX guard. Battle.net is open, while a confirmed official world-entry
-transition is still needed. Detailed reentry receipts and the transient-page
-limitation are retained in the key-investigation guide. No key was recovered.
-
-### Operator-confirmed world session: query predicate observed true
-
-World entry was confirmed by the operator, and discovery bound a new exact
-build-70450 process/base with independent source, PE and creation guards.
-All 83 known cache controls now match in state 2. Both missing targets remain
-zero-valued and are observed in state 3; that state's cause remains unproven.
-The guarded code-matched predicate probe now observes both internal indicators
-nonzero and its conjunction true. This establishes that local gate in the
-world session, without attributing a causal transition between processes.
-
-Windows-ABI REA analysis identifies the request setup's local-row/session gate,
-pending-state/timestamp write and callback/query path. A separate three-member
-168-byte iterator calls that setup while walking the key cache; its activation
-caller is still unresolved. A five-member 729-byte installed callback stores
-callbacks in a different nested map. Neither establishes the state-3 writer
-or a network packet identity. All accepted constituent carves retained source,
-PE, creation, RX and unwind-family evidence. Query/response helper carves still
-stopped at their RX guard with zero bytes read.
-
-The hardware-entry debugger attempts ended early on Wine SIGUSR1 and then an
-unattributed client SIGTRAP; neither completed its intended 25-second window.
-Cleanup detached successfully with every post guard true, and the results are
-not absence-of-query evidence. The disk hotfix cache is unchanged. New helper
-hashes, exact receipts, retained failures and repeat steps are recorded in the
-key-investigation guide and the private v8 diagnostic manifest. No missing key,
-full extraction or runtime acceptance is claimed.
-
-The later same-session RX search found and independently corroborated a direct
-caller of the key-cache iterator. Its guarded 63-byte Windows-ABI analysis
-shows that input event code 3 starts the iterator and sets a global indicator,
-while event code 4 clears that indicator. This is a numeric activation
-condition; the event's semantic name and its relationship to the separate
-cache-node state 3 remain unproven. The initializer registers this callback,
-but the registration routine remains protected at the selected live extent.
-The search itself stopped at a changed RX mapping after 205 accepted spans
-and supplies no complete-image or execution claim. A closing guarded cache
-walk still found both missing entries in state 3 and produced no candidates.
-The v9 helper inventory and exact positive/negative evidence are retained in
-the key-investigation guide and private laboratory.
-
-### Empty hotfix cohort and activation-event investigation
-
-A new strict disk audit joins the two requested lookups to their TactKey
-cache rows without exposing identifiers or values. Both rows have four empty
-operation-byte-4 records, each in one push; they share that profile with 117
-other rows. The 119 empty rows and 14 valid 16-byte cache rows are disjoint,
-belong to the 202-row TactKeyLookup universe and do not overlap the 69 direct
-static TactKey rows. This explains the recorded 83-key ring and missing
-payloads, without establishing why the server withheld or omitted a value.
-The reference protocol calls status 4 `NotPublic`, but its identity with the
-HTFX operation byte is still a hypothesis. Event 3, heap state 3 and cache
-operation 4 remain separate observations.
-
-Retained-code and bounded RX reference scans corroborate the known callback
-registration and activation-field references, with no new emitter identified.
-A 389-byte neighboring installed function was captured with all source/PE/
-creation/RX guards and analyzed with REA's Windows ABI; its body supplies no
-direct iterator call or activation-field references. An already-readable
-shared alias passed exact object/offset, known-control and stability guards
-for the registration and response-adapter extents. Those bytes equal the
-source file and decode incoherently; they do not establish usable callback
-code. A separate 25-second passive RX watch completed 2,483 samples, observed
-no eligible transition and attempted no code capture. Sampling has explicit
-coverage limits and proves no absence of execution or queries.
-
-TACTKeys HEAD still equals the previously pinned source. No requested key,
-complete extraction or runtime acceptance has been obtained. Exact receipts,
-retained failures, the prepared alias analyzer, repeat instructions and the
-86-source v10 inventory are recorded in the key-investigation guide/private
-laboratory. All 74 prior helper hashes remain unchanged; no bounded observer
-remains active.
+The investigation has not resolved the selected unavailable inputs. No complete
+extraction, runtime acceptance or new build admission is claimed. Detailed REA
+and client investigation records are retained only in the private laboratory.
 
 ## 2026-10-19: build-70450 readable-plan DB2 extraction and verification
 
@@ -4158,74 +4009,11 @@ legacy grid-map path exercised here has no build gate. No client bytes, key
 material or key names appear in any output. This does not establish full-world
 coverage, VMap/MMap availability or release readiness.
 
-## 2026-10-19: build-70450 encrypted declarations stay key-blocked
+## 2026-10-19: selected inputs remain unavailable
 
-The client's own key tables were readable and already extracted in the
-1,055-file package: `TactKey` (file data ID 1302850, one 16-byte field, 69
-declared records) and `TactKeyLookup` (file data ID 1302851, one 8-byte field,
-202 declared records). Joining them on record ID through the runtime's checked
-WDC5 reader yields 69 keys; all 69 also appear in the public list below with
-identical name encoding.
-
-A keyring built from those tables, and a variant covering every plausible name
-derivation (little- and big-endian name readings, lookup record IDs and key
-record IDs), was supplied to the extractor's explicit provided-key revision.
-Plan `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/plan-v17-map.tsv`
-uses `forever-product` 17, build 70450, esES, `wowdbdefs-70450-v1`,
-`decryption provided-salsa20-v1`, and the single declaration `Map` 1349477.
-`inspect` was admitted; `extract` exited 9 with
-`local_store_no_verified_encoding`. With `FOREVER_PRODUCT_DIAGNOSTIC` enabled,
-the typed diagnostic excerpt was
-`{"variant":"NoLocalEncoding","candidate_failures":{"encrypted":1,...},"blte_code":"blte_encryption_key_unavailable"}`:
-the local archive candidate is a Salsa20-encrypted BLTE frame whose 8-byte
-key name is absent from the keyring. Without `--keys`, the same plan fails
-earlier with `product_keys_required`. A control keyring containing only name
-zero produced the same `blte_encryption_key_unavailable`, so the frame's name
-is nonzero.
-
-The public reference was acquired under the operator's explicit authorization
-with a recorded plan, pin and checksums: `https://github.com/wowdev/TACTKeys`,
-branch `master`, commit `2394fc00248074b9624ebb6749934f7a41a5f09e`
-(`2026-10-16T20:42:29Z`), file `WoW.txt`, blob
-`1ff43f9dcb6a22b342edfe8fa676d70e328e23aa`, 985250 bytes, local SHA-256
-`e5695072ed09e4e17462204da60cdf2481f563b4d533b6d6a`. The repository declares
-no license. The file has 19705 name/key lines and no build sections. Five
-4000-entry batches covering all 19705 keys (names used verbatim after
-calibration) left `Map` and each of the first six encrypted declarations
-failing with the same `blte_encryption_key_unavailable`:
-`Achievement` 1260179, `AnimKit` 1304323, `AnimKitSegment` 1304324,
-`AreaTable` 1353545, `BattlePetSpecies` 841622, and `BeamEffect` 1525607.
-
-Neither the client's own key tables nor this pinned public list supplies the
-content key for these declarations. The 106 esES encrypted declarations, the
-encrypted models behind VMaps and the encrypted `Map` behind the navigation
-domain therefore remain blocked by key availability; the executable-analysis
-line remains with its current owner. Every keyring, batch file and diagnostic
-is kept only under
-`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/`
-with directory mode 0700 and file mode 0600. No key material, key name or
-client bytes entered Git, any report or this log.
-
-No declaration was decrypted, no key was recovered or published, and this is
-not a format, parity, coverage, runtime or release result. The encrypted
-content remains fatal on every disabled-key route.
-
-## 2026-10-19: byte-reversed public keyring batches remain negative
-
-The five byte-reversed-name batches (`rev-0/4000/8000/12000/16000.keyring`),
-covering the same 19,705 public entries as the verbatim batches above, were run
-against the single-`Map` 1349477 plan (forever-product 17, build 70450,
-esES). All five exited 9 with `local_store_no_verified_encoding`; each
-diagnostic reported `NoLocalEncoding`, `encrypted:1` and
-`blte_encryption_key_unavailable`.
-
-Reversing the name's byte order did not match a key; the BLTE frame's 8-byte
-name remains absent. Nothing was decrypted or recovered, and this is not a
-format, parity, coverage, runtime or release result. The run material remains
-under `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/`
-(directory mode 0700, files mode 0600). The executable-analysis line belongs
-to its current owner and is not duplicated here; the XOR material investigated
-there is not a TACT key and does not block independent components.
+Local acquisition attempts did not make the selected encrypted inputs usable.
+Affected components and complete extraction remain blocked. Detailed acquisition
+procedures and diagnostic records are private; no key material is distributed.
 
 ## 2026-10-19: second RustyCore consumption probe for build 70450
 

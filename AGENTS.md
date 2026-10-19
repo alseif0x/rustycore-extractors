@@ -41,10 +41,10 @@ needed for every task. Add new dated entries there, not here: this file is
 injected into every agent request, so keep it to stable rules and the current
 priority.
 
-For key-source investigation, REA operation, retained negative results and
-repeatable steps after a client/tool version change, read
-`docs/forever-key-investigation.md`. Raw client data and key material stay in
-the external private laboratory described there.
+Detailed key-source investigation, REA operation, client internals and repeat
+procedures belong only in the operator’s external private laboratory.
+`docs/forever-key-investigation.md` carries only a general public status.
+Do not publish investigation details, client data or key material in Git or issues.
 
 Forever summary: the operator made this repository public, renamed `main` to
 `3.4.3`, and selected `forever` as default on 2026-10-03. Forever's development
