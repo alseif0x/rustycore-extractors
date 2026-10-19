@@ -4435,3 +4435,54 @@ This links real runtime consumption to the packaged candidate for the available
 terrain component. It does not establish the runtime build gate (`Profile::declared_build`
 still rejects 70450), navigation/MMaps, collision/VMaps, full-world coverage,
 complete runtime parity, or publication authorization.
+
+### Linux build-70450 selected-map geometry v22 — 2026-10-19
+
+The Linux Rust v22 build-70450 selected-map geometry profile is implemented and
+connected through the CLI, driver, outputs, and verification. An independent
+audit closed five findings: typed failure propagation in `try_render`,
+modification warnings, non-tautological assertions, verification mutation tests,
+and a coverage-ordinal bound. The audit fixes do not change client-derived VMap
+bytes.
+
+Bounded real acceptance used the post-audit binary
+`d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89` with an
+`esES` build-70450 map-48 plan, component mask 16 (`vmaps`), decryption disabled,
+and leased-append disk storage. GameObject globals were excluded by profile;
+models were placement-only; `LiquidObject` was out of scope; available `Map`
+included active-ancestor closure and complete liquid sources. `inspect`,
+`extract`, `verify`, and `verify-links` returned 0. Extraction reported
+`selected_producers_complete` and published a verified package. The persistent
+service limits were `RuntimeMaxSec=180` and `MemoryMax=2G`; its private run
+directory was outside every checkout.
+
+The package has 66 files / 2,079,754 bytes, inventory SHA-256
+`aa9d5cee883beea9789a3e43572d22d7062540696cd168a79729484118e31a0b`, producer
+SHA-256 `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`
+matching the accepted binary, and source SHA-256
+`8caee5a30da7aa1b0917d04b0cc79f1c214385d853e63d350a73343fe3983c8e`. It records
+`full_extractor_complete: false`,
+`complete_global_map_coverage_claim: false`, and
+`coverage_authentication: producer_reported`. Coverage is declared by the
+producer; verification does not reread source `Map` to authenticate it.
+
+Against the same plan with the preceding binary (`0ea038c4…`), 65 of the 66
+published artifacts are byte-identical (55 .vmo, 4 .vmtile, 4 .vmtileidx, 1
+.vmtree, 1 .placements). Only `vmaps/selected-geometry-coverage-v1.bin` differs
+among the published artifacts. `forever-package.json` and `.state/sealed/vmaps`
+also differ because they incorporate producer context. No client-derived VMap
+bytes changed. A private VMO read of the same package, using the producer's own
+parser and retained with its private receipt, reports 55 nonempty models, 77
+groups, 42,337 vertices, 47,175 triangles, 15 liquid groups, and 1,992,541 VMO
+bytes. This is not C++ format parity, RustyCore runtime acceptance, or
+navigation.
+
+Earlier same-plan attempts with `enUS` and the preceding binary failed with
+`local_store_no_verified_encoding` and produced no package. The local sources
+include `esES`; these are retained locale-specific failures, not evidence of an
+equivalent `esES` blockage or acceptance.
+
+Format parity with the C++/TrinityCore reference, RustyCore runtime consumption,
+navigation/MMaps, full-world or whole-client coverage, Windows, and release
+publication remain unproven. This v22 acceptance is independent of and does not
+transfer acceptance from v14, v15, v18, or v21.

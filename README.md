@@ -60,6 +60,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review the available-map Linux terrain results | [Terrain v13 guide](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance) |
 | Review build-70450 available-map terrain results | [Product v20 scope](docs/forever-product-v20.md) and [real v20 checkpoint](docs/forever-progress-log.md#2026-10-19-build-70450-full-maps-terrain-v20) |
 | Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
+| Review the synthetic build-70450 selected-map geometry profile | [Product v22 scope](docs/forever-product-v22.md) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -75,8 +76,8 @@ source of truth; the table below summarizes the boundaries.
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
 | DB2 | Build-specific catalogs, decoding, batch extraction and verification; a real v16 esES package extracted and verified 1,055 keylessly readable declarations out of 1,161 | Complete catalog acquisition and required server consumers; the other 106 esES declarations are encrypted without an available key |
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
-| Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check parsed 450 selected tiles | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
-| Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines | Real 70450 VMaps remain blocked by encrypted required content with no available key; a bounded v15 attempt produced no VMap output. Final product integration and runtime acceptance remain open |
+| Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
+| Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines. Bounded real v22 esES map-48 extraction passed with 66 files / 2,079,754 bytes (inventory `aa9d5cee…`); 65 of the 66 published artifacts match the preceding binary byte-for-byte (55 `.vmo`, 4 `.vmtile`, 4 `.vmtileidx`, 1 `.vmtree`, 1 `.placements`); only the coverage record differs, with no client-derived VMap byte changes. V22 covers selected-map geometry and active ancestors from available Map; GameObject globals are excluded by profile, LiquidObject is out of scope, and MMaps/full-world output are absent. | C++/TrinityCore format parity, RustyCore runtime acceptance, navigation/MMaps, full-world/whole-client coverage and final product integration remain open; prior-profile evidence stays separate |
 | Navigation / MMaps | Rust Recast/Detour stages, tile generation and supplied-input reader/query comparisons | Real 70450 navigation remains blocked: the esES `Map` input is encrypted, its enUS variant is absent locally, and required VMap inputs are unavailable; no real MMaps or runtime acceptance are established |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
@@ -87,7 +88,7 @@ source of truth; the table below summarizes the boundaries.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
-| **70450** | Linux product revisions v15–v21 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. | The other 106 esES DB2 declarations are encrypted; collision/VMaps and navigation/MMaps are blocked by encrypted required content without an available key. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; no whole-client/full-world, parity, complete runtime or release acceptance is established. |
+| **70450** | Linux product revisions v15–v22 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57, v22=16. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. V22 has bounded real esES map-48 acceptance with the post-audit binary `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`: verified package, 66 files / 2,079,754 bytes, inventory `aa9d5cee…`; 65 of 66 published artifacts are byte-identical to the preceding binary; only the coverage record and the context-bearing package manifest/seal differ. Its selected-map/ancestor geometry uses available Map, excludes GameObject globals by profile and omits LiquidObject, MMaps and full-world output. | The other 106 esES DB2 declarations are encrypted. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; v22 coverage is also producer-reported, and verification does not reread Map to authenticate source coverage. No C++/TrinityCore format parity, navigation/MMaps, full-world/whole-client, complete RustyCore runtime or release acceptance is established. |
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
@@ -129,10 +130,13 @@ the [v19 scope](docs/forever-product-v19.md).
 Product v20 separately admits only the Linux resident build-70450 terrain
 profile, with disabled decryption and producer-reported available-map coverage.
 A real package extracted and passed verification for 3,322 MAPS tiles and 71
-tilelists across the client's available maps; a bounded runtime check parsed 450
-selected tiles. This is not whole-client coverage. The lower-level build-70450
-terrain converter assumes the build-70374 ADT/MAPS wire layout; this is not
-format-parity evidence. Full-world/runtime acceptance and release gates remain
+tilelists across the client's available maps. A bounded runtime check against
+reproducible package
+`ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles /
+24,700 points for map 1 and 736 / 18,400 for map 0. These are bounded checks,
+not complete runtime acceptance or whole-client coverage. The lower-level
+build-70450 terrain converter assumes the build-70374 ADT/MAPS wire layout; this
+is not format-parity evidence. Full-world/runtime acceptance and release gates remain
 open. See
 [the v20 scope](docs/forever-product-v20.md).
 
@@ -144,6 +148,18 @@ attempt cannot find a local Map encoding; an esES attempt reaches encrypted Map
 content. Both fail before package creation, and required VMap inputs are
 unavailable. There is no real navigation output or runtime acceptance. See the
 [v21 scope](docs/forever-product-v21.md).
+
+Product v22 separately admits a Linux build-70450 selected-map geometry profile:
+it covers the selected map and active-ancestor closure from available Map rows,
+excludes GameObject globals by profile, and places LiquidObject out of scope.
+The bounded real esES map-48 run with the post-audit binary passed inspect,
+extract, verify and verify-links and published a verified 66-file package of
+2,079,754 bytes (`inventory_sha256` `aa9d5cee…`). Coverage is producer-reported;
+the verifier does not reread Map to authenticate it. Earlier enUS attempts with
+the preceding binary failed with `local_store_no_verified_encoding` and produced
+no package; those locale-specific failures do not establish an esES blockage.
+There are no MMaps or full-world outputs, and this is not C++ format parity or
+RustyCore runtime acceptance. See the [v22 scope](docs/forever-product-v22.md).
 
 The opt-in `FOREVER_PRODUCT_DIAGNOSTIC` now records typed failures for revisions
 v16–v19 and v21; v20 is deliberately excluded because its terrain path flattens
@@ -159,7 +175,8 @@ See [product scope](docs/forever-product.md),
 [available-map terrain results](docs/forever-terrain-v13.md#subsequent-real-all-available-terrain-acceptance),
 [70425 source-reader scope](docs/forever-70425.md),
 [build-70450 v20 terrain scope](docs/forever-product-v20.md),
-[build-70450 v21 navigation scope](docs/forever-product-v21.md) and
+[build-70450 v21 navigation scope](docs/forever-product-v21.md),
+[build-70450 v22 selected geometry scope](docs/forever-product-v22.md) and
 [Linux compatibility](docs/forever-linux-compatibility.md).
 
 The real terrain result covers its declared available-map selection: two WDTs

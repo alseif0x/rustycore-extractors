@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: product inventory and bounded intrinsic format checks.
 //! Does not prove VMap associations, Detour topology, original output parity,
 //! full selected geometry inventories or runtime/client completeness.
@@ -79,6 +80,10 @@ fn verify_inner(
     scope: Scope,
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
+    #[cfg(target_os = "linux")]
+    if plan.is_v22() {
+        return compatible_vmaps::verify_selected_geometry_v22(plan, output, expected);
+    }
     #[cfg(target_os = "linux")]
     if plan.is_v14() || plan.is_v15() || plan.is_v18() {
         return compatible_vmaps::verify(plan, output, expected);

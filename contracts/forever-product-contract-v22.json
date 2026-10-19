@@ -1,0 +1,138 @@
+{
+  "contract": "forever-product-v22",
+  "version": 22,
+  "publication_profile": "Build70450SelectedGeometryV1",
+  "builds": [
+    70450
+  ],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": [
+    "inspect",
+    "extract",
+    "resume",
+    "verify",
+    "verify-links"
+  ],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 16,
+    "components": [
+      "vmaps"
+    ],
+    "decryption": "disabled",
+    "keys": "refused",
+    "storage": "linux-leased-append-disk-world-v1",
+    "storage_budget_fields": [
+      "collision-raw-bytes",
+      "collision-wdt-bytes",
+      "collision-cache-bytes",
+      "collision-placement-bytes",
+      "collision-vmo-bytes",
+      "collision-map-bytes",
+      "collision-output-bytes"
+    ],
+    "collision_profile": "linux70450-selected-map-geometry-vmap-product-v1",
+    "collision_domain": "map:<canonical-u32>",
+    "domain_closure": "available-map-active-ancestors-v1",
+    "coverage_profile": "linux70450-selected-map-geometry-coverage-v1",
+    "gameobject_scope": "excluded-by-profile-v1",
+    "model_scope": "placement-only-v1",
+    "terrain": "none",
+    "navigation": "none",
+    "db2_output_entries": 0,
+    "all_available_maps_selection": false,
+    "inspect_requires_client": false,
+    "extract_resume_require_scratch": true
+  },
+  "source_profile": "linux70450-selected-map-geometry-v1",
+  "source_policy": {
+    "map": "The selected domain is derived with the build-70450 available-section Map reader and its active ancestor closure. A missing, inactive, malformed, or unavailable ancestor is fatal. This contract declares the Map source as available-section coverage, not complete global Map coverage.",
+    "gameobjects": "Global GameObject startup is excluded by profile policy. The geometry kernel does not request GameObjectDisplayInfo; this declared exclusion is not an observed source failure or cause.",
+    "models": "Only models registered by actual selected-domain placement requests are converted and published. Coverage emits placement-only model scope only when startup has no global TempList rows, GODI startup_facts().reads is zero, and the VMO artifact inventory exactly matches used_models. Missing, unavailable, malformed, or unsupported selected WDT, ADT, M2, WMO, or WMO group input is fatal.",
+    "liquids": "LiquidMaterial and LiquidType are read and validated as complete sources. LiquidObject is out of scope and is not requested.",
+    "decryption": "Disabled; key inputs are rejected.",
+    "native_failure_parity": false,
+    "real_extraction_evidence": "none"
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "final_version": 1,
+    "state_version": 2,
+    "coverage": "vmaps/selected-geometry-coverage-v1.bin",
+    "model": "vmaps/<placement-model-basename>.vmo",
+    "placement_proof": "vmaps/coverage/<map-width4>.placements",
+    "tree": "vmaps/<map-width4>/<map-width4>.vmtree",
+    "tile_payload": "vmaps/<map-width4>/<map-width4>_<x-width2>_<y-width2>.vmtile",
+    "tile_index": "vmaps/<map-width4>/<map-width4>_<x-width2>_<y-width2>.vmtileidx",
+    "other_components": false
+  },
+  "verification": {
+    "profile": "linux70450-selected-map-geometry-verification-v1",
+    "scope": "artifact_integrity_selected_map_geometry_associations_and_declared_partial_source_coverage",
+    "coverage_authentication": "producer_reported",
+    "source_authentication": "Offline verification authenticates package bytes, rebuilds VMap associations from retained placement proofs, and checks declared source/domain coverage. It is not an independent client snapshot.",
+    "runtime_claim": false,
+    "format_parity_claim": false
+  },
+  "coverage": {
+    "profile": "linux70450-selected-map-geometry-coverage-v1",
+    "authentication": "producer_reported",
+    "facts": [
+      "selected map ID and active ancestor closure",
+      "Map available-section byte and row facts, section admission states, and declared partial-source scope",
+      "global GameObject scope excluded by profile policy, excluded_by_profile reason, GODI request_made=false, and startup reads zero",
+      "placement-only model scope derived from startup and the exact used_models/VMO-artifact inventory",
+      "complete LiquidMaterial and LiquidType source facts",
+      "LiquidObject out of scope and request_made=false",
+      "size and SHA-256 bindings for every published VMap artifact and placement proof"
+    ],
+    "complete_global_map_coverage_claim": false
+  },
+  "limits": {
+    "collision_record_bytes_min": 32,
+    "collision_record_bytes_max": 137438953472,
+    "collision_output_bytes_min": 1,
+    "collision_output_bytes_max": 68719476736,
+    "coverage_bytes_max": 134217728,
+    "coverage_maps_max": 4096,
+    "coverage_artifacts_max": 65535,
+    "package_files_max": 65536,
+    "staged_vmo_bytes_max": 402653184,
+    "staged_placement_bytes_max": 134217728,
+    "staged_callback_bytes_max": 536870912,
+    "models_max": 4096,
+    "placement_records_per_map_max": 1000000,
+    "placement_stream_bytes_per_map_max": 67108864,
+    "assembly_memory_per_map_max": 536870912,
+    "assembly_output_per_map_max": 134217728,
+    "assembled_domain_bytes_max": 134217728,
+    "meaning": "All plan budgets and product ceilings are downward-only. Callback staging and map assembly fail closed on limits; no output is truncated. Run component state remains provisional until the shared package lifecycle seals the collision component."
+  },
+  "resume": "An incomplete collision component is rerun through the same selected-domain producer and replayed into the common package state. A sealed component is not rewritten; package verification remains available without client input.",
+  "excluded": [
+    "terrain, MAPS, or terrain tilelists",
+    "DB2, game-table, camera, or navigation output",
+    "MMaps",
+    "all-available-maps extraction and full-world coverage",
+    "global GameObject startup models and dtree",
+    "LiquidObject",
+    "provided keys or decryption",
+    "Windows execution",
+    "real build-70450 extraction acceptance",
+    "RustyCore runtime acceptance",
+    "native failure or format parity",
+    "release acceptance"
+  ],
+  "unqualified_status": {
+    "real_extraction": false,
+    "runtime_acceptance": false,
+    "full_world_coverage": false,
+    "format_parity": false,
+    "mmaps": false
+  },
+  "legacy_preservation": "v14, v15, v18, and v21 keep their existing plan, publication, and verification identities; no earlier acceptance transfers to v22.",
+  "full_extractor_complete": false
+}

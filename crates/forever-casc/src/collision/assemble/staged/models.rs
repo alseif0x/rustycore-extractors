@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Modified by the RustyCore Extractors project, 2026-10-17.
-// Authored 2026-10-12; modified 2026-10-17: shared closed genuine-phase VMO kernel.
-//! Consumes the actual authenticated placement stage. Selection is every name
-//! BEFORE placement ID deduplication plus every successful startup TempList row.
-//! Unused acquired dependencies are excluded. One complete authenticated RAW is
+// Modified by the RustyCore Extractors project, 2026-10-19.
+// Authored 2026-10-12; modified 2026-10-17 and 2026-10-19: shared closed
+// genuine-phase VMO kernel and explicit staged placement-only scope.
+//! Consumes the actual authenticated placement stage. The existing global scope
+//! selects every name BEFORE placement ID deduplication plus every successful
+//! startup TempList row; the explicit placement-only staged scope selects only
+//! the placement names. `prepare_placement_only` requires a `Staged` built from
+//! a spooled startup that reads GODI; the v22 geometry route does not call it and
+//! derives its own scope from a no-list startup and the placement/artifact
+//! inventory. Unused acquired dependencies are excluded. One complete authenticated RAW is
 //! parsed/converted at a time; validated VMO bytes live in a fresh private spool.
 //! No caller placements, model bytes, proof, publication or final map assembly.
 //!
@@ -26,11 +31,35 @@ pub mod package;
 #[cfg(test)]
 mod tests;
 pub const PROFILE: &str = "linux-private-selected-vmo-stage-v1";
+pub const PLACEMENT_ONLY_PROFILE: &str = "linux-private-placement-only-vmo-stage-v1";
 pub const MAX_MEMORY_BYTES: usize = crate::collision::run::inventory::MAX_COMBINED_MEMORY_BYTES;
 const MAGIC: &[u8; 8] = b"RCEVMO1\0";
 const HEADER: usize = 92;
 const NAME_BYTES: usize = 1024;
 const GUARD_BYTES: usize = 512 * 1024;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModelScope {
+    Global,
+    PlacementOnly,
+}
+impl ModelScope {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Global => "global",
+            Self::PlacementOnly => "placement_only",
+        }
+    }
+    pub const fn includes_startup_temp_list(self) -> bool {
+        matches!(self, Self::Global)
+    }
+    pub const fn profile(self) -> &'static str {
+        match self {
+            Self::Global => PROFILE,
+            Self::PlacementOnly => PLACEMENT_ONLY_PROFILE,
+        }
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limits {
     pub max_memory_bytes: usize,
@@ -218,6 +247,7 @@ pub struct Prepared {
     base: usize,
     stats: Stats,
     failed: Option<Kind>,
+    scope: ModelScope,
 }
 fn add(a: usize, b: usize) -> Result<usize, Kind> {
     a.checked_add(b).ok_or(Kind::Limit)
@@ -432,6 +462,7 @@ struct PreparedState<P: Phase> {
     base: usize,
     stats: Stats,
     failed: Option<Kind>,
+    scope: ModelScope,
 }
 struct ModelWork<'a, P: Phase> {
     stage: &'a mut P,
@@ -441,6 +472,7 @@ struct ModelWork<'a, P: Phase> {
     base: usize,
     stats: &'a mut Stats,
     failed: &'a mut Option<Kind>,
+    scope: ModelScope,
 }
 impl<P: Phase> PreparedState<P> {
     fn work(&mut self) -> ModelWork<'_, P> {
@@ -452,6 +484,7 @@ impl<P: Phase> PreparedState<P> {
             base: self.base,
             stats: &mut self.stats,
             failed: &mut self.failed,
+            scope: self.scope,
         }
     }
 }
@@ -495,7 +528,14 @@ impl Prepared {
             base: self.base,
             stats: &mut self.stats,
             failed: &mut self.failed,
+            scope: self.scope,
         }
+    }
+    pub const fn scope(&self) -> ModelScope {
+        self.scope
+    }
+    pub const fn profile(&self) -> &'static str {
+        self.scope.profile()
     }
     // Only the package unit controls inspect this strict-owner budget helper.
     #[cfg(test)]
@@ -710,16 +750,18 @@ impl<P: Phase> ModelWork<'_, P> {
             self.stage.verify_unchanged().map_err(phase::<P, ()>)?;
             bump(&mut self.stats.maps_scanned, 1, super::super::MAX_MAPS)?;
         }
-        let lists = self.stage.lists().map_err(phase::<P, ()>)?;
-        let list = gameobject_models::TempList::parse(
-            lists.temp_bytes(),
-            gameobject_models::Limits::default(),
-        )
-        .map_err(Kind::Lists)?;
-        for row in list.rows() {
-            let at = self.binding(row.name())?;
-            self.index[at].selected = true;
-            bump(&mut self.stats.list_rows, 1, super::super::MAX_RECORDS)?;
+        if self.scope.includes_startup_temp_list() {
+            let lists = self.stage.lists().map_err(phase::<P, ()>)?;
+            let list = gameobject_models::TempList::parse(
+                lists.temp_bytes(),
+                gameobject_models::Limits::default(),
+            )
+            .map_err(Kind::Lists)?;
+            for row in list.rows() {
+                let at = self.binding(row.name())?;
+                self.index[at].selected = true;
+                bump(&mut self.stats.list_rows, 1, super::super::MAX_RECORDS)?;
+            }
         }
         self.stats.selected_models = self.index.iter().filter(|e| e.selected).count();
         if self.stats.selected_models > self.limits.max_models {
@@ -1018,9 +1060,18 @@ impl<P: Phase> ModelWork<'_, P> {
 /// Sole constructor: no supplied model identities or selected-name inventory.
 /// Errors consume the authenticated phase and return no usable partial archive.
 fn prepare_state<P: Phase>(
+    stage: P,
+    repository: spool::Spool,
+    limits: Limits,
+) -> Result<PreparedState<P>, WorkError<P::Cause>> {
+    prepare_state_scoped(stage, repository, limits, ModelScope::Global)
+}
+
+fn prepare_state_scoped<P: Phase>(
     mut stage: P,
     mut repository: spool::Spool,
     limits: Limits,
+    scope: ModelScope,
 ) -> Result<PreparedState<P>, WorkError<P::Cause>> {
     let admission: Result<usize, WorkError<P::Cause>> = (|| {
         if repository.resources() != stage.archive().repository.resources()
@@ -1073,6 +1124,7 @@ fn prepare_state<P: Phase>(
             ..Default::default()
         },
         failed: None,
+        scope,
     };
     {
         let mut work = out.work();
@@ -1097,6 +1149,7 @@ pub fn prepare(stage: Staged, repository: spool::Spool, limits: Limits) -> Resul
         base,
         stats,
         failed,
+        scope,
     } = prepare_state(stage, repository, limits).map_err(strict_error)?;
     // Infallible field moves: no allocations, callbacks, new guards or ledger.
     Ok(Prepared {
@@ -1107,6 +1160,41 @@ pub fn prepare(stage: Staged, repository: spool::Spool, limits: Limits) -> Resul
         base,
         stats,
         failed,
+        scope,
+    })
+}
+
+/// Consume the authenticated staged placement owner while excluding startup
+/// TempList rows. This is not the v22 producer path: `Staged` comes from the
+/// spooled startup that reads GODI, while v22 starts without global lists and
+/// derives placement-only scope from its executed route and output inventory.
+/// Placement names are still selected before placement-ID deduplication; no
+/// other admission, parsing, conversion, or publication rule is relaxed.
+pub fn prepare_placement_only(
+    stage: Staged,
+    repository: spool::Spool,
+    limits: Limits,
+) -> Result<Prepared, Error> {
+    let PreparedState {
+        stage,
+        repository,
+        index,
+        limits,
+        base,
+        stats,
+        failed,
+        scope,
+    } = prepare_state_scoped(stage, repository, limits, ModelScope::PlacementOnly)
+        .map_err(strict_error)?;
+    Ok(Prepared {
+        stage,
+        repository,
+        index,
+        limits,
+        base,
+        stats,
+        failed,
+        scope,
     })
 }
 

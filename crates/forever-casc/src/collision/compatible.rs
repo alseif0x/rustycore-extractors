@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified by the RustyCore Extractors project, 2026-10-17.
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-16: opt-in staged complete-model acquisition.
 // Modified 2026-10-17: GNU15-only complete no-collision WMO omission.
 //! Typed source absence becomes an omission. The explicit GNU15-v2 profile also
@@ -889,17 +890,6 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Collector<'s, 'l, L> {
             }
             Ok(value)
         })();
-        self.inner.checked(result)
-    }
-    pub(in crate::collision) fn read_available_source(
-        &mut self,
-        id: u32,
-        cap: usize,
-    ) -> Result<crate::local_store::availability::AvailableSource, payload::CollectorError> {
-        let result = self
-            .inner
-            .inner
-            .read_available_source_target(id, cap, self.target);
         self.inner.checked(result)
     }
     pub(crate) fn release_source(&mut self, bytes: usize) -> Result<(), payload::CollectorError> {

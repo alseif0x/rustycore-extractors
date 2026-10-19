@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 //! Explicit Linux component publication, separate from DB2 metadata.
 use super::{CollisionStorage, Component, Plan, SchemaCatalog, Selection};
 
@@ -19,6 +20,7 @@ pub enum PublicationProfile {
     Build70450Db2ProvidedKeysV1,
     Build70450Db2GtCamerasV1,
     Build70450NavigationV1,
+    Build70450SelectedGeometryV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -146,13 +148,38 @@ impl PublicationProfile {
             }
             return Ok(());
         }
+        if self == Self::Build70450SelectedGeometryV1 {
+            if plan.build != 70450 {
+                return Err("product_plan_build");
+            }
+            if plan.schema_catalog != SchemaCatalog::WowDbDefs70450V1 {
+                return Err("product_plan_schema_catalog");
+            }
+            if plan.components != Component::Collision.bit()
+                || !matches!(plan.collision_storage, CollisionStorage::LeasedDiskV1(_))
+                || plan.decryption != super::Decryption::Disabled
+                || !plan.db2.is_empty()
+                || plan.terrain != Selection::None
+                || plan.navigation != Selection::None
+                || plan.offmesh.is_some()
+                || !plan.pack
+                || plan.big_base_unit
+                || plan.skip_liquids
+                || plan.maximum_slope != 55
+                || plan.non_steep_slope != 55
+            {
+                return Err("product_plan_component_scope");
+            }
+            return Ok(());
+        }
         let (build, catalog, components) = match self {
             Self::Legacy
             | Self::Build70425CompatibleCollisionV1
             | Self::Build70450CompatibleCollisionV1
             | Self::Build70450CollisionProvidedKeysV1
             | Self::Build70450CompatibleTerrainV1
-            | Self::Build70450NavigationV1 => {
+            | Self::Build70450NavigationV1
+            | Self::Build70450SelectedGeometryV1 => {
                 unreachable!("profile returned above")
             }
             Self::Build70338Db2GtCamerasV1 => (

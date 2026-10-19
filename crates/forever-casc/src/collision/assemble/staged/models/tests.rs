@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-12: selected VMO disk phase with complete toy-CASC inputs.
 use super::*;
 use crate::collision::world::{MAP_FILE_DATA_ID, MATERIAL_FILE_DATA_ID, TYPE_FILE_DATA_ID};
@@ -555,6 +556,68 @@ fn startup_duplicates_omissions_and_no_collision_preserve_list_union() {
     assert_eq!(c.stats().unwrap().selected_models, 1);
     assert_eq!(c.stats().unwrap().list_rows, 2);
     assert_eq!(c.stats().unwrap().placement_records, 0);
+}
+
+#[test]
+fn placement_only_staged_scope_excludes_temp_list_rows_and_keeps_placed_model() {
+    let mut input = files(&[(1, 101, -1)]);
+    input[0].2 = gameobject_db2(&[(1, 201), (2, 202)], &[]);
+    input.extend([
+        (101, None, wdt(None, Some(111))),
+        (111, None, m2_adt(201, 42)),
+        (201, None, m2(true)),
+        (202, None, m2(true)),
+    ]);
+    let fixture = CollisionFixture::new(&input);
+    let private = Private::new();
+    let staged = stage(&fixture, &private);
+    assert_eq!(
+        staged.world.startup().data().unwrap().lists().stats().rows,
+        2,
+        "the staged input must contain actual startup TempList rows"
+    );
+
+    let mut prepared = prepare_placement_only(
+        staged,
+        private.spool(&fixture, "placement-only-vmos", SpoolLimits::default()),
+        super::Limits::default(),
+    )
+    .unwrap();
+    let stats = prepared.stats().unwrap();
+    assert_eq!(stats.list_rows, 0);
+    assert_eq!(stats.placement_records, 1);
+    assert_eq!(stats.selected_models, 1);
+
+    let models: Vec<_> = prepared
+        .models()
+        .unwrap()
+        .map(|(name, class)| (name.to_vec(), class))
+        .collect();
+    assert_eq!(models.len(), 1);
+    assert_eq!(models[0].1, Class::M2);
+    let compact = prepared
+        .stage()
+        .world()
+        .startup()
+        .extraction()
+        .phase_compact()
+        .unwrap();
+    let selected = prepared.index.iter().find(|entry| entry.selected).unwrap();
+    assert_eq!(
+        compact
+            .descriptor(selected.handle)
+            .unwrap()
+            .source()
+            .unwrap()
+            .file_data_id(),
+        201
+    );
+    assert!(
+        prepared
+            .with_model(&models[0].0, 0, |view| Ok::<_, u8>(view.bytes().len()))
+            .unwrap()
+            > 0
+    );
 }
 #[test]
 fn startup_wmo_excludes_acquired_unused_doodad_model_dependency() {

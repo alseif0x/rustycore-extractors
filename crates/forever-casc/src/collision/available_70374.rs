@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Modified 2026-10-17: closed target preparation seam; authored 2026-10-15: separate Linux70374 available DB2 startup/world owner.
+// Modified by the RustyCore Extractors project, 2026-10-19.
+// Modified 2026-10-19: strict empty-startup sentinel and target/profile binding;
+// authored 2026-10-15: separate Linux70374 available DB2 startup/world owner.
 //! Available GODI/Map coverage stays distinct from complete source facts. Model,
 //! liquid, WDT and object dependencies retain strict complete acquisition. There
 //! is no missing-input omission policy, package publication or runtime claim.
@@ -20,6 +22,7 @@ pub mod spooled;
 mod tests;
 
 pub const PROFILE: &str = "linux70374-disabled-key-available-collision-world-v1";
+pub const PROFILE_70450_SELECTED_GEOMETRY: &str = "linux70450-selected-map-geometry-collision-v1";
 static EMPTY: gameobjects::EmptyLookup = gameobjects::EmptyLookup;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -251,6 +254,7 @@ impl Topology {
     }
 }
 pub struct Completed {
+    profile: &'static str,
     startup: CompletedStartup,
     report: run::SharedReport,
     map: TableFacts,
@@ -262,7 +266,7 @@ pub struct Completed {
 }
 impl Completed {
     pub const fn profile(&self) -> &'static str {
-        PROFILE
+        self.profile
     }
     pub const fn startup(&self) -> &CompletedStartup {
         &self.startup
@@ -298,13 +302,104 @@ impl Completed {
 /// sources, strict graph, and the unchanged strict shared WDT/ADT/model runner.
 /// No partial Completed can escape a failure. Caller Sink storage is separate.
 pub fn extract(
-    mut startup: Startup<'_>,
+    startup: Startup<'_>,
     sink: &mut impl run::Sink,
     limits: world::Limits,
 ) -> Result<Completed, Error> {
+    extract_with_selection(
+        startup,
+        sink,
+        limits,
+        super::target::Target::Build70374,
+        plan::MapSelection::All,
+    )
+}
+
+/// Available Build 70450 domain runner used by the geometry-only profile.
+/// The selected map and its active ancestors are planned from the admitted
+/// available-section Map rows; Map, LiquidMaterial, and LiquidType remain strict
+/// complete inputs.
+pub(in crate::collision) fn extract_selected_70450(
+    startup: gameobjects::Startup<'_>,
+    map_id: u32,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_selection(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::MapAndAncestors(map_id),
+    )
+}
+
+fn empty_startup(startup: gameobjects::Startup<'_>) -> Result<Startup<'_>, Error> {
+    let data = startup.data();
+    if data.source().file_data_id() != 0
+        || data.stats().direct_rows != 0
+        || data.stats().copy_records != 0
+        || data.stats().candidate_requests != 0
+        || !data.outcomes().is_empty()
+        || data.lists().stats().rows != 0
+        || data.startup_facts().reads != 0
+    {
+        return Err(Error::State);
+    }
+    let (engine, collector) = startup.into_engine_parts();
+    Ok(Context {
+        data: Data {
+            table: TableFacts {
+                file_data_id: 0,
+                declared_bytes: 0,
+                available_bytes: 0,
+                full_ckey_verified: false,
+                encoded_key_authenticated: false,
+                work: acquired::Work::default(),
+                declared_direct_rows: 0,
+                declared_copy_records: 0,
+                direct_rows: 0,
+                copy_records: 0,
+                materialized_rows: 0,
+                retained_bytes: 0,
+                decode_allowance_bytes: 0,
+                sections: [None; 16],
+            },
+            engine,
+        },
+        collector,
+    })
+}
+
+fn completion_profile(
+    target: super::target::Target,
+    selection: plan::MapSelection,
+) -> Result<&'static str, Error> {
+    match (target, selection) {
+        (super::target::Target::Build70374, plan::MapSelection::All) => Ok(PROFILE),
+        (super::target::Target::Build70450, plan::MapSelection::MapAndAncestors(_)) => {
+            Ok(PROFILE_70450_SELECTED_GEOMETRY)
+        }
+        // No profile silently inherits 70374. Add an explicit target/scope pair
+        // only when its complete reader and completion gate are implemented.
+        _ => Err(Error::State),
+    }
+}
+
+fn extract_with_selection(
+    mut startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+    target: super::target::Target,
+    selection: plan::MapSelection,
+) -> Result<Completed, Error> {
+    let profile = completion_profile(target, selection)?;
     let result = (|| {
         limits.validate().map_err(Error::World)?;
-        prepare(startup.collector_mut(), limits)
+        prepare_available_target(startup.collector_mut(), limits, target).map_err(|e| match e {
+            PrepareFailure::Available(e) => e,
+            PrepareFailure::Collector(e) => Error::Collision(e),
+        })
     })();
     let Prepared {
         owner,
@@ -330,9 +425,10 @@ pub fn extract(
             .collector_mut()
             .reserve_external(graph_budget)
             .map_err(Error::Collision)?;
-        let maps = plan::Maps::from_materialized(
+        let maps = plan::Maps::from_materialized_selection(
             owner.rows(),
             owner.direct_records().len(),
+            selection,
             plan::Limits {
                 max_memory_bytes: graph_budget,
                 ..limits.maps
@@ -393,6 +489,7 @@ pub fn extract(
     )?;
     map.materialized_rows = map_stats.rows;
     Ok(Completed {
+        profile,
         startup,
         report,
         map,
@@ -422,38 +519,33 @@ impl<E> From<Error> for PrepareFailure<E> {
     }
 }
 pub(in crate::collision) trait AvailableAccess: world::input::Access {
-    fn read_available_source(
+    fn read_available_source_for_target(
         &mut self,
         id: u32,
         cap: usize,
+        target: super::target::Target,
     ) -> Result<acquired::AvailableSource, Self::Error>;
 }
 impl<L: LiquidLookup + ?Sized> AvailableAccess for Extractor<'_, '_, L> {
-    fn read_available_source(
+    fn read_available_source_for_target(
         &mut self,
         id: u32,
         cap: usize,
+        target: super::target::Target,
     ) -> Result<acquired::AvailableSource, Self::Error> {
-        Extractor::read_available_source(self, id, cap)
+        Extractor::read_available_source_target(self, id, cap, target)
     }
 }
 impl<L: LiquidLookup + ?Sized> AvailableAccess for super::payload::SpoolingExtractor<'_, '_, L> {
-    fn read_available_source(
+    fn read_available_source_for_target(
         &mut self,
         id: u32,
         cap: usize,
+        target: super::target::Target,
     ) -> Result<acquired::AvailableSource, Self::Error> {
-        super::payload::SpoolingExtractor::read_available_source(self, id, cap)
+        let result = self.inner.read_available_source_target(id, cap, target);
+        self.checked(result)
     }
-}
-fn prepare(
-    collector: &mut Extractor<'_, '_, gameobjects::EmptyLookup>,
-    limits: world::Limits,
-) -> Result<Prepared, Error> {
-    prepare_available(collector, limits).map_err(|e| match e {
-        PrepareFailure::Available(e) => e,
-        PrepareFailure::Collector(e) => Error::Collision(e),
-    })
 }
 fn prepare_available<A: AvailableAccess>(
     collector: &mut A,
@@ -468,7 +560,7 @@ pub(in crate::collision) fn prepare_available_target<A: AvailableAccess>(
     target: super::target::Target,
 ) -> Result<Prepared, PrepareFailure<A::Error>> {
     let file = collector
-        .read_available_source(world::MAP_FILE_DATA_ID, limits.max_db2_bytes)
+        .read_available_source_for_target(world::MAP_FILE_DATA_ID, limits.max_db2_bytes, target)
         .map_err(PrepareFailure::Collector)?;
     let source_resident = file
         .resident_bytes()
@@ -627,4 +719,34 @@ pub(in crate::collision) fn header_policy(
         return Err(Error::Limit);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+
+    #[test]
+    fn target_and_selection_require_an_explicit_completion_profile() {
+        assert_eq!(
+            completion_profile(
+                crate::collision::target::Target::Build70374,
+                plan::MapSelection::All
+            ),
+            Ok(PROFILE)
+        );
+        assert_eq!(
+            completion_profile(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::MapAndAncestors(2)
+            ),
+            Ok(PROFILE_70450_SELECTED_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile(
+                crate::collision::target::Target::Build70425,
+                plan::MapSelection::All
+            ),
+            Err(Error::State)
+        );
+    }
 }

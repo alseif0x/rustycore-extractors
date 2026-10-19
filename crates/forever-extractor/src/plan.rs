@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: explicit, canonical offline product selections.
 use forever_casc::{Locale, local_index, package::Component, root};
 use forever_db2::catalog;
@@ -40,6 +41,15 @@ pub const COMPATIBLE_COLLISION_VERIFY_PROFILE: &str = "linux70425-compatible-gnu
 pub const COMPATIBLE_COLLISION_VERIFY_PROFILE_70450: &str =
     "linux70450-compatible-gnu15-vmap-product-v1";
 pub const COMPATIBLE_COLLISION_VERIFY_SCOPE: &str = "artifact_integrity_complete_declared_vmap_associations_and_producer_reported_available_source_coverage";
+pub const SELECTED_GEOMETRY_COLLISION_PROFILE: &str =
+    "linux70450-selected-map-geometry-vmap-product-v1";
+pub const SELECTED_GEOMETRY_COVERAGE_PROFILE: &str = "linux70450-selected-map-geometry-coverage-v1";
+pub const SELECTED_GEOMETRY_VERIFY_PROFILE: &str =
+    "linux70450-selected-map-geometry-verification-v1";
+pub const SELECTED_GEOMETRY_VERIFY_SCOPE: &str =
+    "artifact_integrity_selected_map_geometry_associations_and_declared_partial_source_coverage";
+pub const SELECTED_GEOMETRY_GAMEOBJECT_SCOPE: &str = "excluded-by-profile-v1";
+pub const SELECTED_GEOMETRY_MODEL_SCOPE: &str = "placement-only-v1";
 
 /// Explicit DB2 schema source. Existing product plans retain their legacy
 /// pinned schema; builds 70205 and 70338 plans opt into separately pinned
@@ -202,6 +212,7 @@ impl Plan {
             "19" => 19,
             "20" => 20,
             "21" => 21,
+            "22" => 22,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -235,7 +246,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=21 => match field(&mut lines, "schema-catalog")? {
+            15..=22 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -251,14 +262,14 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=21 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=22 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18 | 21)
+        let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18 | 21 | 22)
             || (matches!(version, 4..=6)
                 && lines
                     .clone()
@@ -269,7 +280,26 @@ impl Plan {
         } else {
             CollisionStorage::Resident
         };
-        let map_domain = if matches!(version, 14 | 15 | 18) {
+        let map_domain = if version == 22 {
+            if field(&mut lines, "collision-profile")? != SELECTED_GEOMETRY_COLLISION_PROFILE {
+                return Err("product_plan_collision_profile");
+            }
+            let domain = decimal(
+                field(&mut lines, "collision-domain")?
+                    .strip_prefix("map:")
+                    .ok_or("product_plan_collision_domain")?,
+            )?;
+            if field(&mut lines, "collision-coverage")? != SELECTED_GEOMETRY_COVERAGE_PROFILE {
+                return Err("product_plan_collision_coverage");
+            }
+            if field(&mut lines, "gameobject-scope")? != SELECTED_GEOMETRY_GAMEOBJECT_SCOPE {
+                return Err("product_plan_gameobject_scope");
+            }
+            if field(&mut lines, "model-scope")? != SELECTED_GEOMETRY_MODEL_SCOPE {
+                return Err("product_plan_model_scope");
+            }
+            Some(domain)
+        } else if matches!(version, 14 | 15 | 18) {
             let profile = if version == 14 {
                 COMPATIBLE_COLLISION_VERIFY_PROFILE
             } else {
@@ -370,6 +400,8 @@ impl Plan {
                 PublicationProfile::Build70450CompatibleTerrainV1
             } else if version == 21 {
                 PublicationProfile::Build70450NavigationV1
+            } else if version == 22 {
+                PublicationProfile::Build70450SelectedGeometryV1
             } else if version == 16 {
                 PublicationProfile::Build70450Db2OnlyV1
             } else if version == 15 {
@@ -418,7 +450,7 @@ impl Plan {
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.publication_profile.validate(self)?;
-        if !self.is_v14() && !self.is_v15() && !self.is_v18() {
+        if !self.is_v14() && !self.is_v15() && !self.is_v18() && !self.is_v22() {
             map_domain::validate(self)?;
         }
         if let Some(connections) = &self.offmesh {
@@ -449,6 +481,7 @@ impl Plan {
             && !self.is_v19()
             && !self.is_v20()
             && !self.is_v21()
+            && !self.is_v22()
         {
             return Err("product_plan_build");
         }
@@ -480,6 +513,7 @@ impl Plan {
             && !self.is_v19()
             && !self.is_v20()
             && !self.is_v21()
+            && !self.is_v22()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -568,7 +602,7 @@ impl Plan {
         {
             return Err("product_plan_options");
         }
-        if self.render().len() > MAX_PLAN_BYTES {
+        if self.try_render()?.len() > MAX_PLAN_BYTES {
             return Err("product_plan_size");
         }
         Ok(())
@@ -579,6 +613,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v22() {
+            return 22;
+        }
         if self.is_v21() {
             return 21;
         }
@@ -642,6 +679,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v22() {
+            return "forever-product-v22";
+        }
         if self.is_v21() {
             return "forever-product-v21";
         }
@@ -789,6 +829,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build-70450 selected-map collision-geometry product.
+    pub const fn is_v22(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450SelectedGeometryV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -823,9 +871,18 @@ impl Plan {
         matches!(self.decryption, Decryption::ProvidedSalsa20V1)
     }
 
-    /// Emit exactly one newline-terminated canonical plan. Call validate first
-    /// when the public fields were constructed or modified directly.
+    /// Compatibility renderer for already-validated plans.
+    ///
+    /// Use `try_render` when a plan may have been constructed or modified
+    /// directly; this helper returns an empty string rather than panicking if
+    /// rendering cannot satisfy the v22 map-domain invariant.
     pub fn render(&self) -> String {
+        self.try_render().unwrap_or_default()
+    }
+
+    /// Emit a canonical plan or return a typed plan error for an incomplete
+    /// manually-constructed profile.
+    pub fn try_render(&self) -> Result<String, &'static str> {
         let index = match self.index_layout {
             local_index::Layout::Contiguous => "contiguous",
             local_index::Layout::Paged => "paged",
@@ -851,12 +908,17 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=21, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=22, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
         let collision_storage = self.collision_storage.render();
-        let map_domain = if self.is_v14() || self.is_v15() || self.is_v18() {
+        let map_domain = if self.is_v22() {
+            let id = self.map_domain.ok_or("product_plan_map_domain")?;
+            format!(
+                "collision-profile\t{SELECTED_GEOMETRY_COLLISION_PROFILE}\ncollision-domain\tmap:{id}\ncollision-coverage\t{SELECTED_GEOMETRY_COVERAGE_PROFILE}\ngameobject-scope\t{SELECTED_GEOMETRY_GAMEOBJECT_SCOPE}\nmodel-scope\t{SELECTED_GEOMETRY_MODEL_SCOPE}\n"
+            )
+        } else if self.is_v14() || self.is_v15() || self.is_v18() {
             let selected = self
                 .map_domain
                 .map_or_else(|| "all-available-maps".to_owned(), |id| format!("map:{id}"));
@@ -899,7 +961,7 @@ impl Plan {
             writeln!(output, "db2\t{}\t{}", entry.name, entry.id)
                 .expect("writing into String cannot fail");
         }
-        output
+        Ok(output)
     }
 }
 
@@ -979,3 +1041,6 @@ mod v20_tests;
 
 #[cfg(test)]
 mod v21_tests;
+
+#[cfg(test)]
+mod v22_tests;

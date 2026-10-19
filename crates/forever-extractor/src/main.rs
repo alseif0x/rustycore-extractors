@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: explicit offline product invocation.
 use forever_casc::integrity;
 #[cfg(any(target_os = "linux", windows))]
@@ -24,6 +25,9 @@ fn main() {
                 );
                 println!(
                     "Linux v21 selects build-70450 DB2+Terrain+VMap+MMap navigation for one map and ancestors with complete keyless Map/LiquidType reads; real inputs are not accepted yet."
+                );
+                println!(
+                    "Linux v22 selects build-70450 VMap geometry for one map and its available active ancestors; GameObject globals are excluded by policy, LiquidObject is out of scope, and no MMap/full-world/runtime/parity claim is made."
                 );
                 println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
@@ -225,7 +229,12 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 connections.len()
             )
         });
-    let map_domain_capability = if plan.is_v14() || plan.is_v15() || plan.is_v18() {
+    let map_domain_capability = if plan.is_v22() {
+        format!(
+            ",\"collision_domain\":\"selected-map-and-active-ancestors\",\"requested_map\":{},\"gameobject_scope\":\"excluded_by_profile\",\"model_scope\":\"placement_only\"",
+            plan.map_domain.ok_or("product_plan_map_domain")?
+        )
+    } else if plan.is_v14() || plan.is_v15() || plan.is_v18() {
         plan.map_domain.map_or_else(
             || ",\"collision_domain\":\"all-available-maps\"".to_owned(),
             |id| format!(",\"collision_domain\":\"map-and-ancestors\",\"requested_map\":{id}"),
@@ -240,7 +249,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         )
     })
     };
-    let terrain_capability = if plan.is_v20() {
+    let terrain_capability = if plan.is_v22() {
+        ",\"collision_source_profile\":\"linux70450-selected-map-geometry-v1\",\"coverage_profile\":\"linux70450-selected-map-geometry-coverage-v1\",\"coverage_authentication\":\"producer_reported\",\"map_source_scope\":\"available_sections\",\"liquid_sources\":\"LiquidMaterial+LiquidType_complete\",\"liquid_object_scope\":\"out_of_scope\",\"complete_global_map_coverage_claim\":false"
+    } else if plan.is_v20() {
         ",\"terrain_source_profile\":\"linux70450-compatible-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"omission_policy\":\"missing-file-only\",\"whole_client_map_coverage\":false"
     } else if plan.is_v15() || plan.is_v18() {
         ",\"collision_source_profile\":\"linux70450-compatible-gnu15-v2\",\"coverage_authentication\":\"producer_reported\",\"whole_client_map_coverage\":false"
@@ -296,6 +307,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     plan.contract(),
                     if plan.is_v15() || plan.is_v14() || plan.is_v18() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
+                    } else if plan.is_v22() {
+                        forever_extractor::plan::SELECTED_GEOMETRY_VERIFY_SCOPE
                     } else if plan.is_v20() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE_70450
                     } else if plan.is_v13() {
@@ -309,6 +322,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     },
                     if plan.is_v15() || plan.is_v18() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE_70450
+                    } else if plan.is_v22() {
+                        forever_extractor::plan::SELECTED_GEOMETRY_VERIFY_PROFILE
                     } else if plan.is_v14() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE
                     } else if plan.is_v20() {
@@ -328,6 +343,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             let summary = verify::verify(&plan, path("--output")?, expected)?;
             let scope = if plan.is_v15() || plan.is_v14() || plan.is_v18() {
                 forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
+            } else if plan.is_v22() {
+                forever_extractor::plan::SELECTED_GEOMETRY_VERIFY_SCOPE
             } else if plan.is_v20() {
                 forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE_70450
             } else if plan.is_v13() {

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: complete offline GameObject startup using existing readers.
 //! GameObject startup precedes liquid-table loading in the pinned extractor
 //! (02245dcd245e7433e524577656177723d3e4992e, vmapexport.cpp:713-723).
@@ -267,6 +268,24 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
     pub fn collector_mut(&mut self) -> &mut Extractor<'store, 'lookup, L> {
         &mut self.collector
     }
+    pub(super) fn into_engine_parts(self) -> (EngineData, Extractor<'store, 'lookup, L>) {
+        let Data {
+            source: _,
+            outcomes,
+            lists,
+            stats,
+            startup_facts,
+        } = self.data;
+        (
+            EngineData {
+                outcomes,
+                lists,
+                stats,
+                startup_facts,
+            },
+            self.collector,
+        )
+    }
     pub fn with_lookup<'next, N: LiquidLookup + ?Sized>(
         self,
         lookup: &'next N,
@@ -364,6 +383,36 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
     Ok(Context {
         data: Data {
             source,
+            outcomes: engine.outcomes,
+            lists: engine.lists,
+            stats: engine.stats,
+            startup_facts: engine.startup_facts,
+        },
+        collector,
+    })
+}
+
+/// Create an empty GameObject startup without requesting or decoding GODI.
+/// The returned startup has no outcomes, rows, or startup model requests; callers
+/// must not expect startup rows. Its zero-ID `SourceFacts` is an explicit
+/// no-source sentinel, not evidence that GODI was read as an empty table.
+/// All existing limits, collector guards, and finish accounting remain active.
+pub fn extract_startup_without_godi(
+    store: &mut LocalStore,
+    limits: Limits,
+) -> Result<Startup<'_>, Error> {
+    limits.validate()?;
+    let mut collector =
+        Extractor::new(store, &EMPTY_LOOKUP, limits.collision).map_err(Error::Collision)?;
+    let engine = finish_lists(&mut collector, Vec::new(), Stats::default(), limits)?;
+    Ok(Context {
+        data: Data {
+            source: SourceFacts {
+                id: 0,
+                key: [0; 16],
+                bytes: 0,
+                first_magic: None,
+            },
             outcomes: engine.outcomes,
             lists: engine.lists,
             stats: engine.stats,

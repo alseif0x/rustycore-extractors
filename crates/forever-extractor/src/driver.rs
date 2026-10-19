@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: serial Rust-local producers behind the common package.
 use crate::{
     Error,
@@ -39,6 +40,8 @@ mod v21_test_md5;
 
 #[cfg(target_os = "linux")]
 pub(crate) mod census_db2;
+#[cfg(target_os = "linux")]
+pub(crate) mod collision_geometry_v22;
 #[cfg(target_os = "linux")]
 mod disk;
 mod execution;
@@ -133,6 +136,7 @@ fn open_inner(
         || plan.is_v19()
         || plan.is_v20()
         || plan.is_v21()
+        || plan.is_v22()
     {
         #[cfg(target_os = "linux")]
         {
@@ -441,7 +445,13 @@ fn prepare_domain(
 ) -> Result<Option<crate::map_domain::Domain>, Error> {
     // v14 derives its declared domain once from the genuine available Map owner.
     // Do not reopen a complete Map or manufacture strict SourceFacts here.
-    if plan.is_v14() || plan.is_v15() || plan.is_v16() || plan.is_v17() || plan.is_v18() {
+    if plan.is_v14()
+        || plan.is_v15()
+        || plan.is_v16()
+        || plan.is_v17()
+        || plan.is_v18()
+        || plan.is_v22()
+    {
         return Ok(None);
     }
     let Some(requested) = plan.map_domain else {
@@ -564,6 +574,19 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
+        if plan.is_v22() {
+            let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage else {
+                return Err("product_scratch_required".into());
+            };
+            return collision_geometry_v22::extract(
+                plan,
+                store,
+                run,
+                self.preflight.as_ref().ok_or("product_scratch_required")?,
+                self.context,
+                budget,
+            );
+        }
         if plan.is_v14() {
             return self
                 .preflight
@@ -1403,7 +1426,7 @@ mod v19_reader_tests {
 }
 
 #[cfg(all(test, target_os = "linux"))]
-mod v21_navigation_tests {
+pub(super) mod v21_navigation_tests {
     use super::*;
     use forever_db2::catalog::{self, FieldType};
     use forever_navigation::mmap;
@@ -1418,9 +1441,9 @@ mod v21_navigation_tests {
         include_str!("../../../tests/contracts/fixtures/forever-product-v21/navigation-map2.tsv");
     static NEXT_LAB: AtomicU64 = AtomicU64::new(0);
 
-    struct Lab(PathBuf);
+    pub(super) struct Lab(PathBuf);
     impl Lab {
-        fn new() -> Self {
+        pub(super) fn new() -> Self {
             let path = std::env::temp_dir().join(format!(
                 "rce-v21-navigation-{}-{}",
                 std::process::id(),
@@ -1796,6 +1819,86 @@ mod v21_navigation_tests {
         let mut bytes = chunk(b"MVER", &18_u32.to_le_bytes());
         bytes.extend_from_slice(&chunk(b"MCNK", &cell));
         bytes
+    }
+
+    fn synthetic_collision_wdt() -> Vec<u8> {
+        let mut mphd = vec![0; 32];
+        put32(&mut mphd, 0, 0x200);
+        let mut main = vec![0; 32768];
+        put32(&mut main, 0, 1);
+        let mut maid = vec![0; 131072];
+        put32(&mut maid, 4, 200);
+        let mut bytes = chunk(b"MPHD", &mphd);
+        bytes.extend_from_slice(&chunk(b"MAIN", &main));
+        bytes.extend_from_slice(&chunk(b"MAID", &maid));
+        bytes
+    }
+
+    fn synthetic_collision_adt() -> Vec<u8> {
+        let mut row = [0; 36];
+        put32(&mut row, 0, 300);
+        put32(&mut row, 4, 42);
+        row[32..34].copy_from_slice(&1024_u16.to_le_bytes());
+        row[34..36].copy_from_slice(&0x40_u16.to_le_bytes());
+        chunk(b"MDDF", &row)
+    }
+
+    fn synthetic_collision_m2() -> Vec<u8> {
+        let mut bytes = vec![0; 304];
+        bytes[..4].copy_from_slice(b"MD20");
+        for (at, value) in [(216, 3), (220, 304), (224, 3), (228, 310)] {
+            put32(&mut bytes, at, value);
+        }
+        bytes.extend_from_slice(&[0, 0, 1, 0, 2, 0]);
+        for value in [0.0_f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0] {
+            bytes.extend_from_slice(&value.to_bits().to_le_bytes());
+        }
+        bytes
+    }
+
+    pub(super) fn v22_geometry_package(lab: &Lab) -> PathBuf {
+        let table_id = |name: &str| {
+            catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
+                .unwrap()
+                .unwrap()
+                .metadata()
+                .file_data_id
+        };
+        let extra_files = [
+            (100, synthetic_collision_wdt()),
+            (200, synthetic_collision_adt()),
+            (300, synthetic_collision_m2()),
+            (
+                table_id("LiquidMaterial"),
+                synthetic_db2("LiquidMaterial", 1, false),
+            ),
+            (
+                table_id("GameObjectDisplayInfo"),
+                b"poisonous synthetic GODI: any read must fail".to_vec(),
+            ),
+            (
+                table_id("LiquidObject"),
+                b"poisonous synthetic LiquidObject: any read must fail".to_vec(),
+            ),
+        ];
+        let fixture = CascFixture::new(lab, MapMode::Normal, false, false, &extra_files);
+        let plan = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v22/map2.tsv"
+        ))
+        .unwrap();
+        let output = lab.0.join("v22-package");
+        let scratch = lab.scratch("v22-scratch");
+        extract_disk(
+            &plan,
+            &fixture.path,
+            &output,
+            [0x7b; 32],
+            false,
+            None,
+            &scratch,
+        )
+        .expect("synthetic v22 placement-only extraction");
+        output
     }
 
     #[test]

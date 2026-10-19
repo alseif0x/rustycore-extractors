@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-11: bounded offline acquisition-to-raw collision pipeline.
 //! Reads complete local files and converts them now; no files are published.
 //! All outputs stay owned until successful finish. Names require the existing
@@ -18,6 +19,8 @@ pub mod available_70374;
 #[cfg(target_os = "linux")]
 pub mod compatible;
 pub mod gameobjects;
+#[cfg(target_os = "linux")]
+pub mod geometry;
 #[cfg(target_os = "linux")]
 pub mod inventory_spool;
 mod names;

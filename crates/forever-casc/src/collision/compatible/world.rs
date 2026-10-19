@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified by the RustyCore Extractors project, 2026-10-19.
 // Authored 2026-10-17: same-owner compatible Map/liquid preparation.
 //! Available Map coverage is separate from complete liquid SourceFacts. One
 //! compatible collector/cache/ledger survives startup and the whole callback.
@@ -53,12 +54,17 @@ impl<L: LiquidLookup + ?Sized> input::Access for Collector<'_, '_, L> {
     }
 }
 impl<L: LiquidLookup + ?Sized> AvailableAccess for Collector<'_, '_, L> {
-    fn read_available_source(
+    fn read_available_source_for_target(
         &mut self,
         id: u32,
         cap: usize,
+        target: Target,
     ) -> Result<crate::local_store::availability::AvailableSource, CollectorError> {
-        Collector::read_available_source(self, id, cap)
+        let result = self
+            .inner
+            .inner
+            .read_available_source_target(id, cap, target);
+        self.inner.checked(result)
     }
 }
 fn world_error(e: strict_world::Error) -> Error {
