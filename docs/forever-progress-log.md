@@ -3742,3 +3742,109 @@ locale), and one revision-20 all-available-maps plan. None was executed because
 the client is in use. Their purpose is to distinguish a wrong locale-variant
 selection from genuine key encryption; they emit no key material. No client,
 keys or network were accessed for this checkpoint.
+
+## 2026-10-19 — first real build-70450 encoding probe execution
+
+The Linux `probe-encoding` command was executed against the installed build-70450
+client on 2026-10-19. Before access, guards confirmed that the client was closed
+(no game process), build-info metadata was unchanged, and no updater process was
+running. Five probe plans were executed. Their reports and traces are retained
+outside every checkout under
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/`
+in `plans/` and `traces/`. The probe is read-only, wrote only its traces, and
+accepted no keys. This is the first execution of the plans prepared in the
+preceding checkpoint; that earlier “not executed” status records the state then.
+
+Build-info tags report the same speech and text locale, `esES`. Thus the
+client's own selection mask is the esES mask used by these plans; another locale
+cannot be assumed to be the locale the client reads.
+
+For Map file data ID `1349477`, the probe enumerated ten ROOT rows, one per
+locale mask: `4`, `16`, `32`, `64`, `128`, `256`, `514`, `4096`, `8192`, and
+`81920`. All rows have identical effective content flags, and each has exactly
+one ENCODING row. Selecting esES chooses locale flags `128`; its encoding has a
+matching local index prefix, but the read is rejected as encrypted. Selecting
+enUS chooses locale flags `514`; its encoding has no matching local index
+prefix, so the read is rejected as missing and that variant is not present
+locally. For this file the locale hypothesis is resolved: the only locally
+present variant is esES, and it is encrypted. Choosing another locale does not
+yield readable Map data.
+
+GameObjectDisplayInfo file data ID `1266277` has one ROOT row and one encoding;
+the read is rejected as encrypted, identically under both locales, so locale
+plays no role. Gameobject model file data ID `7385605` likewise has one ROOT
+row and one encoding; the read is rejected as encrypted under both locales, so
+locale plays no role there either.
+
+For all three blocked sources, locale selection is not the cause and the
+rejections are genuine encryption. For the two single-variant sources, locale is
+irrelevant. The client's own esES locale agrees with the plans, which is
+consistent with the missing keys being obtained at runtime rather than shipped
+locally; this is a consistency observation, not an established fact. The probe
+reports rows and encodings eligible under the plan's locale and the selected
+row's encodings. It does not read other locales' variants beyond the selected
+row, make any claim about whether another locale variant is locally present,
+demonstrate decryption, or recover a key. Keyless rejections appear in the
+encrypted-unsupported class, while earlier keyed runs reported the
+key-unavailable class; the difference is the presence of a keyring, not a
+different cause.
+
+The plan grammar requires declared DB2 entries in catalogue order. Three plans
+were initially rejected with a plan-schema or plan-format code because of their
+authoring order. This is a plan-authoring rule, not a product defect; future
+plans must follow catalogue order.
+
+No key is claimed to exist or be obtainable; decryption has not been
+demonstrated. No component, full-world, runtime, or release gate is met by this
+probe.
+
+## 2026-10-19 — first real build-70450 DB2 catalogue census
+
+The Linux `census-db2` command was executed against the installed build-70450
+client on 2026-10-19 using two plan locales. Reports and stdout are retained
+outside every checkout under
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/census/`:
+`db2-census-70450-esES.json` and `db2-census-70450-enUS.json`. The command
+accepted no keys, wrote only its reports, and extracts nothing. Both reports
+identify `forever-db2-census-contract-v1`, `declarations: 1161`,
+`keyless: true`, and `complete_extraction_claim: false`.
+
+For the installation's own locale, esES, 1,055 declarations are
+`fully_readable` with reason `complete_keyless_decode_and_ckey_check`; 106 are
+`encrypted_no_available_key` with reason
+`encrypted_candidate_no_key_available`; none are `file_unavailable` and none
+are `unsupported_or_unknown`. Every observed encrypted rejection carried the
+encrypted-unsupported class.
+
+For enUS, 826 declarations are `fully_readable`, 81 are
+`encrypted_no_available_key`, and 254 are `file_unavailable` with reason
+`no_local_index_prefix_match`; none are `unsupported_or_unknown`. Under enUS
+the Map table is not encrypted but is absent locally, matching the probe's
+observation that the enUS Map variant has no local index prefix. The esES
+installation has more locally present tables than the enUS selection.
+
+The esES census quantifies the encryption blocker for the first time: 106 of
+1,161 catalogue declarations are key-encrypted, including `Map` and
+`GameObjectDisplayInfo`, while 1,055 are decodable without a key and nothing
+is missing. This establishes no decryption, recovers no key, proves no reader
+correctness or row counts, and is not an extraction or completeness claim. The
+earlier two-table blocker was an artefact of the small selection used then; the
+encrypted set spans many more declarations than the two names observed so far.
+
+The first twenty encrypted declarations in esES catalogue order are
+`Achievement`, `AnimKit`, `AnimKitSegment`, `AreaTable`, `BattlePetSpecies`,
+`BeamEffect`, `CharacterLoadout`, `CharacterServiceInfo`, `Creature`,
+`CreatureDifficulty`, `CreatureDifficultyTreasure`, `CreatureDisplayInfo`,
+`CreatureDisplayInfoExtra`, `CreatureDisplayInfoGeosetData`,
+`CreatureDisplayInfoOption`, `CreatureLabel`, `CreatureMovementInfo`,
+`CreatureSoundData`, `CreatureSoundFidget`, and `CreatureXDisplayInfo`.
+
+For all three previously blocked sources—Map, GameObjectDisplayInfo, and model
+7385605—selection is not the cause and encryption is genuine. Locale is
+irrelevant for the two single-variant sources. The client's esES locale matches
+the selected plan locale, which is consistent with needed keys being obtained
+at runtime rather than shipped locally, but this remains a consistency
+observation, not an established fact. The census reports declaration
+availability only; it demonstrates no decryption. No key is claimed to exist
+or be obtainable, no decryption is claimed possible, and no component,
+full-world, runtime, or release gate is met.
