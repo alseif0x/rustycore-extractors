@@ -1622,3 +1622,74 @@ The v12 authored-source inventory records 108 diagnostic sources and verifies
 all 100 prior v11 hashes unchanged. The C++ call-crib variant remains prepared
 and unexecuted. The investigation still has **no new candidate for either TACT
 asset key**, so no new BLTE verification is claimed.
+
+
+#### Local empty-batch route and a fresh in-world session
+
+A further Windows-ABI reconstruction of `0x4b10b0` identifies a local call to
+`0x4b08a0` at `0x4b167a`. When the send-target pointer is null or the built
+request count is zero, the caller constructs a batch with a null record
+pointer and zero count and still calls the handler. Together with the
+producer/consumer trace, this means event 3 can follow a locally generated
+empty batch: it does not establish a fresh server response. This is static
+control-flow evidence, not a live trace. Evidence:
+`ev_765798dcfcef2f12380d3e6d5b8a6ce60a1767784253c947697816b25b1b1d11`.
+Reviewed receipt:
+`reports/event3-local-empty-batch-route-700-00.json`, SHA-256
+`6b0fce6522f7700d4659be2425a73be3913677216855fa626bc15ad3efa28b0d`.
+
+After the operator reports entering the world again, a new Linux process
+requires a new identity receipt. The first private-map scan is bounded and
+finds no matching headers within its partial coverage. Header-finder v1 then
+retains a read failure; v2 identifies two DOS-header matches whose only
+optional-header field difference is ImageBase. Neither failed version is
+reclassified as successful or as evidence that the game is absent.
+
+A new v3 explicitly verifies the relocation: source ImageBase remains the
+pinned preferred value, runtime ImageBase equals the candidate base, and the
+entire optional-header byte vector matches after adjusting only that field.
+DOS, COFF and section-table bytes remain exact. A complete 4,096-byte RX page
+at `0x4cf000` then matches the independently frozen control hash before and
+after. Source, process creation identity and relevant mappings remain stable.
+The search examines 1,786 eligible mapping starts; six unrelated EIO reads
+remain recorded, so global search completeness and global uniqueness are not
+claimed. The accepted candidate is unique among examined candidates. Receipt:
+`reports/linux-session-header-identity-23756-02.json`, SHA-256
+`695f89232cc830d28b7a44bd80d6d5b6093e220faa71fa6d57750e2610aeb24a`.
+This Linux identity does not claim a Windows PEB or network/world protocol
+binding. The operator's world report supplies that separate context.
+
+The new index-probe v2 pins that receipt and independently rechecks process,
+source, PE headers, RX-page identity and all relevant mappings. Its three
+index reads agree; all final guards pass. The observed collection has 69
+four-byte entries and a row-ID span of 7,910. Both privately resolved selected
+row IDs fall outside that collection's inclusive minimum/maximum range.
+The probe reads 972 typed metadata bytes, including 828 index bytes across
+three reads, and invokes no getter or target code. It reads no key payload.
+This is a bounded result about this collection at this observation, not an
+absence claim for all client memory or every hotfix path. Receipt:
+`private/probe-live-tact-index-presence-v2-safeindex7045001.json`, SHA-256
+`67f3c9b1d8d5f9f9dab55a8b31b1f752c8d81b6d5c70673a45a8728f02c373e2`.
+
+The independently rerun strict cache audit sees the same pinned cache hash
+and the same twelve selected empty `NotPublic` observations. Re-entering the
+world has therefore supplied neither a new selected cache payload nor a key
+candidate in these bounded inspections. Receipt:
+`reports/audit-target-key-cache-status-v2-20261019T115250Z-1792410770485763188-0.json`.
+
+A separate private experiment is being prepared to test reuse of public key
+**values** under the missing lookup names. The pinned 19,705-entry public
+source contains 19,704 distinct values; one value appears under two names.
+This differs from the previous name-based and byte-reversed-name checks,
+which failed before decryption. The aggregate audit establishes no candidate
+or successful decryption. A positive control and full decoded-content integrity
+are required before accepting a result; mode bytes alone are insufficient.
+No random key-space search or network acquisition is implied. Receipt:
+`reports/public-key-value-reuse-audit-00.json`.
+
+The v13 authored-source inventory records 112 diagnostic sources: all 108
+v12 hashes remain unchanged, with separate frozen identity v1/v2/v3 and index
+v2 sources added. The value-probe implementation remains outside this frozen
+inventory while it is being prepared. Inventory:
+`reports/authored-diagnostics-manifest-v13.json`, SHA-256
+`77f09385222487816f798d17ef2fd2b51c759f18b8c48a80f42bf6fa5ca01d21`.
