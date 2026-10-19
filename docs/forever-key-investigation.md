@@ -1554,3 +1554,71 @@ The other reader at `0x20ebf0` has its own retained single-page reconstruction,
 but its one REA attempt reaches the bounded timeout and is cancelled. It has
 no successful pseudocode evidence and is not retried unchanged. Receipt:
 `private/analyze-one-pinned-page-function-v1-safeothercallbackreader7045000-receipt.json`.
+
+#### Event 3 producer and consumer now connected
+
+A separately versioned offline scan targets only `0x5222d3a`, adding the
+declared immediate-store, register-compare, byte-store and extension-load
+encodings to the earlier lexical grammar. It retains the original four
+constraints/two functions admission rule, both exact runtime controls, the
+independent `0x4b1000` hash/call calibration and the independently pinned
+`0x203000` hash/compare/clear calibration. All input, evidence and final guards
+pass: 15,505 pages considered, 13,220 target pages uniquely reconstructed,
+24.024 seconds, two candidate pages retained. Lexical duplicates caused by
+REX/no-REX starts remain recorded, and unadmitted pages, other encodings and
+cross-page instructions remain outside coverage. Receipt:
+`reports/scan-offline-activation-flag-xrefs-v1-20261019T113957Z-17726-ce6bfddd9a.json`.
+
+The new writer candidate is `0x4b0c24`, inside the already analyzed handler
+`0x4b08a0`. Reviewed instruction boundaries and the retained REA evidence
+`ev_e45aa1cf6231711528c1b6cd9b84526772ffd4a6734b9a73888498740714d9f5`
+corroborate the actual write of **1**. The handler processes its array of
+24-byte hotfix records, passes each operation unchanged to `0x4af5c0`, emits
+callback event **1**, then sets the flag. A zero record count skips the record
+loop and still reaches that notification phase. No `Valid`-operation or
+sixteen-byte-key-payload predicate dominates the flag write in this retained
+handler. Calls must return and normal control flow must reach that point;
+exceptions and nonreturning callees are not modeled.
+
+Combined with the consumer, the supported static interpretation is:
+**processing a hotfix batch marks a notification pending; the update routine
+later broadcasts event 3 and clears that mark.** This is an inferred functional
+description, not a recovered official enum name or an observed live execution.
+In particular, an event-3 observation does not establish key delivery: the
+write does not require a valid key payload and can follow a batch containing
+the already identified empty `NotPublic` observations. The pending-event
+mechanism therefore no longer supplies evidence for a missing activation
+condition specific to the two keys. It still does not explain the upstream
+server's publication/account/content rules or recover either value.
+Independent audit:
+`reports/event3-producer-consumer-audit-700-00.json`, SHA-256
+`d9e147ff4bdb76e5a346bf60b6a6d52460a4d0d3ecff124b1ab537b25edc12e6`.
+
+#### Typed index inspection prepared; previous process has exited
+
+REA evidence
+`ev_2ae0893578d087fcc2f0cc5defcf08459714dfab43acd454bfe29b900ddcdcff`
+explains `0x4d7ca0` as the index lookup used by the reconstructed row reader.
+Its four-byte entries compare a sixteen-bit relative row ID; the entry array
+and count agree with the reader's independently reviewed offsets. This allows
+a bounded presence/discriminator check without invoking a getter or reading
+the key payload. The private helper fixes the original identity/binding/mapping
+guards and 4,096-byte typed-read cap, admits at most 256 index entries, requires
+three equal reads and rejects ambiguous selected entries. Selected row IDs
+are resolved and pinned privately; only aggregate results may enter context.
+
+The first execution retains `probe_internal_failure`. A separate offline
+validation of its reconstruction provenance succeeds; a following process
+inventory finds the formerly pinned PID absent and **no `WowB.exe` process**.
+Consequently this attempt establishes no new live row-presence result. Retain
+the failure rather than relabeling it as an absent-key observation or reusing
+the historical process binding. The operator's existing Battle.net desktop
+launcher is started once through an owned user service; launcher output stays
+private. A fresh game process needs its own source/build/PE/base/creation
+binding before another live index read. No row-presence result or new key
+value was established by this failed probe.
+
+The v12 authored-source inventory records 108 diagnostic sources and verifies
+all 100 prior v11 hashes unchanged. The C++ call-crib variant remains prepared
+and unexecuted. The investigation still has **no new candidate for either TACT
+asset key**, so no new BLTE verification is claimed.
