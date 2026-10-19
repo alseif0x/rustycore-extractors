@@ -4721,3 +4721,42 @@ guards were verified.
 This is synthetic validation only. A real filesystem-owner rerun remains
 pending, and no package output or new real acceptance is claimed. Manual real
 tile generation and native SDK query evidence remain separate from this owner.
+
+## 2026-10-19: bounded real available-selected filesystem-owner run
+
+A real bounded run on source commit
+`d0aa69ca0fc0fdf8c7b16e7db1dd760f2a516f02` passed through the Linux
+build-70450 `AvailableSelectedPackage::open_70450` owner and
+`execute_available_selected` runner. It admitted one selected direct Map row,
+one map and four tiles. Available Map inventory remained partial, with 73
+direct rows across one of four sections; the complete `LiquidType` input had
+57 entries.
+
+Strict input parsing, exclusive `0600` staging, rereads, exact inventory and
+all four API guard predicates passed. Snapshots of all 1,331 tracked source
+files, plus configuration, tool, input and binary checks, remained unchanged. The run emitted five files (one 40-byte
+global and four nonempty MMap tiles), totaling 838,116 bytes. Each of the five
+files independently matched the corresponding output from the earlier
+separate manual-generation run. Producer binary SHA-256:
+`15f8d862c2ef2f804b01bacf60f36f37a3f16099694f6122a92307cee14a0858`.
+
+The selected terrain tilelist was authoritatively empty, so the run provides no
+ground MAPS proof. It did not run native queries. The prior native SDK query
+probe remains evidence for its separate consumer and manual inputs only; output
+identity does not transfer that query result to this filesystem-owner run.
+
+The bounded persistent unit was limited to 900 seconds, 3 GiB, one CPU and 64
+tasks. Build time was 46.758 seconds and owner runtime was 8.933 seconds. The
+parent-recorded total duration, including dispatch and post-context checks, was
+56.094 seconds. Parent receipt SHA-256:
+`01dedb51a671e9296597f195f595032aede55d073b2896ba263e8488583e4650`; worker
+receipt SHA-256:
+`9c3e34588b55613429b85061f38f123491897211b947ce1e6ad35c7a55762ecf`.
+
+This is bounded acceptance for the selected filesystem owner and byte-stable
+outputs on the admitted partial inventory. CLI integration, complete-source
+coverage, native queries through this owner, legacy-v15 container or
+`MMapManager`, filename compatibility, cross-tile query behavior, off-mesh,
+ground MAPS, full-world coverage, Trinity parity, server/runtime, Windows and
+release acceptance remain open. The earlier real failure and synthetic
+checkpoints above remain historical and unchanged.

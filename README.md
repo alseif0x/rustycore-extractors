@@ -79,7 +79,7 @@ source of truth; the table below summarizes the boundaries.
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
 | Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
 | Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines. Bounded real v22 esES map-48 extraction passed with 66 files / 2,079,754 bytes (inventory `aa9d5cee…`); 65 of the 66 published artifacts match the preceding binary byte-for-byte (55 `.vmo`, 4 `.vmtile`, 4 `.vmtileidx`, 1 `.vmtree`, 1 `.placements`); only the coverage record differs, with no client-derived VMap byte changes. V22 covers selected-map geometry and active ancestors from available Map; GameObject globals are excluded by profile, LiquidObject is out of scope, and MMaps/full-world output are absent. | C++/TrinityCore format parity, RustyCore runtime acceptance, navigation/MMaps, full-world/whole-client coverage and final product integration remain open; prior-profile evidence stays separate |
-| Navigation / MMaps | Rust Recast/Detour stages and supplied-input reader/query comparisons. A new Linux build-70450 `AvailableSelectedPackage::open_70450` / `execute_available_selected` filesystem library path has synthetic validation; it retains a partial plan and handles one explicit map or tile. The earlier separate manual harness generated and reread four tiles plus a 40-byte global (838,116 bytes total); that output does not exercise the filesystem owner. A later native-SDK probe loaded/unloaded all four generated tiles, resolved 64/64 derived candidates to distinct polygons, and found 163 complete routes in 256 bounded attempts, including a path across multiple loaded tiles ([scope and receipt](docs/forever-navigation.md#2026-10-19-native-sdk-probe-across-four-selected-tiles)) | The filesystem API has no CLI profile or real filesystem-backed acceptance. Real complete-source v21 acceptance, a v23 CLI profile, legacy-v15 container reader/MMapManager, filename compatibility and exhaustive cross-tile behavior, off-mesh/full-world coverage, Trinity parity, complete runtime/server and release acceptance remain open |
+| Navigation / MMaps | Rust Recast/Detour stages and supplied-input comparisons. A bounded real available-selected filesystem-owner run processed one map/four tiles and emitted four nonempty tiles plus a 40-byte global (838,116 bytes); all five outputs were byte-identical to earlier manual outputs. Inventory remains partial, and the authoritative empty terrain tilelist gives no ground-MAPS proof ([checkpoint](docs/forever-navigation.md#2026-10-19-bounded-real-available-selected-filesystem-owner-run)). | CLI profile, complete-source coverage, native queries through this owner, legacy-v15 manager/container/path compatibility, ground MAPS, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
 
@@ -177,13 +177,13 @@ legacy-v15 container or `MMapManager` acceptance, full-world coverage, native
 Trinity parity, or server/runtime acceptance. See the
 [native probe record](docs/forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile).
 
-The Linux filesystem library API for available selected navigation passes
-synthetic validation, including a fix for excessive discovery capacity growth.
-A bounded real open exposed that defect before writing output; a real run of
-the corrected owner is pending. It has no CLI profile. The earlier manual
-generation and native SDK probes remain separate evidence. See the
-[filesystem API checkpoint](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation)
-and the [growth-fix validation](docs/forever-navigation.md#2026-10-19-selected-filesystem-owner-growth-fix-synthetic-validation).
+The Linux available-selected filesystem owner now has a bounded real run for
+one map and four tiles: four nonempty tile files plus a 40-byte global were
+produced, with all five outputs matching the earlier separate manual outputs.
+The inventory remains partial, the selected terrain tilelist was authoritatively
+empty, and no native query ran through this owner. See the
+[real filesystem-owner checkpoint](docs/forever-navigation.md#2026-10-19-bounded-real-available-selected-filesystem-owner-run)
+for scope and limitations.
 
 A later native SDK probe used the four tiles from the separate manual
 four-tile generation. All four loaded and were removed successfully; 64 of 64

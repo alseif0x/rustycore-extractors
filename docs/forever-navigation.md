@@ -2660,3 +2660,46 @@ These results validate the fix synthetically; they do not replace a real-owner
 rerun. Real filesystem-backed acceptance remains pending. No package output or
 new real acceptance is claimed here. The manual generation and native SDK
 probes remain separate evidence and do not exercise this filesystem owner.
+
+## 2026-10-19: bounded real available-selected filesystem-owner run
+
+This later checkpoint supersedes the contemporaneous pending-rerun status in
+the synthetic growth-fix checkpoint above. The original real failure and all
+synthetic validation history are retained there unchanged.
+
+At source commit `d0aa69ca0fc0fdf8c7b16e7db1dd760f2a516f02`, the Linux
+build-70450 `AvailableSelectedPackage::open_70450` owner and
+`execute_available_selected` runner completed a bounded real selected-package
+run. The selected plan contained one direct Map row, one map and four tiles.
+Available Map inventory was still partial: 73 available direct rows across one
+of four sections. The complete `LiquidType` input contained 57 entries.
+
+Strict parsing, exclusive `0600` staging, rereads and exact inventory checks
+passed. The run emitted five files: one 40-byte global and four nonempty MMap
+tiles, 838,116 bytes total. Each output file independently matched the bytes
+from the earlier separate manual-generation run. All four API guard predicates
+passed. Snapshots of all 1,331 tracked source files, plus configuration,
+tool, input and binary checks, remained unchanged. The producer binary SHA-256 is
+`15f8d862c2ef2f804b01bacf60f36f37a3f16099694f6122a92307cee14a0858`.
+
+The selected terrain tilelist was authoritatively empty, so this run does not
+prove ground MAPS output or complete geometry. No native query was run through
+this owner. The earlier native query probe remains scoped to its separate
+consumer and the earlier manual outputs; byte identity does not transfer that
+query result to this filesystem owner.
+
+The bounded persistent run used a 900-second, 3-GiB, one-CPU, 64-task limit.
+Build time was 46.758 seconds and owner runtime was 8.933 seconds. The
+parent-recorded total duration, including dispatch and post-context checks, was
+56.094 seconds. Parent acceptance receipt SHA-256:
+`01dedb51a671e9296597f195f595032aede55d073b2896ba263e8488583e4650`; worker
+receipt SHA-256:
+`9c3e34588b55613429b85061f38f123491897211b947ce1e6ad35c7a55762ecf`.
+
+This establishes only bounded real selected-filesystem owner behavior and
+byte-stable outputs for this partial inventory. It does not establish a CLI
+profile, complete-source coverage, native queries through this owner,
+legacy-v15 container or `MMapManager` acceptance, filename compatibility,
+cross-tile query behavior, off-mesh completeness, ground MAPS, full-world
+coverage, Trinity parity, RustyCore runtime/server acceptance, Windows support,
+or release acceptance.
