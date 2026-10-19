@@ -96,7 +96,7 @@ class LinuxMapDomainContract(unittest.TestCase):
     def test_complete_map_preflight_precedes_output_create_and_resume(self):
         driver = self.source['driver']
         body = driver.split('fn extract_inner(', 1)[1].split('fn prepare_domain(', 1)[0]
-        marker = 'let domain = prepare_domain(plan, &mut store)?;'
+        marker = 'let domain = match prepare_domain(plan, &mut store) {'
         self.assertLess(body.index(marker), body.index('Run::resume('))
         self.assertLess(body.index(marker), body.index('Run::create('))
         prepare = driver.split('fn prepare_domain(', 1)[1].split('#[cfg(test)]', 1)[0]

@@ -140,7 +140,7 @@ class ProductV18Contract(unittest.TestCase):
         self.assertIn("open_db2_70450_with_keys", driver)
         collision_dispatch = driver.split("fn extract_collision(", 1)[1].split("\n    }\n}", 1)[0]
         self.assertIn(
-            'ifplan.is_v15()||plan.is_v18(){returnself.preflight.as_ref().ok_or("product_scratch_required")?.run_compatible_70450(store,run,plan.map_domain,self.context);}',
+            'ifplan.is_v15()||plan.is_v18(){returnself.preflight.as_ref().ok_or("product_scratch_required")?.run_compatible_70450(store,run,plan.map_domain,self.context,plan.is_v18());}',
             "".join(collision_dispatch.split()),
         )
         self.assertIn("plan.is_v14() || plan.is_v15() || plan.is_v18()", verify)

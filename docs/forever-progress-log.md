@@ -4378,3 +4378,9 @@ current pin and does not replace it.
 
 This is a diagnostic improvement only: it does not decrypt content, unblock an
 extraction, close any extraction gate, or change policy.
+
+The initial qualification of `1b4ea4e` omitted the contract suite; a later
+`python3 -B -m unittest discover -s tests/contracts -p 'test_*.py'` run found two
+source-text pins broken by the dispatch and preflight changes, and they are
+corrected here. In the same validation pass, the distribution suite passed 167
+tests with one skip.
