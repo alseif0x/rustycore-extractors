@@ -3879,3 +3879,30 @@ code became protected again. Both query-callee captures also stopped at their
 RX guard. Battle.net is open, while a confirmed official world-entry
 transition is still needed. Detailed reentry receipts and the transient-page
 limitation are retained in the key-investigation guide. No key was recovered.
+
+### Operator-confirmed world session: query predicate observed true
+
+World entry was confirmed by the operator, and discovery bound a new exact
+build-70450 process/base with independent source, PE and creation guards.
+All 83 known cache controls now match in state 2. Both missing targets remain
+zero-valued and are observed in state 3; that state's cause remains unproven.
+The guarded code-matched predicate probe now observes both internal indicators
+nonzero and its conjunction true. This establishes that local gate in the
+world session, without attributing a causal transition between processes.
+
+Windows-ABI REA analysis identifies the request setup's local-row/session gate,
+pending-state/timestamp write and callback/query path. A separate three-member
+168-byte iterator calls that setup while walking the key cache; its activation
+caller is still unresolved. A five-member 729-byte installed callback stores
+callbacks in a different nested map. Neither establishes the state-3 writer
+or a network packet identity. All accepted constituent carves retained source,
+PE, creation, RX and unwind-family evidence. Query/response helper carves still
+stopped at their RX guard with zero bytes read.
+
+The hardware-entry debugger attempts ended early on Wine SIGUSR1 and then an
+unattributed client SIGTRAP; neither completed its intended 25-second window.
+Cleanup detached successfully with every post guard true, and the results are
+not absence-of-query evidence. The disk hotfix cache is unchanged. New helper
+hashes, exact receipts, retained failures and repeat steps are recorded in the
+key-investigation guide and the private v8 diagnostic manifest. No missing key,
+full extraction or runtime acceptance is claimed.

@@ -924,3 +924,125 @@ delivers either selected key and no authenticated recovery. The later
 authored diagnostic source inventory is
 `reports/authored-diagnostics-manifest-v7.json`; it includes prepared variants
 that were not executed, as distinct from the receipts of actual attempts.
+
+### Confirmed world session — available query gate, unresolved target states
+
+The operator then confirmed being inside the world. Discovery found a different
+exact-build process: Linux PID **1656634**, creation ticks **89478947**, Windows
+PID **700**, PEB image base **`0x6ffff05f0000`**. The earlier PID/base must not be
+reused. Exact executable path, creation/active identity and source/runtime PE
+headers matched. As before, the identity helper's optional text sample failed;
+its overall failure is retained, while successful structural fields were
+independently checked by the later probes. Receipts:
+`reports/world-client-windows-discovery-00.json`,
+`reports/world-cross-process-identity-700-00.json` and
+`reports/world-session-binding-700-predicate-00.json`. The last is the strict
+probe binding; a separate binding retains operator-confirmation provenance.
+
+The guarded cache walk found 202 nodes in 256 buckets. All **83 known controls
+now match exactly in state 2**, compared with 69 state-2 controls in the earlier
+login-screen process. Both selected missing entries still have zero value
+fields. A new report version exposes their numeric state histogram only:
+**both are state 3**. It exports neither selected names nor key values and
+creates no candidate key file. All process/source/PE/cache stability guards
+passed. Receipts: `reports/world-client-cache-700-00.json` and
+`reports/world-client-cache-states-700-00.json`. This is a comparison between
+different processes, not a continuously observed state transition. State 3
+has not yet been identified as a timeout, missing row or server denial.
+
+`run_rebound_delivery_predicate.py` validates the strict binding and Windows
+identity receipt before rebinding the existing byte probe. Its one execution
+verified the retained 64-byte RX code hash, interface chain, source/PE and
+creation identity before/after reading the selected fields. The internal
+global object is non-null and both bytes at `+0xc49` and `+0x7e8` are nonzero:
+**the local query predicate is true in this confirmed world session**.
+Receipts: `reports/world-delivery-predicate-700-00.json` and its inner report.
+The two indicators' individual meanings and the action that changed them
+remain unknown; the earlier login-screen byte probe was unobserved.
+
+Fresh current-process carves of the query helper, node helper and callback
+adapter at RVAs `0x1b8e9d0`, `0x1b8e8e0` and `0x1b8ed40` each encountered
+`---s` over their selected extents and read zero code bytes. No protection was
+changed and no protected read was forced. These are retained current-process
+results, not successful captures or identical retries on the older process.
+Their receipts are `reports/world-carve-<rva>-700-00.json`.
+
+The request-setup region at RVA `0x1b8bc20` was captured successfully: 539 bytes,
+stable source/creation/PE/RX guards and an exact match with the retained older
+capture. Windows-ABI REA evidence
+`ev_f80a358f1c6d946da0b5d80bd7a4d0b06c69eeb45b3f2d54a6ef4ca81c334edc`
+has a normal return and the overlapping-global-symbol warning. It returns for
+an available state-2 node and can defer a state-1 node until its cooldown.
+A local TactKey row or the true interface predicate admits the query path;
+that path records pending state 1 and a timestamp, constructs callback
+pointers and calls the query helper. This identifies additional local query
+conditions; it does not identify a packet or write state 3.
+
+Two guarded 256-byte RX neighborhoods provided narrower structural checks.
+The installed leaf at `0x1b8d610` treats a zero lookup as ready and otherwise
+tests the matching key-cache node for state 2. The leaf at `0x1b8bef0` walks
+the cache and returns false when any node has state 1. Neither leaf has a
+source `.pdata` boundary; their branches/returns can be reviewed inside the
+samples, but the full 256-byte neighborhoods are not complete functions.
+Their neighboring partial instructions must not be treated as complete code.
+Receipt: `reports/world-key-state-neighborhoods-700-01.json`.
+
+Source-only unwind inspection and separate guarded carves expanded the
+installed callback at `0x1b8d670` into five contiguous members: 34, 15, 603,
+68 and 9 bytes, ending at `0x1b8d949`. Every member resolves to the same
+source unwind root; the subsequent metadata gap was not filled. The new
+`make_linked_windows_carrier_v4.py` preserves all v3 checks and also validates
+and retains creation ticks, as required by the rebound analysis runner.
+Windows-ABI evidence
+`ev_ba4ab120e421387e4747ccdcb9b6bc748d236f3985cad0ac5d40657177a70790`
+has a normal return. It stores/moves callbacks in a nested map using globals
+different from the key cache; it is not established as the state-3 writer.
+The initial source-metadata parser failure remains retained beside the
+corrected `reports/world-d670-unwind-family-source-700-01.json`.
+
+The adjacent cache iterator at `0x1b8be40` required three contiguous unwind
+members, 29, 133 and 6 bytes, ending at `0x1b8bee8`. All source and live carve
+guards passed. Windows-ABI evidence
+`ev_f781e1289bd4a7d46369341d7f363cc5422b9cce59c9c4ff54adb9bd07afd818`
+has a normal return, with type-propagation and overlapping-global warnings.
+It walks the key cache and calls the request-setup routine for its nodes.
+The caller/registration that activates this iterator is still to be resolved;
+the iterator itself does not establish a state-3 assignment. Source metadata:
+`reports/world-be40-unwind-family-source-700-00.json`. Reviewed structural
+observations are retained separately from raw pseudocode in the laboratory.
+
+Two bounded GDB hardware-entry attempts were retained. The first installed
+three hardware breakpoints but stopped on `SIGUSR1` without a selected hit.
+The new v2 observer preserves the original helper, passes that Wine signal
+through without stopping, retains failed/partial captures and uses explicit
+detach/identity-guarded cleanup. It then stopped after **773.773 ms** on a
+`SIGTRAP` at client RVA `0x2ce407`, outside the three selected entries. Neither
+attempt reached the intended 25-second observation window or captured callback
+code. Both detached, cleared the tracer and passed every post source/PE/
+creation guard; neither reported a permission rejection. No software
+breakpoint fallback, target-function call or signal suppression for SIGTRAP
+was used. This is a debugger limitation with an unresolved trap cause, not
+evidence of no queries, an anti-debug diagnosis or a server decision. Receipts:
+`reports/world-callback-gdb-safeworld70000.json`,
+`reports/world-callback-gdb-v2-safeworld70001.json` and the redacted stop reviews.
+
+The esES `DBCache.bin` is still 3,334,666 bytes with the previously recorded
+digest and stable metadata. No new cache content or delivery was observed,
+and the all-cache parser was not rerun against identical bytes. Receipt:
+`reports/world-dbcache-continuity-700-00.json`. A historical 399-byte neighboring
+routine analyzed under tag `safereply1b8d11000` uses a different map and is
+not identified as a key-reply handler. Keep that negative interpretation and
+the older v1-carve/schema rejection; neither justifies a key or state claim.
+
+Repeat procedure after another client/process change: discover the exact
+canonical executable and Windows/Linux creation identities; obtain the actual
+PEB base; create a new strict binding; then run new-name cache/predicate probes
+with all original code-hash, PE, RX and stability guards. For split functions,
+inspect source unwind families, capture each authenticated contiguous member
+and use the v4 carrier without filling gaps or rewriting older receipts.
+Do not reuse the executed GDB observers unchanged as if they supplied a full
+window. Resolve the iterator's activation and the actual response/state writer
+before assigning a quest, NPC or packet as the trigger. No missing key has
+been recovered or authenticated. Authored-source hashes are in
+`reports/authored-diagnostics-manifest-v8.json`; all captures, keys, raw debugger
+logs and full REA dossiers remain in the private external laboratory.
