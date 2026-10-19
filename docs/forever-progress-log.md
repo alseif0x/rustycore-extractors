@@ -4226,3 +4226,50 @@ under `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20
 (directory mode 0700, files mode 0600). The executable-analysis line belongs
 to its current owner and is not duplicated here; the XOR material investigated
 there is not a TACT key and does not block independent components.
+
+## 2026-10-19: second RustyCore consumption probe for build 70450
+
+The read-only lab harness is under
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/runtime-consumption-70450b-20261019/`,
+with its redacted report in `REPORT2.md`.
+It compiled RustyCore's runtime crates from
+`/home/joe/projects/dream/wow/rustycore` at commit `544721324`, branch
+`forever-extractor-static-terrain`; the runtime tree was not modified. It used
+Rust 1.98.0 offline (53.45 s), enabling `wow-map`'s `forever-terrain` feature
+so the Forever terrain module was reachable. The real package under test was
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/extract-readable/package-esES-highvolume-70450-20261019/`
+(1,055 DB2 files).
+
+`wow_data::forever_hotfix::ForeverTactKeys::load` accepted the package's real
+`TactKey.db2` with count 69. Our `forever_db2::Metadata` reported records=69,
+fields=1, table_hash=`0xdf2f53cf` and layout_hash=`0xcba490fc`, exactly matching
+the runtime constants. The loader also requires format version 5,
+`field_count()==1` and `declared_field_count()==1`, zero parent lookups, no
+inline ID, and uncompressed 16-byte records.
+This is real acceptance by the strict Forever DB2 consumer without relaxation;
+the recorded evidence contains counts and header hashes only.
+
+`wow_map::terrain::forever::Profile::declared_build` admits 70170 and 70205 but
+rejects 70450 with `forever_terrain_profile`, so the runtime terrain/collision
+profile cannot target this build. Against the package,
+`InitializationRecords::load(Complete)` lacks `Map.db2`,
+`BirthRecords::load(Complete)` lacks `SkillLineAbility.db2`, and
+`SpellRecords::load(Complete)` fails with the generic context
+`Cannot open private target item prefix`; the failed first open is
+`SpellName.db2` (declaration 1990283), absent as
+`encrypted_no_available_key`. The runtime's generic context string is outside
+this change's ownership and is unchanged here. The redacted census classifies
+these declarations as `encrypted_no_available_key`: Map
+1349477, SkillLineAbility 1266278, Item 841626, ItemSparse 1572924,
+ItemAppearance 982462, Spell 1140089, SpellEffect 1140088 and SpellName
+1990283. `ForeverHotfixCatalog::new` was not attempted because the package
+lacks its required `HotfixBlobCache` metadata cache.
+
+This harness exercises runtime library code, not the running world server. No
+real 70450 VMap/MMap artifacts exist, so collision and navigation consumers
+could not be exercised. This is partial real-consumption evidence only;
+complete extraction, full-world coverage, navigation, parity and release remain
+open, and the runtime build gate remains an explicit pending responsibility.
+The harness's key-writing subcommands were not used; no key material was
+generated or appears in the outputs, which also contain no key names, client
+bytes or client paths.
