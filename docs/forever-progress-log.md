@@ -4117,3 +4117,95 @@ returned 1 because its caller omitted `--bundle`; the corrected invocation in
 Archive integrity, byte-identical archives and a moved-source rebuild do not
 establish real extraction, runtime acceptance, Windows support, full-world
 coverage or release authorization; no publication is authorized.
+
+## 2026-10-19: RustyCore consumes the build-70450 outputs (lab harness)
+
+The external lab harness at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/runtime-consumption-20261019/`
+compiled the runtime's own crates read-only as path dependencies against the
+runtime checkout at `/home/joe/projects/dream/wow/rustycore`, commit
+`544721324`, branch `forever-extractor-static-terrain`. The runtime tree was
+not modified. The harness used Rust 1.98.0 offline and reused the runtime's
+`Cargo.lock` to retain its pinned dependency graph. Its redacted report is
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/runtime-consumption-20261019/REPORT.md`.
+
+For terrain package
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/probe-70450-20261019/terrain-70450/package-v20-esES`,
+the harness checked 150 tiles each for maps 1, 0 and 169. Our
+`forever_terrain::maps::verify_70450` accepted all 450; the runtime's
+`wow_map::grid_map::GridMap::parse` parsed all 450. Across 11,250 sample
+points, runtime `LiveTerrainHeights::grid_height_like_cpp` matched the directly
+parsed tile height with zero disagreements, and no point fell outside its
+tile's declared min/max range. Map 571 has no tiles in this package because
+the run covers the client's available maps only.
+
+The runtime's `wow_data::forever_game_tables::InitialGameTables::load` loaded
+the v19 package's twenty `gt/` files, with counts `[124, 124, 124]` and
+fingerprints `[12129432390339173315, 3040788807092638946,
+14413540324265136651]`. For the 1,055-file DB2 package, opening every file
+with runtime `wow_data::wdc4::Wdc4Reader` and comparing against our
+`forever_db2::Metadata` yielded `db2_files=1055`, `runtime_opened=1050`,
+`our_metadata_read=1050`, and `empty_tables=544`. The five other files share
+the runtime error class `WDC5 sparse files are not supported by the regular
+reader`. There was no mismatch in record count, declared field count, table
+hash, layout hash or version. `ForeverCharacterIds::load` reported classes=9
+and races=58; `NameRecords::load` succeeded.
+
+This lab harness exercised the runtime's library code against real extracted
+packages; it did not run the world server. The runtime's newer Forever terrain
+profile still admits only builds 70170|70205 (`Profile::declared_build`); the
+legacy grid-map path exercised here has no build gate. No client bytes, key
+material or key names appear in any output. This does not establish full-world
+coverage, VMap/MMap availability or release readiness.
+
+## 2026-10-19: build-70450 encrypted declarations stay key-blocked
+
+The client's own key tables were readable and already extracted in the
+1,055-file package: `TactKey` (file data ID 1302850, one 16-byte field, 69
+declared records) and `TactKeyLookup` (file data ID 1302851, one 8-byte field,
+202 declared records). Joining them on record ID through the runtime's checked
+WDC5 reader yields 69 keys; all 69 also appear in the public list below with
+identical name encoding.
+
+A keyring built from those tables, and a variant covering every plausible name
+derivation (little- and big-endian name readings, lookup record IDs and key
+record IDs), was supplied to the extractor's explicit provided-key revision.
+Plan `/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/plan-v17-map.tsv`
+uses `forever-product` 17, build 70450, esES, `wowdbdefs-70450-v1`,
+`decryption provided-salsa20-v1`, and the single declaration `Map` 1349477.
+`inspect` was admitted; `extract` exited 9 with
+`local_store_no_verified_encoding`. With `FOREVER_PRODUCT_DIAGNOSTIC` enabled,
+the typed diagnostic excerpt was
+`{"variant":"NoLocalEncoding","candidate_failures":{"encrypted":1,...},"blte_code":"blte_encryption_key_unavailable"}`:
+the local archive candidate is a Salsa20-encrypted BLTE frame whose 8-byte
+key name is absent from the keyring. Without `--keys`, the same plan fails
+earlier with `product_keys_required`. A control keyring containing only name
+zero produced the same `blte_encryption_key_unavailable`, so the frame's name
+is nonzero.
+
+The public reference was acquired under the operator's explicit authorization
+with a recorded plan, pin and checksums: `https://github.com/wowdev/TACTKeys`,
+branch `master`, commit `2394fc00248074b9624ebb6749934f7a41a5f09e`
+(`2026-10-16T20:42:29Z`), file `WoW.txt`, blob
+`1ff43f9dcb6a22b342edfe8fa676d70e328e23aa`, 985250 bytes, local SHA-256
+`e5695072ed09e4e17462204da60cdf2481f563b4d533b6d6a`. The repository declares
+no license. The file has 19705 name/key lines and no build sections. Five
+4000-entry batches covering all 19705 keys (names used verbatim after
+calibration) left `Map` and each of the first six encrypted declarations
+failing with the same `blte_encryption_key_unavailable`:
+`Achievement` 1260179, `AnimKit` 1304323, `AnimKitSegment` 1304324,
+`AreaTable` 1353545, `BattlePetSpecies` 841622, and `BeamEffect` 1525607.
+
+Neither the client's own key tables nor this pinned public list supplies the
+content key for these declarations. The 106 esES encrypted declarations, the
+encrypted models behind VMaps and the encrypted `Map` behind the navigation
+domain therefore remain blocked by key availability; the executable-analysis
+line remains with its current owner. Every keyring, batch file and diagnostic
+is kept only under
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/keyring-20261019/`
+with directory mode 0700 and file mode 0600. No key material, key name or
+client bytes entered Git, any report or this log.
+
+No declaration was decrypted, no key was recovered or published, and this is
+not a format, parity, coverage, runtime or release result. The encrypted
+content remains fatal on every disabled-key route.
