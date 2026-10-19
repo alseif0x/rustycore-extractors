@@ -13,31 +13,35 @@ The selected product is `wow_classic_beta`, version `1.60.1.70450`, locale
 `e87aaae6b4204cced22c05975d5378a7ea49e5560c171905c450fbc848e933c1`.
 The three complete-file probes concern Map (FDID 1349477),
 GameObjectDisplayInfo (FDID 1266277), and a model (FDID 7385605).
-They encounter two distinct unavailable key names at their first failing
-encrypted frames. This does not inventory every key needed by later frames
-or by a complete world extraction.
+The initial first-failure probes exposed two unavailable key names. A later
+complete encrypted-frame inventory of these same three objects identifies
+**four distinct unavailable names**, including two additional Map frame names.
+This inventories only these three objects, not every key for a complete world
+extraction.
 
 ### Results already established locally
 
 | Source or method | Observation | Coverage limit |
 | --- | --- | --- |
-| Complete public TACTKeys list | 19,705 pairs; neither requested name present | Exact pinned snapshot, not future updates |
+| Complete public TACTKeys list | 19,705 pairs; all four inventoried unavailable names absent | Exact pinned snapshot, not future updates |
 | Static TactKey / TactKeyLookup | 69 / 202 rows; 69 joined keys | Exact build 70450 |
 | Current hotfix cache | 14 distinct valid direct key observations, all public | Cache produced by the operator's actual session |
 | Combined static and current cache keys | 83 keys; complete-file probes remain blocked | No recovered requested key |
 | All BroadcastText cache records | 92 records; 29 nonempty, all with the 46-byte base tail and no recognized key extension | Exact current cache; no server-wide delivery claim |
 | ROOT variants | Map has ten locale rows; esES is encrypted and enUS encoding is not locally available | Only esES/enUS groups were read |
 | GODI and selected model variants | Each has one ROOT row and one encoding, still encrypted | Exact installed ROOT and selected FDIDs |
-| Latest inspected fork key catalog | Neither requested name present | Pinned fork source, not proof about server operators' private keys |
+| Latest inspected fork key catalog | None of the four inventoried names occurs as a numeric/name literal | Pinned retained source, not proof about future or private operator keys |
 | Fourteen historical minidumps | No requested name found in declared captured memory | Older builds and limited captured ranges; no current heap coverage |
 
 The latest inspected cache SHA-256 is
 `4acfe8b7771327bf869d0f6331ee93c0378c09a37465fa9c4b74f1124dca4ec6`:
 3,342,634 bytes, 33,166 strictly framed HTFX v9 records, declared build 70450.
 Source identity and content were checked before and after the read.
-The two selected rows have twelve empty observations in total. The exact
-client's operation-name table and serializer corroborate their operation 4
-as `NotPublic`; this does not establish the server's reason or future delivery.
+The initial two selected rows have twelve empty observations in total. The
+extended four-name audit resolves four rows and finds 24 observations, all
+operation 4 with zero payload; all four latest observations are also empty.
+The exact client's operation-name table and serializer corroborate operation
+4 as `NotPublic`; this does not establish the server's reason or future delivery.
 
 ## Public sources and pins
 
@@ -1799,3 +1803,102 @@ frozen index v3 and value-probe launcher, for 114 sources. It references the
 separate 400-file value-probe manifest rather than duplicating its enumeration.
 Inventory: `reports/authored-diagnostics-manifest-v14.json`, SHA-256
 `ac759696f4610bb62a7e5d47491e2cfe089c05a4469c569410fb25dc1e080d5a`.
+
+
+#### Complete frame inventory, reusable private samples and the current cache
+
+The separately frozen V2 snapshot inventories all encrypted frames in the
+same three selected objects and preserves their exact authenticated encoded
+records for future offline work. Selection is pinned to V1's record hashes,
+CKeys, sizes and archive/candidate provenance. It compiles offline and runs
+once under `rustycore-public-value-inventory-70450-20261019-00` in 32.264 seconds.
+All 401 source hashes, private input hashes and client-store guards remain
+unchanged. It does not repeat the public-value sweep.
+
+The result is six encrypted-frame occurrences: three in Map, two in
+GameObjectDisplayInfo and one in Model. They contain five distinct names:
+one known/public name and **four unavailable names**. The two newly inventoried
+Map names are absent both from the 83-key ring and the complete pinned public
+dictionary. Exact-name augmentation therefore adds zero keys. Map has three
+unresolved names; GameObjectDisplayInfo has one; Model shares one of Map's
+names. All three baseline full-file decodes retain `missing_key`.
+
+V2 report: `value-probe-v2/reports/observation-00.json`, SHA-256
+`bf25530cdb71bdf1d5cd17fe1f637b06e4f48a4343264fe7e3fa12c3527d00fe`.
+Source manifest: `value-probe-v2/source-pins.json`, SHA-256
+`526e5550c2733f8d8ef06ab461d232ec166032ef6357be8e0839c7d0a4100087`.
+Its private cache retains three records totaling 83,072 bytes, each mode 0600
+inside a 0700 directory. The private observation includes actual names and
+CKey/EKey/frame metadata and must never enter model context. The snapshot
+manifest binds those records and observation by SHA-256:
+`value-probe-v2/cache/round-00/snapshot-manifest.json`, SHA-256
+`be5e9ab8d15fc458d74bda0ea9696eeebaf756358d5cc5c04b12218e6048f70a`.
+These are authenticated ciphertext samples; their complete plaintext CKeys
+are not verified. Future candidate validation can use this private cache
+without reacquiring the client records.
+
+The strict existing cache parser is then given an explicit new four-name
+selection, with the current cache hash and expected request count recorded
+separately. All four names resolve uniquely in TactKeyLookup, all four rows
+are present in the cache, and all 24 retained observations are `NotPublic`
+with zero payload. All four latest observations are likewise empty; all
+input/content/metadata/membership guards pass. Selection:
+`reports/extended-cache-selection-70450-00.json`, SHA-256
+`39bbf0ca017e64d0ea8cd24b4a7027851f494507676771d62beb9837ff6e8647`.
+Result:
+`reports/audit-target-key-cache-status-v2-20261019T125319Z-1792414399706213071-0.json`,
+SHA-256 `611fc3453124a585a5237a93cbdabf399c1f7cb0027fb11180ef3295308992b5`.
+The parser source remains unchanged; the original two-name input is preserved.
+
+The retained fork catalog blob is also checked for the extended selection,
+without network access. None of the four names occurs among its numeric or
+name-string literals. The source blob matches both the pinned native reference
+and the retained later fork checkpoint; this does not establish future-source
+or server-operator private key availability. Receipt:
+`reports/extended-fork-key-source-membership-70450-00.json`.
+
+A single new directed runtime cache walk uses the user-confirmed world session,
+the fresh Linux identity, exact RX control page and all pre/post guards. It
+visits all 256 buckets and 202 nodes with no omissions, cycles, read errors or
+cap hits, reading 12,560 bytes. **All 83 known names now have exact sixteen-byte
+values in state 2.** Both initially selected unavailable names are present,
+outside states 0/1/2, with all-zero value fields; no candidate is exported.
+The frozen observer aggregates these other states, so this receipt does not
+assert their exact numeric state. The global state-2 count is exactly 83 and
+all 83 correspond to the known controls. This shows the known-key cache is
+populated in this observation and supplies no additional available state-2
+key. It remains a directed-cache observation, not all-memory absence or a
+newly observed server-delivery event. Receipt:
+`reports/tactkey-cache-session23756-00-wrapper.json`, SHA-256
+`fc622c1d6fb8c6f06dc27c07ee708f441d2d53c6d5a4169f2b8a6cbf37c9c9c3`.
+
+#### Handler-origin follow-up retains its unresolved boundary
+
+A proposed wider analysis of the lexical handler-pointer candidate at
+`0x20ae10` requires pages `0x20a000` and `0x20b000`. The first has nineteen
+eligible unwind constraints from five functions and a unique phase. The
+second has only one constraint from one function and is rejected by the
+unchanged admission gate. The failed two-page reconstruction remains retained:
+`reports/offline-code-page-reconstruction-v3-20261019T124150Z-62257-efe82bc2c0eb.json`.
+The prepared consumer is explicitly non-executable and stops with
+`draft_registration_context_unavailable`; no threshold is relaxed.
+
+A separate admitted one-page context returns REA evidence
+`ev_24dd1b913e4c2a805b8af2df99b4ced27d106b710126b6af8b83a0faad4e45f3`,
+with a bad-data/truncated-context limitation. Its pseudocode does not establish
+a clean callback registration or network origin. A bounded entry-reachability
+audit finds `0x20aff1` and `0x20aff8` as instruction starts in the inferred
+context; the lexical hit `0x20aff2` is inside the first instruction and is a
+scanner overlap, not another instruction. The function's `.pdata` extent
+continues into the unavailable page, with external edges and unresolved
+indirect transfers. Neither instruction boundaries nor an incomplete dossier
+establish server semantics. Receipt:
+`reports/offline-callback-entry-reachability-audit-v1-20ae10-00.json`, SHA-256
+`0d3447d3ae7a1f00e5869ef5f7faac4d9b47c11a9ee0549e04f5d59676f3b30f`.
+
+The v16 source inventory preserves all 118 v15 source hashes, retains V1 and
+V2 as separate frozen snapshots, records V2's executed diagnostic status and
+keeps the unavailable-context consumer explicitly non-executable. Inventory:
+`reports/authored-diagnostics-manifest-v16.json`, SHA-256
+`6169818dc17ef204df14c9e5956f5a044ee7723d7d65ab41ef8eca44927a7d7b`.
+None of these results recovers a missing key or closes extraction/runtime gates.
