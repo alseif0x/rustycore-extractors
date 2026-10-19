@@ -1987,3 +1987,146 @@ and a missing per-row live request/response trace still limit attribution.
 Evidence:
 `ev_d5cb34508a4ee4b643ee3fe402e460e5568d9dc93219b40ded3ed9f55d85c4ae`
 and `ev_1960a13f0659e1d16ac841e8e8a3d053f8896ee0b9cb1499ed2651f9a85c06c4`.
+
+#### Wider Windows-ABI analysis and a bounded transport-state observation
+
+The new two-page consumer verifies the source `.pdata` intervals and all four
+CHAIN links through `0x20bb01`, then supplies 8,192 contiguous inferred bytes
+with the correct PE32+ entry point and Windows ABI. Two initial preflight
+failures are retained: v2 incorrectly assumed that an authored helper was mode
+0600, and v3 incorrectly assumed the authored-source subdirectory was 0700.
+Neither reached REA. V4 pins their actual existing source modes/owners inside
+the private laboratory; no original permissions or hashes are changed, and
+private data/report artifacts still require 0600.
+
+The v4 analysis succeeds and returns normally, replacing the former
+one-page `halt_baddata` limitation with a wider initialization path. It assigns
+four callback slots to the routines at `0x4b17d0`, `0x4b10b0`, `0x4b0ed0` and
+`0x4b08a0`, and registers `0x4b18a0` through `0x1e2d3c0` on the connection
+object. A separate analysis of `0x1e2d3c0` appends that callback and a zero field
+to a sixteen-byte-entry vector at object offsets `0xc78`/`0xc80`/`0xc88`.
+These are static callback bindings, not proof that a selected server reply was
+received or that any missing key was delivered. External/indirect calls and
+whole-function coverage remain explicit limitations.
+
+Two-page helper: `R/analyze_callback_registration_two_page_v4.py`, SHA-256
+`64c9e2b64544d5cb7b29de22567abebc781616cb5f2a7ce8b77dc6cfde23e907`.
+Receipt:
+`reports/rea-callback-registration-two-page-v4-safecallbacktwopage7045002-20ae10-two-page.json`,
+SHA-256 `10e9ae85a8867f3b1bfa7ea1ad5d39ac40827a02daf5f5423828425e50724479`.
+REA evidence:
+`ev_e644cdd6b43ac79e1b5a72951e3e4c6084025fd01bf655dd525fb0f3fe0e8b4c`
+and `ev_fb7dc573bd37d67b66184e72103ad6efdd220d138af04ede262564065dca31ca`.
+
+A new passive observation separately samples only the connection pointer,
+query-provider pointer and connection-state field twice. The connection and
+provider pointers are non-null and the connection field equals **5**, the
+state admitted by the reconstructed send path. Both samples agree; all source,
+identity, mapping, receipt and RX-control guards pass. The probe reads forty
+typed bytes plus two 4,096-byte control pages, with no packet, endpoint or
+payload reads and no client invocation or writes. This rules out a null
+connection or a different connection-state field in this observation; it does
+not establish per-row request eligibility, queue draining or a fresh response.
+
+Helper: `R/probe_hotfix_transport_gate_v1.py`, SHA-256
+`f84a13ea5d81e4b0e97a59004fc52b9c81c32cf043789540ecf9f3c35fbb94f1`.
+Receipt: `reports/transport-gate-session23756-00.json`, SHA-256
+`1d39c5a2bbbcd2e42f3ac7e7631889273415025f058b91599ca0a8897feae9a2`.
+The Python source emits a retained `SyntaxWarning` about a return in `finally`;
+the observation itself exits zero with every guard true. No missing key is
+recovered by either the code analysis or this transport observation.
+
+#### The two additional frame names also fail the pinned public-value search
+
+A new offline diagnostic reuses only the three authenticated ciphertext records
+retained by V2. It opens no client store and does not repeat the original two
+name selections. The new names are derived locally from the frozen frame
+inventory, excluding the original pair and the 83-entry base ring. A known
+encrypted Z frame again passes the Rust decoder and the independent pinned
+Python/zlib comparator before the search is admitted.
+
+The executed search tests **19,704 distinct public values for each new name**:
+39,408 name/value and frame-occurrence attempts, with both per-name counts
+complete. It finds 166 N-prefix leads, all rejected by the declared frame-size
+check; no Z frame passes integrity, no full-object candidate is reached and
+no pending candidate is produced. Thus neither additional name is resolved by
+this pinned public-value set under the supported N/Z scope. Recursive F remains
+unsupported. This is not an exhaustive cryptographic key search or proof about
+unobserved sources, later dictionaries or future server responses.
+
+V3 explicitly distinguishes a full-object `MD5(CKey)` fingerprint from an exact
+comparison with the raw expected CKey, which V2 did not retain. Its recovery
+flag remains false even if a pending fingerprint candidate were found; such a
+candidate would require a separate exact-CKey check. No candidate reached that
+gate in this run.
+
+The initial diagnostic build failure, two outer-runner preflight failures and
+an early dictionary-parser failure are retained. Separate source snapshots fix
+two Rust type/exhaustiveness errors and restore V1/V2's uppercase-hex support;
+the original snapshots, notices and failed logs remain intact. These are
+private diagnostic changes, with no product-code or dependency change. The
+successful offline Rust-1.98 build checks all 402 source files. Its binary
+SHA-256 is
+`98b3959b0f4d8d2e7610b54bd2c671d4d6001d255cf6ea6183938f488c46031a`.
+The executed repair snapshot has tree SHA-256
+`d321ba86858c04d7aa5096777d6bfad3b1cf688a2d10be59c76f6fd4daf16059`
+and manifest `value-probe-v3/source-pins-repair-02.json`, SHA-256
+`4d8d7c73df8e27a5b06de56de979456b5c391b64701f01b14faade38b8168a00`.
+
+Persistent unit `rustycore-public-value-sweep-70450-20261019-03` executes the
+frozen binary through `value-probe-v3/run_value_sweep_once_v4.py`, SHA-256
+`ff49b3494352837a2e7e65729be1f439df9ad25d81d2c37a2b08d925215cdf63`.
+The run exits zero in 0.471 seconds with all source/input hashes unchanged.
+Aggregate report: `value-probe-v3/reports/sweep-00.json`, SHA-256
+`40fc43c87d1aa17621e0d80ce76b9af68e0013ad2b5ca096cfc396fc88db78ce`.
+Run receipt: `value-probe-v3/reports/run-03.json`, SHA-256
+`11f6a16a80d338b0a123b2b9b59c8df3d4d8432c626af1f701257743ae97d793`.
+All four unavailable names remain unresolved; full extraction and runtime
+acceptance remain open.
+
+#### Callback search boundaries and the second response path
+
+The callback-slot search retains an explicit coverage limit: its original
+push-only grammar with eight byte constraints from three functions admits
+9,173 of 15,505 text pages. A separately selected twelve-slot neighborhood
+finds six original-slot lexical hits (three stores plus their overlapping byte
+starts), and eighteen neighboring-slot candidates. It does not identify a
+reader of the four callback slots or establish that the neighboring slots form
+one structure. A missing reader in this search is not evidence of its absence.
+The eight-page artifact-save cap also remains explicit.
+
+The twelve-slot run pins the scanner and checks its hash/stat before and after
+execution. Helper: `R/scan_offline_response_callback_xrefs_v3.py`, SHA-256
+`33517e5c3f573bc793846220b6fc3d460bcc3afd2adcf4f1b52e73dc3b12e859`.
+Receipt:
+`reports/response-callback-xrefs-v3-20261019T134137Z-117558-d7d04cae283b/response-callback-xrefs-v3-20261019T134155Z-117558-f6405fd4d0.json`,
+SHA-256 `0dc2e45a72353aa4746781ba6eba37d025f4e6d4873db2fb991dc6d1af708858`.
+The first four-slot scan's advertised source hash differed from its retained
+source by one report-count assignment. Both exact source variants are now
+preserved; a pre-execution source hash was not independently recorded for that
+first scan. Do not use it as a stronger provenance claim than the later pinned
+run.
+
+Instruction inspection of the authenticated two-page carrier locates the
+fourth slot's store at `0x20b006`. Its preceding instruction begins at
+`0x20afff` and crosses the page boundary. This explains two concrete omissions:
+the first page scan excludes crossing instructions, and its push-only grammar
+does not admit the second page. It does not justify lowering either threshold.
+The new canonical-allocation hypothesis remains distinct from the source
+unwind semantics: [Microsoft's x64 exception-handling documentation](https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64?view=msvc-170)
+defines the version-1 operation's size and code offset, but does not guarantee
+the particular instruction bytes used by the diagnostic hypothesis.
+
+A separate Windows-ABI two-page analysis resolves the earlier truncated
+`0x4b0ed0` view. It processes twenty-four-byte records, passes each record's
+operation onward unchanged, invokes a per-store virtual method, advances through
+the associated payload by the declared length, and increments a batch counter.
+It returns normally with the wider context. This identifies another processing
+route, not a fresh server reply for the four selected names or a recovered key.
+Helper: `R/analyze_hotfix_notice_two_page_v1.py`, SHA-256
+`9baa5262b0fb7c9071fbfa68946619423404716ca4b2881f586f568d52b936f3`.
+Receipt:
+`reports/rea-hotfix-notice-two-page-v1-safenoticetwopage7045000-4b0ed0-two-page.json`,
+SHA-256 `07ee584c36d4ae7a6b065ac5d4646b925b2a4b6d2baeaa5cee645390577639e5`.
+REA evidence:
+`ev_584e72854ce510ff7554ca4e121a6545d2f2ac232625a7d6c9b465c75669bd47`.
