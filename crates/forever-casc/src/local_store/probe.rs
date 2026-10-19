@@ -398,19 +398,9 @@ impl LocalStore {
                 .try_reserve_exact(root_count)
                 .map_err(|_| StoreError::Limit)?;
             budget.retain(array_bytes::<RootRow>(root_rows.capacity())?)?;
-            // The store's resolver makes two passes: non-audio locale groups
-            // first, then audio locale groups, preserving ROOT block order.
-            let selected = (0..=1).find_map(|audio| {
-                self.root
-                    .eligible_with_ordinals(id, self.locale)
-                    .find(|(_, row)| {
-                        let is_audio = self.root.blocks()[row.block_index]
-                            .content_flags
-                            .effective()
-                            >> 31;
-                        is_audio == audio && self.central.contains(row.content_key)
-                    })
-            });
+            let selected = self
+                .root
+                .resolve_with_ordinal(id, self.locale, |key| self.central.contains(key));
             for (ordinal, row) in self.root.matching_with_ordinals(id) {
                 let block = self
                     .root

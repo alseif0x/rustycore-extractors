@@ -12,7 +12,20 @@ use std::{collections::BTreeMap, path::PathBuf};
 fn main() {
     let mut contract = forever_extractor::CONTRACT;
     match run(&mut contract) {
-        Ok(json) => println!("{json}"),
+        Ok(json) => {
+            let help = json.starts_with("forever-extractor inspect --plan ");
+            if help {
+                print!("{json}");
+                println!(
+                    "forever-extractor probe-encoding --plan PLAN --client CLIENT --output NEW_TRACE --file-data-id FDID [--file-data-id FDID ...] (Linux only; build 70450 revisions 15-20; --keys is forbidden)"
+                );
+                println!(
+                    "Linux v20 selects build-70450 available-map terrain-only output; probe-encoding reports metadata/read diagnostics only."
+                );
+            } else {
+                println!("{json}");
+            }
+        }
         Err(error) => {
             eprintln!(
                 "{{\"contract\":\"{}\",\"status\":\"failed\",\"code\":\"{}\",\"component\":{},\"full_extractor_complete\":false}}",
@@ -135,6 +148,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         return Err("product_keys_forbidden".into());
     }
     if plan.requires_keys()
+        && command != "probe-encoding"
         && !matches!(command, "verify" | "verify-links")
         && (command != "inspect" || options.contains_key("--client"))
         && !options.contains_key("--keys")

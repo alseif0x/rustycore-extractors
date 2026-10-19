@@ -78,26 +78,33 @@ fn probe_reports_each_root_row_and_later_matching_encoding_without_key_bytes() {
     const FILE_ID: u32 = 42;
     let payload = b"probe synthetic local file data".to_vec();
     let ckey = md5::digest(&payload);
+    let audio_payload = b"different synthetic audio file content".to_vec();
+    let audio_ckey = md5::digest(&audio_payload);
     let absent = [0x71; 16];
     let absent_ekey = [0x99; 16];
     let later_ekey = [0x88; 16];
     let rows = [
         (FILE_ID, 0x100, 2, ckey),
-        (FILE_ID, 0x8000_0000, 2, ckey),
+        (FILE_ID, 0x8000_0000, 2, audio_ckey),
         (FILE_ID, 0, 0x80, ckey),
         (FILE_ID, 0, 2, absent),
         (FILE_ID, 0, 2, ckey),
     ];
-    let inputs: [CollisionFile<'_>; 1] = [(FILE_ID, None, payload.clone())];
+    let inputs: [CollisionFile<'_>; 2] = [
+        (FILE_ID, None, payload.clone()),
+        (FILE_ID, None, audio_payload),
+    ];
     let fixture = CollisionFixture::with_probe_root_and_later_encoding(
         &inputs,
         70450,
         root_rows(&rows),
         FILE_ID,
     );
-    let report = open_70450(&fixture)
+    let mut store = open_70450(&fixture);
+    let report = store
         .probe_file_data_ids(&[FILE_ID], Limits::default())
         .unwrap();
+    let actual_read = store.read_file_data_id(FILE_ID).unwrap();
     assert_eq!(
         (report.build, report.locale, report.locale_mask),
         (70450, Locale::EnUs, 2)
@@ -113,6 +120,7 @@ fn probe_reports_each_root_row_and_later_matching_encoding_without_key_bytes() {
     assert_eq!(file.root_rows[1].effective_content_flags, 0x9000_0000);
     assert!(file.root_rows[1].audio_locale_bit);
     assert!(file.root_rows[1].eligible_for_locale);
+    assert!(file.root_rows[1].ckey_central_present);
     assert!(!file.root_rows[1].selected);
     assert_eq!(file.root_rows[2].locale_flags, 0x80);
     assert!(!file.root_rows[2].eligible_for_locale);
@@ -120,6 +128,8 @@ fn probe_reports_each_root_row_and_later_matching_encoding_without_key_bytes() {
     assert!(!file.root_rows[3].ckey_central_present);
     assert!(!file.root_rows[3].selected);
     assert!(file.root_rows[4].selected);
+    assert_eq!(actual_read.content_key, ckey);
+    assert_eq!(file.selected_root_ordinal, Some(4));
     assert_eq!(file.encoding_row_count, 2);
     let encoding_rows: Vec<_> = file
         .route_rows
@@ -186,6 +196,7 @@ fn probe_reports_each_root_row_and_later_matching_encoding_without_key_bytes() {
         "\"payload\":",
         "data.000",
         &hex(&ckey),
+        &hex(&audio_ckey),
         &hex(&absent),
         &hex(&absent_ekey),
         &hex(&later_ekey),

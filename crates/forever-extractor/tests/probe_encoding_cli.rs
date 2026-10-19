@@ -15,6 +15,16 @@ mod jenkins;
 mod md5;
 
 const V20: &str = include_str!("../../../tests/contracts/fixtures/forever-product-v20/map2.tsv");
+const V15: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v15/all-available-maps.tsv");
+const V16: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v16/disabled.tsv");
+const V17: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v17/provided.tsv");
+const V18: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v18/all-available-maps.tsv");
+const V19: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v19/disabled.tsv");
 const V13: &str =
     include_str!("../../../tests/contracts/fixtures/forever-product-v13/available.tsv");
 const V14: &str =
@@ -50,7 +60,7 @@ impl Lab {
         for value in [20_u32, 2, 1, 0] {
             root.extend_from_slice(&value.to_le_bytes());
         }
-        for value in [1_u32, 2, 0x1000_0000, 0] {
+        for value in [1_u32, 0, 0x1000_0000, 0] {
             root.extend_from_slice(&value.to_le_bytes());
         }
         root.push(0);
@@ -237,6 +247,118 @@ fn probe_success_writes_only_the_redacted_trace_and_stdout_envelope() {
 }
 
 #[test]
+fn probe_help_documents_the_command_and_revision_20() {
+    let output = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))
+        .arg("--help")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains(
+        "forever-extractor probe-encoding --plan PLAN --client CLIENT --output NEW_TRACE --file-data-id FDID"
+    ));
+    assert!(stdout.contains("build 70450 revisions 15-20"));
+    assert!(stdout.contains("Linux v20 selects build-70450"));
+}
+
+#[test]
+fn probe_is_keyless_and_reachable_for_each_revision_15_through_20() {
+    const PLANS: [(&str, &str); 6] = [
+        ("v15", V15),
+        ("v16", V16),
+        ("v17", V17),
+        ("v18", V18),
+        ("v19", V19),
+        ("v20", V20),
+    ];
+    let lab = Lab::new();
+    let client = lab.client(42, b"synthetic all-revision probe content");
+    for (name, plan_text) in PLANS {
+        let plan = lab.plan(&format!("{name}.tsv"), plan_text);
+        let trace = lab.0.join(format!("{name}-trace.json"));
+        let result = command(&plan, &client, &trace)
+            .args(["--file-data-id", "42"])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{name} without keys: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(result.stderr.is_empty(), "{name}");
+        let trace_text = fs::read_to_string(&trace).unwrap();
+        assert!(trace_text.contains("\"read_result\":\"decoded\""), "{name}");
+        assert!(trace_text.contains("\"selected\":true"), "{name}");
+        let expected_mask = if plan_text.contains("locale\tesES") {
+            0x80
+        } else {
+            0x2
+        };
+        assert!(
+            trace_text.contains(&format!("\"locale_mask\":{expected_mask}")),
+            "{name}"
+        );
+
+        let keyed_trace = lab.0.join(format!("{name}-keyed-trace.json"));
+        let key_path = lab.0.join(format!("{name}-keys-not-opened.tsv"));
+        let result = command(&plan, &client, &keyed_trace)
+            .args(["--file-data-id", "42", "--keys"])
+            .arg(&key_path)
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(2), "{name}");
+        assert!(error(result).contains("product_keys_forbidden"), "{name}");
+        assert!(!key_path.exists(), "{name}");
+        assert!(!keyed_trace.exists(), "{name}");
+    }
+}
+
+#[test]
+fn keyless_probe_exemption_keeps_key_requirements_for_v17_v18_client_commands() {
+    for (name, plan_text, needs_scratch) in [("v17", V17, false), ("v18", V18, true)] {
+        let lab = Lab::new();
+        let plan = lab.plan(&format!("{name}.tsv"), plan_text);
+        let client = lab.0.join("client-not-opened");
+        let output = lab.0.join("output-not-created");
+
+        let result = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))
+            .args(["inspect", "--plan"])
+            .arg(&plan)
+            .args(["--client"])
+            .arg(&client)
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(2), "{name} inspect");
+        assert!(
+            error(result).contains("product_keys_required"),
+            "{name} inspect"
+        );
+
+        for verb in ["extract", "resume"] {
+            let mut command = Command::new(env!("CARGO_BIN_EXE_forever-extractor"));
+            command
+                .args([verb, "--plan"])
+                .arg(&plan)
+                .args(["--client"])
+                .arg(&client)
+                .args(["--output"])
+                .arg(&output);
+            if needs_scratch {
+                command
+                    .args(["--scratch"])
+                    .arg(lab.0.join("scratch-not-opened"));
+            }
+            let result = command.output().unwrap();
+            assert_eq!(result.status.code(), Some(2), "{name} {verb}");
+            assert!(
+                error(result).contains("product_keys_required"),
+                "{name} {verb}"
+            );
+        }
+    }
+}
+
+#[test]
 fn probe_requires_at_least_one_canonical_repeatable_file_data_id() {
     let lab = Lab::new();
     let plan = lab.plan("v20.tsv", V20);
@@ -257,6 +379,14 @@ fn probe_requires_at_least_one_canonical_repeatable_file_data_id() {
         assert!(error(result).contains("product_probe_file_data_id"));
         assert!(!trace.exists());
     }
+    let mut too_many = command(&plan, &client, &trace);
+    for id in 1..=65 {
+        too_many.args(["--file-data-id", &id.to_string()]);
+    }
+    let result = too_many.output().unwrap();
+    assert_eq!(result.status.code(), Some(2));
+    assert!(error(result).contains("product_probe_file_data_id"));
+    assert!(!trace.exists());
 }
 
 #[test]

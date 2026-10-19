@@ -204,25 +204,27 @@ impl OwnedRoot {
         &self,
         id: u32,
         locale: Locale,
-        mut present: impl FnMut([u8; 16]) -> bool,
+        present: impl FnMut([u8; 16]) -> bool,
     ) -> Option<&root::Entry> {
-        self.eligible(id, locale)
-            .find(|entry| present(entry.content_key))
+        self.resolve_with_ordinal(id, locale, present)
+            .map(|(_, entry)| entry)
+    }
+
+    pub(super) fn resolve_with_ordinal(
+        &self,
+        id: u32,
+        locale: Locale,
+        mut present: impl FnMut([u8; 16]) -> bool,
+    ) -> Option<(usize, &root::Entry)> {
+        self.eligible_with_ordinals(id, locale)
+            .find(|(_, entry)| present(entry.content_key))
     }
 
     // Shared eligibility/order for acquisition and key-free diagnostics. A
     // missing archive never changes which central-present ROOT row is chosen.
     pub(super) fn eligible(&self, id: u32, locale: Locale) -> impl Iterator<Item = &root::Entry> {
-        let mask = match locale {
-            Locale::EnUs => 2,
-            Locale::EsEs => 0x80,
-        };
-        self.matching(id).filter(move |entry| {
-            let block = &self.blocks[entry.block_index];
-            let flags = block.content_flags.effective();
-            flags & (0x100 | 0x80) == 0
-                && (block.locale_flags == 0 || block.locale_flags & mask != 0)
-        })
+        self.eligible_with_ordinals(id, locale)
+            .map(|(_, entry)| entry)
     }
 
     pub(super) fn matching(&self, id: u32) -> impl Iterator<Item = &root::Entry> {
