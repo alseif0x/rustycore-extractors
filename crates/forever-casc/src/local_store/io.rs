@@ -349,6 +349,13 @@ enum Rejection {
     Corrupt,
     Unsupported,
 }
+pub(super) enum ProbeRead {
+    Decoded,
+    Rejected {
+        class: &'static str,
+        blte_code: Option<&'static str>,
+    },
+}
 struct BlteCodeCapture<'a> {
     enabled: bool,
     code: &'a mut Option<&'static str>,
@@ -383,6 +390,53 @@ pub(super) struct Reader<'a> {
 }
 
 impl Reader<'_> {
+    /// Probe one exact local encoding/index candidate without returning decoded
+    /// bytes. The keyless caller receives only a rejection class and static BLTE
+    /// code; keys, encoded bytes and plaintext stay inside this module.
+    pub(super) fn probe_candidate(
+        &self,
+        entry: &local_index::Entry,
+        ekey: [u8; 16],
+        ckey: [u8; 16],
+        expected_size: Option<u32>,
+        max_decoded: u64,
+    ) -> Result<ProbeRead, Error> {
+        let Some(size) = expected_size else {
+            return Ok(ProbeRead::Rejected {
+                class: "unknown_decoded_size",
+                blte_code: None,
+            });
+        };
+        let mut blte_code = None;
+        let mut capture = BlteCodeCapture {
+            enabled: true,
+            code: &mut blte_code,
+        };
+        match self.candidate(
+            entry,
+            ekey,
+            ckey,
+            u64::from(size),
+            max_decoded,
+            &mut capture,
+        )? {
+            Ok(bytes) => {
+                drop(bytes);
+                Ok(ProbeRead::Decoded)
+            }
+            Err(rejection) => Ok(ProbeRead::Rejected {
+                class: match rejection {
+                    Rejection::Missing => "missing",
+                    Rejection::Incomplete => "incomplete",
+                    Rejection::Encrypted => "encrypted",
+                    Rejection::Corrupt => "corrupt",
+                    Rejection::Unsupported => "unsupported",
+                },
+                blte_code,
+            }),
+        }
+    }
+
     pub(super) fn read_reference(
         &self,
         ckey: [u8; 16],

@@ -29,6 +29,8 @@ fn main() {
                 || error.code == "product_platform"
                 || error.code == "product_keys_required"
                 || error.code == "product_keys_forbidden"
+                || error.code == "product_probe_profile"
+                || error.code == "product_probe_file_data_id"
                 || error.code == "product_scratch_required"
                 || error.code == "product_scratch_forbidden"
                 || error.code == "product_disk_unsupported"
@@ -41,7 +43,7 @@ fn main() {
     }
 }
 fn run(contract: &mut &'static str) -> Result<String, Error> {
-    let args: Vec<_> = std::env::args_os().skip(1).take(16).collect();
+    let args: Vec<_> = std::env::args_os().skip(1).take(138).collect();
     let Some(command) = args.first().and_then(|a| a.to_str()) else {
         return Err("product_usage".into());
     };
@@ -52,7 +54,17 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     if command == "verify-links" {
         return Err("product_platform".into());
     }
-    if !["inspect", "extract", "resume", "verify", "verify-links"].contains(&command)
+    let max_args = if command == "probe-encoding" { 137 } else { 16 };
+    if ![
+        "inspect",
+        "extract",
+        "resume",
+        "verify",
+        "verify-links",
+        "probe-encoding",
+    ]
+    .contains(&command)
+        || args.len() > max_args
         || args.len() % 2 != 1
     {
         return Err("product_usage".into());
@@ -60,11 +72,21 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
         "verify" | "verify-links" => &["--plan", "--output", "--expect-context"][..],
+        "probe-encoding" => &["--plan", "--client", "--output", "--keys", "--file-data-id"][..],
         _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
     };
     let mut options = BTreeMap::new();
+    let mut file_data_ids = Vec::new();
     for pair in args[1..].as_chunks::<2>().0 {
         let key = pair[0].to_str().ok_or("product_usage")?;
+        if command == "probe-encoding" && key == "--file-data-id" {
+            if file_data_ids.len() == 64 {
+                return Err("product_probe_file_data_id".into());
+            }
+            let value = pair[1].to_str().ok_or("product_probe_file_data_id")?;
+            file_data_ids.push(parse_file_data_id(value)?);
+            continue;
+        }
         if !allowed.contains(&key)
             || pair[1].is_empty()
             || options.insert(key, PathBuf::from(&pair[1])).is_some()
@@ -78,11 +100,23 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             .map(PathBuf::as_path)
             .ok_or_else(|| Error::from("product_usage"))
     };
+    if command == "probe-encoding" {
+        if file_data_ids.is_empty() {
+            return Err("product_probe_file_data_id".into());
+        }
+        file_data_ids.sort_unstable();
+        if file_data_ids.windows(2).any(|pair| pair[0] == pair[1]) {
+            return Err("product_probe_file_data_id".into());
+        }
+    }
     let bytes = input::bytes(path("--plan")?, forever_extractor::MAX_PLAN_BYTES)?;
     let plan =
         Plan::parse(std::str::from_utf8(&bytes).map_err(|_| Error::from("product_plan_format"))?)?;
     *contract = plan.contract();
-    if matches!(command, "extract" | "resume") {
+    if command == "probe-encoding" && options.contains_key("--keys") {
+        return Err("product_keys_forbidden".into());
+    }
+    if matches!(command, "extract" | "resume" | "probe-encoding") {
         path("--client")?;
         path("--output")?;
     } else if matches!(command, "verify" | "verify-links") {
@@ -257,6 +291,24 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 summary.json()
             ));
         }
+        if command == "probe-encoding" {
+            #[cfg(target_os = "linux")]
+            {
+                let (count, trace_sha256) = driver::probe_encoding_command(
+                    &plan,
+                    path("--client")?,
+                    path("--output")?,
+                    &file_data_ids,
+                )?;
+                return Ok(format!(
+                    "{{\"contract\":\"{}\",\"status\":\"probe_complete\",\"file_data_ids\":{count},\"trace_sha256\":\"{}\",\"offline\":true,\"full_extractor_complete\":false}}",
+                    plan.contract(),
+                    integrity::hex(&trace_sha256),
+                ));
+            }
+            #[cfg(not(target_os = "linux"))]
+            return Err("product_platform".into());
+        }
         // Hash the loaded Linux executable, even if its ordinary pathname was
         // replaced by a concurrent build. This kernel-owned link is deliberate.
         #[cfg(target_os = "linux")]
@@ -320,4 +372,13 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         let _ = path;
         Err("product_platform".into())
     }
+}
+
+fn parse_file_data_id(value: &str) -> Result<u32, Error> {
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err("product_probe_file_data_id".into());
+    }
+    value
+        .parse()
+        .map_err(|_| Error::from("product_probe_file_data_id"))
 }

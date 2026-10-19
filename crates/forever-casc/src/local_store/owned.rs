@@ -62,6 +62,11 @@ pub(super) struct Central {
     keys: Vec<[u8; 16]>,
     order: Vec<u32>,
 }
+pub(super) struct ProbeRoute<'a> {
+    pub(super) build_reference: bool,
+    pub(super) content_size: Option<u32>,
+    pub(super) encoded_keys: &'a [[u8; 16]],
+}
 impl Central {
     pub(super) fn from_routes(
         routes: encoding::EncodingRoutes<'_>,
@@ -124,6 +129,13 @@ impl Central {
             .iter()
             .map(|&index| &self.rows[index as usize])
             .take_while(move |row| row.key == key)
+    }
+    pub(super) fn probe_routes(&self, key: [u8; 16]) -> impl Iterator<Item = ProbeRoute<'_>> {
+        self.matching(key).map(|row| ProbeRoute {
+            build_reference: row.build_reference,
+            content_size: row.size,
+            encoded_keys: &self.keys[row.start as usize..row.start as usize + row.count as usize],
+        })
     }
     pub(super) fn contains(&self, key: [u8; 16]) -> bool {
         self.matching(key).next().is_some()
@@ -214,12 +226,38 @@ impl OwnedRoot {
     }
 
     pub(super) fn matching(&self, id: u32) -> impl Iterator<Item = &root::Entry> {
+        self.matching_with_ordinals(id).map(|(_, entry)| entry)
+    }
+
+    pub(super) fn matching_with_ordinals(
+        &self,
+        id: u32,
+    ) -> impl Iterator<Item = (usize, &root::Entry)> {
         let range = equal_range(&self.order, |index| {
             self.entries[index].file_data_id.cmp(&id)
         });
         self.order[range]
             .iter()
-            .map(|&index| &self.entries[index as usize])
+            .map(|&index| (index as usize, &self.entries[index as usize]))
+    }
+
+    pub(super) fn eligible_with_ordinals(
+        &self,
+        id: u32,
+        locale: Locale,
+    ) -> impl Iterator<Item = (usize, &root::Entry)> {
+        self.matching_with_ordinals(id)
+            .filter(move |(_, entry)| self.eligible_row(entry, locale))
+    }
+
+    pub(super) fn eligible_row(&self, entry: &root::Entry, locale: Locale) -> bool {
+        let mask = match locale {
+            Locale::EnUs => 2,
+            Locale::EsEs => 0x80,
+        };
+        let block = &self.blocks[entry.block_index];
+        let flags = block.content_flags.effective();
+        flags & (0x100 | 0x80) == 0 && (block.locale_flags == 0 || block.locale_flags & mask != 0)
     }
 }
 

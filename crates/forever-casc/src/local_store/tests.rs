@@ -29,6 +29,33 @@ impl CollisionFixture {
     pub(crate) fn for_build(files: &[CollisionFile<'_>], build: u32) -> Self {
         Self(Self::builder(files, build).write())
     }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn with_probe_root_and_later_encoding(
+        files: &[CollisionFile<'_>],
+        build: u32,
+        root: Vec<u8>,
+        file_data_id: u32,
+    ) -> Self {
+        let mut builder = Self::builder(files, build);
+        builder.root_override = Some(root);
+        let index = files
+            .iter()
+            .position(|file| file.0 == file_data_id)
+            .expect("probe fixture contains the requested FDID");
+        let (content_key, content_size, _) = &builder.routes[index];
+        let content_key = *content_key;
+        let content_size = *content_size;
+        let absent_ekey = [0x99; 16];
+        let later_ekey = [0x88; 16];
+        builder.routes[index].2 = vec![absent_ekey];
+        builder
+            .routes
+            .push((content_key, content_size, vec![later_ekey]));
+        builder
+            .records
+            .push((later_ekey, b'N', files[index].2.clone()));
+        Self(builder.write())
+    }
     fn builder(files: &[CollisionFile<'_>], build: u32) -> Builder {
         let mut builder = Builder::new(b"unused");
         builder.version = match build {

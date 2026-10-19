@@ -36,6 +36,7 @@ mod build_info;
 pub mod framing;
 mod io;
 mod owned;
+pub mod probe;
 pub mod routes;
 
 use crate::{Locale, build_config, encoding, local_index, root};

@@ -26,6 +26,8 @@ use std::path::Path;
 mod disk;
 mod execution;
 #[cfg(target_os = "linux")]
+pub(crate) mod probe_encoding;
+#[cfg(target_os = "linux")]
 pub(crate) mod terrain_v12;
 #[cfg(target_os = "linux")]
 pub(crate) mod terrain_v13;
@@ -43,6 +45,19 @@ const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 /// does not prove that the selected files are present or decodable.
 pub fn open(plan: &Plan, client: &Path) -> Result<LocalStore, Error> {
     open_inner(plan, client, None)
+}
+
+/// Run the Linux-only redacted encoding probe. No package or component output
+/// is created; the only write is the caller-selected trace file.
+#[cfg(target_os = "linux")]
+pub fn probe_encoding_command(
+    plan: &Plan,
+    client: &Path,
+    output: &Path,
+    file_data_ids: &[u32],
+) -> Result<(usize, [u8; 32]), Error> {
+    let summary = probe_encoding::run(plan, client, output, file_data_ids)?;
+    Ok((summary.file_data_ids, summary.trace_sha256))
 }
 
 /// Explicit v2 capability only. The original open entry point never enables
