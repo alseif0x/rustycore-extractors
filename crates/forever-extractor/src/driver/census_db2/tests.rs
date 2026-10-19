@@ -2,6 +2,33 @@
 //! State classification uses only synthetic redacted probe facts.
 use super::*;
 use forever_casc::local_store::probe::{CandidateRead, Encoding, RouteKind, RouteRow};
+use std::{
+    fs,
+    io::Write,
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+};
+
+static NEXT_LAB: AtomicU64 = AtomicU64::new(0);
+
+struct Lab(PathBuf);
+impl Lab {
+    fn new() -> Self {
+        let path = std::env::temp_dir().join(format!(
+            "rce-census-atomic-write-{}-{}",
+            std::process::id(),
+            NEXT_LAB.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(path.join("client")).unwrap();
+        fs::create_dir_all(path.join("reports")).unwrap();
+        Self(path)
+    }
+}
+impl Drop for Lab {
+    fn drop(&mut self) {
+        fs::remove_dir_all(&self.0).unwrap();
+    }
+}
 
 fn file_trace(selected: bool, read_result: &'static str, class: Option<&'static str>) -> FileTrace {
     FileTrace {
@@ -68,4 +95,26 @@ fn four_census_states_have_distinct_typed_reasons() {
             "candidate_unsupported_or_unverified"
         )
     );
+}
+
+#[test]
+fn failed_atomic_report_write_leaves_no_partial_report_or_temporary_file() {
+    let lab = Lab::new();
+    let client = lab.0.join("client");
+    let reports = lab.0.join("reports");
+    let output = reports.join("census.json");
+    let error = atomic_write_with(&client, &output, |file| {
+        file.write_all(b"partial synthetic report")?;
+        Err(std::io::Error::other("injected synthetic write failure"))
+    })
+    .unwrap_err();
+    assert_eq!(error.code, "product_census_output");
+    assert!(!output.exists());
+    assert!(fs::read_dir(reports).unwrap().all(|entry| {
+        !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".forever-db2-census-")
+    }));
 }

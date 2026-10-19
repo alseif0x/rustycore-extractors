@@ -24,6 +24,18 @@
     "file_unavailable": "no eligible central-present ROOT route or no complete local candidate was available",
     "unsupported_or_unknown": "candidate corruption/unsupported shape, unknown size, policy cap or an explicit store error prevented a verified read"
   },
+  "state_precedence": [
+    "fully_readable",
+    "unsupported_or_unknown",
+    "encrypted_no_available_key",
+    "file_unavailable"
+  ],
+  "state_predicates": {
+    "fully_readable": "At least one candidate in the LocalStore Central.encoded_keys sequence completed keyless decoding and CKey verification; this sequence includes ENCODING rows and configuration BuildReference rows.",
+    "unsupported_or_unknown": "No candidate completed a read, and a candidate was unsupported, corrupt or unknown-sized, or the probe returned a non-file-unavailable store/policy error. This precedes encryption when both are observed.",
+    "encrypted_no_available_key": "No candidate completed a read, no higher-precedence unsupported/unknown condition applies, and at least one candidate rejection class is encrypted.",
+    "file_unavailable": "No higher-precedence condition applies; no eligible central-present ROOT row, no encoding/index route, missing archive or incomplete span are reported as unavailable."
+  },
   "report": {
     "deterministic": true,
     "all_declarations_retained": true,

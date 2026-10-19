@@ -9,13 +9,20 @@ use crate::{
 };
 use forever_casc::local_store::probe::{self, FileTrace};
 use forever_db2::catalog;
-use std::{fs, io::Write, os::unix::fs::OpenOptionsExt, path::Path};
+use std::{
+    fs,
+    io::Write,
+    os::unix::fs::OpenOptionsExt,
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 const PROFILE: &str = "forever-db2-keyless-availability-census-v1";
 const MAX_DECLARATIONS: usize = 2048;
 const MAX_CANDIDATE_SPAN_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_PER_DECLARATION_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_REPORT_BYTES: usize = 32 * 1024 * 1024;
+static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum State {
@@ -189,26 +196,84 @@ pub(crate) fn run(plan: &Plan, client: &Path, output: &Path) -> Result<Summary, 
     }
     append(&mut report, "]}\n")?;
 
-    // Repeat the no-client/no-checkout guard at the write boundary, after the
-    // complete read-only census and store guard check.
-    let output = super::probe_encoding::output_path(client, &output)?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(0o600)
-        .open(&output)
-        .map_err(|_| Error::from("product_census_output"))?;
-    if file.write_all(report.as_bytes()).is_err() {
-        drop(file);
-        let _ = fs::remove_file(&output);
-        return Err("product_census_output".into());
-    }
-    file.sync_all()
-        .map_err(|_| Error::from("product_census_output"))?;
+    atomic_write_with(client, &output, |file| {
+        file.write_all(report.as_bytes())?;
+        file.sync_all()
+    })?;
     Ok(Summary { declaration_count })
 }
 
+struct TemporaryOutput {
+    path: PathBuf,
+    cleanup: bool,
+}
+impl Drop for TemporaryOutput {
+    fn drop(&mut self) {
+        if self.cleanup {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
+fn atomic_write_with(
+    client: &Path,
+    requested: &Path,
+    write: impl FnOnce(&mut fs::File) -> std::io::Result<()>,
+) -> Result<(), Error> {
+    let target = super::probe_encoding::output_path(client, requested)?;
+    let parent = target
+        .parent()
+        .ok_or_else(|| Error::from("product_diagnostic_path"))?
+        .to_path_buf();
+    let mut temp = None;
+    for _ in 0..32 {
+        let sequence = NEXT_TEMP.fetch_add(1, Ordering::Relaxed);
+        let path = parent.join(format!(
+            ".forever-db2-census-{}-{sequence}.tmp",
+            std::process::id()
+        ));
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&path)
+        {
+            Ok(file) => {
+                temp = Some((path, file));
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(_) => return Err("product_census_output".into()),
+        }
+    }
+    let Some((temp_path, mut file)) = temp else {
+        return Err("product_census_output".into());
+    };
+    let mut cleanup = TemporaryOutput {
+        path: temp_path,
+        cleanup: true,
+    };
+    let write_result = write(&mut file);
+    drop(file);
+    write_result.map_err(|_| Error::from("product_census_output"))?;
+
+    // Recheck both path guards at the publication boundary. Rename is within
+    // this already guarded directory, so readers see either no report or all
+    // of the fully written report, never a prefix.
+    let target = super::probe_encoding::output_path(client, &target)?;
+    fs::rename(&cleanup.path, &target).map_err(|_| Error::from("product_census_output"))?;
+    cleanup.cleanup = false;
+    fs::File::open(parent)
+        .and_then(|directory| directory.sync_all())
+        .map_err(|_| Error::from("product_census_output"))?;
+    Ok(())
+}
+
 fn classify(file: &FileTrace) -> (State, &'static str) {
+    // BuildReference rows are not included in encoding_row_count, but their
+    // EKeys are also returned by Central::encoded_keys and tried by the real
+    // read_selected_ckey path. A successful complete decode through one is
+    // therefore fully readable even though it was not an ENCODING row.
     let encodings = file
         .route_rows
         .iter()

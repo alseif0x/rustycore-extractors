@@ -328,6 +328,10 @@ fn mixed_keyless_census_retains_all_catalogue_declarations_and_aggregates_states
             String::from_utf8_lossy(&result.stderr)
         );
         assert!(result.stderr.is_empty());
+        assert_eq!(
+            String::from_utf8(result.stdout).unwrap(),
+            "{\"contract\":\"forever-db2-census-contract-v1\",\"status\":\"census_written\",\"catalogue\":\"wowdbdefs-70450-v1\",\"declarations\":1161,\"keyless\":true,\"complete_extraction_claim\":false}\n"
+        );
     }
     let report = fs::read(&first).unwrap();
     assert_eq!(

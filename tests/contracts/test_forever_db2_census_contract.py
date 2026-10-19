@@ -56,6 +56,21 @@ class ForeverDb2CensusContract(unittest.TestCase):
                 "unsupported_or_unknown",
             },
         )
+        self.assertEqual(
+            self.contract["state_precedence"],
+            [
+                "fully_readable",
+                "unsupported_or_unknown",
+                "encrypted_no_available_key",
+                "file_unavailable",
+            ],
+        )
+        predicates = self.contract["state_predicates"]
+        self.assertIn("Central.encoded_keys", predicates["fully_readable"])
+        self.assertIn("BuildReference", predicates["fully_readable"])
+        self.assertIn("precedes encryption", predicates["unsupported_or_unknown"])
+        self.assertIn("at least one candidate rejection class is encrypted", predicates["encrypted_no_available_key"])
+        self.assertIn("incomplete span", predicates["file_unavailable"])
         self.assertTrue(self.contract["report"]["deterministic"])
         self.assertTrue(self.contract["report"]["all_declarations_retained"])
         fields = set(self.contract["report"]["fields"])
