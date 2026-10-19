@@ -4419,11 +4419,10 @@ CLI smoke on the unpacked binary from the verified archive reports `help_rc=0`,
 `inspect_help_rc=2`, `extract_help_rc=2` and `verify_help_rc=2`; `--version`
 returns `product_usage` (there is no version subcommand). The packaged binary is
 the pure Rust `--no-default-features` build; searching it for `CascOpenFile`
-returned zero matches. The packaged binary is the pure Rust `--no-default-features`
-build; searching it for `CascOpenFile` returned zero matches. It nevertheless
-reads the real client through the Rust local store: a bounded real acceptance
-was executed with exactly this binary, recorded in the entry below. Reproducible
-packaging and full real admission remain separate gates.
+returned zero matches. It nevertheless reads the real client through the Rust
+local store: a bounded real acceptance was executed with exactly this binary,
+recorded in the entry below. Reproducible packaging and full real admission
+remain separate gates.
 
 On the same HEAD, `python3 -B -m unittest discover -s tests/contracts -p 'test_*.py'`
 reported 423 tests OK, and `python3 -B -m unittest discover -s tests/distribution -p 'test_*.py'`
@@ -4476,8 +4475,31 @@ the 738 artifacts published for map 0 are byte-identical to
 file is `compatible-terrain-coverage-v2.tsv`, which records the selection scope
 (`map:0` versus `all-available-maps`). The `0000.tilelist` is byte-identical.
 
+The same packaged binary was also run in this directory with profile v16 (build
+70450, locale esES, decryption disabled, component `db2`). Plan
+`plan-v16-readable-esES.tsv` contains 1,055 DB2 declarations; `extract` returned
+rc 0 in about 25 seconds with `status: selected_producers_complete` and a
+verified package of 1,055 files / 24,044,516 bytes; `verify` returned rc 0.
+Against the earlier real package produced with the previous candidate
+(`20a567190248dff16724b8ee611b93dac9d3bcf927abdda95ef58b4ec2722ae9`),
+`probe-70450-20261019/extract-readable/package-esES-highvolume-70450-20261019`,
+1,055 of 1,056 compared files are byte-identical. The only difference is
+`forever-package.json`, which records the producer and plan hashes.
+
+Profile v19 (components `db2,gt,cameras`, including the `CinematicCamera` DB2
+table) returned rc 0 from `extract` with `status: selected_producers_complete`
+and a verified package of 31 files / 165,535 bytes; `verify` returned rc 0.
+Against `probe-70450-20261019/gt-cameras-70450/package-v19-esES`, 31 of 32
+compared files are byte-identical; the only difference is
+`forever-package.json`. The packages contain ten `cameras/FILE*.xxx` files,
+`dbc/esES/CinematicCamera.db2` and GT table files; the camera files remain raw,
+opaque files.
+
 This is a bounded single-map real read bound to the packaged candidate, not
 full-world coverage, not a complete extraction, not runtime acceptance and not
 publication authorization; encrypted content without an available key keeps the
 strict DB2, collision and navigation routes blocked, and
-`whole_client_map_coverage` stays false.
+`whole_client_map_coverage` stays false. Byte-for-byte parity with earlier runs
+does not expand coverage: these runs cover the same available client subset, and
+there is still no complete extraction, runtime acceptance or publication
+authorization.
