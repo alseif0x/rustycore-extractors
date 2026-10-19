@@ -61,7 +61,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review build-70450 available-map terrain results | [Product v20 scope](docs/forever-product-v20.md) and [real v20 checkpoint](docs/forever-progress-log.md#2026-10-19-build-70450-full-maps-terrain-v20) |
 | Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
 | Review the build-70450 selected-map geometry profile and bounded real query evidence | [Product v22 scope](docs/forever-product-v22.md) |
-| Review the build-70450 selected-navigation API and bounded real MMap tile | [Navigation scope and evidence](docs/forever-navigation.md#2026-10-19-selected-navigation-from-available-70450-records) |
+| Review build-70450 selected-navigation API and bounded native tile proof | [Navigation scope and evidence](docs/forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -79,7 +79,7 @@ source of truth; the table below summarizes the boundaries.
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
 | Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
 | Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines. Bounded real v22 esES map-48 extraction passed with 66 files / 2,079,754 bytes (inventory `aa9d5cee…`); 65 of the 66 published artifacts match the preceding binary byte-for-byte (55 `.vmo`, 4 `.vmtile`, 4 `.vmtileidx`, 1 `.vmtree`, 1 `.placements`); only the coverage record differs, with no client-derived VMap byte changes. V22 covers selected-map geometry and active ancestors from available Map; GameObject globals are excluded by profile, LiquidObject is out of scope, and MMaps/full-world output are absent. | C++/TrinityCore format parity, RustyCore runtime acceptance, navigation/MMaps, full-world/whole-client coverage and final product integration remain open; prior-profile evidence stays separate |
-| Navigation / MMaps | Rust Recast/Detour stages, supplied-input reader/query comparisons, and a Linux 70450 partial-availability selected-navigation library API with synthetic checks; one bounded real selected-tile run emitted a 367,280-byte `.mmtile` plus a 40-byte global and passed byte-exact save/reread and framing checks ([scope](docs/forever-navigation.md#2026-10-19-selected-navigation-from-available-70450-records)) | V21 still requires unavailable complete sources. Native query/runtime acceptance, off-mesh, full-world output, v23 CLI and release acceptance remain open |
+| Navigation / MMaps | Rust Recast/Detour stages, supplied-input reader/query comparisons, and a Linux 70450 partial-availability selected-navigation library API with synthetic checks. One bounded real selected-tile run emitted a 367,280-byte `.mmtile` plus a 40-byte global and passed byte-exact save/reread and framing checks; a separate native-SDK probe loaded/unloaded that tile, resolved 16/16 derived interior candidates to distinct polygons, and found a complete two-polygon route through the typed v16-payload adapter ([scope and receipt](docs/forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile)) | Real complete-source v21 acceptance, a v23 CLI profile, legacy-v15 container reader/MMapManager, filename and cross-tile behavior, off-mesh/full-world coverage, Trinity parity, complete runtime/server and release acceptance remain open |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
 
@@ -89,7 +89,7 @@ source of truth; the table below summarizes the boundaries.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
-| **70450** | Linux product revisions v15–v22 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57, v22=16. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. V22 has bounded real esES map-48 acceptance with the post-audit binary `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`: verified package, 66 files / 2,079,754 bytes, inventory `aa9d5cee…`; 65 of 66 published artifacts are byte-identical to the preceding binary; only the coverage record and the context-bearing package manifest/seal differ. Its selected-map/ancestor geometry uses available Map, excludes GameObject globals by profile and omits LiquidObject, MMaps and full-world output. | The other 106 esES DB2 declarations are encrypted. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; v22 coverage is also producer-reported, and verification does not reread Map to authenticate source coverage. No C++/TrinityCore format parity, navigation/MMaps, full-world/whole-client, complete RustyCore runtime or release acceptance is established. |
+| **70450** | Linux product revisions v15–v22 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57, v22=16. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. V22 has bounded real esES map-48 acceptance with the post-audit binary `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`: verified package, 66 files / 2,079,754 bytes, inventory `aa9d5cee…`; 65 of 66 published artifacts are byte-identical to the preceding binary; only the coverage record and the context-bearing package manifest/seal differ. Its selected-map/ancestor geometry uses available Map, excludes GameObject globals by profile and omits LiquidObject, MMaps and full-world output. A separate bounded probe accepted native use of one generated MMap tile via a typed v16 payload adapter; it does not change any product revision's scope. | The other 106 esES DB2 declarations are encrypted. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; v22 coverage is also producer-reported, and verification does not reread Map to authenticate source coverage. No C++/TrinityCore format parity, complete navigation product/coverage, legacy-v15 container/MMapManager acceptance, full-world/whole-client, complete RustyCore runtime or release acceptance is established. |
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this
@@ -147,7 +147,9 @@ storage, MAPS terrain, VMaps and MMaps. Its synthetic full extraction and
 verification do not establish a real navigation run. The real canonical enUS
 attempt cannot find a local Map encoding; an esES attempt reaches encrypted Map
 content. Both fail before package creation, and required VMap inputs are
-unavailable. There is no real navigation output or runtime acceptance. See the
+unavailable. These attempts produced no v21 profile package or profile-level
+acceptance. A separate bounded selected-tile native-SDK result is recorded
+below; it does not make the full-source v21 profile available. See the
 [v21 scope](docs/forever-product-v21.md).
 
 Product v22 separately admits a Linux build-70450 selected-map geometry profile:
@@ -159,11 +161,21 @@ extract, verify and verify-links and published a verified 66-file package of
 the verifier does not reread Map to authenticate it. Earlier enUS attempts with
 the preceding binary failed with `local_store_no_verified_encoding` and produced
 no package; those locale-specific failures do not establish an esES blockage.
-There are no MMaps or full-world outputs, and this is not C++ format parity or
-RustyCore runtime acceptance. See the [v22 scope](docs/forever-product-v22.md).
+The v22 geometry package itself has no MMaps or full-world outputs, and is not
+C++ format parity or RustyCore runtime acceptance. See the
+[v22 scope](docs/forever-product-v22.md).
 A separate bounded `forever-vmap` reader/query exercise recorded 24 hits from
 geometry-derived rays; it reached its query cap and was not exhaustive. Details
 and the receipt are in the v22 scope.
+
+A subsequent bounded probe passed one real selected MMap tile through the
+existing RustyCore native Detour SDK using the typed v16-payload adapter. It
+loaded and unloaded the tile, resolved all 16 derived candidate points to
+distinct native polygons, and found one complete two-polygon route. This is
+native SDK evidence for that tile only; it does not establish the v21 profile,
+legacy-v15 container or `MMapManager` acceptance, full-world coverage, native
+Trinity parity, or server/runtime acceptance. See the
+[native probe record](docs/forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile).
 
 The opt-in `FOREVER_PRODUCT_DIAGNOSTIC` now records typed failures for revisions
 v16–v19 and v21; v20 is deliberately excluded because its terrain path flattens

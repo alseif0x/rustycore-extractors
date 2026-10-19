@@ -7,6 +7,54 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### Linux build-70450 bounded native selected-tile probe — 2026-10-19
+
+A single private, bounded run passed one real selected MMap tile through the
+existing RustyCore native Detour SDK. Producer source was `e93dc7b`; the
+consumer-facing extractor was frozen at `1b9376d`, and the RustyCore SDK
+integration source was at `5447213`. The relevant SDK source, workspace, and
+status fingerprints were stable before and after, preserving existing
+integration work.
+
+The run used the original 40-byte global (SHA-256
+`3564d4da656c6f7fc8dd53604fdac41e60e59e8b91f850b7c71816d9b31ebc12`) and
+367,280-byte tile (SHA-256
+`28ca4e65a9bfbdcaa42847e1d85ebf8a1904ed87271dc50225763f56a75872bb`); both
+input hashes were unchanged afterward. Strict Forever v16 framing succeeded.
+The legacy v15 container parser returned its expected v16 rejection, after
+which an adapter used the validated original v16 header and exact unchanged
+Detour v7 payload through the public typed tile API. Native mesh initialization,
+tile load, and tile removal succeeded. Sixteen bounded interior candidates
+produced 16 successful nearest queries and 16 distinct native polygon refs; the
+first of at most 120 route attempts returned a complete two-polygon path with
+distinct endpoints.
+
+The receipt SHA-256 is
+`01b5f123d64cf2d8fa045e7b8bddf499b86e11da78c0704d9ab0dcf78e670d53`; the
+binary SHA-256 is
+`99af787d31db48bf4d61afcc735b0a7b0ff30807b27ac0d51a2d753ad89fc741`. Source,
+workspace, harness, toolchain, input and binary guards all passed, and the 27
+registry lock identities matched RustyCore's lock. Timings were 19.041 seconds
+for the locked offline build, 65 ms for native invocation (58 ms inside the
+probe), and 19.852 seconds total.
+
+This is only a Forever16 typed-payload adapter/native SDK probe. It does not
+establish legacy-v15 container or `MMapManager` acceptance, filename or
+cross-tile behavior, off-mesh/full-world coverage, Trinity parity, a v23 CLI,
+complete RustyCore runtime/server acceptance, Windows support, or release
+authorization. Map owner-encoded source authentication was verified, but full
+Map CKey verification was not; complete `LiquidType` CKey verification remains
+at its existing scope. Extractor commit `1b9376d` passed all four CI jobs in
+run `39308922919`: Linux debug and release, Windows read guards, and resident
+recovery. The focused cfg/test correction was merged and its branch deleted
+locally and remotely; the earlier Windows failure record remains preserved as
+historical evidence.
+
+This adds bounded native-SDK query evidence beyond the generation/framing
+result recorded below. Complete consumer integration remains open, and the
+producer checkpoint below remains preserved as a historical record. See
+[`forever-navigation.md`](forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile).
+
 ### Linux build-70450 selected-tile MMap update — 2026-10-19
 
 A bounded Linux harness at frozen source `e93dc7b` processed one real selected
