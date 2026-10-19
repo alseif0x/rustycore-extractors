@@ -177,12 +177,13 @@ legacy-v15 container or `MMapManager` acceptance, full-world coverage, native
 Trinity parity, or server/runtime acceptance. See the
 [native probe record](docs/forever-navigation.md#2026-10-19-bounded-native-sdk-probe-for-one-selected-tile).
 
-Separately, the Linux filesystem library API for available selected navigation
-has synthetic validation only. The earlier four-tile generation and the native
-one-tile probe used separate harness paths and do not exercise this new owner;
-no CLI profile or real filesystem-backed run is established. Its admission,
-selection, failure, and budget boundaries are recorded in the
-[filesystem API checkpoint](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation).
+The Linux filesystem library API for available selected navigation passes
+synthetic validation, including a fix for excessive discovery capacity growth.
+A bounded real open exposed that defect before writing output; a real run of
+the corrected owner is pending. It has no CLI profile. The earlier manual
+generation and native SDK probes remain separate evidence. See the
+[filesystem API checkpoint](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation)
+and the [growth-fix validation](docs/forever-navigation.md#2026-10-19-selected-filesystem-owner-growth-fix-synthetic-validation).
 
 A later native SDK probe used the four tiles from the separate manual
 four-tile generation. All four loaded and were removed successfully; 64 of 64

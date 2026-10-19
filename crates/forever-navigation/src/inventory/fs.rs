@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Modified 2026-10-19: grow bounded inventory vectors geometrically only when full.
 // Authored 2026-10-11: complete local canonical navigation package discovery.
 //! Linux immutable-directory profile for original producer names (four-digit
 //! map IDs and 0..63 tiles). No CASC, network, implicit download or publication.
@@ -232,11 +233,16 @@ impl Budget {
     }
     fn grow<T>(&mut self, v: &mut Vec<T>, ceiling: usize) -> Result<(), Error> {
         let needed = v.len().checked_add(1).ok_or(Error::Limit)?;
-        self.reserve(
-            v,
-            needed.max(v.capacity().saturating_mul(2)).min(ceiling),
-            ceiling,
-        )?;
+        if needed > ceiling {
+            return Err(Error::Limit);
+        }
+        if needed > v.capacity() {
+            self.reserve(
+                v,
+                needed.max(v.capacity().saturating_mul(2)).min(ceiling),
+                ceiling,
+            )?;
+        }
         if needed > v.capacity() || needed > ceiling {
             return Err(Error::Limit);
         }

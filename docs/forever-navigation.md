@@ -2627,3 +2627,36 @@ acceptance of the legacy-v15 `MMapManager` or filename conventions, server or
 gameplay behavior, native Trinity parity, off-mesh completeness, full-world
 coverage, a v23 CLI profile, or the new filesystem owner. No coordinates or
 polygon references are included in the public evidence.
+
+## 2026-10-19: selected-filesystem owner growth fix: synthetic validation
+
+The retained bounded real-package attempt still records the earlier
+`navigation_discovery_limit` failure before output. Resource/input verification
+completed and source, input and tool guard snapshots remained unchanged. Its
+receipt is `f465eac9414f6c972b2faeeb90a59b410e2031711f772dcd82feb220a794ecfe`.
+The separate bounded diagnostic run used an instrumented source copy, the same
+read-only inputs, and stopped after owner open; it found that `fs::Budget::grow`
+doubled capacity at every insertion, including when existing allocation still
+had free slots. The diagnostic recorded stable guards and no outputs; receipt:
+`cbd057599f6c9553031adbb5c113a5aaaa68b70b0e5a0c2691d9633c41914aec`.
+
+The fix now grows only when the current capacity is full and does not raise the
+budget. A focused growth regression passed (one test, 2.391 seconds; receipt
+`e828afd6ee45edf5211936e65da6bf670c3484ba3f382077cf8462e327b0f434`). A
+format-only wrap followed. On the final fixed source, the full product and
+navigation suites passed: 487 product tests and 345 navigation tests, with 20
+navigation tests ignored (127.161 seconds total; receipt
+`8688d49cc10e14d9a595ba98a12f34f3a2983a59265a65c47e05aa6629b390a6`). The
+workspace all-target Clippy run with warnings denied passed in 3.983 seconds
+(receipt `1bbb6b95c932810c2d181aee0d13f4fb5382564481ccc4ef9e9d92b6baa074c4`).
+All 434 contract tests passed in 6.871 seconds; scoped formatting and diff
+checks also passed (receipt
+`4cee4411c340b784914884b0aab2bbf48ac34c9451e68c62ae593a5238c33cfa`). The
+new synthetic cases cover the capacity-growth ceilings and 64 irrelevant
+entries for both complete-source and available-selected owners. Pre/post
+context and resource guards were verified.
+
+These results validate the fix synthetically; they do not replace a real-owner
+rerun. Real filesystem-backed acceptance remains pending. No package output or
+new real acceptance is claimed here. The manual generation and native SDK
+probes remain separate evidence and do not exercise this filesystem owner.

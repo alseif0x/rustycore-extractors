@@ -870,6 +870,60 @@ fn final_verification_failure_invalidates_callbacks_and_latches_owner() {
 }
 
 #[test]
+fn unrelated_root_entries_fit_default_budgets_for_available_and_complete_owners() {
+    let t = Temp::new();
+    t.add_list(1, &[(0, 0)]);
+    t.add_list(2, &[]);
+    t.add_list(3, &[(0, 0)]);
+    t.add_vmap_dir(3);
+    for ordinal in 0..32 {
+        fs::write(
+            t.maps()
+                .join(format!("unrelated-map-entry-{ordinal:02}.bin")),
+            [],
+        )
+        .unwrap();
+        fs::write(
+            t.vmaps()
+                .join(format!("unrelated-vmap-entry-{ordinal:02}.bin")),
+            [],
+        )
+        .unwrap();
+    }
+
+    let rows = complete_chain_rows();
+    let mut available = AvailableSelectedPackage::open_rows_for_test(
+        &t.maps(),
+        &t.vmaps(),
+        &rows,
+        &[],
+        &sections(rows.len(), 0),
+        3,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(available.plan().maps().len(), 3);
+    assert_eq!(available.plan().map(3).unwrap().tile_count(), 1);
+    assert_eq!(available.statistics().entries, 68);
+    assert!(available.statistics().peak_capacity < 1_000_000);
+    available.verify_unchanged().unwrap();
+
+    let complete = super::super::Package::open_rows(
+        &t.maps(),
+        &t.vmaps(),
+        &rows,
+        70450,
+        Default::default(),
+        Default::default(),
+    )
+    .unwrap();
+    assert_eq!(complete.plan().maps().len(), 3);
+    assert_eq!(complete.plan().map(3).unwrap().tile_count(), 1);
+    assert_eq!(complete.statistics().entries, 68);
+    assert!(complete.statistics().peak_capacity < 1_000_000);
+}
+
+#[test]
 fn complete_filesystem_package_api_remains_separate_and_available() {
     let t = Temp::new();
     t.add_list(1, &[(0, 0)]);

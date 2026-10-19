@@ -4690,3 +4690,34 @@ server/gameplay behavior, native Trinity parity, off-mesh completeness,
 full-world coverage, a CLI profile, or acceptance of the separate filesystem
 owner. See the dated four-tile native checkpoint in
 `docs/forever-navigation.md`.
+
+## 2026-10-19: synthetic validation of selected-filesystem growth fix
+
+The retained bounded real-package open failed closed with
+`navigation_discovery_limit` before output; resource/input checks and source,
+input and tool guards remained stable. Retained failure receipt SHA-256:
+`f465eac9414f6c972b2faeeb90a59b410e2031711f772dcd82feb220a794ecfe`. A
+separate bounded diagnostic run using an instrumented source copy and the same
+read-only inputs stopped after owner open. It identified unconditional
+capacity doubling in `fs::Budget::grow` even while capacity remained. That run
+had stable guards, no outputs, and receipt
+`cbd057599f6c9553031adbb5c113a5aaaa68b70b0e5a0c2691d9633c41914aec`.
+
+The fix grows only when full without raising policy limits. The focused growth
+regression passed (one test, 2.391 seconds; receipt
+`e828afd6ee45edf5211936e65da6bf670c3484ba3f382077cf8462e327b0f434`). After a
+format-only wrap, final validation passed: 345 navigation tests passed with 20
+ignored and 487 product tests passed (127.161 seconds total; receipt
+`8688d49cc10e14d9a595ba98a12f34f3a2983a59265a65c47e05aa6629b390a6`);
+workspace all-target Clippy with `-D warnings` passed in 3.983 seconds (receipt
+`1bbb6b95c932810c2d181aee0d13f4fb5382564481ccc4ef9e9d92b6baa074c4`); and
+434 contract tests passed in 6.871 seconds; scoped formatting and diff checks
+also passed
+(receipt `4cee4411c340b784914884b0aab2bbf48ac34c9451e68c62ae593a5238c33cfa`).
+New synthetic tests exercise growth ceilings and 64 irrelevant entries for both
+complete-source and available-selected owners. Pre/post context and resource
+guards were verified.
+
+This is synthetic validation only. A real filesystem-owner rerun remains
+pending, and no package output or new real acceptance is claimed. Manual real
+tile generation and native SDK query evidence remain separate from this owner.

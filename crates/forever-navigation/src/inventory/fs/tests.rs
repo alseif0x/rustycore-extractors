@@ -465,6 +465,41 @@ fn entries_lists_descriptors_metadata_and_owned_capacity_are_bounded() {
     .unwrap();
     assert_eq!(p.statistics().peak_capacity, peak);
 }
+
+#[test]
+fn budget_growth_only_reserves_when_full_and_preserves_lower_ceilings() {
+    let mut budget = Budget::new(Limits::default()).unwrap();
+    let ceiling = budget.limits.entries;
+    let mut entries = Vec::new();
+    for value in 0..64usize {
+        let previous_capacity = entries.capacity();
+        budget.grow(&mut entries, ceiling).unwrap();
+        if entries.len() < previous_capacity {
+            assert_eq!(entries.capacity(), previous_capacity);
+        }
+        entries.push(value);
+    }
+    assert_eq!(entries.len(), 64);
+    assert!(entries.capacity() <= 128);
+    assert!(budget.stats.peak_capacity <= guard::SCRATCH + 4096);
+
+    let mut budget = Budget::new(Limits::default()).unwrap();
+    let mut values = Vec::new();
+    for _ in 0..16 {
+        budget.grow(&mut values, 16).unwrap();
+        values.push(0u8);
+    }
+    let capacity = values.capacity();
+    let statistics = budget.stats;
+    values.truncate(7);
+    budget.grow(&mut values, 8).unwrap();
+    assert_eq!(values.capacity(), capacity);
+    assert_eq!(budget.stats, statistics);
+    values.push(0);
+    assert_eq!(budget.grow(&mut values, 8), Err(Error::Limit));
+    assert_eq!(values.len(), 8);
+}
+
 #[test]
 fn bound_empty_tile_runs_and_detects_preexisting_package_mutation() {
     let t = Temp::new();
