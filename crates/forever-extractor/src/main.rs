@@ -30,6 +30,12 @@ fn main() {
                     "Linux v22 selects build-70450 VMap geometry for one map and its available active ancestors; GameObject globals are excluded by policy, LiquidObject is out of scope, and no MMap/full-world/runtime/parity claim is made."
                 );
                 println!(
+                    "Linux v23 selects build-70450 navigation for one map from sealed v20 terrain and v22 VMap packages; extract/resume and verify-links require both package/plan pairs. Source coverage remains producer-reported; this is not a full-extractor or runtime claim."
+                );
+                println!(
+                    "v23 extract|resume and verify-links require --terrain-package PACKAGE --terrain-plan PLAN --vmap-package PACKAGE --vmap-plan PLAN; plan-only inspect is allowed, client inspect is not."
+                );
+                println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
                 );
                 println!(
@@ -62,6 +68,9 @@ fn main() {
                 || error.code == "product_scratch_required"
                 || error.code == "product_scratch_forbidden"
                 || error.code == "product_disk_unsupported"
+                || error.code == "product_navigation_inputs_required"
+                || error.code == "product_navigation_inputs_forbidden"
+                || error.code == "product_v23_client_inspect_unsupported"
             {
                 2
             } else {
@@ -105,12 +114,31 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     }
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
-        "verify" | "verify-links" => &["--plan", "--output", "--expect-context"][..],
+        "verify" => &["--plan", "--output", "--expect-context"][..],
+        "verify-links" => &[
+            "--plan",
+            "--output",
+            "--expect-context",
+            "--terrain-package",
+            "--terrain-plan",
+            "--vmap-package",
+            "--vmap-plan",
+        ][..],
         "probe-encoding" | "inspect-db2" => {
             &["--plan", "--client", "--output", "--keys", "--file-data-id"][..]
         }
         "census-db2" => &["--plan", "--client", "--output", "--keys"][..],
-        _ => &["--plan", "--client", "--output", "--keys", "--scratch"][..],
+        _ => &[
+            "--plan",
+            "--client",
+            "--output",
+            "--keys",
+            "--scratch",
+            "--terrain-package",
+            "--terrain-plan",
+            "--vmap-package",
+            "--vmap-plan",
+        ][..],
     };
     let mut options = BTreeMap::new();
     let mut file_data_ids = Vec::new();
@@ -160,6 +188,11 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let plan =
         Plan::parse(std::str::from_utf8(&bytes).map_err(|_| Error::from("product_plan_format"))?)?;
     *contract = plan.contract();
+    validate_selected_navigation_cli(command, &plan, &options)?;
+    #[cfg(not(target_os = "linux"))]
+    if plan.is_v23() && command != "inspect" {
+        return Err("product_platform".into());
+    }
     if matches!(command, "probe-encoding" | "census-db2" | "inspect-db2")
         && options.contains_key("--keys")
     {
@@ -264,7 +297,9 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     } else {
         ""
     };
-    let navigation_capability = if plan.is_v21() {
+    let navigation_capability = if plan.is_v23() {
+        ",\"navigation_source_profile\":\"linux70450-selected-navigation-v1\",\"navigation_inputs\":\"sealed-v20-terrain-and-v22-vmap\",\"input_coverage\":\"producer_reported\",\"complete_navigation_input_claim\":false"
+    } else if plan.is_v21() {
         ",\"navigation_source_profile\":\"linux70450-map-domain-navigation-v1\",\"complete_navigation_input_claim\":false"
     } else {
         ""
@@ -301,6 +336,25 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             };
             #[cfg(target_os = "linux")]
             if command == "verify-links" {
+                if plan.is_v23() {
+                    let inputs = driver::SelectedNavigationInputs {
+                        terrain_package: path("--terrain-package")?,
+                        terrain_plan: path("--terrain-plan")?,
+                        vmap_package: path("--vmap-package")?,
+                        vmap_plan: path("--vmap-plan")?,
+                    };
+                    let summary = verify::verify_selected_navigation_links(
+                        &plan,
+                        path("--output")?,
+                        expected,
+                        &inputs,
+                    )?;
+                    return Ok(format!(
+                        "{{\"contract\":\"{}\",\"scope\":\"selected_navigation_linked_package_identities\",\"verification_profile\":\"linux70450-selected-navigation-links-v1\",\"linked_inputs\":\"offline_verified\",\"client_reads\":false{capability},\"full_extractor_complete\":false,\"package\":{}}}",
+                        plan.contract(),
+                        summary.json()
+                    ));
+                }
                 let summary = verify::verify_links(&plan, path("--output")?, expected)?;
                 return Ok(format!(
                     "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
@@ -341,6 +395,13 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 ));
             }
             let summary = verify::verify(&plan, path("--output")?, expected)?;
+            if plan.is_v23() {
+                return Ok(format!(
+                    "{{\"contract\":\"{}\",\"scope\":\"selected_navigation_package_integrity_and_stored_provenance\",\"verification_profile\":\"linux70450-selected-navigation-v1\",\"client_reads\":false{capability},\"full_extractor_complete\":false,\"package\":{}}}",
+                    plan.contract(),
+                    summary.json()
+                ));
+            }
             let scope = if plan.is_v15() || plan.is_v14() || plan.is_v18() {
                 forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_SCOPE
             } else if plan.is_v22() {
@@ -431,7 +492,29 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                 context.json()
             ));
         }
-        let summary = if let Some(scratch) = options.get("--scratch") {
+        let summary = if plan.is_v23() {
+            #[cfg(target_os = "linux")]
+            {
+                let inputs = driver::SelectedNavigationInputs {
+                    terrain_package: path("--terrain-package")?,
+                    terrain_plan: path("--terrain-plan")?,
+                    vmap_package: path("--vmap-package")?,
+                    vmap_plan: path("--vmap-plan")?,
+                };
+                driver::extract_selected_navigation(
+                    &plan,
+                    path("--client")?,
+                    path("--output")?,
+                    producer,
+                    command == "resume",
+                    &inputs,
+                )
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                return Err("product_platform".into());
+            }
+        } else if let Some(scratch) = options.get("--scratch") {
             driver::extract_disk(
                 &plan,
                 path("--client")?,
@@ -471,6 +554,34 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         let _ = path;
         Err("product_platform".into())
     }
+}
+
+fn validate_selected_navigation_cli(
+    command: &str,
+    plan: &Plan,
+    options: &BTreeMap<&str, PathBuf>,
+) -> Result<(), Error> {
+    if plan.is_v23() && command == "inspect" && options.contains_key("--client") {
+        return Err("product_v23_client_inspect_unsupported".into());
+    }
+
+    let supplied = [
+        "--terrain-package",
+        "--terrain-plan",
+        "--vmap-package",
+        "--vmap-plan",
+    ]
+    .into_iter()
+    .filter(|option| options.contains_key(*option))
+    .count();
+    let requires_pairs = plan.is_v23() && matches!(command, "extract" | "resume" | "verify-links");
+    if requires_pairs && supplied != 4 {
+        return Err("product_navigation_inputs_required".into());
+    }
+    if !requires_pairs && supplied != 0 {
+        return Err("product_navigation_inputs_forbidden".into());
+    }
+    Ok(())
 }
 
 fn parse_file_data_id(value: &str) -> Result<u32, Error> {

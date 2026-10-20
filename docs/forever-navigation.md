@@ -2739,3 +2739,91 @@ Coverage remains partial: 73 available direct Map rows in one of four sections,
 one selected map and complete LiquidType input. The terrain tilelist was
 authoritatively empty. This run adds no ground MAPS, CLI profile, native-query,
 server/runtime, full-world, Trinity-parity, Windows or release acceptance.
+
+## 2026-10-20: independent v16 readers consuming filesystem-owner outputs
+
+A separate bounded native consumer read the exact five outputs identified by
+the preceding filesystem-owner receipt `cb9aacda21bef46c80131c3cd7fa4a680f4def561d86938a82ad305d7743dfeb`.
+It used two standalone, explicitly selected build-70450 MMap-v16 readers,
+followed by the existing RustyCore native SDK. The global parameters were
+projected into typed fields and tile payloads stayed unchanged. No legacy-v15
+header was synthesized. The readers' 15 synthetic cases and separate framing
+checks on one real global and four real tiles had passed before this consumer
+run; framing alone does not establish native payload safety.
+
+The consumer retained its additional bounded payload/topology checks. All four
+tiles loaded, were present, and were removed successfully. All 64 nearest-poly
+queries succeeded with 64 distinct results. Of 256 bounded route attempts,
+163 produced complete cross-tile paths and 93 retained `target_not_last_poly`.
+Inputs, SDK source, reader sources, dependency pins and binary remained stable;
+1,434 additional toolchain/registry file guards also matched before and after.
+The persistent unit enforced 900 seconds, 3 GiB, one CPU and 64 tasks. Build
+took 10.471 seconds and the native process took 0.231 seconds.
+
+The original finalizer rejected the native report because its expected scope
+label differed from the executable's emitted label. That failed receipt is
+retained. A new report-only projection admitted the exact emitted label and
+recorded the independent reader provenance separately; neither build nor native
+execution was repeated. Recovered receipt SHA-256:
+`5f57edff488d99e5e07e494ae1c5cfee91b9489e05fe3944df9ab4d5c53ae58f`;
+root review: `909439f37dbe55afb51ef94660227b0fd3f225c1e373e68d87047b6cc4e2c2dc`.
+Consumer binary SHA-256:
+`57188bcb42e721451a7232df4ebd0acf1c356f17ce8c557c366f7b5a72f8ca6a`.
+
+This connects the selected filesystem-owner outputs to independent readers and
+the native SDK for one map/four tiles. The readers remain external prototypes.
+CLI generation, production `MMapManager` integration and filename compatibility,
+ground MAPS, off-mesh/full-world coverage, Trinity parity, runtime/server,
+Windows and release acceptance remain open.
+
+## 2026-10-20: bounded real v23 selected-navigation CLI
+
+The Linux v23 CLI now has a bounded real esES map-48 result using the already
+sealed v20 terrain and v22 VMap input packages. Source commit `4030a54` corrects
+the distinct terrain/VMap projection counts and records inner source identity
+v2. The producer SHA-256 is
+`20753bcdac11ec892ffd2d55579200f0a3e949b5986db12061a87d15d8807ef9`.
+This run adds a CLI route to the selected filesystem-owner capability; it does
+not broaden available-section source coverage.
+
+Ten cases passed: fresh extraction, intrinsic offline verification, linked-input
+verification, wrong expected context, read-only refusal to resume a completed
+seal, wrong terrain producer plan, one controlled interruption after the global
+receipt, fresh-process resume, and both resumed verifiers. The fresh and resumed
+public manifests are identical. Both input-package trees and all frozen
+source/tool/binary/plan pins stayed unchanged.
+
+The output has six public artifacts / 842,691 bytes: four nonempty MMap tiles,
+one 40-byte global and one coverage record. The five navigation payloads total
+838,116 bytes and individually match the prior filesystem-owner hashes. The
+manifest SHA-256 is
+`5e7bdd7c90b462c70345cdf6aa71cd93b38d9014a63acec9d123f887e6dff52f`;
+its inventory SHA-256 is
+`82840ffd5d651b562decf7df30ddf2b9fcb565f2799e177b735425d01f935488`.
+
+The root receipt is
+`53c65727db2e7b7b7d5b5b9f6888ae36c935b1bae45b1506ad1c6385fb103bd9`;
+execution receipt:
+`dba80927e59904d5811c99e3e64f51e349c9df981b88875285e0223706719214`.
+The service ran for 41.244 seconds within actual 900-second, 3-GiB, one-CPU and
+64-task limits. Focused software checks passed 19 v23 tests, library Clippy and
+the v23 contract (`5703c879268b36df22ae4cdffb73bacb314443b90c27c045afda2efec20e246c`).
+The release build has receipt
+`93e3113119c32941c201bdda91861d52c0d422bfb211b27b81dc3c4d8b1300c0`.
+The connected synthetic CLI workflow subsequently passed all ten integration
+cases and targeted Clippy; receipt
+`c825d0e2e69b162f2741859ced6c85a733ed653b398722b1345ef3004b79d12d`.
+It generates v20 terrain and v22 geometry from one synthetic local source, then
+v23 navigation with a nonempty tile and both verifiers. Final all-target
+extractor software closeout subsequently passed 649 tests across 22 test
+binaries, 438 contract tests, all-target Clippy, formatting and diff checks;
+receipt `5b4b605819af0277dbaa750cc79508eff50eb7ee6f8e416fe2c1d575841b034a`.
+
+The terrain tilelist here is authoritatively empty. This gives no nonempty
+ground-MAPS proof. The independent-reader native SDK result above consumed the
+earlier filesystem-owner outputs and retains that consumer scope. Complete
+source coverage, production `MMapManager`/filenames, off-mesh/full-world
+navigation, native Trinity parity, full RustyCore runtime/server, Windows and
+release acceptance remain open. The CLI continues reporting
+`full_extractor_complete: false`. See the [v23 guide](forever-product-v23.md) and
+[redacted structured report](acceptance/forever-v23-selected-navigation-70450-20261020.json).

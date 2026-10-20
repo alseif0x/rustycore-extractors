@@ -4787,3 +4787,96 @@ This is bounded regression evidence for the selected filesystem owner and
 partial Map inventory. No ground MAPS, new CLI profile, native query,
 server/runtime, full-world, Windows or release acceptance is added. See the
 dated regression checkpoint in `docs/forever-navigation.md`.
+
+## 2026-10-20: independent-reader native consumption of filesystem outputs
+
+A bounded consumer used the latest accepted filesystem-owner global/four tiles
+through external standalone MMap-v16 reader prototypes and RustyCore's existing
+native SDK. Four tiles loaded/removed, 64/64 nearest queries succeeded with 64
+distinct results, and 256 route attempts retained 163 complete cross-tile paths
+plus 93 `target_not_last_poly` outcomes. The SDK/reader/input/binary guards and
+1,434 extra toolchain/registry guards were stable. The unit enforced
+900 seconds/3 GiB/one CPU/64 tasks; build/native times were 10.471/0.231 seconds.
+
+An original finalizer scope-label mismatch was repaired through a new offline
+report projection. The failed receipt and all execution artifacts are retained;
+no build or native execution was repeated. Recovered receipt:
+`5f57edff488d99e5e07e494ae1c5cfee91b9489e05fe3944df9ab4d5c53ae58f`;
+independent root review:
+`909439f37dbe55afb51ef94660227b0fd3f225c1e373e68d87047b6cc4e2c2dc`.
+
+This is selected-output native SDK consumption only. The reader prototypes are
+external; CLI generation, production manager/path compatibility, ground MAPS,
+off-mesh/full-world, Trinity parity, runtime/server, Windows and release gates
+remain open. Details are in the dated independent-reader checkpoint in
+`docs/forever-navigation.md`.
+
+## 2026-10-20: v23 CLI local validation remains open
+
+The selected-navigation CLI implementation and its canonical-input-plan fix
+were saved locally as `6d7dbdb` and `1d7c8dc`. Scoped validation after the plan
+fix passed 641 extractor tests, 438 contract tests, Clippy, formatting and diff
+checks. Its receipt is
+`fd158f733f1ac48d7ca865db425ffff979509442da8bce854233a4dc9859bb13`.
+This software checkpoint does not establish a successful real v23 extraction.
+
+Two bounded real attempts were retained as failures before package acceptance:
+`product_navigation_input_profile` and then `product_navigation_map_source`.
+Their parent receipt hashes are
+`c128edf3359befdb7c512a2f26b1ab23500121a5150dbea3bf80c9c57dfee20f`
+and `de06ddc47e15a7e65332ff11e54e21474631ed10dc929d00b365e7d31472a813`.
+The input-package trees remained unchanged. The first failure exposed an
+incorrect requirement for DB2 outputs in a valid terrain producer plan. The
+second exposed an incorrect equality between terrain-filtered and
+VMap-preserved Map projection counts. The source APIs intentionally use
+separate projection policies.
+
+A bounded local diagnostic confirmed source stability and reader parity;
+receipt `f90b232882ce10ec5454e50c45b7e89d7708e71fa608e593f99c1f63def58672`
+is diagnostic evidence only. A separate source audit identified rejection of
+valid empty BLTE frame ranges as a latent defect; this was not observed in the
+real diagnostic. Investigation records and raw local outputs remain private.
+
+The next gate is the versioned identity/count correction, a connected synthetic
+CASC-to-v20/v22-to-v23 CLI success case, and then a newly pinned real CLI run
+including offline verification and interruption/resume. Real CLI, full-world,
+production manager/runtime and release acceptance remain unestablished here.
+
+## 2026-10-20: bounded real v23 CLI succeeds after projection correction
+
+Commit `4030a54` separates terrain-filtered and VMap-preserved Map counts in
+inner identity v2 and preserves authenticated zero-length range facts. Nineteen
+focused v23 tests, library Clippy and the profile contract passed with receipt
+`5703c879268b36df22ae4cdffb73bacb314443b90c27c045afda2efec20e246c`.
+
+The newly pinned binary passed all ten bounded real CLI cases: extraction,
+offline verification, linked inputs, expected errors, controlled interruption
+and fresh-process resume with both verifiers. Receipt:
+`53c65727db2e7b7b7d5b5b9f6888ae36c935b1bae45b1506ad1c6385fb103bd9`.
+The six-artifact package totals 842,691 bytes. Its four nonempty tiles and
+40-byte global total 838,116 bytes; all five match the preceding filesystem-owner
+payload hashes. Fresh/resumed manifests are identical and input packages remain
+unchanged. The run took 41.244 seconds under actual 900s / 3 GiB / one CPU /
+64-task limits. Detailed scope and receipt hashes are in the
+[navigation checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-selected-navigation-cli).
+
+The connected synthetic CLI fixture and final full extractor-target software
+closeout remain pending. This selected terrain inventory is empty; complete
+source coverage, nonempty ground MAPS, production manager/server, full-world,
+Windows and release acceptance remain open. No key-recovery result is implied.
+
+The connected synthetic CLI follow-up now passes ten integration cases and
+targeted Clippy (receipt
+`c825d0e2e69b162f2741859ced6c85a733ed653b398722b1345ef3004b79d12d`).
+It uses one synthetic local source to generate sealed v20/v22 packages, then
+v23 navigation with a nonempty tile and both verifiers. The real producer
+sources/dependencies are unchanged; final extractor-target regression follows.
+
+Final extractor-target closeout passed 649 Rust tests across 22 test binaries,
+438 contracts, all-target Clippy, formatting and diff checks. Receipt:
+`5b4b605819af0277dbaa750cc79508eff50eb7ee6f8e416fe2c1d575841b034a`
+(287.467 seconds; actual 600s / 3 GiB / one CPU / 64 tasks). Runtime producer
+sources, manifests, lockfile, toolchain and registry pins remain unchanged from
+the accepted real CLI run; follow-up changes are test fixtures and documentation.
+This completes this selected Linux CLI software checkpoint, with the broader
+coverage, manager/runtime, distribution and release gates still open.

@@ -64,7 +64,8 @@ impl Context {
         // Explicit product plans bind their independent profile through
         // plan_sha256. Build 70425 admits v14 collision; build 70450 admits
         // v15/v18 collision (16), v16/v17 DB2 (1), v19 DB2+GT+cameras (7),
-        // v20 terrain (8), or v21 DB2+Terrain+Collision+Navigation (57), each
+        // v20 terrain (8), v21 DB2+Terrain+Collision+Navigation (57), or
+        // v23 selected navigation (32), each
         // only for an implemented revision and Linux.
         let product_scope = match self.build {
             70425 => self.components == Component::Collision.bit(),
@@ -77,6 +78,7 @@ impl Context {
                     | Component::Terrain.bit()
                     | Component::Collision.bit()
                     | Component::Navigation.bit(),
+                Component::Navigation.bit(),
             ]
             .contains(&self.components),
             _ => true,
@@ -497,12 +499,18 @@ mod product70450_context_tests {
     // test below now includes the later implemented product masks.
     const V19_CONTEXT_TEST_IDENTIFIER: &str =
         "context70450_admits_only_the_three_linux_product_masks";
+    const V21_CONTEXT_TEST_IDENTIFIER: &str =
+        "context70450_admits_only_the_five_linux_implemented_product_masks";
 
     #[test]
-    fn context70450_admits_only_the_five_linux_implemented_product_masks() {
+    fn context70450_admits_only_the_six_linux_implemented_product_masks() {
         assert_eq!(
             V19_CONTEXT_TEST_IDENTIFIER,
             "context70450_admits_only_the_three_linux_product_masks"
+        );
+        assert_eq!(
+            V21_CONTEXT_TEST_IDENTIFIER,
+            "context70450_admits_only_the_five_linux_implemented_product_masks"
         );
         let c = Context {
             build: 70450,
@@ -513,7 +521,7 @@ mod product70450_context_tests {
             components: Component::Collision.bit(),
         };
         // v16/v17 DB2, v15/v18 collision, v19 DB2+GT+cameras, v20 Terrain,
-        // v21 DB2+Terrain+Collision+Navigation.
+        // v21 DB2+Terrain+Collision+Navigation and v23 Navigation.
         let admitted = [
             Component::Db2.bit(),
             Component::Collision.bit(),
@@ -523,6 +531,7 @@ mod product70450_context_tests {
                 | Component::Terrain.bit()
                 | Component::Collision.bit()
                 | Component::Navigation.bit(),
+            Component::Navigation.bit(),
         ];
         for components in 0..=u8::MAX {
             let context = Context { components, ..c };

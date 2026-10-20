@@ -643,3 +643,27 @@ fn target70374_context_is_linux_explicit_db2_triple_or_terrain_without_changing_
         );
     }
 }
+
+#[test]
+fn target70450_mask32_is_additive_linux_only_and_keeps_the_six_field_wire() {
+    for components in 0..=255 {
+        let context = Context {
+            build: 70450,
+            components,
+            locale: crate::Locale::EnUs,
+            source_sha256: [1; 32],
+            plan_sha256: [2; 32],
+            producer_sha256: [3; 32],
+        };
+        assert_eq!(
+            context.validate().is_ok(),
+            cfg!(target_os = "linux") && [16, 1, 7, 8, 57, 32].contains(&components)
+        );
+        if components == Component::Navigation.bit() {
+            assert_eq!(
+                Context::parse(&context.json()).is_ok(),
+                cfg!(target_os = "linux")
+            );
+        }
+    }
+}
