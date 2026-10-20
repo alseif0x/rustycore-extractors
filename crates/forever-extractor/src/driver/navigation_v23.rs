@@ -43,6 +43,9 @@ const IDENTITY_DOMAIN: &str = "rustycore-v23-selected-navigation-identity-v1";
 #[cfg(test)]
 #[path = "navigation_v23/coverage_tests.rs"]
 mod coverage_tests;
+#[cfg(test)]
+#[path = "navigation_v23/input_plan_tests.rs"]
+mod input_plan_tests;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PackageIdentity {
@@ -1834,6 +1837,9 @@ fn checked_input_plans(
 ) -> Result<(PlanGuard, PlanGuard), Error> {
     let terrain = PlanGuard::open(inputs.terrain_plan)?;
     let vmap = PlanGuard::open(inputs.vmap_plan)?;
+    // The validated v20/v22 product plans intentionally publish no DB2
+    // outputs. Navigation source Map/LiquidType tables are resolved through
+    // the pinned 70450 catalog by their readers, not added to those plans.
     if !terrain.plan.is_v20()
         || !vmap.plan.is_v22()
         || terrain.plan.build != 70450
@@ -1844,23 +1850,6 @@ fn checked_input_plans(
         || vmap.plan.locale != product.locale
     {
         return Err("product_navigation_input_profile".into());
-    }
-    let required = ["Map", "LiquidMaterial", "LiquidObject", "LiquidType"];
-    for name in required {
-        let entry = terrain
-            .plan
-            .db2
-            .iter()
-            .find(|entry| entry.name == name)
-            .ok_or("product_navigation_input_profile")?;
-        let expected = catalog::resolve_for(terrain.plan.schema_catalog.id(), name)
-            .map_err(|_| Error::from("product_navigation_input_profile"))?
-            .ok_or("product_navigation_input_profile")?
-            .metadata()
-            .file_data_id;
-        if entry.id != expected {
-            return Err("product_navigation_input_profile".into());
-        }
     }
     Ok((terrain, vmap))
 }
