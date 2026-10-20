@@ -93,6 +93,8 @@ class ProductV23Contract(unittest.TestCase):
         self.assertIn("does not claim complete geometry", policy["vmap_input"])
         self.assertIn("may differ", policy["linked_contexts"])
         self.assertIn("no publication-profile field", policy["identity"])
+        self.assertIn("identity grammar version 2", policy["identity"])
+        self.assertIn("separate terrain- and VMap-reader materialized row counts", policy["map"])
         self.assertIn("exactly once", policy["locking_and_finalization"])
         self.assertIn("not an atomic multi-package snapshot", policy["locking_and_finalization"])
         self.assertIn("must not equal, contain, or be contained", policy["input_path_safety"])
@@ -131,6 +133,8 @@ class ProductV23Contract(unittest.TestCase):
             "incomplete-terrain-coverage",
             "known-empty-terrain",
             "vmap-closure-or-source-drift",
+            "map-reader-projection-counts",
+            "ordered-zero-length-map-ranges",
             "output-path-overlap",
             "nested-callback-invariant",
             "map-or-liquid-source-drift",

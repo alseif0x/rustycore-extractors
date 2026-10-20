@@ -64,7 +64,8 @@ fn sample() -> Coverage {
             declared_copy_pairs: 1,
             direct_rows: 1,
             copy_pairs: 0,
-            materialized_rows: 1,
+            terrain_materialized_rows: 1,
+            vmap_materialized_rows: 1,
             decoded_sha256: [0x51; 32],
             snapshot_sha256: [0x52; 32],
         },
@@ -469,6 +470,8 @@ fn coverage_and_identity_grammars_reject_unknown_duplicate_and_noncanonical_fiel
     parse_rejects_without_panicking(noncanonical_tile.as_bytes());
 
     let identity = coverage.identity.render().unwrap();
+    let identity_v1 = identity.replacen("identity\t2\n", "identity\t1\n", 1);
+    parse_rejects_without_panicking(&rebind_identity_text(&coverage, identity_v1));
     let mut identity_unknown = identity.clone();
     identity_unknown.push_str("unknown-identity-field\t1\n");
     parse_rejects_without_panicking(&rebind_identity_text(&coverage, identity_unknown));
@@ -566,7 +569,11 @@ fn map_liquid_catalog_authentication_and_record_counts_are_bounded() {
     assert_rejected(bad);
 
     let mut bad = sample();
-    bad.identity.map.materialized_rows = 0;
+    bad.identity.map.terrain_materialized_rows = 2;
+    assert_rejected(bad);
+
+    let mut bad = sample();
+    bad.identity.map.vmap_materialized_rows = 0;
     assert_rejected(bad);
 
     let mut bad = sample();
@@ -1053,4 +1060,269 @@ fn failed_post_callback_package_check_leaves_only_provisional_output() {
     assert!(provisional.join(COVERAGE_PATH).is_file());
     assert!(!provisional.join(".state/sealed/navigation").exists());
     assert!(!provisional.join(".state/sealed/mmaps").exists());
+}
+
+struct SyntheticMapSource(Vec<u8>);
+
+impl forever_db2::availability::Source for SyntheticMapSource {
+    fn declared_bytes(&self) -> u64 {
+        self.0.len() as u64
+    }
+
+    fn range(
+        &self,
+        offset: u64,
+        bytes: usize,
+    ) -> Result<&[u8], forever_db2::availability::Unavailable> {
+        let start = usize::try_from(offset).map_err(|_| forever_db2::availability::Unavailable)?;
+        let end = start
+            .checked_add(bytes)
+            .ok_or(forever_db2::availability::Unavailable)?;
+        self.0
+            .get(start..end)
+            .ok_or(forever_db2::availability::Unavailable)
+    }
+}
+
+fn synthetic_map_with_zero_wdt_and_one_direct_copy() -> SyntheticMapSource {
+    use forever_db2::catalog::FieldType;
+
+    const HEADER: usize = 204;
+    const SECTION: usize = 40;
+    fn put_u16(bytes: &mut [u8], at: usize, value: u16) {
+        bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+    }
+    fn put_u32(bytes: &mut [u8], at: usize, value: u32) {
+        bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+    fn width(kind: FieldType) -> u32 {
+        match kind {
+            FieldType::Byte => 8,
+            FieldType::Short => 16,
+            FieldType::String
+            | FieldType::NonLocalizedString
+            | FieldType::Int
+            | FieldType::Float => 32,
+            FieldType::Long => 64,
+        }
+    }
+
+    let table = catalog::resolve_for(SchemaCatalog::WowDbDefs70450V1.id(), "Map")
+        .unwrap()
+        .unwrap();
+    let metadata = table.metadata();
+    assert_eq!(metadata.name, "Map");
+    assert_eq!(metadata.field_count, metadata.file_field_count);
+    assert_eq!(metadata.index, -1);
+    assert!(matches!(
+        metadata.fields[0].kind,
+        FieldType::String | FieldType::NonLocalizedString
+    ));
+    assert!(matches!(
+        metadata.fields[1].kind,
+        FieldType::String | FieldType::NonLocalizedString
+    ));
+
+    let field_count = metadata.file_field_count;
+    let mut offsets = Vec::with_capacity(field_count);
+    let mut bit_offset = 0_u32;
+    for field in metadata.fields.iter().take(field_count) {
+        offsets.push(bit_offset);
+        bit_offset = bit_offset
+            .checked_add(width(field.kind) * u32::from(field.array_size))
+            .unwrap();
+    }
+    assert_eq!(bit_offset % 8, 0);
+    let record_size = usize::try_from(bit_offset / 8).unwrap();
+    let columns_start = HEADER + SECTION + field_count * 4;
+    let data_start = columns_start + field_count * 24;
+    let mut bytes = vec![0_u8; data_start];
+
+    bytes[..4].copy_from_slice(b"WDC5");
+    put_u32(&mut bytes, 4, 5);
+    put_u32(&mut bytes, 136, 1);
+    put_u32(&mut bytes, 140, field_count as u32);
+    put_u32(&mut bytes, 144, record_size as u32);
+    put_u32(&mut bytes, 148, 2);
+    put_u32(&mut bytes, 152, metadata.table_hash.unwrap_or(0));
+    put_u32(&mut bytes, 156, metadata.layout_hash);
+    put_u32(&mut bytes, 160, 0);
+    put_u32(&mut bytes, 164, 48);
+    put_u16(&mut bytes, 172, 0);
+    bytes[174..176].copy_from_slice(&metadata.index.to_le_bytes());
+    put_u32(&mut bytes, 176, field_count as u32);
+    put_u32(&mut bytes, 180, 0);
+    put_u32(&mut bytes, 184, 0);
+    put_u32(&mut bytes, 188, (field_count * 24) as u32);
+    put_u32(&mut bytes, 192, 0);
+    put_u32(&mut bytes, 196, 0);
+    put_u32(&mut bytes, 200, 1);
+
+    let section_at = HEADER;
+    put_u32(&mut bytes, section_at + 8, data_start as u32);
+    put_u32(&mut bytes, section_at + 12, 1);
+    put_u32(&mut bytes, section_at + 16, 2);
+    put_u32(&mut bytes, section_at + 20, 0);
+    put_u32(&mut bytes, section_at + 24, 4);
+    put_u32(&mut bytes, section_at + 28, 0);
+    put_u32(&mut bytes, section_at + 32, 0);
+    put_u32(&mut bytes, section_at + 36, 1);
+
+    for (index, field) in metadata.fields.iter().take(field_count).enumerate() {
+        let at = columns_start + index * 24;
+        put_u16(&mut bytes, at, u16::try_from(offsets[index]).unwrap());
+        put_u32(&mut bytes, at + 8, 0);
+        put_u32(&mut bytes, at + 16, width(field.kind));
+        put_u32(&mut bytes, at + 20, u32::from(field.array_size));
+    }
+
+    let mut record = vec![0_u8; record_size];
+    for (index, target) in [(0, record_size), (1, record_size + 1)] {
+        let offset = usize::try_from(offsets[index] / 8).unwrap();
+        let relative = u32::try_from(target - offset).unwrap();
+        put_u32(&mut record, offset, relative);
+    }
+    for field in [13, 14] {
+        let offset = usize::try_from(offsets[field] / 8).unwrap();
+        put_u16(&mut record, offset, u16::MAX);
+    }
+    bytes.extend_from_slice(&record);
+    bytes.extend_from_slice(&[0, 0]);
+    bytes.extend_from_slice(&48_u32.to_le_bytes());
+    bytes.extend_from_slice(&49_u32.to_le_bytes());
+    bytes.extend_from_slice(&48_u32.to_le_bytes());
+    SyntheticMapSource(bytes)
+}
+
+#[test]
+fn map_reader_projections_bind_distinct_wdt_filtered_and_vmap_counts() {
+    let source = synthetic_map_with_zero_wdt_and_one_direct_copy();
+    let navigation = availability::read_navigation_maps_70450(&source).unwrap();
+    let terrain = availability::read_map_70450(&source).unwrap();
+    let vmap = availability::read_vmap_maps_70450(&source).unwrap();
+    assert_eq!(navigation.direct_records().len(), 1);
+    assert_eq!(navigation.copies().len(), 1);
+    assert_eq!(terrain.direct_records()[0].fields.wdt_file_data_id, 0);
+    validate_map_reader_parity(&navigation, &terrain, &vmap).unwrap();
+    let projections = materialize_map_projections(terrain, vmap).unwrap();
+    assert_eq!(projections.terrain_rows, 0);
+    assert_eq!(projections.vmap_rows, 2);
+
+    let decoded_sha = map_decoded_facts_sha256(&navigation, 0, 2).unwrap();
+    assert_ne!(
+        decoded_sha,
+        map_decoded_facts_sha256(&navigation, 1, 2).unwrap()
+    );
+    assert_ne!(
+        decoded_sha,
+        map_decoded_facts_sha256(&navigation, 0, 1).unwrap()
+    );
+
+    let mut coverage = sample();
+    coverage.identity.map.direct_rows = navigation.direct_records().len();
+    coverage.identity.map.copy_pairs = navigation.copies().len();
+    coverage.identity.map.terrain_materialized_rows = projections.terrain_rows;
+    coverage.identity.map.vmap_materialized_rows = projections.vmap_rows;
+    coverage.identity.map.decoded_sha256 = decoded_sha;
+    assert!(terrain_materialized_rows_match(
+        &coverage.identity.map,
+        projections.terrain_rows
+    ));
+    assert!(!terrain_materialized_rows_match(
+        &coverage.identity.map,
+        projections.vmap_rows
+    ));
+    assert!(vmap_materialized_rows_match(
+        &coverage.identity.map,
+        projections.vmap_rows
+    ));
+    assert!(!vmap_materialized_rows_match(
+        &coverage.identity.map,
+        projections.terrain_rows
+    ));
+    refresh_identity_binding(&mut coverage);
+    coverage.validate().unwrap();
+    let encoded = coverage.render().unwrap();
+    let decoded = Coverage::parse(&encoded).unwrap();
+    assert_eq!(decoded.identity.map.terrain_materialized_rows, 0);
+    assert_eq!(decoded.identity.map.vmap_materialized_rows, 2);
+
+    let mut changed_terrain = coverage.clone();
+    changed_terrain.identity.map.terrain_materialized_rows = 1;
+    assert!(changed_terrain.render().is_err());
+    let mut changed_vmap = coverage;
+    changed_vmap.identity.map.vmap_materialized_rows = 1;
+    assert!(changed_vmap.render().is_err());
+}
+
+#[test]
+fn map_snapshot_commits_ordered_zero_length_available_and_encrypted_ranges() {
+    use forever_casc::blte::available::{CoverageRange, RangeState};
+
+    let data = [0x12, 0x34, 0x56];
+    let ranges = [
+        CoverageRange {
+            offset: 0,
+            bytes: 0,
+            state: RangeState::Available,
+        },
+        CoverageRange {
+            offset: 0,
+            bytes: 0,
+            state: RangeState::EncryptedUnavailable,
+        },
+        CoverageRange {
+            offset: 0,
+            bytes: 3,
+            state: RangeState::Available,
+        },
+        CoverageRange {
+            offset: 3,
+            bytes: 2,
+            state: RangeState::EncryptedUnavailable,
+        },
+    ];
+    let mut calls = Vec::new();
+    let snapshot = append_map_range_snapshot(5, 3, false, true, &ranges, |offset, len| {
+        calls.push((offset, len));
+        let start = usize::try_from(offset).map_err(|_| Error::from("test_range"))?;
+        let end = start
+            .checked_add(len)
+            .ok_or_else(|| Error::from("test_range"))?;
+        data.get(start..end)
+            .ok_or_else(|| Error::from("test_range"))
+    })
+    .unwrap();
+    assert_eq!(calls, [(0, 3)]);
+
+    let reordered = [ranges[1], ranges[0], ranges[2], ranges[3]];
+    let reordered_snapshot =
+        append_map_range_snapshot(5, 3, false, true, &reordered, |offset, len| {
+            let start = usize::try_from(offset).map_err(|_| Error::from("test_range"))?;
+            let end = start
+                .checked_add(len)
+                .ok_or_else(|| Error::from("test_range"))?;
+            data.get(start..end)
+                .ok_or_else(|| Error::from("test_range"))
+        })
+        .unwrap();
+    assert_ne!(
+        integrity::digest(&snapshot),
+        integrity::digest(&reordered_snapshot)
+    );
+
+    let without_empty_frames =
+        append_map_range_snapshot(5, 3, false, true, &[ranges[2], ranges[3]], |offset, len| {
+            let start = usize::try_from(offset).map_err(|_| Error::from("test_range"))?;
+            let end = start
+                .checked_add(len)
+                .ok_or_else(|| Error::from("test_range"))?;
+            data.get(start..end)
+                .ok_or_else(|| Error::from("test_range"))
+        })
+        .unwrap();
+    assert_ne!(
+        integrity::digest(&snapshot),
+        integrity::digest(&without_empty_frames)
+    );
 }

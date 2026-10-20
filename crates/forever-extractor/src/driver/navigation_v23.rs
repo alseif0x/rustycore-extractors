@@ -11,7 +11,7 @@ use crate::{
     plan::SchemaCatalog,
 };
 use forever_casc::{
-    blte::available::RangeState,
+    blte::available::{CoverageRange, RangeState},
     integrity,
     local_store::{LocalStore, OpenOptions as CascOpenOptions, availability::AvailableSource},
     package::{self, Artifact, Component, Context, Run, Summary},
@@ -37,8 +37,9 @@ const COVERAGE_LIMIT: usize = 1024 * 1024;
 const MAP_LIMIT: u64 = 16 * 1024 * 1024;
 const DB2_LIMIT: u64 = 16 * 1024 * 1024;
 const OUTPUT_PROFILE: &str = "linux70450-selected-navigation-v1";
-const MAP_DOMAIN: &[u8] = b"rustycore-v23-map-available-snapshot-v1\0";
-const IDENTITY_DOMAIN: &str = "rustycore-v23-selected-navigation-identity-v1";
+const MAP_DOMAIN: &[u8] = b"rustycore-v23-map-available-snapshot-v2\0";
+const MAP_DECODED_FACTS_DOMAIN: &[u8] = b"rustycore-v23-map-decoded-facts-v2\0";
+const IDENTITY_DOMAIN: &str = "rustycore-v23-selected-navigation-identity-v2";
 
 #[cfg(test)]
 #[path = "navigation_v23/coverage_tests.rs"]
@@ -70,9 +71,20 @@ struct MapSnapshot {
     declared_copy_pairs: usize,
     direct_rows: usize,
     copy_pairs: usize,
-    materialized_rows: usize,
+    /// Terrain projection after its WDT-zero filter and copy replay.
+    terrain_materialized_rows: usize,
+    /// VMap projection after copy replay; WDT-zero rows remain available.
+    vmap_materialized_rows: usize,
     decoded_sha256: [u8; 32],
     snapshot_sha256: [u8; 32],
+}
+
+fn terrain_materialized_rows_match(snapshot: &MapSnapshot, rows: usize) -> bool {
+    snapshot.terrain_materialized_rows == rows
+}
+
+fn vmap_materialized_rows_match(snapshot: &MapSnapshot, rows: usize) -> bool {
+    snapshot.vmap_materialized_rows == rows
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -130,7 +142,7 @@ impl SourceIdentity {
         out.try_reserve(128 * 1024)
             .map_err(|_| Error::from("product_allocation"))?;
         use std::fmt::Write as _;
-        writeln!(out, "identity\t1\nprofile\t{IDENTITY_DOMAIN}").expect("String formatting");
+        writeln!(out, "identity\t2\nprofile\t{IDENTITY_DOMAIN}").expect("String formatting");
         writeln!(out, "selected-map\t{}", self.selected_map).expect("String formatting");
         writeln!(out, "build\t{}\nlocale\t{}", self.build, self.locale).expect("String formatting");
         writeln!(out, "plan-sha256\t{}", integrity::hex(&self.plan_sha256))
@@ -149,7 +161,7 @@ impl SourceIdentity {
         .expect("String formatting");
         writeln!(
             out,
-            "map-snapshot\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "map-snapshot\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.map.file_data_id,
             self.map.declared_bytes,
             self.map.available_bytes,
@@ -161,7 +173,8 @@ impl SourceIdentity {
             self.map.declared_copy_pairs,
             self.map.direct_rows,
             self.map.copy_pairs,
-            self.map.materialized_rows,
+            self.map.terrain_materialized_rows,
+            self.map.vmap_materialized_rows,
             integrity::hex(&self.map.decoded_sha256),
             integrity::hex(&self.map.snapshot_sha256),
         )
@@ -393,8 +406,15 @@ impl Coverage {
             || self.identity.map.declared_copy_pairs > MAP_ROWS_MAX
             || self.identity.map.direct_rows > self.identity.map.declared_direct_rows
             || self.identity.map.copy_pairs > self.identity.map.declared_copy_pairs
-            || self.identity.map.materialized_rows < self.identity.map.direct_rows
-            || self.identity.map.materialized_rows
+            || self.identity.map.terrain_materialized_rows
+                > self
+                    .identity
+                    .map
+                    .direct_rows
+                    .checked_add(self.identity.map.copy_pairs)
+                    .ok_or("product_navigation_coverage")?
+            || self.identity.map.vmap_materialized_rows < self.identity.map.direct_rows
+            || self.identity.map.vmap_materialized_rows
                 > self
                     .identity
                     .map
@@ -614,7 +634,7 @@ impl SourceIdentity {
         let text =
             std::str::from_utf8(bytes).map_err(|_| Error::from("product_navigation_identity"))?;
         let mut lines = text.lines();
-        require_fields(&mut lines, "identity", &["1"])?;
+        require_fields(&mut lines, "identity", &["2"])?;
         require_fields(&mut lines, "profile", &[IDENTITY_DOMAIN])?;
         let selected_map = u32_number(required_fields(&mut lines, "selected-map", 1)?[0])?;
         let build = u32_number(required_fields(&mut lines, "build", 1)?[0])?;
@@ -623,7 +643,7 @@ impl SourceIdentity {
         let producer_sha256 = parse_hex32(required_fields(&mut lines, "producer-sha256", 1)?[0])?;
         let current_source_sha256 =
             parse_hex32(required_fields(&mut lines, "current-source-sha256", 1)?[0])?;
-        let map_fields = required_fields(&mut lines, "map-snapshot", 14)?;
+        let map_fields = required_fields(&mut lines, "map-snapshot", 15)?;
         let map = MapSnapshot {
             file_data_id: u32_number(map_fields[0])?,
             declared_bytes: number(map_fields[1])?,
@@ -636,9 +656,10 @@ impl SourceIdentity {
             declared_copy_pairs: usize_number(map_fields[8])?,
             direct_rows: usize_number(map_fields[9])?,
             copy_pairs: usize_number(map_fields[10])?,
-            materialized_rows: usize_number(map_fields[11])?,
-            decoded_sha256: parse_hex32(map_fields[12])?,
-            snapshot_sha256: parse_hex32(map_fields[13])?,
+            terrain_materialized_rows: usize_number(map_fields[11])?,
+            vmap_materialized_rows: usize_number(map_fields[12])?,
+            decoded_sha256: parse_hex32(map_fields[13])?,
+            snapshot_sha256: parse_hex32(map_fields[14])?,
         };
         let mut closure = Vec::new();
         while lines
@@ -1285,22 +1306,21 @@ fn append_u64(bytes: &mut Vec<u8>, value: u64) {
     bytes.extend_from_slice(&value.to_le_bytes());
 }
 
-fn map_snapshot(
-    source: &AvailableSource,
-    records: &AvailableRecords<forever_db2::terrain_sources::NavigationMapFields>,
-    materialized_rows: usize,
-) -> Result<MapSnapshot, Error> {
-    let declared = source.declared_bytes();
-    let available = source.available_bytes();
-    let ranges = source.coverage();
-    if source.file_data_id() == 0
-        || declared == 0
+fn append_map_range_snapshot<'a>(
+    declared: u64,
+    available: u64,
+    full_ckey_verified: bool,
+    encoded_key_authenticated: bool,
+    ranges: &[CoverageRange],
+    mut read_range: impl FnMut(u64, usize) -> Result<&'a [u8], Error>,
+) -> Result<Vec<u8>, Error> {
+    if declared == 0
         || declared > MAP_LIMIT
         || available > declared
         || ranges.is_empty()
         || ranges.len() > MAP_RANGES_MAX
-        || (!source.full_ckey_verified() && !source.encoded_key_authenticated())
-        || (source.full_ckey_verified() && available != declared)
+        || (!full_ckey_verified && !encoded_key_authenticated)
+        || (full_ckey_verified && available != declared)
     {
         return Err("product_navigation_map_source".into());
     }
@@ -1320,8 +1340,8 @@ fn map_snapshot(
     snapshot.extend_from_slice(MAP_DOMAIN);
     append_u64(&mut snapshot, declared);
     append_u64(&mut snapshot, available);
-    snapshot.push(u8::from(source.full_ckey_verified()));
-    snapshot.push(u8::from(source.encoded_key_authenticated()));
+    snapshot.push(u8::from(full_ckey_verified));
+    snapshot.push(u8::from(encoded_key_authenticated));
     append_u64(&mut snapshot, ranges.len() as u64);
     let mut offset = 0_u64;
     let mut available_total = 0_u64;
@@ -1330,7 +1350,7 @@ fn map_snapshot(
             .offset
             .checked_add(range.bytes)
             .ok_or("product_navigation_map_source")?;
-        if range.offset != offset || range.bytes == 0 || end > declared {
+        if range.offset != offset || end > declared {
             return Err("product_navigation_map_source".into());
         }
         append_u64(&mut snapshot, range.offset);
@@ -1340,44 +1360,63 @@ fn map_snapshot(
             RangeState::EncryptedUnavailable => 2,
         });
         if range.state == RangeState::Available {
-            let n = usize::try_from(range.bytes)
-                .map_err(|_| Error::from("product_navigation_map_source"))?;
-            let bytes = source
-                .range(range.offset, n)
-                .map_err(|_| Error::from("product_navigation_map_source"))?;
-            if bytes.len() != n {
-                return Err("product_navigation_map_source".into());
+            if range.bytes != 0 {
+                let n = usize::try_from(range.bytes)
+                    .map_err(|_| Error::from("product_navigation_map_source"))?;
+                let bytes = read_range(range.offset, n)?;
+                if bytes.len() != n {
+                    return Err("product_navigation_map_source".into());
+                }
+                snapshot.extend_from_slice(bytes);
             }
-            snapshot.extend_from_slice(bytes);
             available_total = available_total
                 .checked_add(range.bytes)
                 .ok_or("product_navigation_map_source")?;
         }
+        // Zero-length frames remain ordered facts at this offset. They do not
+        // request an empty capability read or move the decoded cursor.
         offset = end;
     }
     if offset != declared || available_total != available || snapshot.len() > MAP_SNAPSHOT_MAX {
         return Err("product_navigation_map_source".into());
     }
-    let mut decoded = Vec::new();
-    let record_capacity = records
-        .sections()
-        .len()
-        .checked_mul(16)
-        .and_then(|n| n.checked_add(records.direct_records().len().checked_mul(16)?))
-        .and_then(|n| n.checked_add(records.copies().len().checked_mul(8)?))
-        .and_then(|n| n.checked_add(64))
+    Ok(snapshot)
+}
+
+fn map_decoded_facts_sha256(
+    records: &AvailableRecords<forever_db2::terrain_sources::NavigationMapFields>,
+    terrain_materialized_rows: usize,
+    vmap_materialized_rows: usize,
+) -> Result<[u8; 32], Error> {
+    let section_count = records.sections().len();
+    let direct_count = records.direct_records().len();
+    let copy_count = records.copies().len();
+    let record_capacity = section_count
+        .checked_mul(13)
+        .and_then(|sections| {
+            MAP_DECODED_FACTS_DOMAIN
+                .len()
+                .checked_add(40)?
+                .checked_add(sections)
+        })
+        .and_then(|n| n.checked_add(direct_count.checked_mul(14)?))
+        .and_then(|n| n.checked_add(copy_count.checked_mul(8)?))
         .filter(|n| *n <= 4 * 1024 * 1024)
         .ok_or("product_navigation_map_source")?;
-    if records.direct_records().len() > MAP_ROWS_MAX
-        || records.copies().len() > MAP_ROWS_MAX
-        || materialized_rows > MAP_ROWS_MAX
+    if direct_count > MAP_ROWS_MAX
+        || copy_count > MAP_ROWS_MAX
+        || terrain_materialized_rows > MAP_ROWS_MAX
+        || vmap_materialized_rows > MAP_ROWS_MAX
     {
         return Err("product_navigation_map_source".into());
     }
+    let mut decoded = Vec::new();
     decoded
         .try_reserve_exact(record_capacity)
         .map_err(|_| Error::from("product_allocation"))?;
-    decoded.extend_from_slice(b"rustycore-v23-map-decoded-facts-v1\0");
+    decoded.extend_from_slice(MAP_DECODED_FACTS_DOMAIN);
+    append_u64(&mut decoded, terrain_materialized_rows as u64);
+    append_u64(&mut decoded, vmap_materialized_rows as u64);
     append_u64(&mut decoded, records.sections().len() as u64);
     for section in records.sections() {
         append_u32(&mut decoded, section.ordinal);
@@ -1402,6 +1441,46 @@ fn map_snapshot(
         append_u32(&mut decoded, copy.new_id);
         append_u32(&mut decoded, copy.source_id);
     }
+    if decoded.len() != record_capacity {
+        return Err("product_navigation_map_source".into());
+    }
+    Ok(integrity::digest(&decoded))
+}
+
+fn map_snapshot(
+    source: &AvailableSource,
+    records: &AvailableRecords<forever_db2::terrain_sources::NavigationMapFields>,
+    terrain_materialized_rows: usize,
+    vmap_materialized_rows: usize,
+) -> Result<MapSnapshot, Error> {
+    let declared = source.declared_bytes();
+    let available = source.available_bytes();
+    let ranges = source.coverage();
+    if source.file_data_id() == 0
+        || declared == 0
+        || declared > MAP_LIMIT
+        || available > declared
+        || ranges.is_empty()
+        || ranges.len() > MAP_RANGES_MAX
+        || (!source.full_ckey_verified() && !source.encoded_key_authenticated())
+        || (source.full_ckey_verified() && available != declared)
+    {
+        return Err("product_navigation_map_source".into());
+    }
+    let snapshot = append_map_range_snapshot(
+        declared,
+        available,
+        source.full_ckey_verified(),
+        source.encoded_key_authenticated(),
+        ranges,
+        |offset, bytes| {
+            source
+                .range(offset, bytes)
+                .map_err(|_| Error::from("product_navigation_map_source"))
+        },
+    )?;
+    let decoded_sha256 =
+        map_decoded_facts_sha256(records, terrain_materialized_rows, vmap_materialized_rows)?;
     let declared_direct_rows = records
         .sections()
         .iter()
@@ -1416,16 +1495,18 @@ fn map_snapshot(
             total.checked_add(section.declared_copies as usize)
         })
         .ok_or("product_navigation_map_source")?;
+    let materialized_max = records
+        .direct_records()
+        .len()
+        .checked_add(records.copies().len())
+        .ok_or("product_navigation_map_source")?;
     if declared_direct_rows > MAP_ROWS_MAX
         || declared_copy_pairs > MAP_ROWS_MAX
         || records.direct_records().len() > declared_direct_rows
         || records.copies().len() > declared_copy_pairs
-        || materialized_rows < records.direct_records().len()
-        || materialized_rows
-            > records
-                .direct_records()
-                .len()
-                .saturating_add(records.copies().len())
+        || vmap_materialized_rows < records.direct_records().len()
+        || terrain_materialized_rows > materialized_max
+        || vmap_materialized_rows > materialized_max
     {
         return Err("product_navigation_map_source".into());
     }
@@ -1441,8 +1522,9 @@ fn map_snapshot(
         declared_copy_pairs,
         direct_rows: records.direct_records().len(),
         copy_pairs: records.copies().len(),
-        materialized_rows,
-        decoded_sha256: integrity::digest(&decoded),
+        terrain_materialized_rows,
+        vmap_materialized_rows,
+        decoded_sha256,
         snapshot_sha256: integrity::digest(&snapshot),
     })
 }
@@ -1454,24 +1536,17 @@ struct MapInputs {
     snapshot: MapSnapshot,
 }
 
-fn load_map_inputs(store: &mut LocalStore) -> Result<MapInputs, Error> {
-    let map_id = catalog::resolve_for(SchemaCatalog::WowDbDefs70450V1.id(), "Map")
-        .map_err(|_| Error::from("product_navigation_identity"))?
-        .ok_or("product_navigation_identity")?
-        .metadata()
-        .file_data_id;
-    let source = store
-        .read_file_data_id_available_70450_with_limit(map_id, MAP_LIMIT)
-        .map_err(|error| Error::from(error.code()))?;
-    if source.file_data_id() != map_id {
-        return Err("product_navigation_map_source".into());
-    }
-    let navigation = availability::read_navigation_maps_70450(&source)
-        .map_err(|error| Error::from(error.code()))?;
-    let terrain =
-        availability::read_map_70450(&source).map_err(|error| Error::from(error.code()))?;
-    let vmap =
-        availability::read_vmap_maps_70450(&source).map_err(|error| Error::from(error.code()))?;
+struct MaterializedMapProjections {
+    terrain_rows: usize,
+    vmap_rows: usize,
+    global_parent_ids: BTreeSet<u32>,
+}
+
+fn validate_map_reader_parity(
+    navigation: &AvailableRecords<forever_db2::terrain_sources::NavigationMapFields>,
+    terrain: &AvailableRecords<forever_db2::terrain_sources::MapFields>,
+    vmap: &AvailableRecords<forever_db2::terrain_sources::VMapFields>,
+) -> Result<(), Error> {
     if navigation.sections() != terrain.sections()
         || navigation.sections() != vmap.sections()
         || navigation.direct_records().len() != terrain.direct_records().len()
@@ -1501,15 +1576,13 @@ fn load_map_inputs(store: &mut LocalStore) -> Result<MapInputs, Error> {
     {
         return Err("product_navigation_map_source".into());
     }
-    let mut vmap_wdt_ids = BTreeMap::new();
-    for row in vmap.direct_records() {
-        if vmap_wdt_ids
-            .insert(row.id, row.fields.wdt_file_data_id as u32)
-            .is_some()
-        {
-            return Err("product_navigation_map_source".into());
-        }
-    }
+    Ok(())
+}
+
+fn materialize_map_projections(
+    terrain: AvailableRecords<forever_db2::terrain_sources::MapFields>,
+    vmap: AvailableRecords<forever_db2::terrain_sources::VMapFields>,
+) -> Result<MaterializedMapProjections, Error> {
     let materialized_vmap = vmap
         .materialize()
         .map_err(|error| Error::from(error.code()))?;
@@ -1519,21 +1592,59 @@ fn load_map_inputs(store: &mut LocalStore) -> Result<MapInputs, Error> {
             global_parent_ids.insert(row.fields.parent_map_id as u32);
         }
     }
+    let vmap_rows = materialized_vmap.rows().len();
     let terrain_materialized = terrain
         .materialize()
         .map_err(|error| Error::from(error.code()))?;
     let terrain_rows = terrain_materialized.rows().len();
-    let vmap_rows = materialized_vmap.rows().len();
-    if terrain_rows != vmap_rows {
-        return Err("product_navigation_map_source".into());
-    }
     drop(terrain_materialized);
     drop(materialized_vmap);
-    let snapshot = map_snapshot(&source, &navigation, terrain_rows)?;
+    Ok(MaterializedMapProjections {
+        terrain_rows,
+        vmap_rows,
+        global_parent_ids,
+    })
+}
+
+fn load_map_inputs(store: &mut LocalStore) -> Result<MapInputs, Error> {
+    let map_id = catalog::resolve_for(SchemaCatalog::WowDbDefs70450V1.id(), "Map")
+        .map_err(|_| Error::from("product_navigation_identity"))?
+        .ok_or("product_navigation_identity")?
+        .metadata()
+        .file_data_id;
+    let source = store
+        .read_file_data_id_available_70450_with_limit(map_id, MAP_LIMIT)
+        .map_err(|error| Error::from(error.code()))?;
+    if source.file_data_id() != map_id {
+        return Err("product_navigation_map_source".into());
+    }
+    let navigation = availability::read_navigation_maps_70450(&source)
+        .map_err(|error| Error::from(error.code()))?;
+    let terrain =
+        availability::read_map_70450(&source).map_err(|error| Error::from(error.code()))?;
+    let vmap =
+        availability::read_vmap_maps_70450(&source).map_err(|error| Error::from(error.code()))?;
+    validate_map_reader_parity(&navigation, &terrain, &vmap)?;
+    let mut vmap_wdt_ids = BTreeMap::new();
+    for row in vmap.direct_records() {
+        if vmap_wdt_ids
+            .insert(row.id, row.fields.wdt_file_data_id as u32)
+            .is_some()
+        {
+            return Err("product_navigation_map_source".into());
+        }
+    }
+    let materialized = materialize_map_projections(terrain, vmap)?;
+    let snapshot = map_snapshot(
+        &source,
+        &navigation,
+        materialized.terrain_rows,
+        materialized.vmap_rows,
+    )?;
     Ok(MapInputs {
         navigation,
         vmap_wdt_ids,
-        global_parent_ids,
+        global_parent_ids: materialized.global_parent_ids,
         snapshot,
     })
 }
@@ -1754,7 +1865,7 @@ fn validate_input_coverage(input: InputCoverage<'_>) -> Result<Vec<TerrainMap>, 
         || terrain.map.encoded_key_authenticated != map.encoded_key_authenticated
         || terrain.map.direct_rows != map.direct_rows
         || terrain.map.copy_records != map.copy_pairs
-        || terrain.map.materialized_rows != map.materialized_rows
+        || !terrain_materialized_rows_match(map, terrain.map.materialized_rows)
         || terrain_section_count != records.sections().len()
     {
         return Err("product_navigation_input_terrain_coverage".into());
@@ -1802,7 +1913,7 @@ fn validate_input_coverage(input: InputCoverage<'_>) -> Result<Vec<TerrainMap>, 
         || vmap.map.declared_copy_records as usize != map.declared_copy_pairs
         || vmap.map.direct_rows as usize != map.direct_rows
         || vmap.map.copy_records as usize != map.copy_pairs
-        || vmap.map.materialized_rows as usize != map.materialized_rows
+        || !vmap_materialized_rows_match(map, vmap.map.materialized_rows as usize)
         || vmap.map.sections.len() != records.sections().len()
     {
         return Err("product_navigation_input_vmap_coverage".into());
@@ -1905,7 +2016,10 @@ fn verify_input_binding(
         || vmap.coverage.map.declared_copy_records as usize != identity.map.declared_copy_pairs
         || vmap.coverage.map.direct_rows as usize != identity.map.direct_rows
         || vmap.coverage.map.copy_records as usize != identity.map.copy_pairs
-        || vmap.coverage.map.materialized_rows as usize != identity.map.materialized_rows
+        || !vmap_materialized_rows_match(
+            &identity.map,
+            vmap.coverage.map.materialized_rows as usize,
+        )
         || vmap.coverage.map.sections.len() != identity.map.section_count
         || identity.closure.len() != vmap.coverage.maps.len()
         || terrain.coverage.map.declared_bytes != identity.map.declared_bytes
@@ -1914,7 +2028,7 @@ fn verify_input_binding(
         || terrain.coverage.map.encoded_key_authenticated != identity.map.encoded_key_authenticated
         || terrain.coverage.map.direct_rows != identity.map.direct_rows
         || terrain.coverage.map.copy_records != identity.map.copy_pairs
-        || terrain.coverage.map.materialized_rows != identity.map.materialized_rows
+        || !terrain_materialized_rows_match(&identity.map, terrain.coverage.map.materialized_rows)
         || terrain.coverage.map.sections.iter().flatten().count() != identity.map.section_count
     {
         return Err("product_navigation_input_context".into());
