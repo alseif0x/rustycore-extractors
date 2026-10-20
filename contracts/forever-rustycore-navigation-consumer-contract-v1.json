@@ -1,0 +1,206 @@
+{
+  "contract": "forever-rustycore-navigation-consumer-v1",
+  "version": 1,
+  "status": "bounded_local_accepted_core_publication_pending",
+  "issue": 104,
+  "scope": {
+    "platform": "linux",
+    "client_build": 70450,
+    "producer_profile": "linux70450-selected-navigation-v1",
+    "mmap_version": 16,
+    "detour_version": 7,
+    "detour_reference_bits": 64,
+    "selected_maps_per_package": 1,
+    "offmesh_connections": 0,
+    "acceptance_level": "production_library_consumer",
+    "server_activation": false
+  },
+  "preserved_windows_source_deltas": [
+    {
+      "path": "Cargo.lock",
+      "baseline_revision": "ee0b1d35699a382bb860a4d95cd98aef24714293",
+      "baseline_sha256": "6efa56a44865d62d09fcdcc39a03e4c836afc64ea7e9fed23fbefa92711dff69",
+      "candidate_sha256": "8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27",
+      "scope": "Add only the Linux navigation-to-CASC edge to Cargo's flattened all-target graph; no registry identity or Windows target edge changes",
+      "before": "name = \"forever-navigation\"\nversion = \"0.1.0\"\ndependencies = [\n",
+      "after": "name = \"forever-navigation\"\nversion = \"0.1.0\"\ndependencies = [\n \"forever-casc\",\n"
+    },
+    {
+      "path": "crates/forever-navigation/Cargo.toml",
+      "baseline_revision": "ee0b1d35699a382bb860a4d95cd98aef24714293",
+      "baseline_sha256": "8e4bc8f86a42e0447bc77f77e06478a6fd6987f131e6cc68ed1668517575e552",
+      "candidate_sha256": "9bae1c448815c93a6230d694e3cbb320dc667d2930ac644e22672f2f78362eee",
+      "scope": "Add only an explicit Linux shared-package dependency; Windows dependency and source pins retain their original scope",
+      "before": "",
+      "after": "[target.'cfg(target_os = \"linux\")'.dependencies]\nforever-casc = { path = \"../forever-casc\", default-features = false }\n\n"
+    }
+  ],
+  "admission": {
+    "component_owner": "forever-navigation::package_v23",
+    "envelope_owner": "forever-casc::package",
+    "single_codec": "The producer and consumer use the same canonical V23 coverage and source-identity codec. The executable no longer owns a second implementation.",
+    "expected_facts": [
+      "selected map",
+      "locale",
+      "canonical producer-plan SHA-256",
+      "optional exact package context; required by the RustyCore consumer"
+    ],
+    "checks": [
+      "Linux rooted no-symlink files and shared package lock",
+      "complete canonical manifest, receipts, seals and artifact namespace",
+      "exact artifact lengths and SHA-256 values",
+      "build, locale, component, source, plan and producer context",
+      "canonical source identity and selected effective-parent closure",
+      "complete selected terrain-input eligibility recorded by the existing profile",
+      "exact global, written tile, declared empty tile and coverage inventory",
+      "MMap16 complete framing and canonical producer paths"
+    ],
+    "not_proven": [
+      "authentication of the original producer",
+      "native Detour topology safety from framing or hashes alone",
+      "whole-world source completeness",
+      "immutability of future pathname reads"
+    ]
+  },
+  "owned_read_batch": {
+    "same_verification_pass": true,
+    "caller_callbacks_before_final_verification": false,
+    "global_container_included": true,
+    "retained_tiles": "Only explicitly requested tiles are retained. All package artifacts are still verified.",
+    "defaults": {
+      "maximum_requested_tiles": 64,
+      "maximum_retained_bytes": 134217728
+    },
+    "overrides": "Caller limits may only reduce built-in ceilings. Retained allocation capacities and transient per-file reads are accounted separately from package metadata and from native allocations; these are logical limits, not RSS measurements.",
+    "reject_before_payload_work": [
+      "duplicate requested coordinates",
+      "coordinates outside 0..63",
+      "request count beyond caller limit"
+    ],
+    "availability": "A recorded empty tile is distinct from a written tile. A coordinate outside the selected coverage is unavailable, never fabricated empty geometry.",
+    "publication": "Owned bytes and validated metadata are returned only after the entire canonical verification operation succeeds.",
+    "later_loads": "The RustyCore owner requires the initially admitted context and complete package summary/inventory on each later batch read. Native operations use owned checked bytes after the verification call returns."
+  },
+  "native_ingress": {
+    "implementation_status": "bounded_local_accepted",
+    "owner": "wow-recastdetour",
+    "format_gate": "An explicit checked Detour7 ground-payload profile for the vendored 64-bit-reference ABI. It does not relabel v16 containers as legacy v15.",
+    "checks_before_native_allocation_or_tile_add": [
+      "exact little-endian header, positive bounded counts, checked section sizes and complete payload extent",
+      "ground polygon shape, referenced vertex and internal-neighbor indices",
+      "supported external-portal directions and representable portal arithmetic",
+      "detail mesh ranges and triangle indices",
+      "BV leaf indices, forward escape ranges and representable quantization",
+      "finite bounded numerical inputs and valid native tile coordinates",
+      "zero off-mesh payloads for this selected profile",
+      "global parameters, bounded native capacities and payload tile placement consistent with the admitted global container"
+    ],
+    "limits": "Caller-reduced resource policies reject before native entry; budgets are not silently increased to make an observed route complete.",
+    "native_profile_defaults": {
+      "maximum_payload_bytes": 67108864,
+      "maximum_polygons": 100000,
+      "maximum_vertices": 250000,
+      "maximum_links": 1000000,
+      "maximum_detail_triangles": 1000000,
+      "maximum_bv_nodes": 1000000,
+      "maximum_absolute_coordinate": 1048576,
+      "maximum_native_tile_slots": 4096,
+      "maximum_corridor_references": 4096,
+      "minimum_query_nodes": 4,
+      "maximum_query_nodes": 65535
+    },
+    "query_budget_identity": "An existing instance query retains its admitted node budget. A conflicting valid budget is an error; changing the budget requires explicit unload and reload.",
+    "legacy_behavior": "The existing legacy format remains explicit. Admission of this profile does not transfer newer-build acceptance to legacy readers or older-build acceptance to build70450."
+  },
+  "rustycore_owner": {
+    "implementation_status": "bounded_local_accepted_core_publication_pending",
+    "native_owner": "existing MMapManager/MMapData",
+    "query_lifetime": "Instance queries belong to their existing MMapData and are destroyed before its mesh. No second native mesh/query registry or Send/Sync relaxation is introduced.",
+    "execution": "Construction, package reads, tile preparation and queries run on the existing dedicated native pathfinder owner thread, outside map/entity/session locks.",
+    "feature": "Explicit opt-in library capability; no automatic server configuration or world-entry activation.",
+    "consumer_defaults": {
+      "maximum_loaded_tiles": 4096,
+      "maximum_tiles_per_batch": 64,
+      "maximum_batch_bytes": 134217728,
+      "maximum_loaded_artifact_bytes": 134217728,
+      "maximum_instance_queries": 64,
+      "instance_query_nodes": 4096,
+      "maximum_corridor_references": 256
+    },
+    "source_scope": "Only the admitted selected map and its supplied coverage are queryable. Older terrain-library build gates and unrelated phase topology are not evidence for this profile.",
+    "format_paths": "Original MMap16 global and underscore-separated tile names are consumed through the shared package API; no legacy filename fallback is attempted.",
+    "errors": "Configured source, integrity, format, scope and native failures remain errors. They are not converted to a successful straight-line path or missing-data fallback.",
+    "status": "Native query detail bits and partial outcomes remain visible. A successful native status alone is not a complete-route claim.",
+    "rollback": "Failed preparation must not publish partial native ownership as a successfully prepared batch; unload/cleanup and repeated load behavior have explicit tests."
+  },
+  "acceptance": {
+    "state": "bounded_local_consumer_and_packaged_candidate_accepted",
+    "required": [
+      "shared-codec synthetic roundtrip and diagnostic regressions without removed registrations",
+      "public verifier and owned-batch positive and negative synthetic consumers",
+      "strict native ingress malformed-index, size, numeric, portal, detail and BV rejection cases before FFI",
+      "existing manager and actual library/worker consumer lifecycle, failure and repeated load tests",
+      "bounded private real package admission and manager/query evidence with guarded inputs",
+      "affected CLI byte/semantic regression acceptance",
+      "requalification of the changed shipped Linux source graph and reproducible package"
+    ],
+    "executed": {
+      "shared_package_tests": 17,
+      "sdk_tests": 77,
+      "public_worker_tests": 10,
+      "feature_disabled_tests": 1,
+      "extractor_rust_tests": 3941,
+      "extractor_rust_ignored": 26,
+      "rust_acceptance_method": "Retained full sweep plus corrected diagnostic test rerun and remaining-crate continuation; no single green workspace invocation claim.",
+      "contract_tests": 436,
+      "packaging_tests": 89,
+      "ordinary_receipt_sha256": "573971d643fb25428760380a71329c335ec37f1aea69253687f332cc8e88b2e6",
+      "real_worker_receipt_sha256": "8551686bc18b2c411ca6ed4e6504ee686f8a3c3a3a6abf643f3e63340b7c4901",
+      "real_worker": {
+        "tiles_loaded_and_unloaded": 8,
+        "nearest_queries": 98,
+        "route_queries": 256,
+        "complete": 6,
+        "partial": 250,
+        "out_of_nodes": 0,
+        "buffer_too_small": 0,
+        "final_loaded_tiles": 0,
+        "final_instance_queries": 0,
+        "original_headers_preserved": true,
+        "inputs_unchanged": true
+      },
+      "raw_sdk_comparison": {
+        "route_count": 256,
+        "ordinal_status_length_target_facts_equal": true,
+        "different_rows": 0
+      },
+      "whole_core_final_accepted": false,
+      "server_runtime_accepted": false,
+      "core_publication": "pending; inherited architecture/session baseline rejection retained",
+      "ordinary_campaign_600_second_target_met": false,
+      "distribution": {
+        "source_profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",
+        "source_snapshot_sha256": "577d46cd2952cf306c5fa404ba87bd5881e1e6701e14b4f6f56f3ea2cabbf85b",
+        "archive_sha256": "14e7d7d95f5bc4390837453eb26ef0bac9ae349ba4a2a3f20dc63db7f45adfbe",
+        "binary_sha256": "1c391fe7dea024c16c1080244b497bc5c97d0067c095f3f577ff1df6590bcdb0",
+        "two_fresh_archives_and_binaries_identical": true,
+        "moved_source_offline_rebuild_identical": true,
+        "packaged_synthetic_cli_cases": 47,
+        "real_payloads_exact_baseline": 9,
+        "real_payload_bytes": 3782524,
+        "distribution_receipt_sha256": "1f5b703144c62bea7b68672e5ca0819cbcbc24912164434b17456d37068cec91",
+        "packaged_cli_receipt_sha256": "fbeb4506284fe3e8adaa1e3af5b1fe234eba70f74e2109bebb6bf7b76135b538",
+        "packaged_real_receipt_sha256": "5694df5e71356b6ba088b344a1e4cad1d0fcb48f48ba84f314c740d40ca653e2",
+        "frozen_status_prose": "The archive retains earlier source-definition status and the draft SDK/consumer-limit wording. Later status prose and the corrected consumer limit are documentation-only; the qualified Rust product sources are unchanged.",
+        "release_authorized": false
+      }
+    }
+  },
+  "non_claims": [
+    "no full-world geometry or navigation acceptance",
+    "no new native Trinity parity claim",
+    "no server gameplay, creation or world-entry acceptance",
+    "no recovered encryption keys",
+    "no Windows delivery or release authorization"
+  ]
+}

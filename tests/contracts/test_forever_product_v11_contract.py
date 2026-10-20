@@ -142,7 +142,7 @@ class ProductV11Contract(unittest.TestCase):
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
         self.assertEqual(m.SCHEMA, 'forever-distribution-v1')
-        self.assertEqual(m.SOURCE_PROFILE, 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12')
+        self.assertEqual(m.SOURCE_PROFILE, 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13')
         selected = set(m.selected_paths(ROOT))
         for name in ('contracts/forever-product-contract-v11.json',
                      'tests/contracts/test_forever_product_v11_contract.py',

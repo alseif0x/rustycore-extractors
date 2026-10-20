@@ -23,7 +23,7 @@ def synthetic_lock():
         "forever-casc": ["forever-db2", "forever-platform", "forever-terrain", "forever-vmap", "miniz_oxide"],
         "forever-db2": [],
         "forever-extractor": ["forever-casc", "forever-db2", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap"],
-        "forever-navigation": ["forever-db2", "forever-platform", "forever-terrain", "forever-vmap"],
+        "forever-navigation": ["forever-casc", "forever-db2", "forever-platform", "forever-terrain", "forever-vmap"],
         "forever-platform": [], "forever-terrain": [], "forever-vmap": ["forever-platform"],
     }
     lines = ["version = 4"]
@@ -616,7 +616,7 @@ class DistributionTests(unittest.TestCase):
         lock = synthetic_lock()
         before, package = lock.split('name = "forever-navigation"', 1)
         section, after = package.split("[[package]]", 1)
-        changed = section.replace('"forever-db2", ', '"forever-casc", "forever-db2", ', 1)
+        changed = section.replace('"forever-casc", ', '"miniz_oxide", "forever-casc", ', 1)
         self.assertNotEqual(changed, section)
         self.assertFailure("lock_closure", m.validate_lock, (before + 'name = "forever-navigation"' + changed + "[[package]]" + after).encode())
 
@@ -915,10 +915,10 @@ class DistributionTests(unittest.TestCase):
         manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-collision-disk-source-v9"
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
-    def test_v12_requires_and_ships_exact_v23_source_closure(self):
+    def test_v13_retains_and_ships_exact_v23_source_closure(self):
         self.assertEqual(
             m.SOURCE_PROFILE,
-            "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12",
+            "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",
         )
         self.assertTrue(set(m.PRODUCT_V23_SOURCE) <= set(m.REQUIRED))
         self.build()
@@ -953,6 +953,40 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(contract["source"]["profile"], m.SOURCE_PROFILE)
         self.assertTrue(set(m.PRODUCT_V23_SOURCE) <= set(contract["source"]["required"]))
         self.assertFalse(contract["source"]["product_v23_selected_navigation_acceptance"]["bundle_built"])
+
+    def test_v13_requires_and_ships_shared_navigation_consumer_source(self):
+        self.assertTrue(set(m.NAVIGATION_CONSUMER_SOURCE) <= set(m.REQUIRED))
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        for name in m.NAVIGATION_CONSUMER_SOURCE:
+            with self.subTest(name=name):
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual(
+                    (self.root / "output/source" / name).read_bytes(),
+                    (self.source / name).read_bytes(),
+                )
+                incomplete = copy.deepcopy(manifest)
+                incomplete["inventory"].pop("source/" + name)
+                self.assertFailure("manifest_missing", m.validate_manifest, incomplete)
+        historical = copy.deepcopy(manifest)
+        historical["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12"
+        self.assertFailure("manifest_snapshot", m.validate_manifest, historical)
+        contract = json.loads((REPO / "contracts/forever-distribution-contract-v1.json").read_bytes())
+        self.assertTrue(set(m.NAVIGATION_CONSUMER_SOURCE) <= set(contract["source"]["required"]))
+        self.assertEqual(contract["source"]["linux_navigation_consumer_dependency_edges"],
+                         {"forever-navigation": ["forever-casc"]})
+        self.assertTrue(contract["source"]["navigation_consumer_acceptance"]["bundle_built"])
+        self.assertFalse(contract["source"]["qualified_navigation_consumer_candidate"]["release_authorized"])
+
+    def test_navigation_to_casc_edge_is_mandatory_with_existing_registry_closure(self):
+        lock = synthetic_lock()
+        m.validate_lock(lock.encode())
+        before, package = lock.split('name = "forever-navigation"', 1)
+        section, after = package.split("[[package]]", 1)
+        removed = section.replace('"forever-casc", ', "", 1)
+        self.assertNotEqual(removed, section)
+        self.assertFailure("lock_closure", m.validate_lock,
+                           (before + 'name = "forever-navigation"' + removed + "[[package]]" + after).encode())
 
     def test_missing_v23_source_contract_fixture_and_link_docs_reject_before_compile(self):
         missing = (

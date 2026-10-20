@@ -4933,3 +4933,69 @@ The failed inventory-shadowing harness attempt is retained separately and ran no
 build/native stage. The packaged-output byte-parity check is a separate run, not
 a repeated native test. Production manager/server, full-world and release remain
 open. See the [native checkpoint](forever-navigation.md#2026-10-20-native-sdk-accepts-the-eight-ground-navigation-tiles).
+
+## 2026-10-20: path-status diagnosis and selected consumer implementation
+
+PR #103 merged into `forever` at `ee0b1d3`; its six exact-head CI checks passed
+and the completed branch was removed. The accepted v12 artifacts retain their
+frozen source, binary and qualification scope.
+
+The RustyCore SDK now has an independently checked status-preserving path API
+and query-node admission. Its isolated SDK acceptance passed 62 tests, scoped
+formatting and clippy; the original root-lock refusal and invalid one-node
+negative run remain retained. The status-aware replay took 6.358s, preserved all
+256 earlier route outcomes and found six complete results plus 250 results with
+Detour's partial-result detail bit. No result carried out-of-nodes,
+buffer-too-small or failure bits. Receipt
+`ed12740f517e860c19611527ad85e10771dfad3f660a6d205491171007361dab`.
+This diagnoses the partial outcome, not its geometry/coverage/filter cause.
+
+Issue #104 now owns the complete selected-package library consumer. The shared
+canonical V23 codec, verification and bounded owned reads are authored in
+`forever-navigation::package_v23`; the CLI delegates to that owner. Strict SDK
+ground-payload ingress and checked manager operations are also authored. The
+optional RustyCore pathfinder/worker consumer is still being connected, and
+combined synthetic, actual-manager and real-package acceptance is pending.
+Those new sources have not been tested by the earlier SDK campaign.
+
+The corresponding-source profile advances to v13 for the shared admission API,
+tests, consumer contract and explicit Linux navigation-to-CASC edge. Its fresh
+packaging qualification remains pending. Complete extraction/geometry/world,
+server gameplay/runtime, Windows and release gates remain open. See the
+[consumer scope](forever-rustycore-navigation-consumer.md).
+
+
+## 2026-10-20: bounded selected consumer and reproducible v13 acceptance
+
+The shared package admission and owned reads pass 17 focused tests. The checked
+native SDK passes 77 tests and clippy; the public RustyCore worker passes ten
+synthetic cases plus one feature-disabled regression. Extractor qualification
+composes a retained broad run, one corrected diagnostic assertion and remaining
+crate continuation: 3,941 passed / 26 explicit ignores, with formatting, clippy,
+436 Forever contracts and 89 packaging tests passing. The initial compilation,
+private-visibility, moved-fixture and lint failures are retained. The ordinary
+campaign spent 1,241.240s in its attempt units, including negative attempts, so
+its 600-second performance target is not met; this is not a reset per retry.
+
+The actual public worker loads/unloads eight real MMap16 tiles, resolves all 98
+proximity queries and executes 256 cross-tile requests. Six complete / 250 partial
+results match every earlier raw SDK ordinal/status/length/target fact. No node
+exhaustion or small-buffer detail appears; final native tile/query counts are
+zero and inputs remain unchanged. Worker receipt:
+`8551686bc18b2c411ca6ed4e6504ee686f8a3c3a3a6abf643f3e63340b7c4901`.
+The 250 partial routes retain their unresolved geometry/coverage/filter cause.
+
+V13 then produced two identical fresh archives/binaries and a matching moved-source
+offline rebuild (174.512s), passed 47 packaged synthetic CLI/fixture cases
+(45.277s) and reproduced nine real baseline payloads (54.740s). The exact snapshot,
+archive, binary and receipt hashes are recorded in the distribution/consumer
+guides. The archive retains its definition-stage prose; the later status and
+consumer-limit correction is documentation-only. The actual consumer request
+limit is 256 references, while the lower-level SDK ceiling is 4,096.
+
+Issue #104 remains open for RustyCore publication: its general final gate still
+rejects inherited logical/session baseline drift. The physical source gate and
+focused external-path policy/actual metadata graph pass; no ceiling was reset.
+No server/world entry or release was activated. Full source/geometry/world,
+Windows, runtime/gameplay and release remain open. Detailed investigation and
+all real inputs/outputs stay outside Git in the private local laboratory.

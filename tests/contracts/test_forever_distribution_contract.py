@@ -39,10 +39,10 @@ class DistributionContract(unittest.TestCase):
         self.assertIn('keys', self.c['source']['forbidden'])
         self.assertIn('generated extraction output', self.c['source']['forbidden'])
 
-    def test_v12_profile_requires_v23_closure_without_packaging_claims(self):
+    def test_v13_profile_retains_v23_closure_without_packaging_claims(self):
         self.assertEqual(
             self.c['source']['profile'],
-            'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12',
+            'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13',
         )
         required_v23 = {
             'crates/forever-extractor/src/driver/navigation_v23.rs',
@@ -66,6 +66,37 @@ class DistributionContract(unittest.TestCase):
         self.assertFalse(acceptance['two_fresh_candidates_match'])
         self.assertFalse(acceptance['moved_source_rebuild_matches'])
         self.assertFalse(acceptance['packaged_v23_cli_accepted'])
+
+    def test_v13_consumer_source_and_local_edge_require_fresh_qualification(self):
+        source = self.c['source']
+        for name in (
+            'crates/forever-navigation/src/package_v23.rs',
+            'crates/forever-navigation/src/package_v23/schema.rs',
+            'crates/forever-navigation/src/package_v23/verify.rs',
+            'crates/forever-navigation/src/package_v23/tests.rs',
+            'crates/forever-navigation/src/package_v23/tests/fixtures.rs',
+            'crates/forever-navigation/src/package_v23/tests/fixtures/schema.rs',
+            'crates/forever-navigation/src/package_v23/tests/fixtures/consumer.rs',
+            'contracts/forever-rustycore-navigation-consumer-contract-v1.json',
+            'tests/contracts/test_forever_navigation_consumer_contract.py',
+            'docs/forever-rustycore-navigation-consumer.md',
+        ):
+            self.assertIn(name, source['required'])
+        self.assertEqual(source['linux_navigation_consumer_dependency_edges'],
+                         {'forever-navigation': ['forever-casc']})
+        self.assertIn('v12 remains historical', source['prior_profiles'])
+        self.assertEqual(source['workspace_crates'], 7)
+        acceptance = source['navigation_consumer_acceptance']
+        self.assertTrue(acceptance['bundle_built'])
+        self.assertTrue(acceptance['rustycore_manager_consumer_accepted'])
+        self.assertTrue(acceptance['rustycore_worker_consumer_accepted'])
+        self.assertFalse(acceptance['publication_authorized'])
+        qualified = source['qualified_navigation_consumer_candidate']
+        self.assertTrue(qualified['two_fresh_archives_and_binaries_identical'])
+        self.assertTrue(qualified['moved_source_offline_rebuild_identical'])
+        self.assertEqual(qualified['packaged_synthetic_cli_cases'], 47)
+        self.assertEqual(qualified['real_payloads_exact_baseline'], 9)
+        self.assertFalse(qualified['release_authorized'])
 
     def test_offline_recipe_and_rebuild_are_explicit(self):
         self.assertEqual(self.c['toolchain'], '1.98.0')

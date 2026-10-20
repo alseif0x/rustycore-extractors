@@ -71,8 +71,12 @@ The candidate must also retain `THIRD_PARTY_NOTICES.md` and the exact pinned
 Rust standard-library copyright index/license texts under toolchain-notices;
 these are notice documents, without a claim that every listed component links.
 The current source profile is
-`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12`;
-its explicit v23 source/test/contract/document closure is mandatory. The build
+`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13`;
+its explicit v23/shared-consumer source/test/contract/document closure is mandatory.
+V13 has bounded component/real-worker acceptance and matching fresh/offline-rebuild
+archives, 47 packaged CLI cases and a real nine-payload parity run. RustyCore publication and
+server/full-world acceptance remain open. V12 retains its frozen inputs.
+The build
 environment fixes one Cargo job. Qualification belongs to each frozen source
 snapshot, archive and executable; recorded earlier test counts and artifact
 comparisons retain their original inputs and scopes. Current qualification and
