@@ -213,6 +213,7 @@ impl Plan {
             "20" => 20,
             "21" => 21,
             "22" => 22,
+            "23" => 23,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -246,7 +247,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=22 => match field(&mut lines, "schema-catalog")? {
+            15..=23 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -262,7 +263,7 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=22 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=23 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
@@ -402,6 +403,8 @@ impl Plan {
                 PublicationProfile::Build70450NavigationV1
             } else if version == 22 {
                 PublicationProfile::Build70450SelectedGeometryV1
+            } else if version == 23 {
+                PublicationProfile::Build70450SelectedNavigationV1
             } else if version == 16 {
                 PublicationProfile::Build70450Db2OnlyV1
             } else if version == 15 {
@@ -450,7 +453,7 @@ impl Plan {
     /// Validate manually constructed plans before any source or output I/O.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.publication_profile.validate(self)?;
-        if !self.is_v14() && !self.is_v15() && !self.is_v18() && !self.is_v22() {
+        if !self.is_v14() && !self.is_v15() && !self.is_v18() && !self.is_v22() && !self.is_v23() {
             map_domain::validate(self)?;
         }
         if let Some(connections) = &self.offmesh {
@@ -482,6 +485,7 @@ impl Plan {
             && !self.is_v20()
             && !self.is_v21()
             && !self.is_v22()
+            && !self.is_v23()
         {
             return Err("product_plan_build");
         }
@@ -514,6 +518,7 @@ impl Plan {
             && !self.is_v20()
             && !self.is_v21()
             && !self.is_v22()
+            && !self.is_v23()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -585,7 +590,7 @@ impl Plan {
         {
             return Err("product_plan_dependencies");
         }
-        if self.contains(Component::Navigation) {
+        if self.contains(Component::Navigation) && !self.is_v23() {
             if !self.contains(Component::Terrain)
                 || !self.contains(Component::Collision)
                 || !self.contains(Component::Db2)
@@ -613,6 +618,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v23() {
+            return 23;
+        }
         if self.is_v22() {
             return 22;
         }
@@ -679,6 +687,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v23() {
+            return "forever-product-v23";
+        }
         if self.is_v22() {
             return "forever-product-v22";
         }
@@ -837,6 +848,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build-70450 selected navigation over sealed inputs.
+    pub const fn is_v23(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450SelectedNavigationV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -908,7 +927,7 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=22, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=23, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
@@ -1044,3 +1063,5 @@ mod v21_tests;
 
 #[cfg(test)]
 mod v22_tests;
+#[cfg(test)]
+mod v23_tests;

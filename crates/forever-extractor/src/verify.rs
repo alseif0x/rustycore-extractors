@@ -64,6 +64,22 @@ pub fn verify_links(
     verify_inner(plan, output, expected, Scope::Links)
 }
 
+/// Linux-only offline verification that also pins and deeply verifies the
+/// sealed terrain and VMap packages named by a v23 package's coverage.
+#[cfg(target_os = "linux")]
+pub fn verify_selected_navigation_links(
+    plan: &Plan,
+    output: &Path,
+    expected: Option<Context>,
+    inputs: &crate::driver::SelectedNavigationInputs<'_>,
+) -> Result<package::Summary, Error> {
+    if !plan.is_v23() {
+        return Err("product_navigation_profile".into());
+    }
+    crate::driver::admit(plan)?;
+    crate::driver::navigation_v23::verify_links(plan, output, expected, inputs)
+}
+
 #[cfg(target_os = "linux")]
 fn uses_target_metadata_preflight(plan: &Plan) -> bool {
     plan.is_gt_cameras()
@@ -80,6 +96,13 @@ fn verify_inner(
     scope: Scope,
 ) -> Result<package::Summary, Error> {
     crate::driver::admit(plan)?;
+    #[cfg(target_os = "linux")]
+    if plan.is_v23() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::verify_intrinsic(plan, output, expected);
+    }
     #[cfg(target_os = "linux")]
     if plan.is_v22() {
         return compatible_vmaps::verify_selected_geometry_v22(plan, output, expected);

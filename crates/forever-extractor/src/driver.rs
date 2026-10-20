@@ -48,6 +48,8 @@ mod execution;
 #[cfg(target_os = "linux")]
 pub(crate) mod inspect_db2;
 #[cfg(target_os = "linux")]
+pub(crate) mod navigation_v23;
+#[cfg(target_os = "linux")]
 pub(crate) mod probe_encoding;
 #[cfg(target_os = "linux")]
 pub(crate) mod terrain_v12;
@@ -66,6 +68,9 @@ const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 /// Admit the exact explicitly selected physical profile, offline. Opening alone
 /// does not prove that the selected files are present or decodable.
 pub fn open(plan: &Plan, client: &Path) -> Result<LocalStore, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     open_inner(plan, client, None)
 }
 
@@ -109,6 +114,9 @@ pub fn open_with_keys(
     client: &Path,
     keys: forever_casc::keys::Keyring,
 ) -> Result<LocalStore, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     open_inner(plan, client, Some(keys))
 }
 
@@ -215,7 +223,8 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.map_domain.is_some()
+    if plan.is_v23()
+        || plan.map_domain.is_some()
         || plan.is_gt_cameras()
         || plan.is_v10()
         || plan.is_available_terrain()
@@ -244,6 +253,9 @@ pub fn inspect(
     producer: [u8; 32],
     keys: Option<crate::input::SuppliedKeys>,
 ) -> Result<Context, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     admit(plan)?;
     validate_keys(plan, keys.is_some())?;
     #[cfg(windows)]
@@ -269,6 +281,9 @@ fn validate_keys(plan: &Plan, present: bool) -> Result<(), Error> {
 }
 
 pub fn context(plan: &Plan, store: &LocalStore, producer: [u8; 32]) -> Result<Context, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     plan.validate()?;
     if store.build().build != plan.build {
         return Err("product_build_mismatch".into());
@@ -295,7 +310,39 @@ pub fn extract(
     producer: [u8; 32],
     resume: bool,
 ) -> Result<package::Summary, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     extract_inner(plan, client, output, producer, resume, None, None)
+}
+
+/// Inputs required by the additive Linux selected-navigation profile. The
+/// package roots and their canonical producer plans are verified while held
+/// under the package readers' shared locks.
+pub struct SelectedNavigationInputs<'a> {
+    pub terrain_package: &'a Path,
+    pub terrain_plan: &'a Path,
+    pub vmap_package: &'a Path,
+    pub vmap_plan: &'a Path,
+}
+
+/// Generate one v23 selected-map MMap package from independently verified v20
+/// terrain and v22 selected VMap packages. This does not claim full-client
+/// coverage or Detour/runtime parity.
+#[cfg(target_os = "linux")]
+pub fn extract_selected_navigation(
+    plan: &Plan,
+    client: &Path,
+    output: &Path,
+    producer: [u8; 32],
+    resume: bool,
+    inputs: &SelectedNavigationInputs<'_>,
+) -> Result<package::Summary, Error> {
+    if !plan.is_v23() {
+        return Err("product_navigation_profile".into());
+    }
+    admit(plan)?;
+    navigation_v23::extract(plan, client, output, producer, resume, inputs)
 }
 
 /// The key input is explicitly loaded once and its source file is protected
@@ -308,6 +355,9 @@ pub fn extract_with_keys(
     resume: bool,
     keys: crate::input::SuppliedKeys,
 ) -> Result<package::Summary, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     extract_inner(plan, client, output, producer, resume, Some(keys), None)
 }
 
@@ -324,6 +374,9 @@ pub fn extract_disk(
     keys: Option<crate::input::SuppliedKeys>,
     scratch: &Path,
 ) -> Result<package::Summary, Error> {
+    if plan.is_v23() {
+        return Err("product_navigation_inputs_required".into());
+    }
     extract_inner(plan, client, output, producer, resume, keys, Some(scratch))
 }
 
@@ -1246,6 +1299,9 @@ mod disk_admission_tests {
         );
     }
 }
+#[cfg(all(test, target_os = "linux"))]
+#[path = "driver/v23_api_tests.rs"]
+mod v23_api_tests;
 #[cfg(test)]
 mod v9_tests;
 

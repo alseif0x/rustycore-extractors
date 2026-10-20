@@ -21,6 +21,7 @@ pub enum PublicationProfile {
     Build70450Db2GtCamerasV1,
     Build70450NavigationV1,
     Build70450SelectedGeometryV1,
+    Build70450SelectedNavigationV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -172,6 +173,31 @@ impl PublicationProfile {
             }
             return Ok(());
         }
+        if self == Self::Build70450SelectedNavigationV1 {
+            if plan.build != 70450 {
+                return Err("product_plan_build");
+            }
+            if plan.schema_catalog != SchemaCatalog::WowDbDefs70450V1 {
+                return Err("product_plan_schema_catalog");
+            }
+            if plan.components != Component::Navigation.bit()
+                || !matches!(plan.collision_storage, CollisionStorage::Resident)
+                || plan.decryption != super::Decryption::Disabled
+                || plan.map_domain.is_some()
+                || !plan.db2.is_empty()
+                || plan.terrain != Selection::None
+                || !matches!(plan.navigation, Selection::Map(_))
+                || plan.offmesh.is_some()
+                || !plan.pack
+                || plan.big_base_unit
+                || plan.skip_liquids
+                || plan.maximum_slope != 55
+                || plan.non_steep_slope != 55
+            {
+                return Err("product_plan_component_scope");
+            }
+            return Ok(());
+        }
         let (build, catalog, components) = match self {
             Self::Legacy
             | Self::Build70425CompatibleCollisionV1
@@ -179,7 +205,8 @@ impl PublicationProfile {
             | Self::Build70450CollisionProvidedKeysV1
             | Self::Build70450CompatibleTerrainV1
             | Self::Build70450NavigationV1
-            | Self::Build70450SelectedGeometryV1 => {
+            | Self::Build70450SelectedGeometryV1
+            | Self::Build70450SelectedNavigationV1 => {
                 unreachable!("profile returned above")
             }
             Self::Build70338Db2GtCamerasV1 => (
