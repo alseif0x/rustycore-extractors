@@ -2865,3 +2865,36 @@ source/geometry, off-mesh/full-world, Trinity parity, RustyCore runtime/server,
 Windows and release acceptance remain open. Input coverage remains
 producer-reported and `full_extractor_complete` remains false. See the
 [redacted report](acceptance/forever-v23-selected-navigation-ground-70450-20261020.json).
+
+## 2026-10-20: native SDK accepts the eight ground-navigation tiles
+
+An independent native SDK probe now accepts the original ground package above.
+Strict v16 readers retain the original headers, explicitly project the validated
+global parameters, and pass the unchanged Detour v7 payloads through RustyCore's
+existing typed SDK API. All eight tiles load and unload; all eight are present
+after loading and absent after removal. The legacy v15 parser rejects every v16
+tile as expected. Queries are dropped before tile removal.
+
+All 98 nearest-poly attempts succeed, with a result for every loaded tile. A
+bounded 256-route campaign finds six complete paths crossing distinct endpoint
+tiles; 250 paths do not reach their requested final polygon. The cause of those
+partial routes is not established; this is not complete-connectivity acceptance. Limits are 4,096 query
+nodes, 256 path entries and 128 candidate points. The complete offline build/probe
+campaign takes 12.159 seconds (10.681s build, 0.681s native invocation), under
+observed 900s / 3-GiB / one-CPU / 64-task service limits. All 18 integrity checks,
+source/input pins, the preserved integration dirty state and 15 authored files
+stay stable. Receipt:
+`be0c80742301fc2f650a7bea42ddaa64c5a89307b05cbfe0426c588e49a9d4fa`.
+
+A prior harness inventory attempt failed before compilation because a local
+variable shadowed a hash helper. It remains retained; a new recipe corrected
+that naming error and added whitelisted function/line diagnostics. No product
+Rust or dependency changed.
+
+The native probe consumes the original ground outputs. Separately, the qualified
+v12 packaged-binary run reproduces all nine navigation payloads byte-for-byte;
+it is not a second native invocation. Production `MMapManager`/filename loading,
+complete source/geometry, off-mesh/full-world, Trinity parity, runtime/server,
+Windows and release acceptance remain open. See the
+[redacted SDK report](acceptance/forever-v23-ground-native-sdk-20261020.json) and
+[distribution qualification](forever-distribution.md).

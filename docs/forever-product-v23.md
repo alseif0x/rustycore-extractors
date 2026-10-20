@@ -3,6 +3,8 @@
 > A bounded real Linux map-48 CLI run passed ten lifecycle cases. Complete
 > extraction, full-world resources and RustyCore runtime acceptance remain open.
 > The connected synthetic workflow and final extractor-target checks also pass.
+> A later nonempty-terrain run produces eight MMaps; the qualified local Linux
+> package reproduces all nine navigation payloads and passes both verifiers.
 
 V23 adds a Linux command-line route for build **70450** navigation from two
 already sealed packages: v20 terrain and v22 selected-map geometry. It uses
@@ -127,8 +129,26 @@ took 52.846 seconds under observed 900-second / 3-GiB / one-CPU / 64-task limits
 source, binary, plans and both input trees remained stable.
 
 This establishes one bounded navigation package with nonempty real terrain
-inputs. The new package has no independent SDK or production manager/server
-acceptance; earlier native results retain their original inputs. Complete-source,
+inputs. A subsequent typed native SDK probe accepts its original eight outputs;
+production manager/server acceptance remains open. Earlier native results retain
+their original inputs. Complete-source,
 full-world, Trinity parity, Windows and release gates remain open. See the
 [ground checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain)
 and [redacted report](acceptance/forever-v23-selected-navigation-ground-70450-20261020.json).
+
+## Qualified local Linux v12 candidate
+
+The local archive frozen at `719faee` has two matching fresh offline builds and
+a matching moved-source rebuild. Its extracted binary passes 37 synthetic product
+cases and ten v23 CLI/fixture cases. A separately executed real ground run passed
+all four commands in 54.066 seconds and reproduced the earlier eight MMap tiles
+and global byte-for-byte; metadata records the new packaged producer identity.
+This adds bounded packaged-binary acceptance, with no release or runtime claim.
+See the [distribution qualification](forever-distribution.md).
+
+The later [native SDK checkpoint](forever-navigation.md#2026-10-20-native-sdk-accepts-the-eight-ground-navigation-tiles)
+loads and unloads the original eight ground tiles, resolves 98 nearest-poly
+queries and finds six complete cross-tile routes in 256 attempts; the other 250
+do not reach the requested final polygon and remain unqualified. This uses a
+strict typed adapter and preserves v16 headers/payloads; it does not accept the
+legacy v15 reader, production filenames/manager or server runtime.

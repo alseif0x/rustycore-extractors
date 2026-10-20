@@ -1,0 +1,144 @@
+{
+  "distribution": {
+    "archive_sha256": "a3ff0d9d91bcbe10df88b8193b02c31f96b83f34b33146b810e5551c808455e3",
+    "binary_sha256": "afbc1618f3fad9c420d0ee0726005b6246e9b1aa9edac50e37e1f3e42de387aa",
+    "elapsed_seconds": 171.276,
+    "epoch": 1791720000,
+    "inventory_files": 962,
+    "manifest_sha256": "4fd1e2b0241dc364e3df97ef60866987906bbdc009543967ee79d18542c5cce0",
+    "moved_offline_rebuild_identical": true,
+    "two_fresh_archives_identical": true,
+    "two_fresh_binaries_identical": true
+  },
+  "full_extractor_complete": false,
+  "limits": {
+    "distribution_campaign": {
+      "cpu_quota_percent": 100,
+      "memory_bytes": 3221225472,
+      "observed_before_execution": true,
+      "runtime_seconds": 1800,
+      "tasks_max": 64
+    },
+    "packaged_real_navigation": {
+      "cpu_quota_percent": 100,
+      "memory_bytes": 3221225472,
+      "observed_before_execution": true,
+      "runtime_seconds": 900,
+      "tasks_max": 64
+    },
+    "packaged_synthetic_cli": {
+      "cpu_quota_percent": 100,
+      "memory_bytes": 3221225472,
+      "observed_before_execution": true,
+      "runtime_seconds": 600,
+      "tasks_max": 64
+    }
+  },
+  "not_established": [
+    "full_world",
+    "complete_geometry",
+    "trinity_parity",
+    "production_mmap_manager",
+    "rustycore_runtime_server",
+    "windows_delivery",
+    "key_recovery"
+  ],
+  "packaged_real_navigation": {
+    "artifact_bytes": 3787736,
+    "artifacts": 10,
+    "baseline_tree_unchanged": true,
+    "build": 70450,
+    "client_root_identity_unchanged": true,
+    "commands": [
+      {
+        "elapsed_seconds": 0.001,
+        "exit_code": 0,
+        "name": "inspect"
+      },
+      {
+        "elapsed_seconds": 40.447,
+        "exit_code": 0,
+        "name": "extract"
+      },
+      {
+        "elapsed_seconds": 0.064,
+        "exit_code": 0,
+        "name": "verify"
+      },
+      {
+        "elapsed_seconds": 9.934,
+        "exit_code": 0,
+        "name": "verify-links"
+      }
+    ],
+    "component_mask": 32,
+    "elapsed_seconds": 54.066,
+    "empty_outcomes": 3,
+    "geometry_tree_unchanged": true,
+    "inventory_sha256": "5024670f801913846d113b64c79c30cd1e3e7974dcc558989e53459f6d06439a",
+    "locale": "esES",
+    "navigation_payload_parity": {
+      "baseline_bytes": 3782524,
+      "baseline_file_count": 9,
+      "baseline_inventory_sha256": "b44a4471c711fec4656f7deec84d1ebb378eeec7ca104c2d5ce3b411b605a3ba",
+      "byte_equal": true,
+      "candidate_bytes": 3782524,
+      "candidate_file_count": 9,
+      "candidate_inventory_sha256": "b44a4471c711fec4656f7deec84d1ebb378eeec7ca104c2d5ce3b411b605a3ba",
+      "digest_domain": "selected-packaged-v23-navigation-payload-inventory-v1",
+      "scope": "relative .mmap/.mmtile path, byte length, and SHA-256 equality only"
+    },
+    "nonempty_mmap_tiles": 8,
+    "source_guard_unchanged": true,
+    "status": "accepted",
+    "terrain_input_tiles": 6,
+    "terrain_tree_unchanged": true
+  },
+  "packaged_synthetic_cli": {
+    "bundle_inventory_verified": true,
+    "elapsed_executed_campaign_seconds": 44.397,
+    "network_syscall_lines": 0,
+    "network_trace_lines": 27,
+    "network_trace_only_sigchld": true,
+    "source_unchanged": true,
+    "synthetic_product_cases": 37,
+    "v23_cli_and_fixture_cases": 10
+  },
+  "platform": "linux-x86_64",
+  "publication": "local-candidate",
+  "qualification_note": "The archive is frozen at source commit719faee8392a1ce2d1c3193a4c6eea025b9dfca3. Its source-profile-definition checkpoint records acceptance as pending. This subsequent qualification records executed evidence without rewriting the frozen archive or changing production Rust, manifests, lockfile or dependencies.",
+  "receipts": {
+    "distribution_sha256": "feddacb4e6affcaeb8eb6d9a3b8732af2403833b8d3b6073dc6272ab292687a1",
+    "packaged_cli_original_wrapper_sha256": "b0f19383e512f858eaa440a1b5009743d3100bc9ed7bbbe5f8ec3bd10758ae26",
+    "packaged_cli_root_review_sha256": "dd54764ad6f7e73d06032b586971b2666fa5fc677e10f5222c3ed323eab9d556",
+    "packaged_real_navigation_sha256": "4e695fcfb45767f42a72a62e39739b83c559aa81f6a777bbf7a4b4b599109c13"
+  },
+  "release_authorized": false,
+  "retained_harness_findings": [
+    "Fresh build workspace is not an unpacked distribution bundle; verify the exact archive extraction. The rejected preflight ran no product command.",
+    "The parent v23 test trace contains only 27 SIGCHLD exit notifications. All 47 cases passed; the failed empty-trace wrapper and separate root review are preserved. No commands were repeated to replace those results."
+  ],
+  "runtime_linkage": {
+    "maximum_recorded_glibc_symbol_version": "GLIBC_2.34",
+    "needed": [
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "universal_linux_abi_claim": false
+  },
+  "schema": "forever-v23-distribution-v12-local-qualification-v1",
+  "source_commit": "719faee8392a1ce2d1c3193a4c6eea025b9dfca3",
+  "source_profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12",
+  "source_snapshot_files": 905,
+  "source_snapshot_sha256": "0e71112571234dc244f4dfe4399daf873bf49cd676ce4839416259da93e19578",
+  "source_unchanged": true,
+  "status": "qualified_local_candidate",
+  "synthetic_checks": {
+    "contracts": 439,
+    "packaging_tests": 87,
+    "receipt_sha256": "ee87112768c38525cc55345081f1cdf46e199304572789d3259272d7afd15eb4",
+    "source_files_guarded": 1344
+  }
+}

@@ -70,12 +70,15 @@ recorded license closure. See `docs/forever-distribution.md` and
 The candidate must also retain `THIRD_PARTY_NOTICES.md` and the exact pinned
 Rust standard-library copyright index/license texts under toolchain-notices;
 these are notice documents, without a claim that every listed component links.
-Executed local acceptance passes 41 packaging tests and 82 contracts, two
-identical fresh archives/binaries and a moved-source offline rebuild. Fifteen
-independent regressions pass; the packaged binary passes 37 CLI cases and
-preserves 110 prior synthetic artifact hashes plus the real 33-artifact batch.
-Production Rust/dependencies remain unchanged; Windows, full-world and real
-complete geometry/runtime acceptance stay open. No publication is authorized.
+The current source profile is
+`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12`;
+its explicit v23 source/test/contract/document closure is mandatory. The build
+environment fixes one Cargo job. Qualification belongs to each frozen source
+snapshot, archive and executable; recorded earlier test counts and artifact
+comparisons retain their original inputs and scopes. Current qualification and
+retained failures live in `docs/forever-distribution.md` and its structured
+reports. Windows, full-world and real complete geometry/runtime acceptance
+stay open. No publication is authorized.
 
 ## Fixed v0.1 target
 

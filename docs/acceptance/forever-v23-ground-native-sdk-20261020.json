@@ -1,0 +1,62 @@
+{
+  "adapter_contract": "original v16 headers, exact unchanged Detour v7 payloads, explicitly projected validated global parameters",
+  "build_elapsed_seconds": 10.681,
+  "candidate_points_limit": 128,
+  "cause_of_partial_routes_established": false,
+  "complete_cross_tile_route_found": true,
+  "complete_cross_tile_routes": 6,
+  "expected_legacy_v15_rejections": 8,
+  "full_extractor_complete": false,
+  "guards": {
+    "all18_integrity_checks_pass": true,
+    "authored_files_unchanged": 15,
+    "inputs_and_output_tree_unchanged": true,
+    "source_and_preserved_integration_work_unchanged": true
+  },
+  "input": "original selected-ground v23 eight-tile package",
+  "input_v23_receipt_sha256": "f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900",
+  "limits": {
+    "cpu_quota_percent": 100,
+    "memory_bytes": 3221225472,
+    "observed_before_execution": true,
+    "runtime_seconds": 900,
+    "tasks_max": 64
+  },
+  "native_elapsed_seconds": 0.681,
+  "nearest_poly_attempts": 98,
+  "nearest_poly_successes": 98,
+  "nearest_resolved_for_every_loaded_tile": true,
+  "not_established": [
+    "production_mmap_manager",
+    "filename_acquisition",
+    "full_world",
+    "offmesh_coverage",
+    "trinity_oracle_parity",
+    "rustycore_server_gameplay",
+    "windows_delivery",
+    "release_publication"
+  ],
+  "query_nodes_limit": 4096,
+  "receipt_sha256": "be0c80742301fc2f650a7bea42ddaa64c5a89307b05cbfe0426c588e49a9d4fa",
+  "related_packaged_output": {
+    "nine_navigation_payloads_byte_equal": true,
+    "second_native_run_performed": false,
+    "separate_real_receipt_sha256": "4e695fcfb45767f42a72a62e39739b83c559aa81f6a777bbf7a4b4b599109c13"
+  },
+  "retained_failed_harness_attempt": {
+    "build_or_native_ran": false,
+    "cause": "a local digest name shadowed the inventory helper; corrected in a new retained recipe",
+    "receipt_sha256": "ec122726360176bc1ef94710ec2fe8e58d0d91e9468ed739d8f7ef5810c39d71"
+  },
+  "root_review_sha256": "a2755c9791d3993b7531d91526b2cd34b8ce71c20a3e7bf7b541ab55bc368d72",
+  "route_attempts": 256,
+  "route_attempts_all_complete_claim": false,
+  "route_outcome_review_sha256": "bf5acf9a56cb2f5958e2b5c992f85269e80724456bb8723ab9ac562a9160e23f",
+  "route_polys_limit": 256,
+  "schema": "forever-v23-ground-native-sdk-acceptance-v1",
+  "status": "accepted",
+  "target_not_last_poly": 250,
+  "tiles_loaded": 8,
+  "tiles_removed": 8,
+  "total_elapsed_seconds": 12.159
+}
