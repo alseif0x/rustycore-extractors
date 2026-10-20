@@ -5,11 +5,27 @@
 Issue #104 carries the Linux build-70450 selected-navigation consumer. Its
 shared package API, checked native ingress and optional RustyCore manager/worker
 have passed bounded local synthetic and real-package acceptance. The RustyCore
-implementation is published in [RustyCore PR #1454](https://github.com/alseif0x/rustycore/pull/1454).
-Its merge remains pending. The general final still rejects inherited
-architecture/session baseline drift; publication uses only the existing
-experimental exception for that unchanged debt. Server activation and gameplay
-acceptance remain open.
+implementation was squash merged into `forever` in
+[PR #1454](https://github.com/alseif0x/rustycore/pull/1454) at
+`984a0c6abc6ac0b00bacaaaf58224058d7297df3`. Its tree
+`7d87fdb8416dd871f97314719ecd1527a29f08bf` matches the qualified publication
+tree of `803449bd030ca68d48b906880b78ca8a31810751`, based on unchanged
+`b8330b1b5ba50c7ec870b8ca9f1f0969df8e667a`. This confirms the bounded consumer
+merge; it does not transfer code qualification or its receipts to the merge
+commit. The general final still rejects inherited architecture/session baseline
+drift. Server activation, complete geometry, full-world and gameplay acceptance
+remain open. Extractor issue #104 tracks only this bounded consumer integration.
+
+Separate README-only [RustyCore PR #1456](https://github.com/alseif0x/rustycore/pull/1456)
+was squash merged at `33820338567870954b9a4a8003aa417efefb12f1`. It documents
+manual pinned sibling-source preparation before Cargo plus Rust product build,
+profile and verification examples. It does not publish the CI bootstrap
+amendment. Historical candidate `c89279417bc39a97c703c73cc485099a852640af`
+remains unpublished and preserved in its original detached checkout and
+receipts. The local `forever-navigation-ci-bootstrap` branch prepares a follow-up
+with separate qualification. The workflow change remains absent after the earlier
+push rejection for missing OAuth workflow scope; no retry or bypass was
+attempted.
 
 `forever_navigation::package_v23` owns the canonical V23 coverage and source
 identity codec. The extractor CLI delegates output-package verification to
@@ -135,9 +151,10 @@ Windows or release acceptance is implied.
 
 ## Frozen v13 package qualification
 
-The later core publication changes no shipped extractor Rust, dependency,
-manifest, lock or packaging recipe. Its status update does not requalify a new
-archive or transfer the frozen v13 qualification to a later Git SHA.
+The core consumer and README-guide publications change no shipped extractor
+Rust, dependency, manifest, lock or packaging recipe. Their status updates do
+not requalify a new archive or transfer the frozen v13 qualification to later
+Git SHAs.
 
 The frozen corresponding-source digest is
 `577d46cd2952cf306c5fa404ba87bd5881e1e6701e14b4f6f56f3ea2cabbf85b`.
@@ -158,7 +175,7 @@ Its eight tile payloads and global are byte-identical to the retained baseline:
 nine payloads / 3,782,524 bytes. Input trees and the package remained unchanged.
 See the exact receipt hashes in the [contract](../contracts/forever-rustycore-navigation-consumer-contract-v1.json).
 
-## Isolated core qualification and publication — 2026-10-20
+## Isolated core qualification and publication — 2026-10-20 (historical publication checkpoint)
 
 Core code `1bf5ee4b48d8f729e806f7acddfdebad01025b58` passes workspace
 all-target compilation, 5,933 tests across four affected libraries (three
@@ -176,11 +193,13 @@ included; original pending terrain, configuration and source files are preserved
 
 Publication commit `803449bd030ca68d48b906880b78ca8a31810751` adds only the two
 owning core checkpoint documents after code qualification. Its final reproduces
-exactly the same inherited logical/Session rejection and no new failure. The
-existing exception authorizes experimental branch publication; it does not
-authorize merging or activating the server. The core PR and issue #104 remain
-open. These isolated attempts and closing validation total 1,397.524s; they
-do not reset the earlier failed ordinary 600-second target.
+exactly the same inherited logical/Session rejection and no new failure. At that
+publication checkpoint, the existing exception authorized experimental branch
+publication; it did not authorize merging or activating the server, and the
+core PR and issue #104 were still open. The subsequent squash merge is recorded
+in the current implementation scope above. These isolated attempts and closing
+validation total 1,397.524s; they do not reset the earlier failed ordinary
+600-second target.
 
 Code qualification receipt:
 `fe9f725ff4de50441ace06613be4b028bb723cbab4a1cbde9cdbc75107ea8e41`.
@@ -189,14 +208,15 @@ Closing publication review:
 These receipts qualify the stated component operation; complete real geometry,
 full-world resources and server/gameplay acceptance remain open.
 
-## Local core bootstrap amendment — 2026-10-20
+## Local core bootstrap amendment — 2026-10-20 (historical status at push rejection)
 
-Core candidate `c89279417bc39a97c703c73cc485099a852640af` records the pinned
+Historical core candidate `c89279417bc39a97c703c73cc485099a852640af` records the pinned
 source bootstrap for the adjacent extractor checkout at commit
 `3baac307329bd0391cd7f083a55e03b982081b27` and lock SHA-256
 `8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27`. It is
-unpublished: GitHub rejected the push for missing OAuth workflow scope, so PR
-#1454 remains at `803449bd`; no retry or bypass was attempted.
+unpublished at this checkpoint: GitHub rejected the push for missing OAuth
+workflow scope, and PR #1454 then pointed at `803449bd`; no retry or bypass was
+attempted. The later core merge did not include this local workflow amendment.
 
 Bootstrap evidence includes actionlint 1.7.12, Bash syntax, 16 synthetic cases,
 the exact public fetch/checksum and offline locked metadata for 38 packages with
@@ -207,4 +227,8 @@ and the 52.636-second core final receipt, are in the contract. That final has
 the same inherited rejection and no new failure waived. The historical 1bf5
 code qualification and 803449 publication remain unchanged; no new general final
 or server/runtime acceptance is claimed. Rust, manifests, lock and dependency
-policy are unchanged by this amendment.
+policy are unchanged by this amendment. The PR #1454 merge is now recorded in
+the current implementation scope above. The original candidate remains in its
+old detached checkout and receipts. The rebased follow-up needs its own
+committed-candidate qualification; the historical receipts do not automatically
+qualify it. The CI bootstrap remains unpublished.

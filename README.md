@@ -80,21 +80,29 @@ source of truth; the table below summarizes the boundaries.
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
 | Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
 | Collision / VMaps | Linux v22 has bounded real selected-map extraction and verification. The latest esES geometry input contains 149 artifacts / 2,199,694 bytes and feeds the [ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). Placement-only models, available Map coverage and excluded GameObject globals remain explicit. | Complete geometry, C++/TrinityCore parity, RustyCore runtime and full-world/whole-client coverage remain open |
-| Navigation / MMaps | Linux v23 generated and verified navigation with six real terrain tiles: eight nonempty MMap tiles, three empty outcomes, a 40-byte global and coverage (ten artifacts / 3,787,736 bytes). [Ground checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). The optional RustyCore library worker admits the original eight containers, resolves 98 proximity queries and preserves all 256 raw SDK route outcomes: six complete and 250 partial. It unloads all tiles and instance queries; the packaged executable reproduces the payloads. The earlier empty-terrain package separately passed ten CLI lifecycle cases. | Complete-source/geometry, movement/path execution, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
+| Navigation / MMaps | Linux v23 generated and verified navigation with six real terrain tiles: eight nonempty MMap tiles, three empty outcomes, a 40-byte global and coverage (ten artifacts / 3,787,736 bytes). [Ground checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). The optional RustyCore library worker, merged in PR #1454, admits the original eight containers, resolves 98 proximity queries and preserves all 256 raw SDK route outcomes: six complete and 250 partial. It unloads all tiles and instance queries; the packaged executable reproduces the payloads. The earlier empty-terrain package separately passed ten CLI lifecycle cases. | Complete-source/geometry, movement/path execution, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
 | Packaging | Local Linux v13 candidate: two identical fresh archives/binaries, a matching moved-source offline rebuild, 47 synthetic CLI/fixture cases and nine real navigation payloads identical to the baseline ([qualification](docs/forever-distribution.md)) | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
 
 The [selected-navigation consumer](docs/forever-rustycore-navigation-consumer.md)
-is being integrated under [#104](https://github.com/alseif0x/rustycore-extractors/issues/104).
-Its shared package API and native manager/worker now pass bounded local acceptance.
+is merged into RustyCore's `forever` branch via
+[PR #1454](https://github.com/alseif0x/rustycore/pull/1454), at squash commit
+`984a0c6`. Its shared package API and native manager/worker pass bounded local
+acceptance. Exact source and merge identities are recorded in the consumer
+guide and [#104](https://github.com/alseif0x/rustycore-extractors/issues/104).
 The v13 source has matching fresh archives and a moved-source offline rebuild;
 the packaged binary also passes synthetic and real navigation checks. The core
-integration is published in [RustyCore PR #1454](https://github.com/alseif0x/rustycore/pull/1454),
-with 5,944 scoped tests passing and three ignored. Its merge, complete geometry
-and server/world acceptance remain open. The inherited general validation
-rejection is retained. Historical v12 evidence keeps its frozen scope.
-A local CI bootstrap amendment remains unpublished pending the required GitHub
-OAuth workflow scope.
+integration's historical qualification records 5,944 scoped tests passing and
+three ignored; the inherited general validation rejection remains. The merge
+does not change complete-geometry or server/world acceptance. Historical v12
+evidence keeps its frozen scope.
+
+Separate README-only [RustyCore PR #1456](https://github.com/alseif0x/rustycore/pull/1456)
+was merged at `338203385`. Follow its
+[extraction-tools guide](https://github.com/alseif0x/rustycore/blob/forever/README.md#forever-extraction-tools)
+for manual pinned sibling-source preparation before Cargo, compilation and
+package verification. CI workflow bootstrapping remains a separate unpublished
+follow-up pending the required GitHub OAuth workflow scope.
 
 ### Current build-specific scope
 

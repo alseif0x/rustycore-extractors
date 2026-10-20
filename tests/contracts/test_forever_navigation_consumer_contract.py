@@ -30,7 +30,9 @@ class NavigationConsumerContract(unittest.TestCase):
         self.assertEqual(contract["scope"]["selected_maps_per_package"], 1)
         self.assertEqual(contract["scope"]["offmesh_connections"], 0)
         self.assertFalse(contract["scope"]["server_activation"])
-        for item in ("no full-world geometry or navigation acceptance",
+        for item in ("no new extractor product or archive qualification",
+                     "no complete real geometry acceptance",
+                     "no full-world geometry or navigation acceptance",
                      "no server gameplay, creation or world-entry acceptance",
                      "no recovered encryption keys",
                      "no Windows delivery or release authorization"):
@@ -106,10 +108,10 @@ class NavigationConsumerContract(unittest.TestCase):
         self.assertEqual(owner["consumer_defaults"]["maximum_loaded_artifact_bytes"], 128 * 1024 * 1024)
         self.assertIn("strict native ingress malformed-index, size, numeric, portal, detail and BV rejection cases before FFI",
                       self.contract["acceptance"]["required"])
-        publication = self.contract["rustycore_publication"]
-        self.assertEqual(self.contract["status"], "bounded_local_accepted_core_merge_pending")
+        self.assertEqual(self.contract["status"], "bounded_local_accepted_core_merged")
         self.assertEqual(owner["implementation_status"], self.contract["status"])
-        self.assertEqual(publication["state"], "draft_pr_published_merge_pending")
+        publication = self.contract["rustycore_publication"]
+        self.assertEqual(publication["state"], "bounded_consumer_squash_merged")
         self.assertEqual(publication["pull_request"], "https://github.com/alseif0x/rustycore/pull/1454")
         for field in ("tested_code_commit", "publication_commit", "base_commit"):
             self.assertRegex(publication[field], r"^[0-9a-f]{40}$")
@@ -117,21 +119,54 @@ class NavigationConsumerContract(unittest.TestCase):
         self.assertEqual(publication["component_tests_ignored"], 3)
         self.assertEqual(publication["tested_code_commit"], "1bf5ee4b48d8f729e806f7acddfdebad01025b58")
         self.assertEqual(publication["publication_commit"], "803449bd030ca68d48b906880b78ca8a31810751")
+        self.assertEqual(publication["base_commit"], "b8330b1b5ba50c7ec870b8ca9f1f0969df8e667a")
+        self.assertEqual(publication["merged_branch"], "forever")
+        self.assertEqual(publication["merged_commit"], "984a0c6abc6ac0b00bacaaaf58224058d7297df3")
+        self.assertEqual(publication["merge_strategy"], "squash")
+        self.assertTrue(publication["merged"])
+        self.assertEqual(
+            publication["tree_identity"],
+            {
+                "published_qualified_tree": "7d87fdb8416dd871f97314719ecd1527a29f08bf",
+                "merged_tree": "7d87fdb8416dd871f97314719ecd1527a29f08bf",
+                "matches": True,
+            },
+        )
+        guide = publication["readme_guide"]
+        self.assertEqual(guide["pull_request"], "https://github.com/alseif0x/rustycore/pull/1456")
+        self.assertEqual(guide["merged_commit"], "33820338567870954b9a4a8003aa417efefb12f1")
+        self.assertEqual(guide["merge_strategy"], "squash")
+        self.assertIn("README-only", guide["scope"])
+        self.assertEqual(guide["extractor_source_commit"], "3baac307329bd0391cd7f083a55e03b982081b27")
+        self.assertEqual(
+            guide["extractor_cargo_lock_sha256"],
+            "8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27",
+        )
+        self.assertFalse(guide["ci_bootstrap_included"])
         self.assertTrue(publication["documentation_only_delta_after_code_qualification"])
         self.assertTrue(publication["sdk_physical_failure_repaired_without_ceiling_change"])
         self.assertTrue(publication["existing_inherited_debt_experimental_publication_exception_used"])
-        for field in ("general_final_accepted", "new_validation_failure_waived", "merged",
+        for field in ("general_final_accepted", "new_validation_failure_waived",
                       "server_runtime_accepted", "shipped_extractor_product_sources_changed",
-                      "frozen_v13_qualification_scope_changed"):
+                      "complete_geometry_accepted", "full_world_accepted",
+                      "frozen_v13_qualification_scope_changed",
+                      "extractor_product_acceptance_transferred",
+                      "new_extractor_product_acceptance_established"):
             self.assertFalse(publication[field], field)
 
         amendment = self.contract["bootstrap_amendment"]
         self.assertEqual(amendment["candidate_commit"], "c89279417bc39a97c703c73cc485099a852640af")
+        self.assertEqual(amendment["candidate_status"], "historical_qualified_local_unpublished")
+        self.assertEqual(amendment["branch"], "forever-navigation-ci-bootstrap")
+        self.assertTrue(amendment["current_rebase_requires_separate_qualification"])
+        self.assertTrue(amendment["workflow_bytes_match_historical_candidate"])
         self.assertFalse(amendment["published"])
+        self.assertFalse(amendment["workflow_amendment_published"])
         self.assertEqual(amendment["push_status"], "pending_missing_github_oauth_workflow_scope")
         self.assertEqual(amendment["push_attempt_result"], "rejected_missing_github_oauth_workflow_scope")
         self.assertFalse(amendment["push_retry_or_bypass_attempted"])
         self.assertEqual(amendment["remote_pr_publication_commit"], publication["publication_commit"])
+        self.assertTrue(amendment["remote_pr_publication_commit_is_historical"])
         self.assertEqual(amendment["source_pin"]["commit"], "3baac307329bd0391cd7f083a55e03b982081b27")
         self.assertEqual(
             amendment["source_pin"]["cargo_lock_sha256"],
