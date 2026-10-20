@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Synthetic v23 command grammar and dispatch admission only; no client data.
+//! Synthetic v23 CLI grammar plus one full linked-package workflow; no client data.
 #![cfg(target_os = "linux")]
+
+#[path = "v23_selected_navigation_cli/fixture.rs"]
+mod fixture;
 
 use std::{
     fs,
-    path::PathBuf,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
     process::{Command, Output},
     sync::atomic::{AtomicU64, Ordering},
 };
 
 const V23: &str = include_str!("../../../tests/contracts/fixtures/forever-product-v23/map48.tsv");
+const V20: &str = include_str!("../../../tests/contracts/fixtures/forever-product-v20/map2.tsv");
 const V22: &str = include_str!("../../../tests/contracts/fixtures/forever-product-v22/map2.tsv");
 const V21: &str =
     include_str!("../../../tests/contracts/fixtures/forever-product-v21/navigation-map2.tsv");
@@ -25,12 +30,26 @@ impl Lab {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
         fs::write(path.join("plan.tsv"), plan).unwrap();
         Self(path)
     }
 
     fn plan(&self) -> PathBuf {
         self.0.join("plan.tsv")
+    }
+
+    fn write_named_plan(&self, name: &str, plan: &str) -> PathBuf {
+        let path = self.0.join(name);
+        fs::write(&path, plan).unwrap();
+        path
+    }
+
+    fn private_dir(&self, name: &str) -> PathBuf {
+        let path = self.0.join(name);
+        fs::create_dir(&path).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+        path
     }
 
     fn write_plan(&self, plan: &str) {
@@ -71,6 +90,58 @@ fn assert_output_absent(lab: &Lab, name: &str) {
         !lab.0.join(name).exists(),
         "unexpected output created: {name}"
     );
+}
+
+fn assert_success(output: Output, label: &str) -> String {
+    assert!(
+        output.status.success(),
+        "{label} failed (status {:?}): {}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).unwrap()
+}
+
+fn assert_incomplete_extractor(stdout: &str) {
+    assert!(
+        stdout.contains("\"full_extractor_complete\":false"),
+        "successful selected-navigation output must not claim a full extractor run: {stdout}"
+    );
+}
+
+fn has_nonempty_mmtile(directory: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(directory) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let path = entry.path();
+        let Ok(metadata) = fs::symlink_metadata(&path) else {
+            return false;
+        };
+        if metadata.file_type().is_symlink() {
+            return false;
+        }
+        if metadata.is_dir() {
+            return has_nonempty_mmtile(&path);
+        }
+        path.extension()
+            .is_some_and(|extension| extension == "mmtile")
+            && metadata.len() > 0
+    })
+}
+
+fn decode_hex(encoded: &str) -> Vec<u8> {
+    assert_eq!(encoded.len() % 2, 0, "hex field has an odd length");
+    encoded
+        .as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| {
+            let pair = std::str::from_utf8(pair).unwrap();
+            u8::from_str_radix(pair, 16).unwrap()
+        })
+        .collect()
 }
 
 fn all_input_pairs() -> [&'static str; 8] {
@@ -357,4 +428,128 @@ fn other_profiles_forbid_navigation_pairs_and_keep_existing_cli_behavior() {
     let stdout = String::from_utf8(planned_v21.stdout).unwrap();
     assert!(stdout.contains("\"contract\":\"forever-product-v21\""));
     assert!(!stdout.contains("linux70450-selected-navigation-v1"));
+}
+
+#[test]
+fn selected_map_cli_builds_and_verifies_navigation_from_synthetic_v20_and_v22_packages() {
+    let lab = Lab::new(V23);
+    let client = lab.0.join("synthetic-client");
+    fs::create_dir(&client).unwrap();
+    fixture::write_client(&client);
+
+    // Keep the two producer plans and the v23 consumer on the same synthetic
+    // selected map. The extra source Map row has WDT ID zero and is outside
+    // the selected closure, exercising the intentionally different terrain
+    // and VMap projection counts in the generated v23 identity.
+    let terrain_plan_text = V20.replace("terrain\tmap:2", "terrain\tmap:48");
+    let vmap_plan_text = V22.replace("collision-domain\tmap:2", "collision-domain\tmap:48");
+    let terrain_plan = lab.write_named_plan("terrain-plan.tsv", &terrain_plan_text);
+    let vmap_plan = lab.write_named_plan("vmap-plan.tsv", &vmap_plan_text);
+    let product_plan = lab.plan();
+    let terrain_package = lab.0.join("terrain-package");
+    let vmap_package = lab.0.join("vmap-package");
+    let navigation_package = lab.0.join("navigation-package");
+    let scratch = lab.private_dir("vmap-scratch");
+
+    let terrain = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))
+        .current_dir(&lab.0)
+        .args(["extract", "--plan"])
+        .arg(&terrain_plan)
+        .args(["--client"])
+        .arg(&client)
+        .args(["--output"])
+        .arg(&terrain_package)
+        .output()
+        .unwrap();
+    assert_success(terrain, "v20 terrain producer");
+    assert!(terrain_package.is_dir());
+
+    let vmap = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))
+        .current_dir(&lab.0)
+        .args(["extract", "--plan"])
+        .arg(&vmap_plan)
+        .args(["--client"])
+        .arg(&client)
+        .args(["--output"])
+        .arg(&vmap_package)
+        .args(["--scratch"])
+        .arg(&scratch)
+        .output()
+        .unwrap();
+    assert_success(vmap, "v22 VMap producer");
+    assert!(vmap_package.is_dir());
+
+    let extract = Command::new(env!("CARGO_BIN_EXE_forever-extractor"))
+        .current_dir(&lab.0)
+        .args(["extract", "--plan"])
+        .arg(&product_plan)
+        .args(["--client"])
+        .arg(&client)
+        .args(["--output"])
+        .arg(&navigation_package)
+        .args(["--terrain-package"])
+        .arg(&terrain_package)
+        .args(["--terrain-plan"])
+        .arg(&terrain_plan)
+        .args(["--vmap-package"])
+        .arg(&vmap_package)
+        .args(["--vmap-plan"])
+        .arg(&vmap_plan)
+        .output()
+        .unwrap();
+    let extract_stdout = assert_success(extract, "v23 selected navigation producer");
+    assert!(extract_stdout.contains("\"contract\":\"forever-product-v23\""));
+    assert!(extract_stdout.contains("\"status\":\"selected_producers_complete\""));
+    assert_incomplete_extractor(&extract_stdout);
+    assert!(navigation_package.is_dir());
+    assert!(
+        has_nonempty_mmtile(&navigation_package),
+        "synthetic selected navigation output contains a nonempty tile"
+    );
+
+    let coverage =
+        fs::read_to_string(navigation_package.join("mmaps/selected-navigation-coverage-v1.tsv"))
+            .unwrap();
+    let identity_hex = coverage
+        .lines()
+        .find_map(|line| line.strip_prefix("identity-hex\t"))
+        .expect("v23 coverage contains its source identity");
+    let identity = String::from_utf8(decode_hex(identity_hex)).unwrap();
+    assert!(identity.lines().any(|line| line == "identity\t2"));
+    assert!(identity.lines().any(|line| line == "selected-map\t48"));
+    let map_snapshot = identity
+        .lines()
+        .find(|line| line.starts_with("map-snapshot\t"))
+        .expect("decoded v23 identity contains the Map snapshot");
+    let map_fields: Vec<_> = map_snapshot.split('\t').collect();
+    assert_eq!(map_fields[10], "2", "two synthetic source Map rows");
+    assert_eq!(
+        map_fields[12], "1",
+        "terrain projection excludes WDT-zero row"
+    );
+    assert_eq!(map_fields[13], "2", "VMap projection retains WDT-zero row");
+
+    let verify = lab.command(
+        "verify",
+        &["--output", navigation_package.to_str().unwrap()],
+    );
+    let verify_stdout = assert_success(verify, "v23 intrinsic verifier");
+    assert_incomplete_extractor(&verify_stdout);
+    let verify_links = lab.command(
+        "verify-links",
+        &[
+            "--output",
+            navigation_package.to_str().unwrap(),
+            "--terrain-package",
+            terrain_package.to_str().unwrap(),
+            "--terrain-plan",
+            terrain_plan.to_str().unwrap(),
+            "--vmap-package",
+            vmap_package.to_str().unwrap(),
+            "--vmap-plan",
+            vmap_plan.to_str().unwrap(),
+        ],
+    );
+    let verify_links_stdout = assert_success(verify_links, "v23 linked-input verifier");
+    assert_incomplete_extractor(&verify_links_stdout);
 }

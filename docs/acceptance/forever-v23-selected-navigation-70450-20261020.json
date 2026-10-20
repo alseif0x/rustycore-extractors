@@ -1,0 +1,137 @@
+{
+  "schema": "forever-v23-selected-navigation-acceptance-v1",
+  "status": "passed_bounded_real_cli",
+  "build": 70450,
+  "locale": "esES",
+  "selected_map": 48,
+  "component_mask": 32,
+  "identity_version": 2,
+  "implementation_commit": "4030a5490e72cc9ba416860b13f2716ea331867e",
+  "producer_sha256": "20753bcdac11ec892ffd2d55579200f0a3e949b5986db12061a87d15d8807ef9",
+  "plan_sha256": "ecc0cc0263fd21c40b6144b104bae7c9724d897e970dae07d3c485e80b5a4ab6",
+  "package_manifest_sha256": "5e7bdd7c90b462c70345cdf6aa71cd93b38d9014a63acec9d123f887e6dff52f",
+  "inventory_sha256": "82840ffd5d651b562decf7df30ddf2b9fcb565f2799e177b735425d01f935488",
+  "public_artifacts": 6,
+  "public_bytes": 842691,
+  "navigation_payload_bytes": 838116,
+  "navigation_payloads": [
+    {
+      "kind": "global",
+      "bytes": 40,
+      "sha256": "3564d4da656c6f7fc8dd53604fdac41e60e59e8b91f850b7c71816d9b31ebc12"
+    },
+    {
+      "kind": "tile",
+      "bytes": 367280,
+      "sha256": "28ca4e65a9bfbdcaa42847e1d85ebf8a1904ed87271dc50225763f56a75872bb"
+    },
+    {
+      "kind": "tile",
+      "bytes": 73852,
+      "sha256": "689e144eb7f149db6e25d2ad6a562adb222480cecd2c143d3835e4c40a570d0f"
+    },
+    {
+      "kind": "tile",
+      "bytes": 359660,
+      "sha256": "88442548932cf1a22b8873765681b638851c9119f2a5df494abc0358dae097bc"
+    },
+    {
+      "kind": "tile",
+      "bytes": 37284,
+      "sha256": "fbf6c8bcdcde2520d0bc100cdafd8c38ecef813ab4198f17faaeb0fa4656b003"
+    }
+  ],
+  "cases": [
+    {
+      "id": "fresh_complete",
+      "status": "passed"
+    },
+    {
+      "id": "offline_verify",
+      "status": "passed"
+    },
+    {
+      "id": "verify_links",
+      "status": "passed"
+    },
+    {
+      "id": "wrong_expected_context",
+      "status": "passed"
+    },
+    {
+      "id": "complete_resume_readonly",
+      "status": "passed"
+    },
+    {
+      "id": "wrong_terrain_producer_plan",
+      "status": "passed"
+    },
+    {
+      "id": "interrupt_after_global_receipt",
+      "status": "passed"
+    },
+    {
+      "id": "resume_interrupted",
+      "status": "passed"
+    },
+    {
+      "id": "resumed_offline_verify",
+      "status": "passed"
+    },
+    {
+      "id": "resumed_verify_links",
+      "status": "passed"
+    }
+  ],
+  "source_checks": {
+    "input_trees_and_pins_unchanged": true,
+    "fresh_resume_manifest_identical": true,
+    "prior_payload_hashes_matched": 5
+  },
+  "receipts": {
+    "real_parent_sha256": "53c65727db2e7b7b7d5b5b9f6888ae36c935b1bae45b1506ad1c6385fb103bd9",
+    "execution_sha256": "dba80927e59904d5811c99e3e64f51e349c9df981b88875285e0223706719214",
+    "focused_software_sha256": "5703c879268b36df22ae4cdffb73bacb314443b90c27c045afda2efec20e246c",
+    "release_build_sha256": "93e3113119c32941c201bdda91861d52c0d422bfb211b27b81dc3c4d8b1300c0",
+    "connected_synthetic_cli_sha256": "c825d0e2e69b162f2741859ced6c85a733ed653b398722b1345ef3004b79d12d",
+    "final_extractor_software_sha256": "5b4b605819af0277dbaa750cc79508eff50eb7ee6f8e416fe2c1d575841b034a"
+  },
+  "resources": {
+    "duration_ms": 41244,
+    "runtime_max_seconds": 900,
+    "memory_max_bytes": 3221225472,
+    "cpu_quota_percent": 100,
+    "tasks_max": 64
+  },
+  "software_closeout": {
+    "status": "passed",
+    "extractor_tests_passed": 649,
+    "test_binaries": 22,
+    "contract_tests_passed": 438,
+    "clippy_all_extractor_targets": true,
+    "format_check": true,
+    "diff_check": true,
+    "receipt_sha256": "5b4b605819af0277dbaa750cc79508eff50eb7ee6f8e416fe2c1d575841b034a"
+  },
+  "scope": {
+    "available_source_only": true,
+    "coverage_authentication": "producer_reported",
+    "off_mesh": false,
+    "nonempty_ground_maps_proof": false,
+    "production_manager_acceptance": false,
+    "server_acceptance": false,
+    "full_world": false,
+    "key_recovery": false,
+    "windows_acceptance": false,
+    "release_publication": false,
+    "full_extractor_complete": false
+  },
+  "connected_synthetic_cli": {
+    "passed": true,
+    "tests_passed": 10,
+    "nonempty_mmtile": true,
+    "produces_v20_v22_v23": true,
+    "intrinsic_and_linked_verification": true,
+    "clippy_passed": true
+  }
+}
