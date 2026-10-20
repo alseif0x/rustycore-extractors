@@ -39,6 +39,33 @@ class DistributionContract(unittest.TestCase):
         self.assertIn('keys', self.c['source']['forbidden'])
         self.assertIn('generated extraction output', self.c['source']['forbidden'])
 
+    def test_v12_profile_requires_v23_closure_without_packaging_claims(self):
+        self.assertEqual(
+            self.c['source']['profile'],
+            'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12',
+        )
+        required_v23 = {
+            'crates/forever-extractor/src/driver/navigation_v23.rs',
+            'crates/forever-extractor/src/driver/navigation_v23/coverage_tests.rs',
+            'crates/forever-extractor/src/driver/navigation_v23/input_plan_tests.rs',
+            'crates/forever-extractor/src/driver/v23_api_tests.rs',
+            'crates/forever-extractor/src/plan/v23_tests.rs',
+            'crates/forever-extractor/tests/v23_selected_navigation_cli.rs',
+            'crates/forever-extractor/tests/v23_selected_navigation_cli/fixture.rs',
+            'contracts/forever-product-contract-v23.json',
+            'tests/contracts/test_forever_product_v23_contract.py',
+            'tests/contracts/fixtures/forever-product-v23/map48.tsv',
+            'docs/forever-product-v23.md',
+            'docs/acceptance/forever-v23-selected-navigation-70450-20261020.json',
+            'docs/forever-navigation.md',
+        }
+        self.assertTrue(required_v23 <= set(self.c['source']['required']))
+        acceptance = self.c['source']['product_v23_selected_navigation_acceptance']
+        self.assertFalse(acceptance['bundle_built'])
+        self.assertFalse(acceptance['two_fresh_candidates_match'])
+        self.assertFalse(acceptance['moved_source_rebuild_matches'])
+        self.assertFalse(acceptance['packaged_v23_cli_accepted'])
+
     def test_offline_recipe_and_rebuild_are_explicit(self):
         self.assertEqual(self.c['toolchain'], '1.98.0')
         self.assertEqual(self.c['build']['recipe'], 'cargo build --offline --locked --release -p forever-extractor --no-default-features')

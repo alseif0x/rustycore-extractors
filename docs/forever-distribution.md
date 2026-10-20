@@ -1055,3 +1055,26 @@ producer/source bindings. Later documentation does not change any frozen
 archive, executable or accepted input. Full catalog, Map/GameObject sources,
 real geometry/world resources, RustyCore runtime and publication remain open;
 Windows and draft PR #27 stay deferred.
+
+
+## V23 selected-navigation corresponding-source profile v12 — 2026-10-20
+
+Issue #102 advances the current source profile to
+`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12`.
+The explicit required closure includes the v23 selected-navigation implementation
+and synthetic plan/API/CLI tests, its canonical product contract and fixture, and
+the product guide with both direct documentation targets:
+`docs/acceptance/forever-v23-selected-navigation-70450-20261020.json` and
+`docs/forever-navigation.md`. This is an unconditional current-profile source
+requirement; removing the product contract does not disable the gate. Shared
+extractor entry points remain required by the existing source profile.
+
+Earlier v11 bundles remain historical with their bundled verifier and recorded
+bytes. The v12 profile does not revise those artifacts. It also does not turn
+the separately recorded v23 real CLI run into packaged-binary evidence. At this
+checkpoint the v23-specific source closure is defined, but no fresh distribution
+candidate, two-build reproducibility result, moved-source rebuild, or packaged
+v23 CLI acceptance is claimed. The archive schema, Linux x86_64 scope, Rust
+1.98.0 toolchain, two-package registry closure, notices, and offline build recipe
+remain unchanged; full extraction, runtime acceptance and publication remain
+open.

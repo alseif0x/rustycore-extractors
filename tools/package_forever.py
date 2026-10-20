@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-source-v11"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12"
 CONTRACT_MARKDOWN = "contracts/WOWDBDEFS-LICENSE.md"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
@@ -164,7 +164,26 @@ PRODUCT_70374_GT_CAMERAS_SOURCE = (
     'crates/forever-extractor/tests/product_v11_cli.rs',
     'crates/forever-casc/src/cameras/tests/build70374.rs',
 )
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE
+# v23 source-profile additions. Shared entry points such as main.rs, driver.rs,
+# plan.rs and verify.rs are already mandatory in earlier source closures.
+PRODUCT_V23_SOURCE = (
+    "crates/forever-extractor/src/driver/navigation_v23.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/coverage_tests.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/input_plan_tests.rs",
+    "crates/forever-extractor/src/driver/v23_api_tests.rs",
+    "crates/forever-extractor/src/plan/v23_tests.rs",
+    "crates/forever-extractor/tests/v23_selected_navigation_cli.rs",
+    "crates/forever-extractor/tests/v23_selected_navigation_cli/fixture.rs",
+    "contracts/forever-product-contract-v23.json",
+    "tests/contracts/test_forever_product_v23_contract.py",
+    "tests/contracts/fixtures/forever-product-v23/map48.tsv",
+    "docs/forever-product-v23.md",
+    "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+    "docs/forever-navigation.md",
+)
+# Unlike optional QA additions, the current profile always requires the v23
+# source closure. Removing its contract cannot silently skip this admission.
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE + PRODUCT_V23_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024
