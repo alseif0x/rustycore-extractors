@@ -98,6 +98,20 @@ Complete-source coverage, production
 TrinityCore format parity, complete runtime/server acceptance, Windows delivery
 and release publication remain outside this checkpoint.
 
+### Shared admission API
+
+Issue #104 moves the canonical coverage codecs and offline component checks into
+`forever-navigation::package_v23`, shared with the CLI. Its bounded `read_batch`
+returns the global container and only requested tiles after the entire package
+has passed verification. Declared-empty tiles remain distinct from unavailable
+coordinates. Callers must reverify and compare the original package identity
+before later loads; package verification does not establish native memory safety.
+
+The [selected consumer contract](forever-rustycore-navigation-consumer.md)
+records bounded local manager/worker and fresh v13 package acceptance, plus the
+remaining RustyCore publication and server/world gates. These results use their
+own frozen sources and have not inherited earlier CLI or v12 binary acceptance.
+
 ## Bounded real checkpoint with empty terrain
 
 The real esES map-48 package has six public artifacts / 842,691 bytes: four
@@ -152,3 +166,18 @@ queries and finds six complete cross-tile routes in 256 attempts; the other 250
 do not reach the requested final polygon and remain unqualified. This uses a
 strict typed adapter and preserves v16 headers/payloads; it does not accept the
 legacy v15 reader, production filenames/manager or server runtime.
+
+
+## Selected library consumer and v13 package checkpoint
+
+The subsequent [consumer checkpoint](forever-rustycore-navigation-consumer.md)
+accepts the original MMap16 containers through RustyCore's existing manager and
+worker. Eight tiles load and unload; all 98 proximity queries succeed and all
+256 route status/length/target facts match the raw SDK replay (six complete,
+250 partial). The library is opt-in and has not activated the server.
+
+The frozen v13 package has two matching fresh builds and a matching moved-source
+offline rebuild. Its extracted binary passes 47 synthetic CLI/fixture cases and
+reproduces all nine baseline navigation payloads in a fresh four-command real
+run. Earlier source/build results retain their original scopes. Full-world
+geometry/navigation, gameplay/runtime, RustyCore publication and release remain open.

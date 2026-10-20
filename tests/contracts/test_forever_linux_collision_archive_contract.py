@@ -8,7 +8,7 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12'
+PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13'
 HISTORICAL_PROFILE = 'forever-seven-crate-linux-collision-leased-archive-source-v8'
 
 

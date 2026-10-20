@@ -1131,3 +1131,48 @@ to `GLIBC_2.34`; no static or universal Linux ABI claim is made. This is a local
 Linux candidate for bounded extraction. Complete geometry/source/world coverage,
 production manager/server acceptance, Windows and release publication remain open.
 See the [redacted qualification report](acceptance/forever-v23-distribution-v12-20261020.json).
+
+## Shared navigation consumer source profile v13 — 2026-10-20
+
+The current recipe defines
+`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13`.
+It retains the V23 producer closure and additionally requires the canonical shared
+navigation-package schema, verifier, bounded owned batch reads, public consumer
+tests and [consumer contract/guide](forever-rustycore-navigation-consumer.md).
+The explicit Linux `forever-navigation -> forever-casc` path edge is required;
+the seven workspace crates and two pinned registry packages are unchanged.
+
+At the source-definition checkpoint combined qualification was pending. The
+following executed checkpoint qualifies the exact frozen v13 candidate. V12
+remains evidence for its own frozen source and archive. No server activation,
+complete-world coverage or release authorization follows.
+
+### Executed v13 candidate and selected consumer
+
+The frozen source digest `577d46cd2952cf306c5fa404ba87bd5881e1e6701e14b4f6f56f3ea2cabbf85b`
+produced two identical fresh archives and binaries and an identical moved-source
+offline rebuild in 174.512s. Archive SHA-256:
+`14e7d7d95f5bc4390837453eb26ef0bac9ae349ba4a2a3f20dc63db7f45adfbe`;
+binary: `1c391fe7dea024c16c1080244b497bc5c97d0067c095f3f577ff1df6590bcdb0`.
+The archive contains 972 inventoried files and retains its earlier definition-stage
+prose; later status and consumer-limit documentation corrections are outside that
+snapshot. The seven-crate/two-registry-package product and build recipe are unchanged.
+
+The relocated binary passes 37 synthetic product cases and ten v23 CLI/fixture
+cases (45.277s), followed by all four real navigation commands (54.740s). Its
+eight tiles and global match the baseline byte-for-byte: nine payloads /
+3,782,524 bytes. The ten traced v23 cases attempt zero network syscalls; the
+37 product cases are not traced. The original inputs and bundle remain unchanged.
+
+Distribution receipt: `1f5b703144c62bea7b68672e5ca0819cbcbc24912164434b17456d37068cec91`.
+Packaged CLI receipt: `fbeb4506284fe3e8adaa1e3af5b1fe234eba70f74e2109bebb6bf7b76135b538`.
+Packaged real receipt: `5694df5e71356b6ba088b344a1e4cad1d0fcb48f48ba84f314c740d40ca653e2`.
+
+The separate RustyCore library worker accepts and unloads eight original
+containers, resolves 98 proximity queries and preserves all 256 raw SDK route
+status/length/target outcomes: six complete and 250 partial, zero exhausted-node
+or small-buffer details. This is bounded library/worker acceptance. RustyCore's
+general publication gate still rejects inherited architecture/session baselines;
+server gameplay, full geometry/world, Windows and release remain open. The
+ordinary validation campaign exceeded its 600-second target; failed attempts
+were retained. See the [consumer evidence and limits](forever-rustycore-navigation-consumer.md).

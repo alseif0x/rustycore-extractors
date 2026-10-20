@@ -7,6 +7,8 @@ pub mod inventory;
 pub mod mmap;
 pub mod models;
 pub mod offmesh;
+#[cfg(target_os = "linux")]
+pub mod package_v23;
 pub mod pipeline;
 pub mod recast;
 pub mod terrain;

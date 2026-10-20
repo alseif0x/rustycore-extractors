@@ -12,6 +12,9 @@ forever-db2 = { path = "../forever-db2" }
 forever-terrain = { path = "../forever-terrain" }
 forever-vmap = { path = "../forever-vmap" }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+forever-casc = { path = "../forever-casc", default-features = false }
+
 [lints]
 workspace = true
 

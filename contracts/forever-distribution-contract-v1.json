@@ -198,7 +198,17 @@
       "docs/forever-product-v23.md",
       "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
       "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
-      "docs/forever-navigation.md"
+      "docs/forever-navigation.md",
+      "crates/forever-navigation/src/package_v23.rs",
+      "crates/forever-navigation/src/package_v23/schema.rs",
+      "crates/forever-navigation/src/package_v23/verify.rs",
+      "crates/forever-navigation/src/package_v23/tests.rs",
+      "crates/forever-navigation/src/package_v23/tests/fixtures.rs",
+      "crates/forever-navigation/src/package_v23/tests/fixtures/schema.rs",
+      "crates/forever-navigation/src/package_v23/tests/fixtures/consumer.rs",
+      "contracts/forever-rustycore-navigation-consumer-contract-v1.json",
+      "tests/contracts/test_forever_navigation_consumer_contract.py",
+      "docs/forever-rustycore-navigation-consumer.md"
     ],
     "forbidden": [
       "client assets",
@@ -215,7 +225,7 @@
     "mutation": "reject a changed selected source snapshot",
     "scope": "production pure Rust build, synthetic checks, exact registry sources and retained notices; native oracle reference trees are external and excluded",
     "legacy_provenance": "retain existing legacy license/reference inventories as documentation; the actual pure Rust binary dependency closure is its versioned distribution manifest, not a claim native C++ dependencies are linked",
-    "profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12",
+    "profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",
     "workspace_crates": 7,
     "windows_dependency_edges": {
       "forever-casc": [
@@ -231,7 +241,7 @@
         "forever-platform"
       ]
     },
-    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph; forever-seven-crate-linux-collision-leased-archive-source-v8 remains historical with its bundled frozen verifier and its library-only acceptance; v9 mandates explicit product plan v3, physical-space observation, guarded disk driver and product CLI checks without relabeling earlier archives; forever-seven-crate-linux-product-collision-disk-source-v9 remains historical with its bundled frozen verifier and accepted b692ed3 Linux bundle; v10 requires both separately pinned target catalogs and product v4/v5 source without replacing any historical archive bytes; forever-seven-crate-linux-product-db2-catalog-source-v10 archives remain historical with their bundled frozen verifiers; v11 requires the explicit70374 DB2+GT+raw-camera product contract and canonical synthetic fixtures and remains historical with its bundled frozen verifier; v12 is the current profile and additionally requires the v23 selected-navigation source, synthetic contract/fixture closure, guide, redacted acceptance report and navigation documentation without changing historical archive bytes or implying packaged acceptance",
+    "prior_profiles": "forever-six-crate-source-v1, forever-seven-crate-ci-source-v2, forever-seven-crate-windows-input-source-v3, forever-seven-crate-windows-producer-source-v4, forever-seven-crate-windows-vmap-diagnostics-source-v5 and forever-seven-crate-windows-vmap-required-framing-source-v6 archives remain historical with their bundled frozen verifiers; v7 requires its exact profile and nine-package graph with the additional local Windows navigation-to-platform edge; forever-seven-crate-windows-navigation-readers-source-v7 remains historical with its frozen verifier; v8 additionally mandates the private Linux collision lease/archive source while preserving the seven-crate/nine-package flattened graph; forever-seven-crate-linux-collision-leased-archive-source-v8 remains historical with its bundled frozen verifier and its library-only acceptance; v9 mandates explicit product plan v3, physical-space observation, guarded disk driver and product CLI checks without relabeling earlier archives; forever-seven-crate-linux-product-collision-disk-source-v9 remains historical with its bundled frozen verifier and accepted b692ed3 Linux bundle; v10 requires both separately pinned target catalogs and product v4/v5 source without replacing any historical archive bytes; forever-seven-crate-linux-product-db2-catalog-source-v10 archives remain historical with their bundled frozen verifiers; v11 requires the explicit70374 DB2+GT+raw-camera product contract and canonical synthetic fixtures and remains historical with its bundled frozen verifier; v12 required the v23 selected-navigation source, synthetic contract/fixture closure, guide, redacted acceptance report and navigation documentation without changing historical archive bytes or implying packaged acceptance; v12 remains historical with its frozen verifier and qualified Linux candidate; v13 is the current profile and adds canonical shared navigation-package admission, bounded owned reads and an explicit Linux navigation-to-CASC path edge, with exact frozen changed-source qualification recorded separately",
     "windows_producer_scope": "original loaded-main-module seal acquisition and pure PE verifier/sealer source, synthetic checks and scope documentation are mandatory corresponding source; this Linux recipe does not seal or enable a Windows product",
     "windows_vmap_scope": "original guarded Windows RootedSource and safe EOF source/tests; preliminary synthetic Wine evidence does not accept actual Windows/NTFS or enable the product",
     "input_diagnostics_scope": "metadata-only fixed routes and pure whole-span BLTE inspector remain distinct APIs; v6 additionally mandates the key-free fixed-three-input complete-span framing adapter with static contract and qualified executed Linux observations; no full EKey/CKey/plaintext or key sufficiency claim",
@@ -281,7 +291,22 @@
       "windows_product_enabled": false,
       "full_extractor_complete": false
     },
-    "product_v23_selected_navigation_scope": "The current v12 source profile requires the Linux build-70450 single-selected-map navigation implementation, its synthetic source/plan/API/CLI tests, canonical v23 contract and fixture, product guide, both redacted acceptance reports and the navigation-document link target. Existing unbundled v23 CLI evidence does not establish packaged-binary or reproducible-distribution acceptance.",
+    "product_v23_selected_navigation_scope": "The current v13 source profile retains the Linux build-70450 single-selected-map source and evidence closure and adds its shared package schema/admission, bounded owned consumer reads, synthetic public-consumer tests and consumer contract/guide. The explicit Linux navigation-to-CASC path edge is part of the seven-crate graph. Historical v12 qualification does not establish acceptance of these changed sources or a new reproducible candidate.",
+    "linux_navigation_consumer_dependency_edges": {
+      "forever-navigation": [
+        "forever-casc"
+      ]
+    },
+    "navigation_consumer_acceptance": {
+      "status": "bounded local consumer and frozen v13 candidate accepted; core publication and server/full-world remain open",
+      "shared_api_tests_executed": true,
+      "rustycore_manager_consumer_accepted": true,
+      "rustycore_worker_consumer_accepted": true,
+      "bundle_built": true,
+      "two_fresh_candidates_match": true,
+      "moved_source_rebuild_matches": true,
+      "publication_authorized": false
+    },
     "product_v23_selected_navigation_acceptance": {
       "status": "source closure defined; reproducible distribution and packaged executable acceptance pending",
       "bundle_built": false,
@@ -290,6 +315,22 @@
       "packaged_v23_cli_accepted": false,
       "publication_authorized": false,
       "full_extractor_complete": false
+    },
+    "qualified_navigation_consumer_candidate": {
+      "source_profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",
+      "source_snapshot_sha256": "577d46cd2952cf306c5fa404ba87bd5881e1e6701e14b4f6f56f3ea2cabbf85b",
+      "archive_sha256": "14e7d7d95f5bc4390837453eb26ef0bac9ae349ba4a2a3f20dc63db7f45adfbe",
+      "binary_sha256": "1c391fe7dea024c16c1080244b497bc5c97d0067c095f3f577ff1df6590bcdb0",
+      "two_fresh_archives_and_binaries_identical": true,
+      "moved_source_offline_rebuild_identical": true,
+      "packaged_synthetic_cli_cases": 47,
+      "real_payloads_exact_baseline": 9,
+      "real_payload_bytes": 3782524,
+      "distribution_receipt_sha256": "1f5b703144c62bea7b68672e5ca0819cbcbc24912164434b17456d37068cec91",
+      "packaged_cli_receipt_sha256": "fbeb4506284fe3e8adaa1e3af5b1fe234eba70f74e2109bebb6bf7b76135b538",
+      "packaged_real_receipt_sha256": "5694df5e71356b6ba088b344a1e4cad1d0fcb48f48ba84f314c740d40ca653e2",
+      "frozen_status_prose": "The archive retains earlier source-definition status and the draft SDK/consumer-limit wording. Later status prose and the corrected consumer limit are documentation-only; the qualified Rust product sources are unchanged.",
+      "release_authorized": false
     }
   },
   "registry_dependencies": [

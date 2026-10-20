@@ -12,7 +12,7 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12'
+PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13'
 HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 
@@ -241,9 +241,20 @@ class WindowsNavigationContract(unittest.TestCase):
         )
         self.assertEqual(hashlib.sha256(inventory).hexdigest(), admission['current_sha256'])
         reviewed[inventory_path] = fs_delta['candidate_sha256']
+        consumer = json.loads((ROOT / 'contracts/forever-rustycore-navigation-consumer-contract-v1.json').read_text())
+        shared_deltas = {entry['path']: entry for entry in consumer['preserved_windows_source_deltas']}
+        self.assertEqual(set(shared_deltas), {'Cargo.lock', 'crates/forever-navigation/Cargo.toml'})
         for name, expected in pins.items():
             expected = reviewed.get(name, expected)
-            self.assertEqual(hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), expected, name)
+            current = (ROOT / name).read_bytes()
+            if name in shared_deltas:
+                delta = shared_deltas[name]
+                self.assertEqual(delta['baseline_sha256'], expected)
+                self.assertEqual(hashlib.sha256(current).hexdigest(), delta['candidate_sha256'])
+                after = delta['after'].encode('utf-8')
+                self.assertEqual(current.count(after), 1)
+                current = current.replace(after, delta['before'].encode('utf-8'), 1)
+            self.assertEqual(hashlib.sha256(current).hexdigest(), expected, name)
 
     def test_only_reviewed_local_dependency_and_exact_registry_closure(self):
         m = tomllib.loads((ROOT / 'crates/forever-navigation/Cargo.toml').read_text())
@@ -251,7 +262,7 @@ class WindowsNavigationContract(unittest.TestCase):
         packages = tomllib.loads((ROOT / 'Cargo.lock').read_text())['package']
         self.assertEqual(len(packages), 9)
         self.assertEqual(len(literal('CRATES')), 7)
-        self.assertEqual(next(p for p in packages if p['name'] == 'forever-navigation')['dependencies'], ['forever-db2', 'forever-platform', 'forever-terrain', 'forever-vmap'])
+        self.assertEqual(next(p for p in packages if p['name'] == 'forever-navigation')['dependencies'], ['forever-casc', 'forever-db2', 'forever-platform', 'forever-terrain', 'forever-vmap'])
         registry = {p['name'] + '-' + p['version']: p['checksum'] for p in packages if 'source' in p}
         self.assertEqual(registry, literal('DEPENDENCIES'))
         self.assertEqual({p['name']: p['version'] for p in packages if 'source' in p}, self.c['dependency_graph']['registry_packages'])

@@ -39,6 +39,7 @@ dependencies = [
 name = "forever-navigation"
 version = "0.1.0"
 dependencies = [
+ "forever-casc",
  "forever-db2",
  "forever-platform",
  "forever-terrain",

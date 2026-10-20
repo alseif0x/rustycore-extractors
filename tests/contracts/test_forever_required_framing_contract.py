@@ -9,7 +9,7 @@ import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12'
+PROFILE = 'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13'
 HISTORICAL_PROFILE = 'forever-seven-crate-windows-navigation-readers-source-v7'
 
 
@@ -49,12 +49,12 @@ class RequiredFramingContract(unittest.TestCase):
         self.assertIn('forever-seven-crate-windows-producer-source-v4', d['source']['prior_profiles'])
         self.assertEqual(d['contract'], 'forever-distribution-v1')
 
-    def test_unchanged_exact_dependency_graph(self):
+    def test_current_reviewed_flattened_dependency_graph(self):
         packages = tomllib.loads((ROOT / 'Cargo.lock').read_text())['package']
         self.assertEqual(len(packages), 9)
         self.assertEqual(len(literal('CRATES')), 7)
         self.assertEqual(next(p for p in packages if p['name'] == 'forever-vmap')['dependencies'], ['forever-platform'])
-        self.assertEqual(next(p for p in packages if p['name'] == 'forever-navigation')['dependencies'], ['forever-db2', 'forever-platform', 'forever-terrain', 'forever-vmap'])
+        self.assertEqual(next(p for p in packages if p['name'] == 'forever-navigation')['dependencies'], ['forever-casc', 'forever-db2', 'forever-platform', 'forever-terrain', 'forever-vmap'])
         registry = {p['name'] + '-' + p['version']: p['checksum'] for p in packages if 'source' in p}
         self.assertEqual(registry, literal('DEPENDENCIES'))
 

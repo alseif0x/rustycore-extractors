@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13"
 CONTRACT_MARKDOWN = "contracts/WOWDBDEFS-LICENSE.md"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
@@ -182,9 +182,21 @@ PRODUCT_V23_SOURCE = (
     "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
     "docs/forever-navigation.md",
 )
+NAVIGATION_CONSUMER_SOURCE = (
+    "crates/forever-navigation/src/package_v23.rs",
+    "crates/forever-navigation/src/package_v23/schema.rs",
+    "crates/forever-navigation/src/package_v23/verify.rs",
+    "crates/forever-navigation/src/package_v23/tests.rs",
+    "crates/forever-navigation/src/package_v23/tests/fixtures.rs",
+    "crates/forever-navigation/src/package_v23/tests/fixtures/schema.rs",
+    "crates/forever-navigation/src/package_v23/tests/fixtures/consumer.rs",
+    "contracts/forever-rustycore-navigation-consumer-contract-v1.json",
+    "tests/contracts/test_forever_navigation_consumer_contract.py",
+    "docs/forever-rustycore-navigation-consumer.md",
+)
 # Unlike optional QA additions, the current profile always requires the v23
 # source closure. Removing its contract cannot silently skip this admission.
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE + PRODUCT_V23_SOURCE
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE + PRODUCT_V23_SOURCE + NAVIGATION_CONSUMER_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024
@@ -316,7 +328,7 @@ def validate_lock(data):
         require(len(packages) == 9, "lock_closure")
         names = set()
         registry = {}
-        expected = {"forever-casc": ["forever-db2", "forever-platform", "forever-terrain", "forever-vmap", "miniz_oxide"], "forever-db2": [], "forever-extractor": ["forever-casc", "forever-db2", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap"], "forever-navigation": ["forever-db2", "forever-platform", "forever-terrain", "forever-vmap"], "forever-platform": [], "forever-terrain": [], "forever-vmap": ["forever-platform"], "adler2": [], "miniz_oxide": ["adler2"]}
+        expected = {"forever-casc": ["forever-db2", "forever-platform", "forever-terrain", "forever-vmap", "miniz_oxide"], "forever-db2": [], "forever-extractor": ["forever-casc", "forever-db2", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap"], "forever-navigation": ["forever-casc", "forever-db2", "forever-platform", "forever-terrain", "forever-vmap"], "forever-platform": [], "forever-terrain": [], "forever-vmap": ["forever-platform"], "adler2": [], "miniz_oxide": ["adler2"]}
         for package in packages:
             name = package["name"]
             require(name not in names and name in expected, "lock_closure")
