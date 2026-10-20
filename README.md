@@ -93,6 +93,8 @@ integration is published in [RustyCore PR #1454](https://github.com/alseif0x/rus
 with 5,944 scoped tests passing and three ignored. Its merge, complete geometry
 and server/world acceptance remain open. The inherited general validation
 rejection is retained. Historical v12 evidence keeps its frozen scope.
+A local CI bootstrap amendment remains unpublished pending the required GitHub
+OAuth workflow scope.
 
 ### Current build-specific scope
 

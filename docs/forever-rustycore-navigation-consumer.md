@@ -188,3 +188,23 @@ Closing publication review:
 `c22c427eb9bb2ccb5b14863c819be8f03fd70db762dd5d6d262f00546b2834f1`.
 These receipts qualify the stated component operation; complete real geometry,
 full-world resources and server/gameplay acceptance remain open.
+
+## Local core bootstrap amendment — 2026-10-20
+
+Core candidate `c89279417bc39a97c703c73cc485099a852640af` records the pinned
+source bootstrap for the adjacent extractor checkout at commit
+`3baac307329bd0391cd7f083a55e03b982081b27` and lock SHA-256
+`8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27`. It is
+unpublished: GitHub rejected the push for missing OAuth workflow scope, so PR
+#1454 remains at `803449bd`; no retry or bypass was attempted.
+
+Bootstrap evidence includes actionlint 1.7.12, Bash syntax, 16 synthetic cases,
+the exact public fetch/checksum and offline locked metadata for 38 packages with
+the feature disabled. ShellCheck was unavailable. The initial PATH diagnostic
+is retained; resuming with pinned Rust 1.98.0 did not change sources or download
+again, so the steps are not one green campaign. Focused and live receipt hashes,
+and the 52.636-second core final receipt, are in the contract. That final has
+the same inherited rejection and no new failure waived. The historical 1bf5
+code qualification and 803449 publication remain unchanged; no new general final
+or server/runtime acceptance is claimed. Rust, manifests, lock and dependency
+policy are unchanged by this amendment.

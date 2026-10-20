@@ -115,6 +115,8 @@ class NavigationConsumerContract(unittest.TestCase):
             self.assertRegex(publication[field], r"^[0-9a-f]{40}$")
         self.assertEqual(publication["component_tests_passed"], 5944)
         self.assertEqual(publication["component_tests_ignored"], 3)
+        self.assertEqual(publication["tested_code_commit"], "1bf5ee4b48d8f729e806f7acddfdebad01025b58")
+        self.assertEqual(publication["publication_commit"], "803449bd030ca68d48b906880b78ca8a31810751")
         self.assertTrue(publication["documentation_only_delta_after_code_qualification"])
         self.assertTrue(publication["sdk_physical_failure_repaired_without_ceiling_change"])
         self.assertTrue(publication["existing_inherited_debt_experimental_publication_exception_used"])
@@ -122,6 +124,64 @@ class NavigationConsumerContract(unittest.TestCase):
                       "server_runtime_accepted", "shipped_extractor_product_sources_changed",
                       "frozen_v13_qualification_scope_changed"):
             self.assertFalse(publication[field], field)
+
+        amendment = self.contract["bootstrap_amendment"]
+        self.assertEqual(amendment["candidate_commit"], "c89279417bc39a97c703c73cc485099a852640af")
+        self.assertFalse(amendment["published"])
+        self.assertEqual(amendment["push_status"], "pending_missing_github_oauth_workflow_scope")
+        self.assertEqual(amendment["push_attempt_result"], "rejected_missing_github_oauth_workflow_scope")
+        self.assertFalse(amendment["push_retry_or_bypass_attempted"])
+        self.assertEqual(amendment["remote_pr_publication_commit"], publication["publication_commit"])
+        self.assertEqual(amendment["source_pin"]["commit"], "3baac307329bd0391cd7f083a55e03b982081b27")
+        self.assertEqual(
+            amendment["source_pin"]["cargo_lock_sha256"],
+            "8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27",
+        )
+        focused = amendment["focused_checks"]
+        self.assertEqual(focused["actionlint_version"], "1.7.12")
+        self.assertTrue(focused["actionlint_passed"])
+        self.assertTrue(focused["bash_n_passed"])
+        self.assertEqual(focused["shellcheck"], "unavailable")
+        self.assertEqual(focused["synthetic_cases_passed"], 16)
+        self.assertEqual(
+            focused["synthetic_case_scope"],
+            [
+                "fresh checkout success",
+                "existing directory, file, symlink and dangling symlink rejection",
+                "wrong HEAD and wrong lock rejection",
+                "fetch failure",
+            ],
+        )
+        self.assertTrue(focused["public_exact_sha_fetch_passed"])
+        self.assertTrue(focused["extractor_lock_checksum_passed"])
+        self.assertTrue(focused["cargo_metadata"]["passed"])
+        self.assertTrue(focused["cargo_metadata"]["feature_disabled"])
+        self.assertEqual(focused["cargo_metadata"]["workspace_packages"], 38)
+        self.assertIn("not one green campaign", focused["retained_path_diagnostic"])
+        self.assertEqual(
+            focused["focused_receipt_sha256"],
+            "b95dea4b5d570f49fdfbd768ed0ad0c38fbb521f3fcaacd1a01c3532288c490e",
+        )
+        self.assertEqual(
+            focused["live_receipt_sha256"],
+            "496c840cbc526adc0a58ff1a63091a6d7d7bffb000c963267db78084bd0707b2",
+        )
+        final = amendment["core_final"]
+        self.assertEqual(final["elapsed_seconds"], 52.636)
+        self.assertEqual(
+            final["receipt_sha256"],
+            "c1c363146e52b039d4a61786e533e8b9cc0c4c899c0578d4328c39a92fc64e71",
+        )
+        self.assertFalse(final["general_final_accepted"])
+        self.assertTrue(final["same_inherited_rejection"])
+        self.assertFalse(final["new_validation_failure"])
+        self.assertFalse(final["new_validation_failure_waived"])
+        self.assertTrue(amendment["core_product_rust_unchanged"])
+        self.assertTrue(amendment["core_manifests_unchanged"])
+        self.assertTrue(amendment["core_lock_unchanged"])
+        self.assertTrue(amendment["core_dependency_policy_unchanged"])
+        self.assertTrue(amendment["does_not_change_historical_publication_or_code_qualification"])
+        self.assertFalse(amendment["server_runtime_accepted"])
 
 
 if __name__ == "__main__":

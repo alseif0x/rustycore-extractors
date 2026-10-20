@@ -5030,3 +5030,27 @@ packaging recipe. Frozen v13 retains its exact source/archive/binary evidence;
 there is no claim of a new qualified archive at this later Git SHA. Complete
 geometry, full-world/server/gameplay acceptance, Windows and releases remain
 open. Detailed investigation stays exclusively in the private local laboratory.
+
+## 2026-10-20: local core CI bootstrap amendment remains unpublished
+
+Core candidate `c89279417bc39a97c703c73cc485099a852640af` records the source-only
+adjacent checkout pin `3baac307329bd0391cd7f083a55e03b982081b27` with extractor
+lock SHA-256 `8afafe1f5f8b9c98f53ed55155160b2a6d21f6efb5edf1d1c7f0f6e60819af27`.
+Actionlint 1.7.12, Bash syntax and 16 synthetic bootstrap cases passed. Public
+exact-SHA fetch/checksum and feature-disabled offline locked metadata for 38
+packages passed. ShellCheck was unavailable. The initial runner lacked Cargo on
+PATH after fetch; the pinned-1.98.0 resume made no source changes or redownload,
+so there is no single green campaign. Focused/live bootstrap receipts are
+`b95dea4b5d570f49fdfbd768ed0ad0c38fbb521f3fcaacd1a01c3532288c490e` and
+`496c840cbc526adc0a58ff1a63091a6d7d7bffb000c963267db78084bd0707b2`.
+
+The core final took 52.636 seconds and retained the same inherited rejection,
+without a new failure or waiver; receipt
+`c1c363146e52b039d4a61786e533e8b9cc0c4c899c0578d4328c39a92fc64e71`. GitHub
+rejected push because the OAuth token lacks workflow scope. Candidate
+`c89279417bc39a97c703c73cc485099a852640af` remains unpublished, PR #1454 remains
+at `803449bd`, and no retry/bypass occurred. This does not change the historical
+code qualification `1bf5ee4b48d8f729e806f7acddfdebad01025b58`, the existing
+`documentation_only_delta_after_code_qualification` scope, or Rust/manifests/
+lock/dependency policy. No new general-final or server/runtime acceptance is
+claimed; merge remains pending.
