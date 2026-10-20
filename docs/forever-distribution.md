@@ -65,10 +65,11 @@ cargo build --offline --locked --release -p forever-extractor --no-default-featu
 ```
 
 The recipe records sanitized settings, fixed remapped paths, stripped debug
-information and a single codegen unit. Cargo home and target directories are
-isolated from normal workstation caches/builds. The shipped binary is produced
-by this build; a separately supplied binary is not accepted as corresponding
-to a source snapshot merely because its version string matches.
+information, one Cargo build job and a single codegen unit. The build environment
+sets `CARGO_BUILD_JOBS=1`, overriding inherited values. Cargo home and target
+directories are isolated from normal workstation caches/builds. This build
+produces the shipped binary; a separately supplied binary is not accepted as
+corresponding to a source snapshot merely because its version string matches.
 
 ## Artifact and reconstruction
 
@@ -1055,3 +1056,78 @@ producer/source bindings. Later documentation does not change any frozen
 archive, executable or accepted input. Full catalog, Map/GameObject sources,
 real geometry/world resources, RustyCore runtime and publication remain open;
 Windows and draft PR #27 stay deferred.
+
+
+## V23 selected-navigation corresponding-source profile v12 — 2026-10-20
+
+Issue #102 advances the current source profile to
+`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12`.
+The explicit required closure includes the v23 selected-navigation implementation
+and synthetic plan/API/CLI tests, its canonical product contract and fixture, and
+the product guide plus these three documentation/evidence files:
+
+- `docs/forever-navigation.md`
+- `docs/acceptance/forever-v23-selected-navigation-70450-20261020.json`
+- `docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json`
+
+This is an unconditional current-profile source requirement; removing the product
+contract does not disable the gate. Shared extractor entry points remain required
+by the existing source profile.
+
+Earlier v11 bundles remain historical with their bundled verifier and recorded
+bytes. The v12 profile does not revise those artifacts. It also does not turn
+the separately recorded v23 real CLI run into packaged-binary evidence. At the initial profile-definition
+checkpoint the v23-specific source closure was defined, but no fresh distribution
+candidate, two-build reproducibility result, moved-source rebuild, or packaged
+v23 CLI acceptance was claimed. The subsequent qualification below records those
+executed results. The archive schema, Linux x86_64 scope, Rust
+1.98.0 toolchain, two-package registry closure, notices, and offline build recipe
+remain unchanged; full extraction, runtime acceptance and publication remain
+open.
+
+## V12 local candidate qualification — 2026-10-20
+
+The frozen candidate from commit `719faee8392a1ce2d1c3193a4c6eea025b9dfca3`
+passes local v12 distribution acceptance. Before freezing it, 87 packaging tests
+and 439 contracts passed with all 1,344 source files unchanged. Two fresh offline
+builds, including an output path with spaces, produced identical archives and
+binaries. The trusted verifier accepted both archives; a new moved-source offline
+rebuild using the bundled helper/vendor reproduced the binary. The three-build
+campaign took 171.276 seconds under observed 1,800s / 3-GiB / one-CPU / 64-task
+limits. The bundle has 905 selected source files and 962 inventory entries.
+
+| Identity | SHA-256 |
+| --- | --- |
+| Archive | `a3ff0d9d91bcbe10df88b8193b02c31f96b83f34b33146b810e5551c808455e3` |
+| Binary | `afbc1618f3fad9c420d0ee0726005b6246e9b1aa9edac50e37e1f3e42de387aa` |
+| Selected source snapshot | `0e71112571234dc244f4dfe4399daf873bf49cd676ce4839416259da93e19578` |
+| Distribution receipt | `feddacb4e6affcaeb8eb6d9a3b8732af2403833b8d3b6073dc6272ab292687a1` |
+
+The exact archive-extracted executable then passed 37 synthetic product/key cases
+and ten v23 CLI/fixture cases, including the connected terrain/geometry/navigation
+workflow. Syscall denial remained enabled. Its parent trace contains only 27
+`SIGCHLD` exit notifications and zero network syscall lines. The original wrapper
+incorrectly expected an empty parent trace; the failed wrapper is retained beside
+a separate root review validating every line, successful case, bundle and source
+guard. No successful test was repeated to replace that finding. A preceding
+preflight correctly refused verification of a build workspace containing extra
+build files; that attempt made no product call.
+
+Finally, the extracted candidate passed plan-only inspect, real v23 extraction,
+offline verify and verify-links in 54.066 seconds under observed 900s / 3-GiB /
+one-CPU / 64-task limits. It admitted six terrain tiles and produced eight
+nonempty MMap tiles, three empty outcomes, a global and coverage: ten artifacts /
+3,787,736 bytes. All nine navigation payload paths, lengths and hashes match the
+previous accepted ground package byte-for-byte (3,782,524 bytes); metadata has its
+new producer identity. Input packages, plans, source, binary, baseline and client
+root identity stayed stable. Receipt:
+`4e695fcfb45767f42a72a62e39739b83c559aa81f6a777bbf7a4b4b599109c13`.
+
+The immutable archive retains its initial profile-definition checkpoint, where
+acceptance was still pending. This later qualification does not rewrite it or
+change Rust/dependency bytes. Original notices and pinned Rust notices remain
+included. ELF inspection records external system libraries and GLIBC symbols up
+to `GLIBC_2.34`; no static or universal Linux ABI claim is made. This is a local
+Linux candidate for bounded extraction. Complete geometry/source/world coverage,
+production manager/server acceptance, Windows and release publication remain open.
+See the [redacted qualification report](acceptance/forever-v23-distribution-v12-20261020.json).

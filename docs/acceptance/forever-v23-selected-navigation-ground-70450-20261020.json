@@ -1,0 +1,102 @@
+{
+  "execution": {
+    "client_root_identity_unchanged": true,
+    "elapsed_seconds": 52.846,
+    "limits": {
+      "cpu_quota_percent": 100,
+      "memory_bytes": 3221225472,
+      "observed_before_execution": true,
+      "runtime_seconds": 900,
+      "tasks_max": 64
+    },
+    "receipt_sha256": "f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900",
+    "source_guard_unchanged": true,
+    "stages": [
+      {
+        "elapsed_seconds": 0.001,
+        "exit_code": 0,
+        "name": "inspect"
+      },
+      {
+        "elapsed_seconds": 41.1,
+        "exit_code": 0,
+        "name": "extract"
+      },
+      {
+        "elapsed_seconds": 0.064,
+        "exit_code": 0,
+        "name": "verify"
+      },
+      {
+        "elapsed_seconds": 10.034,
+        "exit_code": 0,
+        "name": "verify-links"
+      }
+    ],
+    "terrain_input_tree_unchanged": true,
+    "vmap_input_tree_unchanged": true
+  },
+  "full_extractor_complete": false,
+  "inputs": {
+    "geometry": {
+      "acquisition_receipt_sha256": "07c6e8488a6a354a92c04ec6771d42f38239606e8410e47df302bfb60bb5a233",
+      "artifacts": 149,
+      "bytes": 2199694,
+      "inventory_sha256": "3b19180cbceb4866387617ec0492be191789519f56e59b3ad58e0b9c580f11fe",
+      "linked_verification_receipt_sha256": "5295f3400c05a72a3ac4a074fe31b01f6b09027d1d9aaac57662396a73b867d2",
+      "profile": "v22"
+    },
+    "terrain": {
+      "all_closure_terrain_admitted": true,
+      "artifacts": 3394,
+      "bytes": 215659177,
+      "fresh_closure_maps": 1,
+      "manifest_sha256": "21ff33209659a30ff02c40530a1d88ad50d62e4009ed22a7eda09e3b818af310",
+      "producer_sha256": "268f9579772d4244288c19a5779fd55653f2efae7366dcf6c1cc201675f51159",
+      "profile": "v20",
+      "selected_converted_tiles": 6,
+      "selected_known_tiles": 6,
+      "selected_missing_root_adts": 0
+    }
+  },
+  "not_established": {
+    "complete_geometry_or_trinity_parity": true,
+    "full_world": true,
+    "independent_native_sdk_for_this_package": true,
+    "key_recovery": true,
+    "production_mmap_manager": true,
+    "release_publication": true,
+    "rustycore_runtime_server": true,
+    "windows_delivery": true
+  },
+  "output": {
+    "artifacts": 10,
+    "bytes": 3787736,
+    "candidate_tiles": 11,
+    "context_source_sha256": "1a9cf8b1206c2c8a069774525ab80f8dae0113c57ef49e8372e95be11a6fe40d",
+    "coverage_bytes": 5212,
+    "coverage_output_hashes_match_files": true,
+    "coverage_sha256": "3d27f37ed8054e8ec79a5a28177a1af6e30fee5938795226786407f031bb3c4e",
+    "empty_tile_outcomes": 3,
+    "global_bytes": 40,
+    "inventory_sha256": "f093e0e67511c599c93d74f9465eec2a3f71ec6c11bbd58e645af50fc3c0bfbc",
+    "manifest_sha256": "f774668ef14093c4a3bc7ae79f61661fae2e64ac0bbc14725ba3e13372ed1cff",
+    "navigation_payload_bytes": 3782524,
+    "nonempty_tile_bytes": 3782484,
+    "nonempty_tiles": 8
+  },
+  "recorded_utc": "2026-10-20T02:06:30.252369+00:00",
+  "schema": "forever-v23-selected-navigation-nonempty-terrain-acceptance-v1",
+  "scope": "one selected Linux build-70450 map with admitted nonempty terrain inputs and nonempty navigation outputs",
+  "source": {
+    "build": 70450,
+    "complete_source_coverage": false,
+    "component_mask": 32,
+    "coverage_authentication": "producer_reported; fresh source and linked package guards exercised",
+    "locale": "esES",
+    "observed_checkout_commit": "501f654894bbd31d834a1247faf6411d698563d4",
+    "plan_sha256": "4d42ff8e44078674b2b09c3c20b98054957851e46ee92ea4b4e299d2b3fc02a2",
+    "producer_sha256": "20753bcdac11ec892ffd2d55579200f0a3e949b5986db12061a87d15d8807ef9",
+    "runtime_commit": "4030a5490e72cc9ba416860b13f2716ea331867e"
+  }
+}

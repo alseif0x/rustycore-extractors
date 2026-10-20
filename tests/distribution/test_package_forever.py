@@ -116,7 +116,7 @@ class DistributionTests(unittest.TestCase):
         archive = self.root / "a/forever-extractor-linux.tar.gz"
         manifest = m.verify_archive(archive)
         self.assertFalse(manifest["full_extractor_complete"])
-        self.assertEqual(manifest["source_snapshot"]["profile"], "forever-seven-crate-linux-product-db2-gt-cameras-source-v11")
+        self.assertEqual(manifest["source_snapshot"]["profile"], m.SOURCE_PROFILE)
         unpacked = self.root / "moved"
         unpacked.mkdir()
         # Test archive has already been checked; manually write regular members.
@@ -537,8 +537,7 @@ class DistributionTests(unittest.TestCase):
         self.assertTrue(all(not (self.source / name).exists() for name in m.OPTIONAL_WINDOWS_QA_SOURCE))
         root = self.unpack("legacy-v10")
         manifest, _ = m.verify_bundle(root)
-        self.assertEqual(manifest["source_snapshot"]["profile"],
-                         "forever-seven-crate-linux-product-db2-gt-cameras-source-v11")
+        self.assertEqual(manifest["source_snapshot"]["profile"], m.SOURCE_PROFILE)
         self.assertTrue(all("source/" + name not in manifest["inventory"]
                             for name in m.OPTIONAL_WINDOWS_QA_SOURCE))
         with patch.object(m, "compile_source", self.compiler):
@@ -596,6 +595,9 @@ class DistributionTests(unittest.TestCase):
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
         manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-collision-leased-archive-source-v8"
+        self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
+
+        manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-db2-gt-cameras-source-v11"
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
     def test_exact_windows_dependency_edges_are_required(self):
@@ -913,14 +915,89 @@ class DistributionTests(unittest.TestCase):
         manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-collision-disk-source-v9"
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
+    def test_v12_requires_and_ships_exact_v23_source_closure(self):
+        self.assertEqual(
+            m.SOURCE_PROFILE,
+            "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12",
+        )
+        self.assertTrue(set(m.PRODUCT_V23_SOURCE) <= set(m.REQUIRED))
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        self.assertEqual(manifest["source_snapshot"]["profile"], m.SOURCE_PROFILE)
+        for name in m.PRODUCT_V23_SOURCE:
+            with self.subTest(name=name):
+                self.assertTrue(m.bundle_path_allowed("source/" + name))
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual(
+                    (self.root / "output/source" / name).read_bytes(),
+                    (self.source / name).read_bytes(),
+                )
+
+        # The verifier requires the named v23 closure, rather than trusting the
+        # broad directory scans used to populate a normal current snapshot.
+        for name in (
+            "crates/forever-extractor/src/driver/navigation_v23.rs",
+            "contracts/forever-product-contract-v23.json",
+            "tests/contracts/fixtures/forever-product-v23/map48.tsv",
+            "docs/forever-product-v23.md",
+            "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+            "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
+            "docs/forever-navigation.md",
+        ):
+            with self.subTest(missing_manifest=name):
+                incomplete = copy.deepcopy(manifest)
+                incomplete["inventory"].pop("source/" + name)
+                self.assertFailure("manifest_missing", m.validate_manifest, incomplete)
+
+        contract = json.loads((REPO / "contracts/forever-distribution-contract-v1.json").read_bytes())
+        self.assertEqual(contract["source"]["profile"], m.SOURCE_PROFILE)
+        self.assertTrue(set(m.PRODUCT_V23_SOURCE) <= set(contract["source"]["required"]))
+        self.assertFalse(contract["source"]["product_v23_selected_navigation_acceptance"]["bundle_built"])
+
+    def test_missing_v23_source_contract_fixture_and_link_docs_reject_before_compile(self):
+        missing = (
+            "crates/forever-extractor/src/driver/navigation_v23.rs",
+            "contracts/forever-product-contract-v23.json",
+            "tests/contracts/fixtures/forever-product-v23/map48.tsv",
+            "docs/forever-product-v23.md",
+            "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+            "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
+            "docs/forever-navigation.md",
+        )
+        for index, name in enumerate(missing):
+            with self.subTest(name=name):
+                path = self.source / name
+                original = path.read_bytes()
+                path.unlink()
+                try:
+                    with patch.object(
+                        m,
+                        "compile_source",
+                        side_effect=AssertionError("missing v23 closure must reject before compilation"),
+                    ):
+                        self.assertFailure("input_io", self.build, "missing-v23-" + str(index))
+                finally:
+                    path.write_bytes(original)
+
     def test_environment_drops_inherited_injection(self):
-        with patch.dict(m.os.environ, {"RUSTFLAGS": "secret", "RUSTC_WRAPPER": "evil", "RCE_FOREVER_CASC_REFERENCE": "client", "HTTP_PROXY": "secret"}):
+        with patch.dict(
+            m.os.environ,
+            {
+                "RUSTFLAGS": "secret",
+                "RUSTC_WRAPPER": "evil",
+                "CARGO_BUILD_JOBS": "64",
+                "RCE_FOREVER_CASC_REFERENCE": "client",
+                "HTTP_PROXY": "secret",
+            },
+        ):
             env = m.build_env(self.root, {"rustc": "/installed/rustc", "cargo": "/installed/cargo"}, 1234)
         self.assertNotIn("RUSTC_WRAPPER", env)
         self.assertNotIn("RCE_FOREVER_CASC_REFERENCE", env)
         self.assertNotIn("HTTP_PROXY", env)
+        self.assertEqual(env["CARGO_BUILD_JOBS"], "1")
         self.assertNotIn("secret", " ".join(env.values()))
         self.assertEqual(env["CARGO_NET_OFFLINE"], "true")
+        self.assertEqual(m.build_description()["cargo_jobs"], 1)
 
 
 if __name__ == "__main__":

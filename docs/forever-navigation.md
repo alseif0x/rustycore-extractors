@@ -2827,3 +2827,74 @@ navigation, native Trinity parity, full RustyCore runtime/server, Windows and
 release acceptance remain open. The CLI continues reporting
 `full_extractor_complete: false`. See the [v23 guide](forever-product-v23.md) and
 [redacted structured report](acceptance/forever-v23-selected-navigation-70450-20261020.json).
+
+## 2026-10-20: bounded real v23 navigation with nonempty terrain
+
+The selected Linux v23 route now has a second real esES result with nonempty
+terrain inputs. Its full v20 input was freshly verified (3,394 artifacts /
+215,659,177 bytes); a separate v22 acquisition and both verifiers accepted
+149 geometry artifacts / 2,199,694 bytes. The v20 original producer identity is
+retained separately from the newer verification and v22/v23 binary. Fresh v23
+admission confirmed one active-closure map, WDT loaded, six known/converted
+terrain tiles and no missing root ADTs. No ancestor set was inferred externally.
+
+Plan-only inspect, fresh extraction, offline verify and offline verify-links all
+returned zero. Eleven candidate tile outcomes contain eight nonempty MMap tiles
+and three empty outcomes. The eight tiles total 3,782,484 bytes; the global is
+40 bytes and coverage is 5,212 bytes. The complete ten-artifact package totals
+3,787,736 bytes. Every coverage output length/hash matches its verified file.
+Its inventory is `f093e0e67511c599c93d74f9465eec2a3f71ec6c11bbd58e645af50fc3c0bfbc`.
+
+Receipt: `f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900`.
+The 52.846-second execution used observed 900-second, 3-GiB, one-CPU and 64-task
+limits. Source, binary, plans, both upstream trees and the client-root identity
+stayed unchanged. The runtime producer remains `20753bcd…07ef9` from commit
+`4030a54`; this run changes no product Rust source or dependency.
+
+A preceding VMap harness attempt stopped at `package_exists` because it had
+created the output leaf before `Run::create`. The failed run is retained; a new
+recipe left that leaf absent and used the required existing private scratch
+root. V23 recipe review also separated the original terrain producer from its
+later verifier before any v23 product call. These are harness corrections, not
+new extraction or source-coverage acceptance.
+
+This closes the bounded nonempty-terrain-input navigation gap for one map. It
+does not transfer earlier native SDK results to these eight outputs. Independent
+SDK consumption of this package, production `MMapManager`/filenames, complete
+source/geometry, off-mesh/full-world, Trinity parity, RustyCore runtime/server,
+Windows and release acceptance remain open. Input coverage remains
+producer-reported and `full_extractor_complete` remains false. See the
+[redacted report](acceptance/forever-v23-selected-navigation-ground-70450-20261020.json).
+
+## 2026-10-20: native SDK accepts the eight ground-navigation tiles
+
+An independent native SDK probe now accepts the original ground package above.
+Strict v16 readers retain the original headers, explicitly project the validated
+global parameters, and pass the unchanged Detour v7 payloads through RustyCore's
+existing typed SDK API. All eight tiles load and unload; all eight are present
+after loading and absent after removal. The legacy v15 parser rejects every v16
+tile as expected. Queries are dropped before tile removal.
+
+All 98 nearest-poly attempts succeed, with a result for every loaded tile. A
+bounded 256-route campaign finds six complete paths crossing distinct endpoint
+tiles; 250 paths do not reach their requested final polygon. The cause of those
+partial routes is not established; this is not complete-connectivity acceptance. Limits are 4,096 query
+nodes, 256 path entries and 128 candidate points. The complete offline build/probe
+campaign takes 12.159 seconds (10.681s build, 0.681s native invocation), under
+observed 900s / 3-GiB / one-CPU / 64-task service limits. All 18 integrity checks,
+source/input pins, the preserved integration dirty state and 15 authored files
+stay stable. Receipt:
+`be0c80742301fc2f650a7bea42ddaa64c5a89307b05cbfe0426c588e49a9d4fa`.
+
+A prior harness inventory attempt failed before compilation because a local
+variable shadowed a hash helper. It remains retained; a new recipe corrected
+that naming error and added whitelisted function/line diagnostics. No product
+Rust or dependency changed.
+
+The native probe consumes the original ground outputs. Separately, the qualified
+v12 packaged-binary run reproduces all nine navigation payloads byte-for-byte;
+it is not a second native invocation. Production `MMapManager`/filename loading,
+complete source/geometry, off-mesh/full-world, Trinity parity, runtime/server,
+Windows and release acceptance remain open. See the
+[redacted SDK report](acceptance/forever-v23-ground-native-sdk-20261020.json) and
+[distribution qualification](forever-distribution.md).

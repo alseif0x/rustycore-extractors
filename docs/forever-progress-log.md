@@ -4880,3 +4880,56 @@ sources, manifests, lockfile, toolchain and registry pins remain unchanged from
 the accepted real CLI run; follow-up changes are test fixtures and documentation.
 This completes this selected Linux CLI software checkpoint, with the broader
 coverage, manager/runtime, distribution and release gates still open.
+
+## 2026-10-20: nonempty terrain and selected navigation accepted
+
+PR #101 merged into `forever` at `501f654`; all six exact-head CI checks passed
+and its completed branch was deleted. A subsequent local-only campaign verified
+the full v20 package, admitted six converted terrain tiles with zero missing
+root ADTs, acquired and verified a 149-artifact v22 geometry input, and generated
+v23 navigation. All four v23 stages passed; eleven candidates produced eight
+nonempty tiles and three empty outcomes, with ten artifacts / 3,787,736 bytes.
+Observed service limits were 900s / 3 GiB / one CPU / 64 tasks; elapsed 52.846s.
+Inputs and frozen source/tool/plan identities stayed stable. Receipt:
+`f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900`.
+
+The earlier VMap harness `package_exists` failure and unexecuted v23 recipe
+producer/verifier mismatch remain recorded locally. Neither is a recovered-key
+result. The new navigation package has no native SDK, production manager/server
+or full-world acceptance. Detailed scope is in the
+[ground checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain).
+Issue #102 separately versions the Linux corresponding-source closure; its
+packaged-binary and reproducibility acceptance remains pending.
+
+## 2026-10-20: v12 Linux candidate passes reproducibility and packaged CLI
+
+Issue #102's frozen source `719faee` passed 87 packaging tests / 439 contracts.
+Two fresh offline archives and binaries match; the moved-source rebuild also
+matches. The three-build campaign took 171.276s. Archive `a3ff0d9d…455e3`,
+binary `afbc1618…e387aa`. The extracted binary passed 37 synthetic product cases
+and ten v23 CLI/fixture cases. A separate real ground campaign passed all four
+stages in 54.066s and reproduced all nine navigation payloads / 3,782,524 bytes
+from the earlier eight-tile ground output. Both inputs, baseline, source, binary
+and plans stayed unchanged. The failed build-workspace preflight and empty-parent-
+trace wrapper assertion remain retained; the latter has a separate root review
+confirming 27 SIGCHLD lines and zero network syscall lines, with all 47 cases passed.
+No successful product/test call was repeated.
+
+This is bounded local-candidate qualification; the frozen archive retains its
+earlier source-definition status. No production Rust/dependency changed. Complete
+geometry/source/world, manager/runtime/server, Windows and release gates remain
+open. Details and receipt hashes: [distribution qualification](forever-distribution.md)
+and [redacted report](acceptance/forever-v23-distribution-v12-20261020.json).
+
+## 2026-10-20: independent native SDK ground-output acceptance
+
+The eight original ground MMap tiles pass strict v16 reading, typed projection,
+native load/unload and per-tile nearest-poly checks: 98/98 nearest queries pass.
+A 256-route bounded campaign finds six complete cross-tile paths; the other 250
+do not reach the final polygon and their cause remains unestablished. All eight legacy v15 parses reject as expected. The 12.159-second
+offline build/probe preserves all 18 integrity checks and existing integration
+work. Receipt `be0c80742301fc2f650a7bea42ddaa64c5a89307b05cbfe0426c588e49a9d4fa`.
+The failed inventory-shadowing harness attempt is retained separately and ran no
+build/native stage. The packaged-output byte-parity check is a separate run, not
+a repeated native test. Production manager/server, full-world and release remain
+open. See the [native checkpoint](forever-navigation.md#2026-10-20-native-sdk-accepts-the-eight-ground-navigation-tiles).
