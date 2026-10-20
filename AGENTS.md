@@ -74,8 +74,9 @@ The current source profile is
 `forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13`;
 its explicit v23/shared-consumer source/test/contract/document closure is mandatory.
 V13 has bounded component/real-worker acceptance and matching fresh/offline-rebuild
-archives, 47 packaged CLI cases and a real nine-payload parity run. RustyCore publication and
-server/full-world acceptance remain open. V12 retains its frozen inputs.
+archives, 47 packaged CLI cases and a real nine-payload parity run. The selected-navigation
+consumer is merged into RustyCore, but this does not qualify a new extractor archive or establish
+server/full-world acceptance. V12 retains its frozen inputs.
 The build
 environment fixes one Cargo job. Qualification belongs to each frozen source
 snapshot, archive and executable; recorded earlier test counts and artifact

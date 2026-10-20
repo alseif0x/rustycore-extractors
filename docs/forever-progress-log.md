@@ -5054,3 +5054,38 @@ code qualification `1bf5ee4b48d8f729e806f7acddfdebad01025b58`, the existing
 `documentation_only_delta_after_code_qualification` scope, or Rust/manifests/
 lock/dependency policy. No new general-final or server/runtime acceptance is
 claimed; merge remains pending.
+
+## 2026-10-20: bounded consumer and manual README guide merged
+
+RustyCore PR #1454 was squash merged into `forever` at
+`984a0c6abc6ac0b00bacaaaf58224058d7297df3`. The merge is based on the unchanged
+`b8330b1b5ba50c7ec870b8ca9f1f0969df8e667a`; its tree
+`7d87fdb8416dd871f97314719ecd1527a29f08bf` exactly matches the qualified
+publication tree from `803449bd030ca68d48b906880b78ca8a31810751`. The merged
+feature branch was removed. This confirms bounded consumer publication only;
+it does not transfer prior test receipts or code qualification to the merge
+SHA. The tested code remains `1bf5ee4b48d8f729e806f7acddfdebad01025b58`, the
+retained general-final rejection remains, and the ordinary 600-second target
+remains unmet.
+
+RustyCore README-only PR #1456 was separately squash merged at
+`33820338567870954b9a4a8003aa417efefb12f1`. It documents the manual exact
+sibling extractor checkout and lock pin before Cargo, plus the Rust product
+build, profile and verification examples. This publication does not include
+the CI bootstrap workflow amendment.
+
+Historical bootstrap candidate `c89279417bc39a97c703c73cc485099a852640af`
+remains unpublished and preserved in its original detached checkout and
+receipts. The local `forever-navigation-ci-bootstrap` branch has since moved
+to a prepared follow-up that requires its own committed-candidate
+qualification. The required OAuth
+workflow scope remains unavailable, the workflow amendment is absent, and no
+retry or bypass was attempted. The README's manual preparation is published
+independently and does not claim CI bootstrapping. PR #1454 and PR #1456 feature
+branches were deleted after their merges. Extractor issue #104 tracks the
+bounded consumer closeout; it does not cover complete Linux delivery.
+
+All earlier acceptance counts, timings, receipts and retained failures remain
+attached to their original campaigns. The v13 archive, frozen source and binary
+are unchanged; this docs/status delta qualifies no new archive and transfers no
+extractor-product, complete-geometry, full-world or server-runtime acceptance.
