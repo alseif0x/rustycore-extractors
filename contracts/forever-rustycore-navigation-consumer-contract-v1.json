@@ -1,7 +1,7 @@
 {
   "contract": "forever-rustycore-navigation-consumer-v1",
   "version": 1,
-  "status": "bounded_local_accepted_core_publication_pending",
+  "status": "bounded_local_accepted_core_merge_pending",
   "issue": 104,
   "scope": {
     "platform": "linux",
@@ -113,7 +113,7 @@
     "legacy_behavior": "The existing legacy format remains explicit. Admission of this profile does not transfer newer-build acceptance to legacy readers or older-build acceptance to build70450."
   },
   "rustycore_owner": {
-    "implementation_status": "bounded_local_accepted_core_publication_pending",
+    "implementation_status": "bounded_local_accepted_core_merge_pending",
     "native_owner": "existing MMapManager/MMapData",
     "query_lifetime": "Instance queries belong to their existing MMapData and are destroyed before its mesh. No second native mesh/query registry or Send/Sync relaxation is introduced.",
     "execution": "Construction, package reads, tile preparation and queries run on the existing dedicated native pathfinder owner thread, outside map/entity/session locks.",
@@ -132,6 +132,28 @@
     "errors": "Configured source, integrity, format, scope and native failures remain errors. They are not converted to a successful straight-line path or missing-data fallback.",
     "status": "Native query detail bits and partial outcomes remain visible. A successful native status alone is not a complete-route claim.",
     "rollback": "Failed preparation must not publish partial native ownership as a successfully prepared batch; unload/cleanup and repeated load behavior have explicit tests."
+  },
+  "rustycore_publication": {
+    "state": "draft_pr_published_merge_pending",
+    "pull_request": "https://github.com/alseif0x/rustycore/pull/1454",
+    "tested_code_commit": "1bf5ee4b48d8f729e806f7acddfdebad01025b58",
+    "publication_commit": "803449bd030ca68d48b906880b78ca8a31810751",
+    "base_commit": "b8330b1b5ba50c7ec870b8ca9f1f0969df8e667a",
+    "documentation_only_delta_after_code_qualification": true,
+    "workspace_all_targets_compilation_passed": true,
+    "component_tests_passed": 5944,
+    "component_tests_ignored": 3,
+    "qualification_method": "Retained unchanged-candidate workspace, hygiene, dependency and data-suite evidence plus pinned-reference database, SDK, world and consumer continuation; no single green general-final invocation.",
+    "code_qualification_receipt_sha256": "fe9f725ff4de50441ace06613be4b028bb723cbab4a1cbde9cdbc75107ea8e41",
+    "publication_final_receipt_sha256": "c22c427eb9bb2ccb5b14863c819be8f03fd70db762dd5d6d262f00546b2834f1",
+    "sdk_physical_failure_repaired_without_ceiling_change": true,
+    "general_final_accepted": false,
+    "existing_inherited_debt_experimental_publication_exception_used": true,
+    "new_validation_failure_waived": false,
+    "merged": false,
+    "server_runtime_accepted": false,
+    "shipped_extractor_product_sources_changed": false,
+    "frozen_v13_qualification_scope_changed": false
   },
   "acceptance": {
     "state": "bounded_local_consumer_and_packaged_candidate_accepted",
@@ -176,7 +198,7 @@
       },
       "whole_core_final_accepted": false,
       "server_runtime_accepted": false,
-      "core_publication": "pending; inherited architecture/session baseline rejection retained",
+      "core_publication": "draft PR 1454 published under the existing unchanged inherited-debt experimental exception; merge pending and general final rejection retained",
       "ordinary_campaign_600_second_target_met": false,
       "distribution": {
         "source_profile": "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",

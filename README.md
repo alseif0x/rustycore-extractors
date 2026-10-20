@@ -88,8 +88,11 @@ The [selected-navigation consumer](docs/forever-rustycore-navigation-consumer.md
 is being integrated under [#104](https://github.com/alseif0x/rustycore-extractors/issues/104).
 Its shared package API and native manager/worker now pass bounded local acceptance.
 The v13 source has matching fresh archives and a moved-source offline rebuild;
-the packaged binary also passes synthetic and real navigation checks. RustyCore publication, complete geometry and
-server/world acceptance remain open. Historical v12 evidence keeps its frozen scope.
+the packaged binary also passes synthetic and real navigation checks. The core
+integration is published in [RustyCore PR #1454](https://github.com/alseif0x/rustycore/pull/1454),
+with 5,944 scoped tests passing and three ignored. Its merge, complete geometry
+and server/world acceptance remain open. The inherited general validation
+rejection is retained. Historical v12 evidence keeps its frozen scope.
 
 ### Current build-specific scope
 

@@ -106,6 +106,22 @@ class NavigationConsumerContract(unittest.TestCase):
         self.assertEqual(owner["consumer_defaults"]["maximum_loaded_artifact_bytes"], 128 * 1024 * 1024)
         self.assertIn("strict native ingress malformed-index, size, numeric, portal, detail and BV rejection cases before FFI",
                       self.contract["acceptance"]["required"])
+        publication = self.contract["rustycore_publication"]
+        self.assertEqual(self.contract["status"], "bounded_local_accepted_core_merge_pending")
+        self.assertEqual(owner["implementation_status"], self.contract["status"])
+        self.assertEqual(publication["state"], "draft_pr_published_merge_pending")
+        self.assertEqual(publication["pull_request"], "https://github.com/alseif0x/rustycore/pull/1454")
+        for field in ("tested_code_commit", "publication_commit", "base_commit"):
+            self.assertRegex(publication[field], r"^[0-9a-f]{40}$")
+        self.assertEqual(publication["component_tests_passed"], 5944)
+        self.assertEqual(publication["component_tests_ignored"], 3)
+        self.assertTrue(publication["documentation_only_delta_after_code_qualification"])
+        self.assertTrue(publication["sdk_physical_failure_repaired_without_ceiling_change"])
+        self.assertTrue(publication["existing_inherited_debt_experimental_publication_exception_used"])
+        for field in ("general_final_accepted", "new_validation_failure_waived", "merged",
+                      "server_runtime_accepted", "shipped_extractor_product_sources_changed",
+                      "frozen_v13_qualification_scope_changed"):
+            self.assertFalse(publication[field], field)
 
 
 if __name__ == "__main__":

@@ -5,9 +5,11 @@
 Issue #104 carries the Linux build-70450 selected-navigation consumer. Its
 shared package API, checked native ingress and optional RustyCore manager/worker
 have passed bounded local synthetic and real-package acceptance. The RustyCore
-candidate remains local: its general publication gate still rejects inherited
-architecture/session baseline drift. Server activation and gameplay acceptance
-remain open.
+implementation is published in [RustyCore PR #1454](https://github.com/alseif0x/rustycore/pull/1454).
+Its merge remains pending. The general final still rejects inherited
+architecture/session baseline drift; publication uses only the existing
+experimental exception for that unchanged debt. Server activation and gameplay
+acceptance remain open.
 
 `forever_navigation::package_v23` owns the canonical V23 coverage and source
 identity codec. The extractor CLI delegates output-package verification to
@@ -133,6 +135,10 @@ Windows or release acceptance is implied.
 
 ## Frozen v13 package qualification
 
+The later core publication changes no shipped extractor Rust, dependency,
+manifest, lock or packaging recipe. Its status update does not requalify a new
+archive or transfer the frozen v13 qualification to a later Git SHA.
+
 The frozen corresponding-source digest is
 `577d46cd2952cf306c5fa404ba87bd5881e1e6701e14b4f6f56f3ea2cabbf85b`.
 Two fresh archives and binaries match; a moved-source offline rebuild matches
@@ -151,3 +157,34 @@ traced, so this is not a network observation over all 47. A fresh real run took
 Its eight tile payloads and global are byte-identical to the retained baseline:
 nine payloads / 3,782,524 bytes. Input trees and the package remained unchanged.
 See the exact receipt hashes in the [contract](../contracts/forever-rustycore-navigation-consumer-contract-v1.json).
+
+## Isolated core qualification and publication — 2026-10-20
+
+Core code `1bf5ee4b48d8f729e806f7acddfdebad01025b58` passes workspace
+all-target compilation, 5,933 tests across four affected libraries (three
+ignored), ten public consumer cases, one feature-disabled regression, focused
+dependency checks, formatting and SDK Clippy. The 5,944 passes compose retained
+unchanged-candidate evidence and a resumed invocation with the already pinned
+SQL reference. A missing-reference failure remains retained; no source was
+changed to bypass its comparisons.
+
+The initial isolated candidate also exposed a new SDK physical-size failure
+(220 versus 218). Moving the three synthetic-fixture FFI declarations into a
+private module preserves cfgs, symbols and callers and repairs that failure
+without changing a ceiling. Seven reviewed preexisting test-only repairs are
+included; original pending terrain, configuration and source files are preserved.
+
+Publication commit `803449bd030ca68d48b906880b78ca8a31810751` adds only the two
+owning core checkpoint documents after code qualification. Its final reproduces
+exactly the same inherited logical/Session rejection and no new failure. The
+existing exception authorizes experimental branch publication; it does not
+authorize merging or activating the server. The core PR and issue #104 remain
+open. These isolated attempts and closing validation total 1,397.524s; they
+do not reset the earlier failed ordinary 600-second target.
+
+Code qualification receipt:
+`fe9f725ff4de50441ace06613be4b028bb723cbab4a1cbde9cdbc75107ea8e41`.
+Closing publication review:
+`c22c427eb9bb2ccb5b14863c819be8f03fd70db762dd5d6d262f00546b2834f1`.
+These receipts qualify the stated component operation; complete real geometry,
+full-world resources and server/gameplay acceptance remain open.

@@ -4999,3 +4999,34 @@ focused external-path policy/actual metadata graph pass; no ceiling was reset.
 No server/world entry or release was activated. Full source/geometry/world,
 Windows, runtime/gameplay and release remain open. Detailed investigation and
 all real inputs/outputs stay outside Git in the private local laboratory.
+
+## 2026-10-20: isolated core consumer published; merge pending
+
+The isolated core acceptance found a new SDK root physical failure (220 lines
+against 218); the earlier physical-pass wording did not establish a clean
+publication candidate. Moving the three fixture-only FFI declarations to a
+private module fixes it without changing cfgs, symbols, behavior or ceilings.
+Seven reviewed preexisting test-only repairs are included, preserving their
+original files and pending terrain/operator work.
+
+Code `1bf5ee4b` passes workspace all-target compilation, 5,933 affected-library
+tests (three ignored), ten public consumer cases and one disabled-feature case,
+plus formatting, focused dependency checks and SDK Clippy. This composes retained
+evidence and a pinned-reference continuation. The missing SQL-reference failure
+is retained; the two existing reference files match CI's exact source pins.
+No unchanged workspace or data suite was repeated to relabel that attempt green.
+
+The general final still fails unchanged inherited logical/Session debt. Core
+publication `803449bd` adds only checkpoint documentation after the tested code;
+its final retains exactly that rejection with no new failure waived. Published
+[RustyCore PR #1454](https://github.com/alseif0x/rustycore/pull/1454) uses only the
+existing experimental inherited-debt publication exception. It is a draft,
+with merge/runtime authority pending. Issue #104 stays open. The three isolated
+attempts plus closing validation total 1,397.524s; the earlier ordinary target
+remains unmet. Exact receipt hashes are in the consumer contract and guide.
+
+This public status delta changes no shipped product Rust, dependency, lock or
+packaging recipe. Frozen v13 retains its exact source/archive/binary evidence;
+there is no claim of a new qualified archive at this later Git SHA. Complete
+geometry, full-world/server/gameplay acceptance, Windows and releases remain
+open. Detailed investigation stays exclusively in the private local laboratory.
