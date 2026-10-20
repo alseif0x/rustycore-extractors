@@ -4880,3 +4880,23 @@ sources, manifests, lockfile, toolchain and registry pins remain unchanged from
 the accepted real CLI run; follow-up changes are test fixtures and documentation.
 This completes this selected Linux CLI software checkpoint, with the broader
 coverage, manager/runtime, distribution and release gates still open.
+
+## 2026-10-20: nonempty terrain and selected navigation accepted
+
+PR #101 merged into `forever` at `501f654`; all six exact-head CI checks passed
+and its completed branch was deleted. A subsequent local-only campaign verified
+the full v20 package, admitted six converted terrain tiles with zero missing
+root ADTs, acquired and verified a 149-artifact v22 geometry input, and generated
+v23 navigation. All four v23 stages passed; eleven candidates produced eight
+nonempty tiles and three empty outcomes, with ten artifacts / 3,787,736 bytes.
+Observed service limits were 900s / 3 GiB / one CPU / 64 tasks; elapsed 52.846s.
+Inputs and frozen source/tool/plan identities stayed stable. Receipt:
+`f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900`.
+
+The earlier VMap harness `package_exists` failure and unexecuted v23 recipe
+producer/verifier mismatch remain recorded locally. Neither is a recovered-key
+result. The new navigation package has no native SDK, production manager/server
+or full-world acceptance. Detailed scope is in the
+[ground checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain).
+Issue #102 separately versions the Linux corresponding-source closure; its
+packaged-binary and reproducibility acceptance remains pending.

@@ -179,6 +179,7 @@ PRODUCT_V23_SOURCE = (
     "tests/contracts/fixtures/forever-product-v23/map48.tsv",
     "docs/forever-product-v23.md",
     "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+    "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
     "docs/forever-navigation.md",
 )
 # Unlike optional QA additions, the current profile always requires the v23
@@ -459,7 +460,7 @@ def read_toolchain_notices():
 
 
 def build_env(output, programs, epoch):
-    env = {"PATH": str(Path(programs["rustc"]).parent) + ":/usr/bin:/bin", "HOME": str(output / "home"), "CARGO_HOME": str(output / "cargo-home"), "CARGO_TARGET_DIR": str(output / "target"), "RUSTC": programs["rustc"], "LANG": "C", "LC_ALL": "C", "TZ": "UTC", "SOURCE_DATE_EPOCH": str(epoch), "CARGO_INCREMENTAL": "0", "CARGO_PROFILE_RELEASE_DEBUG": "0", "CARGO_PROFILE_RELEASE_STRIP": "debuginfo", "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "1", "CARGO_NET_OFFLINE": "true"}
+    env = {"PATH": str(Path(programs["rustc"]).parent) + ":/usr/bin:/bin", "HOME": str(output / "home"), "CARGO_HOME": str(output / "cargo-home"), "CARGO_TARGET_DIR": str(output / "target"), "RUSTC": programs["rustc"], "LANG": "C", "LC_ALL": "C", "TZ": "UTC", "SOURCE_DATE_EPOCH": str(epoch), "CARGO_BUILD_JOBS": "1", "CARGO_INCREMENTAL": "0", "CARGO_PROFILE_RELEASE_DEBUG": "0", "CARGO_PROFILE_RELEASE_STRIP": "debuginfo", "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "1", "CARGO_NET_OFFLINE": "true"}
     env["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join(["--remap-path-prefix=" + str(output) + "=/forever-distribution", "-C", "debuginfo=0", "-C", "strip=debuginfo", "-C", "codegen-units=1"])
     return env
 
@@ -589,7 +590,7 @@ def validate_manifest(manifest):
 
 
 def build_description():
-    return {"command": ["cargo", "build", "--offline", "--locked", "--release", "-p", "forever-extractor", "--no-default-features"], "native": False, "incremental": False, "debug": 0, "strip": "debuginfo", "codegen_units": 1, "remap_root": "/forever-distribution", "system_linkage": "x86_64 GNU/Linux system linker and runtime; libgcc_s.so.1, libm.so.6, libc.so.6, ld-linux-x86-64.so.2 are external; not static or all-Linux ABI compatibility"}
+    return {"command": ["cargo", "build", "--offline", "--locked", "--release", "-p", "forever-extractor", "--no-default-features"], "cargo_jobs": 1, "native": False, "incremental": False, "debug": 0, "strip": "debuginfo", "codegen_units": 1, "remap_root": "/forever-distribution", "system_linkage": "x86_64 GNU/Linux system linker and runtime; libgcc_s.so.1, libm.so.6, libc.so.6, ld-linux-x86-64.so.2 are external; not static or all-Linux ABI compatibility"}
 
 
 def validate_payloads(manifest, payloads):

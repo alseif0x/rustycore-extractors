@@ -941,6 +941,7 @@ class DistributionTests(unittest.TestCase):
             "tests/contracts/fixtures/forever-product-v23/map48.tsv",
             "docs/forever-product-v23.md",
             "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+            "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
             "docs/forever-navigation.md",
         ):
             with self.subTest(missing_manifest=name):
@@ -960,6 +961,7 @@ class DistributionTests(unittest.TestCase):
             "tests/contracts/fixtures/forever-product-v23/map48.tsv",
             "docs/forever-product-v23.md",
             "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+            "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
             "docs/forever-navigation.md",
         )
         for index, name in enumerate(missing):
@@ -978,13 +980,24 @@ class DistributionTests(unittest.TestCase):
                     path.write_bytes(original)
 
     def test_environment_drops_inherited_injection(self):
-        with patch.dict(m.os.environ, {"RUSTFLAGS": "secret", "RUSTC_WRAPPER": "evil", "RCE_FOREVER_CASC_REFERENCE": "client", "HTTP_PROXY": "secret"}):
+        with patch.dict(
+            m.os.environ,
+            {
+                "RUSTFLAGS": "secret",
+                "RUSTC_WRAPPER": "evil",
+                "CARGO_BUILD_JOBS": "64",
+                "RCE_FOREVER_CASC_REFERENCE": "client",
+                "HTTP_PROXY": "secret",
+            },
+        ):
             env = m.build_env(self.root, {"rustc": "/installed/rustc", "cargo": "/installed/cargo"}, 1234)
         self.assertNotIn("RUSTC_WRAPPER", env)
         self.assertNotIn("RCE_FOREVER_CASC_REFERENCE", env)
         self.assertNotIn("HTTP_PROXY", env)
+        self.assertEqual(env["CARGO_BUILD_JOBS"], "1")
         self.assertNotIn("secret", " ".join(env.values()))
         self.assertEqual(env["CARGO_NET_OFFLINE"], "true")
+        self.assertEqual(m.build_description()["cargo_jobs"], 1)
 
 
 if __name__ == "__main__":

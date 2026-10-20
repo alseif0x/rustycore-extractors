@@ -91,12 +91,12 @@ source stability is not an atomic client snapshot. Per-domain limits do not
 constitute a global RSS guarantee. Every v23 CLI result retains
 `full_extractor_complete: false`.
 
-Complete-source coverage, nonempty ground-MAPS acceptance, production
+Complete-source coverage, production
 `MMapManager` integration and filenames, off-mesh/full-world navigation,
 TrinityCore format parity, complete runtime/server acceptance, Windows delivery
 and release publication remain outside this checkpoint.
 
-## Bounded real checkpoint
+## Bounded real checkpoint with empty terrain
 
 The real esES map-48 package has six public artifacts / 842,691 bytes: four
 nonempty tiles, a 40-byte global and coverage. All five navigation payloads match
@@ -109,3 +109,26 @@ nonempty ground-MAPS acceptance. The independent-reader native SDK checkpoint
 uses the earlier filesystem-owner outputs; this CLI run does not add production
 manager or server acceptance. See the [redacted report](acceptance/forever-v23-selected-navigation-70450-20261020.json)
 and [navigation checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-selected-navigation-cli).
+
+## Bounded real checkpoint with nonempty terrain
+
+A subsequent build-70450 esES run used the full sealed v20 terrain package and
+another sealed v22 geometry package (149 artifacts / 2,199,694 bytes). Fresh
+v23 admission confirmed one active-closure map, a loaded WDT, six known-present
+and converted terrain tiles, and zero missing root ADTs. The two upstream
+producer identities are pinned separately; the older v20 producer differs from
+the binary used for later verification and v22/v23 generation.
+
+All four commands passed: plan-only inspection, extraction, offline verification
+and linked-input verification. Eleven candidate navigation tiles yielded eight
+nonempty outputs and three recorded empty outcomes. The output has ten public
+artifacts / 3,787,736 bytes, including a 40-byte global and coverage. Execution
+took 52.846 seconds under observed 900-second / 3-GiB / one-CPU / 64-task limits;
+source, binary, plans and both input trees remained stable.
+
+This establishes one bounded navigation package with nonempty real terrain
+inputs. The new package has no independent SDK or production manager/server
+acceptance; earlier native results retain their original inputs. Complete-source,
+full-world, Trinity parity, Windows and release gates remain open. See the
+[ground checkpoint](forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain)
+and [redacted report](acceptance/forever-v23-selected-navigation-ground-70450-20261020.json).

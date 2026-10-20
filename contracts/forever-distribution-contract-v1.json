@@ -197,6 +197,7 @@
       "tests/contracts/fixtures/forever-product-v23/map48.tsv",
       "docs/forever-product-v23.md",
       "docs/acceptance/forever-v23-selected-navigation-70450-20261020.json",
+      "docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json",
       "docs/forever-navigation.md"
     ],
     "forbidden": [
@@ -280,7 +281,7 @@
       "windows_product_enabled": false,
       "full_extractor_complete": false
     },
-    "product_v23_selected_navigation_scope": "The current v12 source profile requires the Linux build-70450 single-selected-map navigation implementation, its synthetic source/plan/API/CLI tests, canonical v23 contract and fixture, product guide, its redacted acceptance report and navigation-document link target. Existing unbundled v23 CLI evidence does not establish packaged-binary or reproducible-distribution acceptance.",
+    "product_v23_selected_navigation_scope": "The current v12 source profile requires the Linux build-70450 single-selected-map navigation implementation, its synthetic source/plan/API/CLI tests, canonical v23 contract and fixture, product guide, both redacted acceptance reports and the navigation-document link target. Existing unbundled v23 CLI evidence does not establish packaged-binary or reproducible-distribution acceptance.",
     "product_v23_selected_navigation_acceptance": {
       "status": "source closure defined; reproducible distribution and packaged executable acceptance pending",
       "bundle_built": false,
@@ -309,6 +310,7 @@
   "network": false,
   "build": {
     "recipe": "cargo build --offline --locked --release -p forever-extractor --no-default-features",
+    "cargo_jobs": 1,
     "source": "build the frozen shipped corresponding source",
     "isolation": "new external Cargo home and target; sanitized flags/environment; directory-vendored dependencies",
     "reproducibility": "explicit epoch, fixed remapped build paths, debuginfo stripped, one codegen unit; two fresh local builds and moved-source rebuild must match",

@@ -57,6 +57,7 @@ class DistributionContract(unittest.TestCase):
             'tests/contracts/fixtures/forever-product-v23/map48.tsv',
             'docs/forever-product-v23.md',
             'docs/acceptance/forever-v23-selected-navigation-70450-20261020.json',
+            'docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json',
             'docs/forever-navigation.md',
         }
         self.assertTrue(required_v23 <= set(self.c['source']['required']))
@@ -69,6 +70,7 @@ class DistributionContract(unittest.TestCase):
     def test_offline_recipe_and_rebuild_are_explicit(self):
         self.assertEqual(self.c['toolchain'], '1.98.0')
         self.assertEqual(self.c['build']['recipe'], 'cargo build --offline --locked --release -p forever-extractor --no-default-features')
+        self.assertEqual(self.c['build']['cargo_jobs'], 1)
         self.assertIn('--epoch UNIX', self.c['commands']['build'])
         self.assertIn('--bundle UNPACKED_ROOT', self.c['commands']['rebuild'])
         self.assertFalse(self.c['build']['native_backend'])

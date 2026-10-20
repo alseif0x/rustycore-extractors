@@ -62,7 +62,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review the synthetic build-70450 map-domain navigation profile | [Product v21 scope](docs/forever-product-v21.md) |
 | Review the build-70450 selected-map geometry profile and bounded real query evidence | [Product v22 scope](docs/forever-product-v22.md) |
 | Review the build-70450 selected-filesystem navigation API and related evidence | [Navigation scope and evidence](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation) |
-| Use the build-70450 selected-navigation Linux CLI | [Product v23 guide](docs/forever-product-v23.md) and [bounded real CLI checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-selected-navigation-cli) |
+| Use the build-70450 selected-navigation Linux CLI | [Product v23 guide](docs/forever-product-v23.md) and [real ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain) |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -79,8 +79,8 @@ source of truth; the table below summarizes the boundaries.
 | DB2 | Build-specific catalogs, decoding, batch extraction and verification; a real v16 esES package extracted and verified 1,055 keylessly readable declarations out of 1,161 | Complete catalog acquisition and required server consumers; the other 106 esES declarations are encrypted without an available key |
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
 | Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
-| Collision / VMaps | M2/WMO conversion, placements, assembly, queries and resident/leased-disk library pipelines. Bounded real v22 esES map-48 extraction passed with 66 files / 2,079,754 bytes (inventory `aa9d5cee…`); 65 of the 66 published artifacts match the preceding binary byte-for-byte (55 `.vmo`, 4 `.vmtile`, 4 `.vmtileidx`, 1 `.vmtree`, 1 `.placements`); only the coverage record differs, with no client-derived VMap byte changes. V22 covers selected-map geometry and active ancestors from available Map; GameObject globals are excluded by profile, LiquidObject is out of scope, and MMaps/full-world output are absent. | C++/TrinityCore format parity, RustyCore runtime acceptance, complete navigation/MMaps, full-world/whole-client coverage and final product integration remain open; prior-profile evidence stays separate |
-| Navigation / MMaps | Linux v23 generated and verified a bounded real esES map-48 package: four nonempty tiles, a 40-byte global and coverage (six artifacts / 842,691 bytes). Ten CLI lifecycle cases passed, including offline verification, linked inputs and interruption/resume; all five navigation payloads match the earlier filesystem-owner outputs byte-for-byte. An independent-reader SDK probe separately covers those earlier outputs. Source inventory is partial, and the selected terrain tilelist is authoritatively empty ([checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-selected-navigation-cli)). | Complete-source coverage, production manager/container/path compatibility, nonempty ground MAPS, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
+| Collision / VMaps | Linux v22 has bounded real selected-map extraction and verification. The latest esES geometry input contains 149 artifacts / 2,199,694 bytes and feeds the [ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). Placement-only models, available Map coverage and excluded GameObject globals remain explicit. | Complete geometry, C++/TrinityCore parity, RustyCore runtime and full-world/whole-client coverage remain open |
+| Navigation / MMaps | Linux v23 generated and verified navigation with six real terrain tiles: eight nonempty MMap tiles, three empty outcomes, a 40-byte global and coverage (ten artifacts / 3,787,736 bytes). [Ground checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). The earlier empty-terrain package separately passed ten CLI lifecycle cases and has prior-input native SDK evidence. | Complete-source/geometry, native SDK for the new package, production manager/container/paths, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
 | Packaging | Versioned manifests, component seals, resume and offline verification; reproducible bounded Linux bundle | Complete extractor release and distribution |
 | Windows | Platform work and historical scoped evidence are retained | Development and delivery resume after the Linux milestone |
 
@@ -333,8 +333,10 @@ bounded real esES map-48 run passed ten extraction/verification/error/resume
 cases and produced six artifacts (842,691 bytes). The five navigation payloads
 are byte-identical to the preceding filesystem-owner output; coverage remains
 producer-reported and the selected terrain inventory is empty. Complete source
-coverage, ground MAPS, production manager/server integration and full-world
+coverage, production manager/server integration and full-world
 acceptance remain open. See the [v23 guide](docs/forever-product-v23.md).
+A subsequent selected-map run with six real terrain tiles produced eight nonempty
+MMap outputs and passed both verifiers; see the [ground checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain).
 
 ## Build the Rust product
 

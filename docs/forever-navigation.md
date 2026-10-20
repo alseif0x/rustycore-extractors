@@ -2827,3 +2827,41 @@ navigation, native Trinity parity, full RustyCore runtime/server, Windows and
 release acceptance remain open. The CLI continues reporting
 `full_extractor_complete: false`. See the [v23 guide](forever-product-v23.md) and
 [redacted structured report](acceptance/forever-v23-selected-navigation-70450-20261020.json).
+
+## 2026-10-20: bounded real v23 navigation with nonempty terrain
+
+The selected Linux v23 route now has a second real esES result with nonempty
+terrain inputs. Its full v20 input was freshly verified (3,394 artifacts /
+215,659,177 bytes); a separate v22 acquisition and both verifiers accepted
+149 geometry artifacts / 2,199,694 bytes. The v20 original producer identity is
+retained separately from the newer verification and v22/v23 binary. Fresh v23
+admission confirmed one active-closure map, WDT loaded, six known/converted
+terrain tiles and no missing root ADTs. No ancestor set was inferred externally.
+
+Plan-only inspect, fresh extraction, offline verify and offline verify-links all
+returned zero. Eleven candidate tile outcomes contain eight nonempty MMap tiles
+and three empty outcomes. The eight tiles total 3,782,484 bytes; the global is
+40 bytes and coverage is 5,212 bytes. The complete ten-artifact package totals
+3,787,736 bytes. Every coverage output length/hash matches its verified file.
+Its inventory is `f093e0e67511c599c93d74f9465eec2a3f71ec6c11bbd58e645af50fc3c0bfbc`.
+
+Receipt: `f057f02ee459355f26eef4d6eec7ddb54205352de0785aa24fb48b25f4f29900`.
+The 52.846-second execution used observed 900-second, 3-GiB, one-CPU and 64-task
+limits. Source, binary, plans, both upstream trees and the client-root identity
+stayed unchanged. The runtime producer remains `20753bcd…07ef9` from commit
+`4030a54`; this run changes no product Rust source or dependency.
+
+A preceding VMap harness attempt stopped at `package_exists` because it had
+created the output leaf before `Run::create`. The failed run is retained; a new
+recipe left that leaf absent and used the required existing private scratch
+root. V23 recipe review also separated the original terrain producer from its
+later verifier before any v23 product call. These are harness corrections, not
+new extraction or source-coverage acceptance.
+
+This closes the bounded nonempty-terrain-input navigation gap for one map. It
+does not transfer earlier native SDK results to these eight outputs. Independent
+SDK consumption of this package, production `MMapManager`/filenames, complete
+source/geometry, off-mesh/full-world, Trinity parity, RustyCore runtime/server,
+Windows and release acceptance remain open. Input coverage remains
+producer-reported and `full_extractor_complete` remains false. See the
+[redacted report](acceptance/forever-v23-selected-navigation-ground-70450-20261020.json).

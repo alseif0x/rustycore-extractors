@@ -65,10 +65,11 @@ cargo build --offline --locked --release -p forever-extractor --no-default-featu
 ```
 
 The recipe records sanitized settings, fixed remapped paths, stripped debug
-information and a single codegen unit. Cargo home and target directories are
-isolated from normal workstation caches/builds. The shipped binary is produced
-by this build; a separately supplied binary is not accepted as corresponding
-to a source snapshot merely because its version string matches.
+information, one Cargo build job and a single codegen unit. The build environment
+sets `CARGO_BUILD_JOBS=1`, overriding inherited values. Cargo home and target
+directories are isolated from normal workstation caches/builds. This build
+produces the shipped binary; a separately supplied binary is not accepted as
+corresponding to a source snapshot merely because its version string matches.
 
 ## Artifact and reconstruction
 
@@ -1063,11 +1064,15 @@ Issue #102 advances the current source profile to
 `forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-source-v12`.
 The explicit required closure includes the v23 selected-navigation implementation
 and synthetic plan/API/CLI tests, its canonical product contract and fixture, and
-the product guide with both direct documentation targets:
-`docs/acceptance/forever-v23-selected-navigation-70450-20261020.json` and
-`docs/forever-navigation.md`. This is an unconditional current-profile source
-requirement; removing the product contract does not disable the gate. Shared
-extractor entry points remain required by the existing source profile.
+the product guide plus these three documentation/evidence files:
+
+- `docs/forever-navigation.md`
+- `docs/acceptance/forever-v23-selected-navigation-70450-20261020.json`
+- `docs/acceptance/forever-v23-selected-navigation-ground-70450-20261020.json`
+
+This is an unconditional current-profile source requirement; removing the product
+contract does not disable the gate. Shared extractor entry points remain required
+by the existing source profile.
 
 Earlier v11 bundles remain historical with their bundled verifier and recorded
 bytes. The v12 profile does not revise those artifacts. It also does not turn
