@@ -7,6 +7,25 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### Linux build-70450 v24 software scope and first real attempt — 2026-10-22
+
+V24 software qualification remains synthetic-only: the plan combines the sealed
+Map DB2 output with v20 terrain, and offline verification independently derives
+Map identity/order/count facts from the artifact and checks alignment with
+coverage v3. This is not real-client acceptance, and prior v20/v23 acceptance
+does not transfer to v24 or real data.
+
+A real build-70450 esES plan selected component mask 9, terrain map 48, and one
+sealed Map DB2 entry. `inspect` exited 0 and reported contract
+`forever-product-v24`; `verification_coverage_authentication=independently_derived`
+was a plan/report field, not extraction acceptance. `extract` exited 9 before
+producing a package and reported
+`{"contract":"forever-product-v24","status":"failed","code":"local_store_no_verified_encoding","component":"db2",...}`.
+The failure is consistent with the previously known encrypted/partial esES Map
+DB2 condition and does not show that a key exists or was recovered. No real
+package, verification, full-world, format-parity, runtime, or release acceptance
+was produced.
+
 ### Linux build-70450 bounded native selected-tile probe — 2026-10-19
 
 A single private, bounded run passed one real selected MMap tile through the
