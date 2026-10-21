@@ -1,0 +1,77 @@
+{
+  "contract": "forever-product-v24",
+  "version": 24,
+  "publication_profile": "Build70450AuthenticatedTerrainV1",
+  "builds": [70450],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 9,
+    "components": ["db2", "maps"],
+    "component_bits": {"db2": 1, "gt": 2, "cameras": 4, "maps": 8},
+    "decryption": "disabled",
+    "keys": "refused",
+    "storage": "resident",
+    "db2_output_entries": ["Map"],
+    "terrain_selection": ["all-available-maps", "map:<canonical-u32>"],
+    "navigation": "none",
+    "map_domain": "none",
+    "offmesh": "disabled",
+    "scratch": "forbidden"
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "component_order": ["db2", "maps"],
+    "db2_map": "dbc/<locale>/Map.db2",
+    "terrain_coverage": "maps/compatible-terrain-coverage-v3.tsv",
+    "terrain_outputs": "v20-compatible MAPS tiles and tilelists",
+    "provisional_until_sealed": true
+  },
+  "source_policy": {
+    "db2_map": "Preserve the local-store Map file bytes as the sole DB2 artifact and seal that component before terrain production.",
+    "terrain_map": "Use the v20 build-70450 available Map projection; materialized rows with a non-zero WDT FileDataID retain v20 source order. Unknown TACT sections remain unknown and are not inferred from bytes.",
+    "terrain_omissions": "Only the v20 MissingFile-only WDT/root-ADT omission policy applies. Terrain conversion outcomes remain producer-reported.",
+    "identity_boundary": "Verification parses the sealed Map artifact with read_map_70450().materialize(), compares declared/direct/copy/materialized counts and ordered selected (Map ID, WDT FileDataID) identities, ordinals, and outcomes against terrain coverage v3. This authenticates the stored Map projection, not whole-client Map completeness or source cryptographic authentication."
+  },
+  "verification": {
+    "profile": "linux70450-authenticated-available-map-terrain-product-v1",
+    "verify_scope": "offline package integrity, intrinsic DB2/MAPS formats, and independently re-derived available Map identity/order/WDT FileDataID/tile counts/materialized rows",
+    "verify_links_scope": "the same checks; no navigation or external package links are part of v24",
+    "coverage_authentication": "independently_derived",
+    "producer_reported_facts": ["WDT dispositions", "tile conversion counts", "missing-root-ADT counts", "source authentication flags"],
+    "client_reads": false,
+    "runtime_claim": false,
+    "format_parity_claim": false,
+    "whole_client_map_coverage": false
+  },
+  "acceptance_matrix": [
+    {"case": "canonical-profile", "expect": "admit only build 70450, mask 9, disabled keys, resident storage, one Map DB2 entry, terrain all or one map, and no navigation/map-domain/offmesh"},
+    {"case": "component-mask", "expect": "reject every mask other than 9; admit only Db2|Terrain=9 for v24, while the v20 terrain profile remains mask 8; component bits are Db2=1, GameTables=2, Cameras=4, Terrain=8"},
+    {"case": "sealed-map-identity", "expect": "offline verification re-reads sealed Map and rejects coverage whose ordered selected Map IDs, WDT FileDataIDs, ordinals, counts, section facts, or materialized-row count disagree"},
+    {"case": "synthetic-map-and-terrain", "expect": "synthetic-only package exercises inspect, combined DB2 and v20 terrain extract/resume, offline verify, and sealed Map WDT FileDataID tampering rejection"},
+    {"case": "other-inputs", "expect": "refuse keys, scratch, navigation, map-domain and off-mesh before client/output work"}
+  ],
+  "excluded": [
+    "real-client extraction or acceptance",
+    "complete or whole-client Map coverage",
+    "full-world terrain completeness",
+    "C++ or TrinityCore format parity",
+    "RustyCore runtime acceptance",
+    "Windows execution",
+    "release acceptance"
+  ],
+  "unqualified_status": {
+    "real_extraction": false,
+    "runtime_acceptance": false,
+    "full_world_coverage": false,
+    "format_parity": false,
+    "windows": false,
+    "full_extractor_complete": false
+  },
+  "legacy_preservation": "v20 terrain and v23 selected navigation retain their existing plan, package and verification identities; v24 software admission transfers no prior real-client acceptance.",
+  "full_extractor_complete": false
+}

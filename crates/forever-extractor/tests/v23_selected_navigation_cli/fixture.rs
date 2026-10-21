@@ -283,6 +283,12 @@ fn normal_record(bytes: &[u8]) -> Vec<u8> {
 /// one unrelated WDT-zero row. All catalog tables and archive records are
 /// synthetic, keyless, and generated in this function.
 pub fn write_client(client: &Path) {
+    write_client_with_map_rows(client, &[(48, 100), (49, 0)]);
+}
+
+/// Write a synthetic source with caller-selected, ordered Map DB2 rows.
+/// Referenced WDTs reuse the same bounded synthetic terrain payload.
+pub fn write_client_with_map_rows(client: &Path, map_rows: &[(u32, u32)]) {
     let map_id = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, "Map")
         .unwrap()
         .unwrap()
@@ -312,8 +318,8 @@ pub fn write_client(client: &Path) {
             .metadata()
             .file_data_id;
 
-    let inputs = vec![
-        (map_id, synthetic_db2("Map", &[(48, 100), (49, 0)])),
+    let mut inputs = vec![
+        (map_id, synthetic_db2("Map", map_rows)),
         (liquid_type_id, synthetic_db2("LiquidType", &[(22, 7)])),
         (
             liquid_material_id,
@@ -328,6 +334,22 @@ pub fn write_client(client: &Path) {
         ),
         (liquid_object_id, synthetic_db2("LiquidObject", &[(9, 0)])),
     ];
+    for wdt_file_data_id in map_rows
+        .iter()
+        .map(|(_, wdt_file_data_id)| *wdt_file_data_id)
+    {
+        if wdt_file_data_id != 0
+            && !inputs
+                .iter()
+                .any(|(file_data_id, _)| *file_data_id == wdt_file_data_id)
+        {
+            let adt_position = inputs
+                .iter()
+                .position(|(file_data_id, _)| *file_data_id == 200)
+                .unwrap();
+            inputs.insert(adt_position, (wdt_file_data_id, combined_wdt()));
+        }
+    }
     let mut source_routes = Vec::new();
     let mut records = Vec::<([u8; 16], Vec<u8>)>::new();
     let mut root_rows = Vec::new();

@@ -22,6 +22,7 @@ pub enum PublicationProfile {
     Build70450NavigationV1,
     Build70450SelectedGeometryV1,
     Build70450SelectedNavigationV1,
+    Build70450AuthenticatedTerrainV1,
 }
 impl PublicationProfile {
     pub(super) fn validate(self, plan: &Plan) -> Result<(), &'static str> {
@@ -198,6 +199,30 @@ impl PublicationProfile {
             }
             return Ok(());
         }
+        if self == Self::Build70450AuthenticatedTerrainV1 {
+            if plan.build != 70450 {
+                return Err("product_plan_build");
+            }
+            if plan.schema_catalog != SchemaCatalog::WowDbDefs70450V1 {
+                return Err("product_plan_schema_catalog");
+            }
+            if plan.components != (Component::Db2.bit() | Component::Terrain.bit())
+                || !matches!(plan.collision_storage, CollisionStorage::Resident)
+                || plan.decryption != super::Decryption::Disabled
+                || plan.map_domain.is_some()
+                || plan.navigation != Selection::None
+                || plan.offmesh.is_some()
+            {
+                return Err("product_plan_component_scope");
+            }
+            if plan.db2.len() != 1 || plan.db2[0].name != "Map" {
+                return Err("product_plan_dependencies");
+            }
+            if !matches!(plan.terrain, Selection::All | Selection::Map(_)) {
+                return Err("product_terrain_selection");
+            }
+            return Ok(());
+        }
         let (build, catalog, components) = match self {
             Self::Legacy
             | Self::Build70425CompatibleCollisionV1
@@ -209,6 +234,7 @@ impl PublicationProfile {
             | Self::Build70450SelectedNavigationV1 => {
                 unreachable!("profile returned above")
             }
+            Self::Build70450AuthenticatedTerrainV1 => unreachable!("profile returned above"),
             Self::Build70338Db2GtCamerasV1 => (
                 70338,
                 SchemaCatalog::WowDbDefs70338V1,

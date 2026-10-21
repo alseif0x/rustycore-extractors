@@ -17,6 +17,7 @@ use forever_db2::availability::{SectionCoverage, SectionState};
 use std::fmt::Write;
 
 pub const COVERAGE_PATH: &str = "maps/compatible-terrain-coverage-v2.tsv";
+pub const COVERAGE_PATH_V24: &str = "maps/compatible-terrain-coverage-v3.tsv";
 pub const MAX_MAPS: usize = 4096;
 pub const COVERAGE_BYTES: usize = 1024 * 1024;
 const SINK_BYTES: usize = 8 * 1024 * 1024;
@@ -28,6 +29,10 @@ pub fn package_limits() -> package::Limits {
         total_bytes: OUTPUT_BYTES,
         ..Default::default()
     }
+}
+
+pub fn package_limits_v24() -> package::Limits {
+    package_limits()
 }
 
 fn require(ok: bool) -> Result<(), Error> {
@@ -115,13 +120,18 @@ pub struct Coverage {
     pub pack: bool,
     pub map: available::MapFacts,
     pub maps: Vec<available::CompatibleMapOutcome>,
+    /// Present only in v24 coverage; rows are in the selected producer order.
+    pub map_wdt_file_data_ids: Option<Vec<(u32, u32)>>,
 }
 impl Coverage {
     fn validate(&self) -> Result<(), Error> {
         self.context.validate()?;
-        require(
-            self.context.build == 70450 && self.context.components == Component::Terrain.bit(),
-        )?;
+        let component_mask = if self.map_wdt_file_data_ids.is_some() {
+            Component::Db2.bit() | Component::Terrain.bit()
+        } else {
+            Component::Terrain.bit()
+        };
+        require(self.context.build == 70450 && self.context.components == component_mask)?;
         selection_text(self.selection)?;
         require(
             self.maps.len() <= MAX_MAPS
@@ -190,6 +200,12 @@ impl Coverage {
                 )?,
             }
         }
+        if let Some(identities) = &self.map_wdt_file_data_ids {
+            require(identities.len() == self.maps.len())?;
+            for (identity, outcome) in identities.iter().zip(&self.maps) {
+                require(identity.0 == outcome.map_id && identity.1 != 0)?;
+            }
+        }
         match self.selection {
             Selection::Map(id) => {
                 require(self.maps.len() == 1 && self.maps[0].map_id == id)?;
@@ -206,9 +222,14 @@ impl Coverage {
         output
             .try_reserve_exact(COVERAGE_BYTES)
             .map_err(|_| Error::from("product_allocation"))?;
+        let version = if self.map_wdt_file_data_ids.is_some() {
+            3
+        } else {
+            2
+        };
         write!(
             output,
-            "terrain-coverage\t2\nprofile\t{}\ncontext\t{}\nselection\t{}\npack\t{}\nmap-bytes\t{}\t{}\nmap-auth\t{}\t{}\nmap-rows\t{}\t{}\t{}\n",
+            "terrain-coverage\t{version}\nprofile\t{}\ncontext\t{}\nselection\t{}\npack\t{}\nmap-bytes\t{}\t{}\nmap-auth\t{}\t{}\nmap-rows\t{}\t{}\t{}\n",
             available::COMPATIBLE_FULL_MAP_PROFILE,
             self.context.json(),
             selection_text(self.selection)?,
@@ -240,7 +261,7 @@ impl Coverage {
         let mut converted = 0u64;
         let mut missing = 0u64;
         let mut unavailable = 0u64;
-        for outcome in &self.maps {
+        for (index, outcome) in self.maps.iter().enumerate() {
             let (wdt, present) = match outcome.wdt {
                 available::WdtDisposition::Loaded => {
                     ("loaded", outcome.known_present_tiles.unwrap().to_string())
@@ -253,17 +274,32 @@ impl Coverage {
             known += outcome.known_present_tiles.unwrap_or(0) as u64;
             converted += outcome.converted_tiles as u64;
             missing += outcome.missing_root_adts as u64;
-            writeln!(
-                output,
-                "map\t{}\t{}\t{}\t{wdt}\t{present}\t{}\t{}\t{}",
-                outcome.plan_index,
-                outcome.materialized_ordinal,
-                outcome.map_id,
-                outcome.converted_tiles,
-                outcome.missing_root_adts,
-                list_path(outcome.map_id),
-            )
-            .expect("String formatting");
+            if let Some(identities) = &self.map_wdt_file_data_ids {
+                writeln!(
+                    output,
+                    "map\t{}\t{}\t{}\t{}\t{wdt}\t{present}\t{}\t{}\t{}",
+                    outcome.plan_index,
+                    outcome.materialized_ordinal,
+                    outcome.map_id,
+                    identities[index].1,
+                    outcome.converted_tiles,
+                    outcome.missing_root_adts,
+                    list_path(outcome.map_id),
+                )
+                .expect("String formatting");
+            } else {
+                writeln!(
+                    output,
+                    "map\t{}\t{}\t{}\t{wdt}\t{present}\t{}\t{}\t{}",
+                    outcome.plan_index,
+                    outcome.materialized_ordinal,
+                    outcome.map_id,
+                    outcome.converted_tiles,
+                    outcome.missing_root_adts,
+                    list_path(outcome.map_id),
+                )
+                .expect("String formatting");
+            }
         }
         let maps = self.maps.len() as u64;
         let loaded = maps - unavailable;
@@ -284,7 +320,8 @@ impl Coverage {
         let text =
             std::str::from_utf8(data).map_err(|_| Error::from("product_terrain_coverage"))?;
         let mut lines = text.lines();
-        require(fields(&mut lines, "terrain-coverage", 2)?[1] == "2")?;
+        let version = fields(&mut lines, "terrain-coverage", 2)?[1];
+        require(version == "2" || version == "3")?;
         require(fields(&mut lines, "profile", 2)?[1] == available::COMPATIBLE_FULL_MAP_PROFILE)?;
         let context = Context::parse(fields(&mut lines, "context", 2)?[1])?;
         let selected = fields(&mut lines, "selection", 2)?[1];
@@ -319,9 +356,18 @@ impl Coverage {
         let mut maps = Vec::new();
         maps.try_reserve_exact(MAX_MAPS)
             .map_err(|_| Error::from("product_allocation"))?;
+        let mut map_wdt_file_data_ids = if version == "3" {
+            let mut identities = Vec::new();
+            identities
+                .try_reserve_exact(MAX_MAPS)
+                .map_err(|_| Error::from("product_allocation"))?;
+            Some(identities)
+        } else {
+            None
+        };
         let mut maps_started = false;
         for line in lines {
-            let values: Vec<_> = line.splitn(10, '\t').collect();
+            let values: Vec<_> = line.splitn(11, '\t').collect();
             match values.first().copied() {
                 Some("section") if !maps_started && values.len() == 5 && section_count < 16 => {
                     let field = |value| {
@@ -340,29 +386,40 @@ impl Coverage {
                     });
                     section_count += 1;
                 }
-                Some("map") if values.len() == 9 && maps.len() < MAX_MAPS => {
+                Some("map")
+                    if values.len() == if version == "3" { 10 } else { 9 }
+                        && maps.len() < MAX_MAPS =>
+                {
                     maps_started = true;
                     let id = u32::try_from(number(values[3])?)
                         .map_err(|_| Error::from("product_terrain_coverage"))?;
-                    let wdt = match values[4] {
+                    let shift = usize::from(version == "3");
+                    if let Some(identities) = &mut map_wdt_file_data_ids {
+                        identities.push((
+                            id,
+                            u32::try_from(number(values[4])?)
+                                .map_err(|_| Error::from("product_terrain_coverage"))?,
+                        ));
+                    }
+                    let wdt = match values[4 + shift] {
                         "loaded" => available::WdtDisposition::Loaded,
                         "unavailable" => available::WdtDisposition::Unavailable,
                         _ => return Err("product_terrain_coverage".into()),
                     };
-                    let known_present_tiles = if values[5] == "unknown" {
+                    let known_present_tiles = if values[5 + shift] == "unknown" {
                         None
                     } else {
-                        Some(usize_field(values[5])?)
+                        Some(usize_field(values[5 + shift])?)
                     };
-                    require(values[8] == list_path(id))?;
+                    require(values[8 + shift] == list_path(id))?;
                     maps.push(available::CompatibleMapOutcome {
                         map_id: id,
                         plan_index: usize_field(values[1])?,
                         materialized_ordinal: usize_field(values[2])?,
                         wdt,
                         known_present_tiles,
-                        converted_tiles: usize_field(values[6])?,
-                        missing_root_adts: usize_field(values[7])?,
+                        converted_tiles: usize_field(values[6 + shift])?,
+                        missing_root_adts: usize_field(values[7 + shift])?,
                     });
                 }
                 Some("finish") => maps_started = true,
@@ -385,6 +442,7 @@ impl Coverage {
                 sections,
             },
             maps,
+            map_wdt_file_data_ids,
         };
         require(coverage.render()?.as_bytes() == data)?;
         Ok(coverage)
@@ -447,6 +505,7 @@ struct Sink<'a> {
     run: &'a mut Run,
     maps: Vec<Bits>,
     outcomes: Vec<available::CompatibleMapOutcome>,
+    expected_map_identities: Option<Vec<ProducerMapIdentity>>,
     error: Option<Error>,
 }
 impl Sink<'_> {
@@ -463,6 +522,16 @@ impl Sink<'_> {
 impl available::Sink for Sink<'_> {
     fn source(&mut self, source: run::SourceFacts) -> Result<(), run::SinkError> {
         if let run::Step::Wdt { map } = source.step {
+            if let Some(expected) = &self.expected_map_identities {
+                let matches = expected
+                    .iter()
+                    .find(|identity| identity.map_id == map)
+                    .is_some_and(|identity| identity.wdt_file_data_id == source.file_data_id);
+                if !matches {
+                    self.error = Some("product_terrain_coverage_authentication".into());
+                    return Err(run::SinkError);
+                }
+            }
             map_bits(&mut self.maps, map).map_err(|error| {
                 self.error = Some(error);
                 run::SinkError
@@ -505,6 +574,16 @@ impl available::Sink for Sink<'_> {
     ) -> Result<(), run::SinkError> {
         let result = (|| {
             require(self.outcomes.len() < MAX_MAPS && outcome.plan_index == self.outcomes.len())?;
+            if let Some(expected) = &self.expected_map_identities {
+                let identity = expected
+                    .get(outcome.plan_index)
+                    .ok_or("product_terrain_coverage_authentication")?;
+                require(
+                    identity.map_id == outcome.map_id
+                        && identity.materialized_ordinal == outcome.materialized_ordinal,
+                )
+                .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+            }
             let map = map_bits(&mut self.maps, outcome.map_id)?;
             require(
                 map.list
@@ -521,6 +600,85 @@ impl available::Sink for Sink<'_> {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ProducerMapIdentity {
+    materialized_ordinal: usize,
+    map_id: u32,
+    wdt_file_data_id: u32,
+}
+
+struct ProducerMapSelection {
+    materialized_rows: usize,
+    selected: Vec<ProducerMapIdentity>,
+}
+
+/// Read the same build-70450 available Map projection that the terrain runner
+/// consumes, retaining only the selected ordered row identities for v24.
+fn producer_map_identities(
+    store: &mut LocalStore,
+    selection: Selection,
+) -> Result<ProducerMapSelection, Error> {
+    let source = store
+        .read_file_data_id_available_70450_with_limit(run::MAP_ID, 16 * 1024 * 1024)
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    let available = forever_db2::availability::read_map_70450(&source)
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    let materialized = available
+        .materialize()
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    let rows = materialized.rows();
+    let materialized_rows = rows.len();
+    let mut selected = Vec::new();
+    match selection {
+        Selection::All => {
+            require(materialized_rows <= MAX_MAPS)
+                .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+            selected
+                .try_reserve_exact(materialized_rows)
+                .map_err(|_| Error::from("product_allocation"))?;
+            for (materialized_ordinal, row) in rows.iter().enumerate() {
+                let wdt_file_data_id = u32::try_from(row.fields.wdt_file_data_id)
+                    .ok()
+                    .filter(|id| *id != 0)
+                    .ok_or("product_terrain_coverage_authentication")?;
+                selected.push(ProducerMapIdentity {
+                    materialized_ordinal,
+                    map_id: row.id,
+                    wdt_file_data_id,
+                });
+            }
+        }
+        Selection::Map(map_id) => {
+            let mut matches = rows.iter().enumerate().filter(|(_, row)| row.id == map_id);
+            let (materialized_ordinal, row) = matches
+                .next()
+                .ok_or("product_terrain_coverage_authentication")?;
+            require(matches.next().is_none())
+                .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+            let wdt_file_data_id = u32::try_from(row.fields.wdt_file_data_id)
+                .ok()
+                .filter(|id| *id != 0)
+                .ok_or("product_terrain_coverage_authentication")?;
+            selected
+                .try_reserve_exact(1)
+                .map_err(|_| Error::from("product_allocation"))?;
+            selected.push(ProducerMapIdentity {
+                materialized_ordinal,
+                map_id,
+                wdt_file_data_id,
+            });
+        }
+        _ => return Err("product_terrain_selection".into()),
+    }
+    store
+        .verify_unchanged()
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    Ok(ProducerMapSelection {
+        materialized_rows,
+        selected,
+    })
+}
+
 // Only explicit MissingFile at WDT/root ADT is omitted by the compatible route.
 pub fn extract(
     product: &Plan,
@@ -528,6 +686,11 @@ pub fn extract(
     run: &mut Run,
     context: Context,
 ) -> Result<(), Error> {
+    let producer_maps = if product.is_v24() {
+        Some(producer_map_identities(store, product.terrain)?)
+    } else {
+        None
+    };
     let mut limits = available::FullMapLimits::default();
     let reservation = package_limits()
         .metadata_bytes
@@ -571,6 +734,7 @@ pub fn extract(
         run,
         maps,
         outcomes,
+        expected_map_identities: producer_maps.as_ref().map(|maps| maps.selected.clone()),
         error: None,
     };
     let completed =
@@ -626,23 +790,121 @@ pub fn extract(
             && stats.converted_tiles == converted
             && stats.tile_lists == plan.maps as u64,
     )?;
+    let map = completed.map();
+    if let Some(producer_maps) = &producer_maps {
+        require(
+            map.materialized_rows == producer_maps.materialized_rows
+                && sink.outcomes.len() == producer_maps.selected.len(),
+        )
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    }
+    let map_wdt_file_data_ids = producer_maps.map(|maps| {
+        maps.selected
+            .into_iter()
+            .map(|identity| (identity.map_id, identity.wdt_file_data_id))
+            .collect()
+    });
     let coverage = Coverage {
         context,
         selection: product.terrain,
         pack: product.pack,
-        map: completed.map(),
+        map,
         maps: std::mem::take(&mut sink.outcomes),
+        map_wdt_file_data_ids,
     }
     .render()?;
     store
         .verify_unchanged()
         .map_err(|error| Error::from(error.code()))?;
+    let path = if product.is_v24() {
+        COVERAGE_PATH_V24
+    } else {
+        COVERAGE_PATH
+    };
     sink.run
-        .put(Component::Terrain, COVERAGE_PATH, coverage.as_bytes())?;
+        .put(Component::Terrain, path, coverage.as_bytes())?;
     store
         .verify_unchanged()
         .map_err(|error| Error::from(error.code()))?;
     Ok(())
+}
+
+pub fn extract_v24(
+    product: &Plan,
+    store: &mut LocalStore,
+    run: &mut Run,
+    context: Context,
+) -> Result<(), Error> {
+    if !product.is_v24() {
+        return Err("product_terrain_profile".into());
+    }
+    extract(product, store, run, context)
+}
+
+/// Independently decoded Map identity retained from the sealed v24 DB2 artifact.
+/// This is a source projection, not proof of whole-client Map completeness.
+pub(crate) struct AuthenticatedMap {
+    declared_bytes: u64,
+    direct_rows: usize,
+    copy_records: usize,
+    materialized_rows: usize,
+    sections: [Option<SectionCoverage>; 16],
+    rows: Vec<(u32, u32)>,
+}
+
+struct SealedMapSource<'a>(&'a [u8]);
+impl forever_db2::availability::Source for SealedMapSource<'_> {
+    fn declared_bytes(&self) -> u64 {
+        self.0.len() as u64
+    }
+
+    fn range(
+        &self,
+        offset: u64,
+        bytes: usize,
+    ) -> Result<&[u8], forever_db2::availability::Unavailable> {
+        let start = usize::try_from(offset).map_err(|_| forever_db2::availability::Unavailable)?;
+        let end = start
+            .checked_add(bytes)
+            .ok_or(forever_db2::availability::Unavailable)?;
+        self.0
+            .get(start..end)
+            .ok_or(forever_db2::availability::Unavailable)
+    }
+}
+
+pub(crate) fn authenticate_map(bytes: &[u8]) -> Result<AuthenticatedMap, Error> {
+    let source = forever_db2::availability::read_map_70450(&SealedMapSource(bytes))
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    require(source.sections().len() <= 16)
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    let direct_rows = source.direct_records().len();
+    let copy_records = source.copies().len();
+    let mut sections = [None; 16];
+    for (slot, section) in sections.iter_mut().zip(source.sections()) {
+        *slot = Some(*section);
+    }
+    let materialized = source
+        .materialize()
+        .map_err(|_| Error::from("product_terrain_coverage_authentication"))?;
+    let mut rows = Vec::new();
+    rows.try_reserve_exact(materialized.rows().len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    for row in materialized.rows() {
+        let wdt_file_data_id = u32::try_from(row.fields.wdt_file_data_id)
+            .ok()
+            .filter(|id| *id != 0)
+            .ok_or("product_terrain_coverage_authentication")?;
+        rows.push((row.id, wdt_file_data_id));
+    }
+    Ok(AuthenticatedMap {
+        declared_bytes: bytes.len() as u64,
+        direct_rows,
+        copy_records,
+        materialized_rows: rows.len(),
+        sections,
+        rows,
+    })
 }
 
 pub struct VerifyFacts {
@@ -657,9 +919,13 @@ impl VerifyFacts {
         }
     }
     pub fn inspect(&mut self, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
-        if artifact.path == COVERAGE_PATH {
+        if artifact.path == COVERAGE_PATH || artifact.path == COVERAGE_PATH_V24 {
             require(self.coverage.is_none())?;
-            self.coverage = Some(Coverage::parse(bytes)?);
+            let coverage = Coverage::parse(bytes)?;
+            if (artifact.path == COVERAGE_PATH_V24) != coverage.map_wdt_file_data_ids.is_some() {
+                return Err("product_terrain_coverage_authentication".into());
+            }
+            self.coverage = Some(coverage);
         } else if artifact.path.ends_with(".tilelist") {
             let id = parse_list(&artifact.path)?;
             map_bits(&mut self.maps, id)?.tile_list(bytes)?;
@@ -672,7 +938,31 @@ impl VerifyFacts {
         Ok(())
     }
     pub fn finish(self, product: &Plan, context: Context) -> Result<(), Error> {
+        self.finish_inner(product, context, None)
+    }
+
+    pub(crate) fn finish_authenticated(
+        self,
+        product: &Plan,
+        context: Context,
+        map: &AuthenticatedMap,
+    ) -> Result<(), Error> {
+        if !product.is_v24() {
+            return Err("product_terrain_coverage_authentication".into());
+        }
+        self.finish_inner(product, context, Some(map))
+    }
+
+    fn finish_inner(
+        self,
+        product: &Plan,
+        context: Context,
+        authenticated_map: Option<&AuthenticatedMap>,
+    ) -> Result<(), Error> {
         let coverage = self.coverage.ok_or("product_terrain_coverage")?;
+        if product.is_v24() != coverage.map_wdt_file_data_ids.is_some() {
+            return Err("product_terrain_coverage_authentication".into());
+        }
         require(
             coverage.context == context
                 && coverage.selection == product.terrain
@@ -691,11 +981,90 @@ impl VerifyFacts {
                     && actual.count() as usize == outcome.converted_tiles,
             )?;
         }
+        if product.is_v24() {
+            let map = authenticated_map.ok_or("product_terrain_coverage_authentication")?;
+            authenticate_coverage_map(&coverage, map)?;
+        } else if authenticated_map.is_some() {
+            return Err("product_terrain_coverage_authentication".into());
+        }
         Ok(())
     }
 }
 
+fn authenticate_coverage_map(coverage: &Coverage, map: &AuthenticatedMap) -> Result<(), Error> {
+    let matches_facts = coverage.map.declared_bytes == map.declared_bytes
+        && coverage.map.direct_rows == map.direct_rows
+        && coverage.map.copy_records == map.copy_records
+        && coverage.map.materialized_rows == map.materialized_rows
+        && coverage.map.sections == map.sections;
+    if !matches_facts {
+        return Err("product_terrain_coverage_authentication".into());
+    }
+    let identities = coverage
+        .map_wdt_file_data_ids
+        .as_deref()
+        .ok_or("product_terrain_coverage_authentication")?;
+    match coverage.selection {
+        Selection::All => {
+            if coverage.maps.len() != map.rows.len() || identities.len() != map.rows.len() {
+                return Err("product_terrain_coverage_authentication".into());
+            }
+            for (ordinal, ((outcome, identity), (map_id, wdt_file_data_id))) in coverage
+                .maps
+                .iter()
+                .zip(identities)
+                .zip(&map.rows)
+                .enumerate()
+            {
+                if *identity != (*map_id, *wdt_file_data_id)
+                    || *wdt_file_data_id == 0
+                    || outcome.plan_index != ordinal
+                    || outcome.materialized_ordinal != ordinal
+                    || outcome.map_id != *map_id
+                {
+                    return Err("product_terrain_coverage_authentication".into());
+                }
+            }
+        }
+        Selection::Map(selected) => {
+            let mut matches =
+                map.rows
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (map_id, wdt_file_data_id))| {
+                        *map_id == selected && *wdt_file_data_id != 0
+                    });
+            let (ordinal, (map_id, wdt_file_data_id)) = matches
+                .next()
+                .ok_or("product_terrain_coverage_authentication")?;
+            if matches.next().is_some()
+                || coverage.maps.len() != 1
+                || identities.len() != 1
+                || identities[0] != (*map_id, *wdt_file_data_id)
+                || coverage.maps[0].plan_index != 0
+                || coverage.maps[0].materialized_ordinal != ordinal
+                || coverage.maps[0].map_id != *map_id
+            {
+                return Err("product_terrain_coverage_authentication".into());
+            }
+        }
+        _ => return Err("product_terrain_coverage_authentication".into()),
+    }
+    Ok(())
+}
+
 pub fn admit_metadata(product: &Plan, artifacts: &[Artifact]) -> Result<(), Error> {
+    if !product.is_v20() {
+        return Err("product_terrain_profile".into());
+    }
+    admit_metadata_with_coverage_path(product, artifacts, COVERAGE_PATH)
+}
+
+fn admit_metadata_with_coverage_path(
+    product: &Plan,
+    artifacts: &[Artifact],
+    coverage_path: &str,
+) -> Result<(), Error> {
     let mut coverage = false;
     let mut lists = Vec::new();
     let mut tiles = Vec::new();
@@ -712,7 +1081,7 @@ pub fn admit_metadata(product: &Plan, artifacts: &[Artifact]) -> Result<(), Erro
             .checked_add(artifact.bytes)
             .ok_or("product_file_limit")?;
         require(total <= OUTPUT_BYTES)?;
-        if artifact.path == COVERAGE_PATH {
+        if artifact.path == coverage_path {
             require(!coverage && artifact.bytes <= COVERAGE_BYTES as u64)?;
             coverage = true;
         } else if artifact.path.ends_with(".tilelist") {
@@ -737,6 +1106,34 @@ pub fn admit_metadata(product: &Plan, artifacts: &[Artifact]) -> Result<(), Erro
         require(lists == [id])?;
     }
     Ok(())
+}
+
+pub fn admit_metadata_v24(product: &Plan, artifacts: &[Artifact]) -> Result<(), Error> {
+    if !product.is_v24() {
+        return Err("product_terrain_profile".into());
+    }
+    let map_path = format!("dbc/{}/Map.db2", product.locale.name());
+    let mut map = false;
+    let mut terrain = Vec::new();
+    terrain
+        .try_reserve_exact(artifacts.len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    for artifact in artifacts {
+        match artifact.component {
+            Component::Db2 => {
+                require(
+                    !map && artifact.path == map_path
+                        && artifact.bytes > 0
+                        && artifact.bytes <= 16 * 1024 * 1024,
+                )?;
+                map = true;
+            }
+            Component::Terrain => terrain.push(artifact.clone()),
+            _ => return Err("product_terrain_coverage".into()),
+        }
+    }
+    require(map)?;
+    admit_metadata_with_coverage_path(product, &terrain, COVERAGE_PATH_V24)
 }
 
 #[cfg(test)]
@@ -827,9 +1224,32 @@ mod tests {
                 output,
             }
         }
+        fn new_v24(with_wdt: bool) -> Self {
+            let root_path = std::env::temp_dir().join(format!(
+                "rce-v24-terrain-synthetic-{}-{}",
+                std::process::id(),
+                NEXT_LAB.fetch_add(1, Ordering::Relaxed)
+            ));
+            let client = root_path.join("client");
+            let output = root_path.join("output");
+            fs::create_dir_all(&client).unwrap();
+            write_synthetic_client_v24(&client, with_wdt);
+            Self {
+                root: root_path,
+                client,
+                output,
+            }
+        }
         fn run(&self) -> forever_casc::package::Summary {
             let product = Plan::parse(include_str!(
                 "../../../../tests/contracts/fixtures/forever-product-v20/map2.tsv"
+            ))
+            .unwrap();
+            crate::driver::extract(&product, &self.client, &self.output, [0x42; 32], false).unwrap()
+        }
+        fn run_v24(&self) -> forever_casc::package::Summary {
+            let product = Plan::parse(include_str!(
+                "../../../../tests/contracts/fixtures/forever-product-v24/map2.tsv"
             ))
             .unwrap();
             crate::driver::extract(&product, &self.client, &self.output, [0x42; 32], false).unwrap()
@@ -1048,13 +1468,27 @@ mod tests {
     }
 
     fn write_synthetic_client(client: &std::path::Path, with_wdt: bool) {
-        let mut map = unknown_tact_map(map_db2());
+        write_synthetic_client_inner(client, with_wdt, true);
+    }
+    fn write_synthetic_client_v24(client: &std::path::Path, with_wdt: bool) {
+        write_synthetic_client_inner(client, with_wdt, false);
+    }
+    fn write_synthetic_client_inner(client: &std::path::Path, with_wdt: bool, partial_map: bool) {
+        let mut map = if partial_map {
+            unknown_tact_map(map_db2())
+        } else {
+            map_db2()
+        };
         put32(&mut map, 152, 0xBD84_CD62);
-        let hole_start = u32::from_le_bytes(map[252..256].try_into().unwrap()) as usize;
-        let hole_len = u32::from_le_bytes(map[144..148].try_into().unwrap()) as usize;
-        let map_hole = hole_start..hole_start + hole_len;
+        let map_hole = if partial_map {
+            let hole_start = u32::from_le_bytes(map[252..256].try_into().unwrap()) as usize;
+            let hole_len = u32::from_le_bytes(map[144..148].try_into().unwrap()) as usize;
+            Some(hole_start..hole_start + hole_len)
+        } else {
+            None
+        };
         let mut inputs = vec![
-            (MAP_ID, map, Some(map_hole)),
+            (MAP_ID, map, map_hole),
             (MATERIAL_ID, material_db2(), None),
             (OBJECT_ID, object_db2(), None),
             (TYPE_ID, type_db2(), None),
@@ -1458,6 +1892,7 @@ mod tests {
                 converted_tiles: 0,
                 missing_root_adts: 0,
             }],
+            map_wdt_file_data_ids: None,
         }
     }
 
@@ -1475,6 +1910,49 @@ mod tests {
         let mut unauthenticated_partial = partial;
         unauthenticated_partial.map.encoded_key_authenticated = false;
         assert!(unauthenticated_partial.render().is_err());
+    }
+
+    #[test]
+    fn v20_coverage_stays_mask_eight_and_cannot_claim_v24_authentication() {
+        let v20 = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v20/map2.tsv"
+        ))
+        .unwrap();
+        let mut mask_nine = partial_coverage();
+        mask_nine.context.components = Component::Db2.bit() | Component::Terrain.bit();
+        assert_eq!(
+            mask_nine.render().unwrap_err().code,
+            "product_terrain_coverage"
+        );
+
+        let mut v24_coverage = partial_coverage();
+        v24_coverage.context.components = Component::Db2.bit() | Component::Terrain.bit();
+        v24_coverage.map_wdt_file_data_ids = Some(vec![(2, 100)]);
+        let v24_bytes = v24_coverage.render().unwrap();
+        assert!(v24_bytes.starts_with("terrain-coverage\t3\n"));
+        let mut facts = VerifyFacts::new();
+        facts.coverage = Some(Coverage::parse(v24_bytes.as_bytes()).unwrap());
+        assert_eq!(
+            facts.finish(&v20, v24_coverage.context).unwrap_err().code,
+            "product_terrain_coverage_authentication"
+        );
+
+        assert!(
+            Plan::parse(include_str!(
+                "../../../../tests/contracts/fixtures/forever-product-v24/map2.tsv"
+            ))
+            .unwrap()
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            Plan {
+                components: Component::Db2.bit() | Component::Terrain.bit(),
+                ..v20
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]
@@ -1512,6 +1990,94 @@ mod tests {
             None,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn v24_seals_map_db2_with_v20_terrain_and_independently_verifies_it() {
+        let lab = Lab::new_v24(true);
+        let summary = lab.run_v24();
+        assert_eq!(summary.context.build, 70450);
+        assert_eq!(
+            summary.context.components,
+            Component::Db2.bit() | Component::Terrain.bit()
+        );
+        assert!(lab.output.join("dbc/enUS/Map.db2").is_file());
+        let coverage =
+            Coverage::parse(&fs::read(lab.output.join(COVERAGE_PATH_V24)).unwrap()).unwrap();
+        assert_eq!(coverage.context.components, 9);
+        assert_eq!(coverage.maps.len(), 1);
+        let product = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v24/map2.tsv"
+        ))
+        .unwrap();
+        crate::verify::verify(&product, &lab.output, None).unwrap();
+        crate::verify::verify_links(&product, &lab.output, None).unwrap();
+    }
+
+    #[test]
+    fn v24_coverage_authentication_binds_sealed_map_identity_and_materialized_count() {
+        let bytes = map_db2();
+        let map = authenticate_map(&bytes).unwrap();
+        assert_eq!(map.rows, [(2, 100)]);
+        assert_eq!(map.materialized_rows, 1);
+
+        let product = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v24/map2.tsv"
+        ))
+        .unwrap();
+        let coverage = Coverage {
+            context: Context {
+                build: 70450,
+                locale: product.locale,
+                source_sha256: [1; 32],
+                plan_sha256: integrity::digest(product.render().as_bytes()),
+                producer_sha256: [2; 32],
+                components: 9,
+            },
+            selection: Selection::Map(2),
+            pack: true,
+            map: available::MapFacts {
+                declared_bytes: map.declared_bytes,
+                available_bytes: map.declared_bytes,
+                full_ckey_verified: true,
+                encoded_key_authenticated: false,
+                work: Default::default(),
+                direct_rows: map.direct_rows,
+                copy_records: map.copy_records,
+                materialized_rows: map.materialized_rows,
+                sections: map.sections,
+            },
+            maps: vec![available::CompatibleMapOutcome {
+                map_id: 2,
+                plan_index: 0,
+                materialized_ordinal: 0,
+                wdt: available::WdtDisposition::Loaded,
+                known_present_tiles: Some(0),
+                converted_tiles: 0,
+                missing_root_adts: 0,
+            }],
+            map_wdt_file_data_ids: Some(vec![(2, 100)]),
+        };
+        let rendered = coverage.render();
+        assert!(rendered.is_ok(), "{}", rendered.unwrap_err().code);
+        assert!(authenticate_coverage_map(&coverage, &map).is_ok());
+
+        let mut wrong_identity = coverage.clone();
+        wrong_identity.maps[0].map_id = 3;
+        assert_eq!(
+            authenticate_coverage_map(&wrong_identity, &map)
+                .unwrap_err()
+                .code,
+            "product_terrain_coverage_authentication"
+        );
+        let mut wrong_count = coverage;
+        wrong_count.map.materialized_rows += 1;
+        assert_eq!(
+            authenticate_coverage_map(&wrong_count, &map)
+                .unwrap_err()
+                .code,
+            "product_terrain_coverage_authentication"
+        );
     }
 
     #[test]

@@ -145,6 +145,7 @@ fn open_inner(
         || plan.is_v20()
         || plan.is_v21()
         || plan.is_v22()
+        || plan.is_v24()
     {
         #[cfg(target_os = "linux")]
         {
@@ -235,6 +236,7 @@ pub fn admit(plan: &Plan) -> Result<(), Error> {
         || plan.is_v18()
         || plan.is_v20()
         || plan.is_v21()
+        || plan.is_v24()
     {
         return Err("product_platform".into());
     }
@@ -454,7 +456,9 @@ fn extract_inner(
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
     let mut package_limits = package::Limits::default();
-    if plan.is_v20() {
+    if plan.is_v24() {
+        package_limits = terrain_v20::package_limits_v24();
+    } else if plan.is_v20() {
         package_limits = terrain_v20::package_limits();
     } else if plan.is_available_terrain() {
         package_limits = terrain_v12::package_limits();
@@ -601,7 +605,9 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
-        if plan.is_v20() {
+        if plan.is_v24() {
+            terrain_v20::extract_v24(plan, store, run, self.context)
+        } else if plan.is_v20() {
             terrain_v20::extract(plan, store, run, self.context)
         } else if plan.is_v13() {
             terrain_v13::extract(plan, store, run, self.context)

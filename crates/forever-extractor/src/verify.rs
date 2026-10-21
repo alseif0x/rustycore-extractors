@@ -116,7 +116,9 @@ fn verify_inner(
         limits.total_bytes = budget.output_bytes;
     }
     #[cfg(target_os = "linux")]
-    if plan.is_v20() {
+    if plan.is_v24() {
+        limits = crate::driver::terrain_v20::package_limits_v24();
+    } else if plan.is_v20() {
         limits = crate::driver::terrain_v20::package_limits();
     } else if plan.is_available_terrain() {
         limits = crate::driver::terrain_v12::package_limits();
@@ -167,19 +169,23 @@ fn verify_inner(
             expected,
             limits,
             |artifacts| {
-                let admitted = if plan.is_v13() {
-                    crate::driver::terrain_v13::admit_metadata(plan, artifacts)
-                } else if plan.is_v12() {
-                    crate::driver::terrain_v12::admit_metadata(plan, artifacts)
-                } else if plan.is_v10() || plan.is_v16() || plan.is_v17() {
-                    v10::admit_metadata(plan, artifacts)
+                let admitted = if plan.is_v24() {
+                    crate::driver::terrain_v20::admit_metadata_v24(plan, artifacts)
                 } else {
-                    v9::admit_metadata(plan, artifacts)
-                };
-                let admitted = if plan.is_v20() {
-                    crate::driver::terrain_v20::admit_metadata(plan, artifacts)
-                } else {
-                    admitted
+                    let admitted = if plan.is_v13() {
+                        crate::driver::terrain_v13::admit_metadata(plan, artifacts)
+                    } else if plan.is_v12() {
+                        crate::driver::terrain_v12::admit_metadata(plan, artifacts)
+                    } else if plan.is_v10() || plan.is_v16() || plan.is_v17() {
+                        v10::admit_metadata(plan, artifacts)
+                    } else {
+                        v9::admit_metadata(plan, artifacts)
+                    };
+                    if plan.is_v20() {
+                        crate::driver::terrain_v20::admit_metadata(plan, artifacts)
+                    } else {
+                        admitted
+                    }
                 };
                 admitted.map_err(|error| {
                     metadata_failure = Some(error);
@@ -232,6 +238,16 @@ fn verify_inner(
             .take()
             .ok_or("product_terrain_coverage")?
             .finish(plan, context)?;
+    } else if plan.is_v24() {
+        let map = facts
+            .authenticated_map
+            .as_ref()
+            .ok_or("product_terrain_coverage_authentication")?;
+        facts
+            .terrain_v20
+            .take()
+            .ok_or("product_terrain_coverage")?
+            .finish_authenticated(plan, context, map)?;
     }
     #[cfg(target_os = "linux")]
     if plan.is_v12() {
@@ -257,6 +273,8 @@ struct Facts {
     terrain_v13: Option<crate::driver::terrain_v13::VerifyFacts>,
     #[cfg(target_os = "linux")]
     terrain_v20: Option<crate::driver::terrain_v20::VerifyFacts>,
+    #[cfg(target_os = "linux")]
+    authenticated_map: Option<crate::driver::terrain_v20::AuthenticatedMap>,
     db2: BTreeSet<String>,
     gt: usize,
     cameras: BTreeSet<u32>,
@@ -325,6 +343,32 @@ impl Facts {
     fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
         if bytes.is_empty() {
             return Err("product_empty_artifact".into());
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v24() {
+            match artifact.component {
+                Component::Db2 => {
+                    let expected = format!("dbc/{}/Map.db2", plan.locale.name());
+                    if artifact.path != expected
+                        || bytes.len() > 16 * 1024 * 1024
+                        || self.authenticated_map.is_some()
+                    {
+                        return Err("product_inventory".into());
+                    }
+                    validate_db2(plan, "Map", bytes)?;
+                    self.authenticated_map =
+                        Some(crate::driver::terrain_v20::authenticate_map(bytes)?);
+                    self.db2.insert("Map".into());
+                    return Ok(());
+                }
+                Component::Terrain => {
+                    return self
+                        .terrain_v20
+                        .get_or_insert_with(crate::driver::terrain_v20::VerifyFacts::new)
+                        .inspect(artifact, bytes);
+                }
+                _ => return Err("product_inventory".into()),
+            }
         }
         #[cfg(target_os = "linux")]
         if plan.is_v20() {
