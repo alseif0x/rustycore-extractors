@@ -67,7 +67,9 @@ use windows::extract_inner;
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 
+#[cfg(target_os = "linux")]
 struct CompleteDb2Source<'a>(&'a [u8]);
+#[cfg(target_os = "linux")]
 impl forever_db2::availability::Source for CompleteDb2Source<'_> {
     fn declared_bytes(&self) -> u64 {
         self.0.len() as u64
@@ -92,6 +94,7 @@ impl forever_db2::availability::Source for CompleteDb2Source<'_> {
 /// payload sizes of its TACT-declared sections. The available-section reader
 /// supplies the semantic/schema gate; this additional extent pass verifies the
 /// exact zero-fill boundary retained in the sealed source artifact.
+#[cfg(target_os = "linux")]
 pub(crate) fn validate_partial_map(bytes: &[u8]) -> Result<Vec<u64>, Error> {
     let projected = forever_db2::availability::read_map_70450(&CompleteDb2Source(bytes))
         .map_err(|_| Error::from("product_partial_map_db2"))?;
@@ -906,7 +909,7 @@ fn db2(
         } else {
             None
         };
-        let (bytes, partial_sections) = if plan.is_v25() && entry.name == "Map" {
+        let (bytes, _partial_sections) = if plan.is_v25() && entry.name == "Map" {
             #[cfg(target_os = "linux")]
             {
                 let source = store
@@ -975,7 +978,7 @@ fn db2(
         }
         #[cfg(target_os = "linux")]
         if plan.is_v25() && entry.name == "Map" {
-            run.set_partial_encrypted_sections(&partial_sections)?;
+            run.set_partial_encrypted_sections(&_partial_sections)?;
         }
         if entry.name == "Map"
             && let Some(domain) = domain
