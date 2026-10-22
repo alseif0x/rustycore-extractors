@@ -645,7 +645,7 @@ fn target70374_context_is_linux_explicit_db2_triple_or_terrain_without_changing_
 }
 
 #[test]
-fn target70450_mask32_is_additive_linux_only_and_keeps_the_six_field_wire() {
+fn target70450_seven_masks_are_linux_only_and_keep_the_six_field_wire() {
     for components in 0..=255 {
         let context = Context {
             build: 70450,
@@ -657,8 +657,14 @@ fn target70450_mask32_is_additive_linux_only_and_keeps_the_six_field_wire() {
         };
         assert_eq!(
             context.validate().is_ok(),
-            cfg!(target_os = "linux") && [16, 1, 7, 8, 57, 32].contains(&components)
+            cfg!(target_os = "linux") && [16, 1, 7, 8, 57, 32, 9].contains(&components)
         );
+        if components == 13 {
+            assert!(
+                context.validate().is_err(),
+                "mask {components} remains rejected"
+            );
+        }
         if components == Component::Navigation.bit() {
             assert_eq!(
                 Context::parse(&context.json()).is_ok(),

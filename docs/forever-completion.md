@@ -23,6 +23,14 @@ are deleted while pending source and the legacy version line remain preserved.
 Earlier bounded `.build.info` reads declared build 70374 and Classic 70003;
 this does not authenticate a game PE or complete installed assets. Historical
 70205 and 70338 evidence remains tied to its recorded sources.
+
+Build-70450 product v24 is a software-only Linux profile combining the sealed
+Map DB2 artifact with v20 terrain; its synthetic verifier re-derives Map
+identity/order/count facts from that artifact. A real esES attempt using mask 9,
+terrain map 48 and one sealed Map entry passed `inspect` but `extract` exited 9
+before package creation with `local_store_no_verified_encoding` for `db2`.
+V24 remains synthetic-only; no real package, full-world, runtime or format-parity
+acceptance is established.
 Linux v11 separately admits explicit 70374 DB2/GT/raw cameras, sealed source and
 the 1,161-schema catalog. Its synthetic56, fresh native whole-selection comparison
 and real26 lifecycle pass independent QA; six complete real views each contain
