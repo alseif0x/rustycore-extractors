@@ -15,15 +15,17 @@ use forever_casc::{
     package::{self, Component, Context, Run},
     root, terrain,
 };
-use forever_db2::{
-    CharacterTable, DecodedTable, HEADER_SIZE, Header, Metadata, RecordError, SECTION_SIZE,
-};
+use forever_db2::{CharacterTable, DecodedTable, HEADER_SIZE, Header, RecordError};
+#[cfg(target_os = "linux")]
+use forever_db2::{Metadata, SECTION_SIZE};
 use forever_navigation::{inventory, models, offmesh, pipeline, recast, tilebuilder::Coordinate};
 #[cfg(target_os = "linux")]
 use inventory::fs as navigation_input;
 #[cfg(windows)]
 use inventory::windows as navigation_input;
-use std::{io::Cursor, path::Path};
+#[cfg(target_os = "linux")]
+use std::io::Cursor;
+use std::path::Path;
 
 #[cfg(all(test, target_os = "linux"))]
 // CASC intentionally exports neither helper; the exact original source is
