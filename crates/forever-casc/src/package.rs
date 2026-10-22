@@ -21,10 +21,13 @@ use std::{
 mod disk;
 mod model;
 #[cfg(target_os = "linux")]
-pub use disk::{Put, Run, verify, verify_with, verify_with_preflight};
+pub use disk::{
+    Put, Run, verify, verify_with, verify_with_preflight,
+    verify_with_preflight_and_partial_sections,
+};
 #[cfg(windows)]
 pub mod windows;
-pub use model::{Artifact, Component, Context, Limits, Summary};
+pub use model::{Artifact, Component, Context, Limits, PartialEncryptedSection, Summary};
 #[cfg(windows)]
 pub use windows::{Put, Run, verify, verify_with};
 #[cfg(all(test, target_os = "linux"))]

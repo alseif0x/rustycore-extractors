@@ -273,6 +273,64 @@ impl Summary {
         )
     }
 }
+
+/// Redacted, deterministic declaration for one unavailable encrypted BLTE
+/// frame represented by a product's explicit declared-skip policy.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PartialEncryptedSection {
+    pub lookup: String,
+    pub frame_ordinal: u32,
+    pub decoded_size: u64,
+}
+
+const MAX_PARTIAL_ENCRYPTED_SECTIONS: usize = 16;
+
+impl PartialEncryptedSection {
+    pub fn json(&self) -> String {
+        format!(
+            "{{\"lookup\":\"{}\",\"frame_ordinal\":{},\"decoded_size\":{}}}",
+            self.lookup, self.frame_ordinal, self.decoded_size
+        )
+    }
+
+    fn parse(value: &Json) -> Result<Self, Error> {
+        let partial = Self {
+            lookup: string(value, "lookup")?.to_owned(),
+            frame_ordinal: u32::try_from(number(value, "frame_ordinal")?)
+                .map_err(|_| Error::Schema)?,
+            decoded_size: number(value, "decoded_size")?,
+        };
+        validate_partial_encrypted_sections(std::slice::from_ref(&partial))?;
+        if let Json::Object(fields) = value {
+            if fields.len() != 3 {
+                return Err(Error::Schema);
+            }
+        } else {
+            return Err(Error::Schema);
+        }
+        Ok(partial)
+    }
+}
+
+pub(super) fn validate_partial_encrypted_sections(
+    sections: &[PartialEncryptedSection],
+) -> Result<(), Error> {
+    if sections.len() > MAX_PARTIAL_ENCRYPTED_SECTIONS
+        || sections.iter().any(|section| {
+            section.lookup.len() != 16
+                || !section
+                    .lookup
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+        || sections
+            .windows(2)
+            .any(|pair| pair[0].frame_ordinal >= pair[1].frame_ordinal)
+    {
+        return Err(Error::Schema);
+    }
+    Ok(())
+}
 #[cfg(any(target_os = "linux", windows))]
 pub(super) struct Inventory {
     pub facts: Vec<Artifact>,
@@ -424,6 +482,66 @@ pub(super) fn header(context: Context) -> String {
         context.json()
     )
 }
+pub(super) fn header_with_partial_sections(
+    context: Context,
+    sections: &[PartialEncryptedSection],
+) -> Result<String, Error> {
+    validate_partial_encrypted_sections(sections)?;
+    if sections.is_empty() {
+        return Ok(header(context));
+    }
+    let declarations = sections
+        .iter()
+        .map(PartialEncryptedSection::json)
+        .collect::<Vec<_>>()
+        .join(",");
+    Ok(format!(
+        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"partial_encrypted_sections\":[{declarations}],\"artifacts\":[\n",
+        context.json()
+    ))
+}
+
+pub(super) fn parse_header_partial_sections(
+    header_text: &str,
+    context: Context,
+) -> Result<Vec<PartialEncryptedSection>, Error> {
+    let standard = header(context);
+    if header_text == standard.strip_suffix('\n').ok_or(Error::Schema)? {
+        return Ok(Vec::new());
+    }
+    if header_text.len() > 4096 {
+        return Err(Error::Limit);
+    }
+    let prefix = format!(
+        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"partial_encrypted_sections\":[",
+        context.json()
+    );
+    let suffix = "],\"artifacts\":[";
+    let body = header_text
+        .strip_prefix(&prefix)
+        .and_then(|text| text.strip_suffix(suffix))
+        .ok_or(Error::Schema)?;
+    let parsed = json::parse(&format!("[{body}]")).map_err(|_| Error::Schema)?;
+    let Json::Array(values) = parsed else {
+        return Err(Error::Schema);
+    };
+    let mut sections = Vec::new();
+    sections
+        .try_reserve_exact(values.len())
+        .map_err(|_| Error::Allocation)?;
+    for value in &values {
+        sections.push(PartialEncryptedSection::parse(value)?);
+    }
+    validate_partial_encrypted_sections(&sections)?;
+    if sections.is_empty() {
+        return Ok(sections);
+    }
+    let canonical = header_with_partial_sections(context, &sections)?;
+    if header_text != canonical.strip_suffix('\n').ok_or(Error::Schema)? {
+        return Err(Error::Schema);
+    }
+    Ok(sections)
+}
 #[cfg(any(target_os = "linux", windows))]
 pub(super) fn footer(s: Summary) -> String {
     format!(
@@ -435,7 +553,17 @@ pub(super) fn footer(s: Summary) -> String {
 }
 
 #[cfg(any(target_os = "linux", windows))]
+#[cfg(windows)]
 pub(super) fn manifest_fact(context: Context, inventory: &Inventory) -> Result<Artifact, Error> {
+    manifest_fact_with_partial_sections(context, inventory, &[])
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn manifest_fact_with_partial_sections(
+    context: Context,
+    inventory: &Inventory,
+    sections: &[PartialEncryptedSection],
+) -> Result<Artifact, Error> {
     let mut hash = sha256::Sha256::new();
     let mut bytes = 0u64;
     let mut emit = |s: &str| -> Result<(), Error> {
@@ -443,7 +571,7 @@ pub(super) fn manifest_fact(context: Context, inventory: &Inventory) -> Result<A
         hash.update(s.as_bytes());
         Ok(())
     };
-    emit(&header(context))?;
+    emit(&header_with_partial_sections(context, sections)?)?;
     for (i, a) in inventory.facts.iter().enumerate() {
         emit(&format!(
             "{}{}\n",

@@ -1,0 +1,17 @@
+forever-product	25
+build	70450
+locale	enUS
+index	contiguous
+root	header-50893-v2
+schema-catalog	wowdbdefs-70450-v1
+decryption	disabled
+partial_encrypted_sections	declared-skip
+components	db2,maps
+terrain	map:2
+pack	true
+navigation	none
+big-base-unit	false
+skip-liquids	false
+maximum-slope	55
+non-steep-slope	55
+db2	Map	1349477

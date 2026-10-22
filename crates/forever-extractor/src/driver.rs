@@ -15,13 +15,15 @@ use forever_casc::{
     package::{self, Component, Context, Run},
     root, terrain,
 };
-use forever_db2::{CharacterTable, DecodedTable, HEADER_SIZE, Header, RecordError};
+use forever_db2::{
+    CharacterTable, DecodedTable, HEADER_SIZE, Header, Metadata, RecordError, SECTION_SIZE,
+};
 use forever_navigation::{inventory, models, offmesh, pipeline, recast, tilebuilder::Coordinate};
 #[cfg(target_os = "linux")]
 use inventory::fs as navigation_input;
 #[cfg(windows)]
 use inventory::windows as navigation_input;
-use std::path::Path;
+use std::{io::Cursor, path::Path};
 
 #[cfg(all(test, target_os = "linux"))]
 // CASC intentionally exports neither helper; the exact original source is
@@ -64,6 +66,128 @@ use windows::extract_inner;
 
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+
+struct CompleteDb2Source<'a>(&'a [u8]);
+impl forever_db2::availability::Source for CompleteDb2Source<'_> {
+    fn declared_bytes(&self) -> u64 {
+        self.0.len() as u64
+    }
+
+    fn range(
+        &self,
+        offset: u64,
+        bytes: usize,
+    ) -> Result<&[u8], forever_db2::availability::Unavailable> {
+        let start = usize::try_from(offset).map_err(|_| forever_db2::availability::Unavailable)?;
+        let end = start
+            .checked_add(bytes)
+            .ok_or(forever_db2::availability::Unavailable)?;
+        self.0
+            .get(start..end)
+            .ok_or(forever_db2::availability::Unavailable)
+    }
+}
+
+/// Validate a zero-filled build-70450 Map projection and return the ordered
+/// payload sizes of its TACT-declared sections. The available-section reader
+/// supplies the semantic/schema gate; this additional extent pass verifies the
+/// exact zero-fill boundary retained in the sealed source artifact.
+pub(crate) fn validate_partial_map(bytes: &[u8]) -> Result<Vec<u64>, Error> {
+    let projected = forever_db2::availability::read_map_70450(&CompleteDb2Source(bytes))
+        .map_err(|_| Error::from("product_partial_map_db2"))?;
+    let mut payload_sizes = Vec::new();
+    payload_sizes
+        .try_reserve_exact(projected.sections().len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    for section in projected.sections() {
+        if section.state == forever_db2::availability::SectionState::UnknownTact {
+            payload_sizes.push(0);
+        }
+    }
+    let materialized = projected
+        .materialize()
+        .map_err(|_| Error::from("product_partial_map_db2"))?;
+    drop(materialized);
+
+    let raw_header: &[u8; HEADER_SIZE] = bytes
+        .get(..HEADER_SIZE)
+        .ok_or("product_partial_map_db2")?
+        .try_into()
+        .map_err(|_| Error::from("product_partial_map_db2"))?;
+    let header = Header::parse(raw_header).map_err(|_| Error::from("product_partial_map_db2"))?;
+    let prefix = HEADER_SIZE
+        .checked_add(
+            (header.section_count as usize)
+                .checked_mul(SECTION_SIZE)
+                .ok_or("product_partial_map_db2")?,
+        )
+        .ok_or("product_partial_map_db2")?;
+    let metadata = Metadata::read(&mut Cursor::new(
+        bytes.get(..prefix).ok_or("product_partial_map_db2")?,
+    ))
+    .map_err(|_| Error::from("product_partial_map_db2"))?;
+    let add = |left: usize, right: usize| {
+        left.checked_add(right)
+            .ok_or_else(|| Error::from("product_partial_map_db2"))
+    };
+    let mul = |left: usize, right: usize| {
+        left.checked_mul(right)
+            .ok_or_else(|| Error::from("product_partial_map_db2"))
+    };
+    let mut end = add(prefix, mul(header.field_count as usize, 4)?)?;
+    end = add(end, header.column_meta_size as usize)?;
+    end = add(end, header.pallet_data_size as usize)?;
+    end = add(end, header.common_data_size as usize)?;
+    for section in &metadata.sections {
+        if section.tact_declared {
+            let count_end = add(end, 4)?;
+            let count = u32::from_le_bytes(
+                bytes
+                    .get(end..count_end)
+                    .ok_or("product_partial_map_db2")?
+                    .try_into()
+                    .map_err(|_| Error::from("product_partial_map_db2"))?,
+            ) as usize;
+            end = add(count_end, mul(count, 4)?)?;
+            if end > bytes.len() {
+                return Err("product_partial_map_db2".into());
+            }
+        }
+    }
+    let mut tact_ordinal = 0usize;
+    for section in &metadata.sections {
+        if section.file_offset as usize != end {
+            return Err("product_partial_map_db2".into());
+        }
+        let start = end;
+        end = add(
+            end,
+            mul(section.record_count as usize, header.record_size as usize)?,
+        )?;
+        end = add(end, section.string_table_size as usize)?;
+        end = add(end, section.id_table_size as usize)?;
+        end = add(end, mul(section.copy_table_count as usize, 8)?)?;
+        if end > bytes.len() {
+            return Err("product_partial_map_db2".into());
+        }
+        if section.tact_declared {
+            let payload = bytes.get(start..end).ok_or("product_partial_map_db2")?;
+            if payload.iter().any(|byte| *byte != 0) {
+                return Err("product_partial_zerofill".into());
+            }
+            let slot = payload_sizes
+                .get_mut(tact_ordinal)
+                .ok_or("product_partial_map_db2")?;
+            *slot =
+                u64::try_from(payload.len()).map_err(|_| Error::from("product_partial_map_db2"))?;
+            tact_ordinal += 1;
+        }
+    }
+    if end != bytes.len() || tact_ordinal != payload_sizes.len() {
+        return Err("product_partial_map_db2".into());
+    }
+    Ok(payload_sizes)
+}
 
 /// Admit the exact explicitly selected physical profile, offline. Opening alone
 /// does not prove that the selected files are present or decodable.
@@ -146,6 +270,7 @@ fn open_inner(
         || plan.is_v21()
         || plan.is_v22()
         || plan.is_v24()
+        || plan.is_v25()
     {
         #[cfg(target_os = "linux")]
         {
@@ -456,7 +581,7 @@ fn extract_inner(
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
     let mut package_limits = package::Limits::default();
-    if plan.is_v24() {
+    if plan.is_v24() || plan.is_v25() {
         package_limits = terrain_v20::package_limits_v24();
     } else if plan.is_v20() {
         package_limits = terrain_v20::package_limits();
@@ -468,11 +593,17 @@ fn extract_inner(
         // vmaps. The canonical v3 output budget also bounds common replay.
         package_limits.total_bytes = budget.output_bytes;
     }
-    let run = if resume {
+    let mut run = if resume {
         Run::resume(output, context, protected, package_limits)?
     } else {
         Run::create(output, context, protected, package_limits)?
     };
+    if plan.is_v25() {
+        // Re-admit Map on resume even when Db2 was already sealed so its
+        // manifest-only partial declarations are reconstructed before finish.
+        db2(plan, &mut store, &mut run, None)?;
+        run.finish_component(Component::Db2)?;
+    }
     let result = execution::execute(
         plan,
         &mut store,
@@ -605,7 +736,7 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
-        if plan.is_v24() {
+        if plan.is_v24() || plan.is_v25() {
             terrain_v20::extract_v24(plan, store, run, self.context)
         } else if plan.is_v20() {
             terrain_v20::extract(plan, store, run, self.context)
@@ -775,29 +906,77 @@ fn db2(
         } else {
             None
         };
-        let file = match store.read_file_data_id_with_limit(entry.id, cap) {
-            Ok(file) => file,
-            Err(error) => {
-                #[cfg(target_os = "linux")]
-                if product_diagnostic_supported(plan) {
-                    store.record_product_diagnostic_failure(
-                        diagnostic_request,
-                        error,
-                        matches!(error, forever_casc::local_store::Error::InputChanged),
-                    );
+        let (bytes, partial_sections) = if plan.is_v25() && entry.name == "Map" {
+            #[cfg(target_os = "linux")]
+            {
+                let source = store
+                    .read_file_data_id_available_70450_with_limit(entry.id, cap)
+                    .map_err(|error| Error::from(error.code()))?;
+                if source.declared_bytes() == 0
+                    || source.declared_bytes() > cap
+                    || (!source.full_ckey_verified() && !source.encoded_key_authenticated())
+                {
+                    return Err("product_partial_map_authentication".into());
                 }
-                return Err(Error::from(error.code()));
+                let (bytes, frames) = source.into_zerofilled();
+                if bytes.is_empty() || bytes.len() as u64 > cap {
+                    return Err("product_file_limit".into());
+                }
+                let tact_payload_sizes = validate_partial_map(&bytes)?;
+                if frames.len() != tact_payload_sizes.len() {
+                    return Err("product_partial_section_count".into());
+                }
+                let mut partials = Vec::new();
+                partials
+                    .try_reserve_exact(frames.len())
+                    .map_err(|_| Error::from("product_allocation"))?;
+                for (frame, decoded_size) in frames.into_iter().zip(tact_payload_sizes) {
+                    if frame.decoded_size != decoded_size {
+                        return Err("product_partial_section_count".into());
+                    }
+                    partials.push(package::PartialEncryptedSection {
+                        lookup: frame.lookup_hex,
+                        frame_ordinal: frame.frame_ordinal,
+                        decoded_size: frame.decoded_size,
+                    });
+                }
+                (bytes, partials)
             }
+            #[cfg(not(target_os = "linux"))]
+            {
+                return Err("product_platform".into());
+            }
+        } else {
+            let file = match store.read_file_data_id_with_limit(entry.id, cap) {
+                Ok(file) => file,
+                Err(error) => {
+                    #[cfg(target_os = "linux")]
+                    if product_diagnostic_supported(plan) {
+                        store.record_product_diagnostic_failure(
+                            diagnostic_request,
+                            error,
+                            matches!(error, forever_casc::local_store::Error::InputChanged),
+                        );
+                    }
+                    return Err(Error::from(error.code()));
+                }
+            };
+            if file.bytes.is_empty() || file.bytes.len() as u64 > cap {
+                return Err("product_file_limit".into());
+            }
+            (file.bytes, Vec::new())
         };
-        if file.bytes.is_empty() || file.bytes.len() as u64 > cap {
-            return Err("product_file_limit".into());
-        }
-        let bytes = file.bytes;
         total = total
             .checked_add(bytes.len() as u64)
             .filter(|n| *n <= DB2_TOTAL_BYTES)
             .ok_or_else(|| Error::from("product_db2_total_limit"))?;
-        validate_db2(plan, &entry.name, &bytes)?;
+        if !(plan.is_v25() && entry.name == "Map") {
+            validate_db2(plan, &entry.name, &bytes)?;
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v25() && entry.name == "Map" {
+            run.set_partial_encrypted_sections(&partial_sections)?;
+        }
         if entry.name == "Map"
             && let Some(domain) = domain
         {

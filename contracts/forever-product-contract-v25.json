@@ -1,0 +1,85 @@
+{
+  "contract": "forever-product-v25",
+  "version": 25,
+  "publication_profile": "Build70450AuthenticatedTerrainPartialMapV1",
+  "builds": [70450],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "plan": {
+    "encoding": "canonical ASCII TSV with final LF",
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 9,
+    "components": ["db2", "maps"],
+    "component_bits": {"db2": 1, "gt": 2, "cameras": 4, "maps": 8},
+    "decryption": "disabled",
+    "keys": "refused",
+    "partial_encrypted_sections": "declared-skip",
+    "storage": "resident",
+    "db2_output_entries": ["Map"],
+    "terrain_selection": ["all-available-maps", "map:<canonical-u32>"],
+    "terrain": "all-available-maps",
+    "terrain_coverage": "maps/compatible-terrain-coverage-v3.tsv",
+    "navigation": "none",
+    "map_domain": "none",
+    "offmesh": "disabled",
+    "scratch": "forbidden"
+  },
+  "package": {
+    "manifest": "forever-package.json",
+    "component_order": ["db2", "maps"],
+    "db2_map": "dbc/<locale>/Map.db2",
+    "partial_encrypted_sections": "optional deterministic [{lookup, frame_ordinal, decoded_size}]; absent or empty means none",
+    "terrain_coverage": "maps/compatible-terrain-coverage-v3.tsv",
+    "terrain_outputs": "v20-compatible MAPS tiles and tilelists",
+    "limits_profile": "forever-product-contract-v24",
+    "provisional_until_sealed": true
+  },
+  "source_policy": {
+    "db2_map": "Use the explicit build-70450 authenticated available-source path, expose its zero-filled backing only under this declared-skip revision, parse it with read_map_70450(), and preserve the bytes as the sole Map DB2 artifact.",
+    "partial_sections": "For each checksum-verified E frame, retain only the redacted lookup hex, frame ordinal, and decoded size. Require every wrapper to use cipher S and require the E-frame count to equal the Map source's tact_declared section count. TrinityCore-style HandleEncryptedSection skips each declared section; no key or decryption is used.",
+    "terrain_map": "Use the v20 build-70450 available Map projection; materialized rows with a non-zero WDT FileDataID retain v20 source order. Unknown TACT sections remain unknown and are not inferred from bytes.",
+    "terrain_omissions": "Only the v20 MissingFile-only WDT/root-ADT omission policy applies. Terrain conversion outcomes remain producer-reported.",
+    "identity_boundary": "Verification re-reads the sealed Map artifact with read_map_70450(), independently derives the number of tact_declared sections, and requires it to match the optional manifest declarations. The projection and its selected identities do not prove whole-client Map completeness or source decryption."
+  },
+  "verification": {
+    "profile": "linux70450-authenticated-available-map-terrain-partial-map-product-v1",
+    "verify_scope": "offline package integrity, intrinsic DB2/MAPS formats, independently re-derived available Map identity and partial-section counts",
+    "verify_links_scope": "the same checks; no navigation or external package links are part of v25",
+    "coverage_authentication": "independently_derived",
+    "partial_decryption_claim": false,
+    "producer_reported_facts": ["WDT dispositions", "tile conversion counts", "missing-root-ADT counts", "source authentication flags"],
+    "client_reads": false,
+    "full_extractor_complete": false,
+    "runtime_claim": false,
+    "format_parity_claim": false,
+    "whole_client_map_coverage": false
+  },
+  "acceptance_matrix": [
+    {"case": "canonical-profile", "expect": "admit only build 70450, mask 9, disabled keys, declared-skip, resident storage, one Map DB2 entry, terrain all or one map, and no navigation/map-domain/offmesh"},
+    {"case": "partial-map", "expect": "accept zero-filled Map only when every E frame uses S and the frame count equals tact_declared sections; skip exactly declared sections and record redacted declarations"},
+    {"case": "partial-verification", "expect": "verify accepts declared partial Map, rejects undeclared partial data, inconsistent declaration counts, zero tact_declared sections with declarations, corrupt zerofill, and unsupported cipher"},
+    {"case": "synthetic-map-and-terrain", "expect": "synthetic-only WDC5 with one readable and one tact_declared section exercises inspect, extract/resume, offline verify and verify-links"},
+    {"case": "other-inputs", "expect": "refuse keys, scratch, navigation, map-domain and off-mesh before client/output work"}
+  ],
+  "excluded": [
+    "real-client extraction or acceptance",
+    "complete or whole-client Map coverage",
+    "full-world terrain completeness",
+    "C++ or TrinityCore format parity",
+    "RustyCore runtime acceptance",
+    "Windows execution",
+    "release acceptance"
+  ],
+  "unqualified_status": {
+    "real_extraction": false,
+    "runtime_acceptance": false,
+    "full_world_coverage": false,
+    "format_parity": false,
+    "windows": false,
+    "full_extractor_complete": false
+  },
+  "legacy_preservation": "v20 terrain, v23 selected navigation and v24 authenticated Map terrain retain their existing plan, package and verification identities; v25 software admission transfers no prior real-client acceptance.",
+  "full_extractor_complete": false
+}
