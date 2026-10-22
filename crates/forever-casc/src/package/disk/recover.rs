@@ -24,6 +24,28 @@ pub(super) fn protocol(root: &Root, context: Context, limits: Limits) -> Result<
     }
     Ok(())
 }
+fn read_partial_sections_from_manifest(
+    root: &Root,
+    path: &str,
+    context: Context,
+    limits: Limits,
+) -> Result<Vec<PartialEncryptedSection>, Error> {
+    let mut file = root.open_file(path, limits)?;
+    let before = file.metadata().map_err(|_| Error::Io)?;
+    if !before.is_file() || before.len() > limits.manifest_bytes {
+        return Err(Error::Path);
+    }
+    let mut reader = io::BufReader::new(&mut file);
+    let line = manifest_header_line(&mut reader)?;
+    let text = std::str::from_utf8(line.strip_suffix(b"\n").ok_or(Error::Schema)?)
+        .map_err(|_| Error::Schema)?;
+    let sections = parse_header_partial_sections(text, context)?;
+    if Identity::of(&before) != Identity::of(&file.metadata().map_err(|_| Error::Changed)?) {
+        return Err(Error::Changed);
+    }
+    root.named_file(path, &file, limits)?;
+    Ok(sections)
+}
 pub(super) fn transaction(context: Context, a: &Artifact) -> String {
     format!(
         "{{\"transaction_version\":2,\"context_sha256\":\"{}\",\"artifact\":{}}}",
@@ -427,7 +449,22 @@ pub(super) fn resume(
     {
         return Err(Error::Inventory);
     }
-    let manifest_expected = manifest_fact(expected, &inventory)?;
+    let partial_manifest = if root.has(MANIFEST, limits)? {
+        Some(read_partial_sections_from_manifest(
+            &root, MANIFEST, expected, limits,
+        )?)
+    } else if root.has(".state/package.part", limits)? {
+        match read_partial_sections_from_manifest(&root, ".state/package.part", expected, limits) {
+            Ok(sections) => Some(sections),
+            Err(Error::Schema) => None,
+            Err(error) => return Err(error),
+        }
+    } else {
+        None
+    };
+    let partial_sections = partial_manifest.as_deref().unwrap_or_default();
+    let manifest_expected =
+        manifest_fact_with_partial_sections(expected, &inventory, partial_sections)?;
     if manifest_expected.bytes > limits.manifest_bytes {
         return Err(Error::Limit);
     }
@@ -517,6 +554,7 @@ pub(super) fn resume(
         bytes,
         failed: false,
         replay,
+        partial_encrypted_sections: partial_manifest,
     })
 }
 

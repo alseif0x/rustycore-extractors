@@ -89,6 +89,53 @@ fn uses_target_metadata_preflight(plan: &Plan) -> bool {
         || plan.is_available_terrain()
 }
 
+#[cfg(target_os = "linux")]
+fn verify_existing_package(
+    plan: &Plan,
+    output: &Path,
+    expected: Option<Context>,
+    limits: package::Limits,
+    metadata_failure: &mut Option<Error>,
+    inspect: impl FnMut(&Artifact, &mut std::fs::File) -> Result<(), package::Error>,
+) -> Result<package::Summary, package::Error> {
+    #[cfg(target_os = "linux")]
+    let verified = if uses_target_metadata_preflight(plan) {
+        package::verify_with_preflight(
+            output,
+            expected,
+            limits,
+            |artifacts| {
+                let admitted = if plan.is_v24() {
+                    crate::driver::terrain_v20::admit_metadata_v24(plan, artifacts)
+                } else {
+                    let admitted = if plan.is_v13() {
+                        crate::driver::terrain_v13::admit_metadata(plan, artifacts)
+                    } else if plan.is_v12() {
+                        crate::driver::terrain_v12::admit_metadata(plan, artifacts)
+                    } else if plan.is_v10() || plan.is_v16() || plan.is_v17() {
+                        v10::admit_metadata(plan, artifacts)
+                    } else {
+                        v9::admit_metadata(plan, artifacts)
+                    };
+                    if plan.is_v20() {
+                        crate::driver::terrain_v20::admit_metadata(plan, artifacts)
+                    } else {
+                        admitted
+                    }
+                };
+                admitted.map_err(|error| {
+                    *metadata_failure = Some(error);
+                    package::Error::Schema
+                })
+            },
+            inspect,
+        )
+    } else {
+        package::verify_with(output, expected, limits, inspect)
+    };
+    verified
+}
+
 fn verify_inner(
     plan: &Plan,
     output: &Path,
@@ -116,7 +163,7 @@ fn verify_inner(
         limits.total_bytes = budget.output_bytes;
     }
     #[cfg(target_os = "linux")]
-    if plan.is_v24() {
+    if plan.is_v24() || plan.is_v25() {
         limits = crate::driver::terrain_v20::package_limits_v24();
     } else if plan.is_v20() {
         limits = crate::driver::terrain_v20::package_limits();
@@ -163,31 +210,22 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut metadata_failure = None;
     #[cfg(target_os = "linux")]
-    let verified = if uses_target_metadata_preflight(plan) {
-        package::verify_with_preflight(
+    let mut manifest_partial_sections = Vec::new();
+    #[cfg(target_os = "linux")]
+    let verified = if plan.is_v25() {
+        package::verify_with_preflight_and_partial_sections(
             output,
             expected,
             limits,
+            |sections| {
+                manifest_partial_sections
+                    .try_reserve_exact(sections.len())
+                    .map_err(|_| package::Error::Allocation)?;
+                manifest_partial_sections.extend_from_slice(sections);
+                Ok(())
+            },
             |artifacts| {
-                let admitted = if plan.is_v24() {
-                    crate::driver::terrain_v20::admit_metadata_v24(plan, artifacts)
-                } else {
-                    let admitted = if plan.is_v13() {
-                        crate::driver::terrain_v13::admit_metadata(plan, artifacts)
-                    } else if plan.is_v12() {
-                        crate::driver::terrain_v12::admit_metadata(plan, artifacts)
-                    } else if plan.is_v10() || plan.is_v16() || plan.is_v17() {
-                        v10::admit_metadata(plan, artifacts)
-                    } else {
-                        v9::admit_metadata(plan, artifacts)
-                    };
-                    if plan.is_v20() {
-                        crate::driver::terrain_v20::admit_metadata(plan, artifacts)
-                    } else {
-                        admitted
-                    }
-                };
-                admitted.map_err(|error| {
+                crate::driver::terrain_v20::admit_metadata_v24(plan, artifacts).map_err(|error| {
                     metadata_failure = Some(error);
                     package::Error::Schema
                 })
@@ -195,7 +233,14 @@ fn verify_inner(
             inspect,
         )
     } else {
-        package::verify_with(output, expected, limits, inspect)
+        verify_existing_package(
+            plan,
+            output,
+            expected,
+            limits,
+            &mut metadata_failure,
+            inspect,
+        )
     };
     #[cfg(not(target_os = "linux"))]
     let verified = package::verify_with(output, expected, limits, inspect);
@@ -224,6 +269,27 @@ fn verify_inner(
         return Err("product_inventory".into());
     }
     #[cfg(target_os = "linux")]
+    if plan.is_v25() {
+        let tact_sizes = facts
+            .partial_map_section_sizes
+            .as_deref()
+            .ok_or("product_partial_map_db2")?;
+        if !manifest_partial_sections.is_empty() && tact_sizes.is_empty() {
+            return Err("product_partial_tact_sections".into());
+        }
+        if !tact_sizes.is_empty() && manifest_partial_sections.is_empty() {
+            return Err("product_partial_undeclared".into());
+        }
+        if tact_sizes.len() != manifest_partial_sections.len()
+            || manifest_partial_sections
+                .iter()
+                .zip(tact_sizes)
+                .any(|(declaration, decoded_size)| declaration.decoded_size != *decoded_size)
+        {
+            return Err("product_partial_section_count".into());
+        }
+    }
+    #[cfg(target_os = "linux")]
     if plan.is_v13() {
         facts
             .terrain_v13
@@ -238,7 +304,7 @@ fn verify_inner(
             .take()
             .ok_or("product_terrain_coverage")?
             .finish(plan, context)?;
-    } else if plan.is_v24() {
+    } else if plan.is_v24() || plan.is_v25() {
         let map = facts
             .authenticated_map
             .as_ref()
@@ -275,6 +341,8 @@ struct Facts {
     terrain_v20: Option<crate::driver::terrain_v20::VerifyFacts>,
     #[cfg(target_os = "linux")]
     authenticated_map: Option<crate::driver::terrain_v20::AuthenticatedMap>,
+    #[cfg(target_os = "linux")]
+    partial_map_section_sizes: Option<Vec<u64>>,
     db2: BTreeSet<String>,
     gt: usize,
     cameras: BTreeSet<u32>,
@@ -345,7 +413,7 @@ impl Facts {
             return Err("product_empty_artifact".into());
         }
         #[cfg(target_os = "linux")]
-        if plan.is_v24() {
+        if plan.is_v24() || plan.is_v25() {
             match artifact.component {
                 Component::Db2 => {
                     let expected = format!("dbc/{}/Map.db2", plan.locale.name());
@@ -355,7 +423,12 @@ impl Facts {
                     {
                         return Err("product_inventory".into());
                     }
-                    validate_db2(plan, "Map", bytes)?;
+                    if plan.is_v25() {
+                        self.partial_map_section_sizes =
+                            Some(crate::driver::validate_partial_map(bytes)?);
+                    } else {
+                        validate_db2(plan, "Map", bytes)?;
+                    }
                     self.authenticated_map =
                         Some(crate::driver::terrain_v20::authenticate_map(bytes)?);
                     self.db2.insert("Map".into());

@@ -54,6 +54,10 @@ pub const AUTHENTICATED_TERRAIN_VERIFY_PROFILE: &str =
     "linux70450-authenticated-available-map-terrain-product-v1";
 pub const AUTHENTICATED_TERRAIN_VERIFY_SCOPE: &str =
     "artifact_integrity_and_terrain_coverage_independently_derived_from_sealed_map_db2";
+pub const AUTHENTICATED_PARTIAL_MAP_VERIFY_PROFILE: &str =
+    "linux70450-authenticated-available-map-terrain-partial-map-product-v1";
+pub const AUTHENTICATED_PARTIAL_MAP_VERIFY_SCOPE: &str =
+    "artifact_integrity_and_terrain_coverage_with_declared_partial_map_section_verification";
 
 /// Explicit DB2 schema source. Existing product plans retain their legacy
 /// pinned schema; builds 70205 and 70338 plans opt into separately pinned
@@ -219,6 +223,7 @@ impl Plan {
             "22" => 22,
             "23" => 23,
             "24" => 24,
+            "25" => 25,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -252,7 +257,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=24 => match field(&mut lines, "schema-catalog")? {
+            15..=25 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -268,13 +273,16 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=24 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=25 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
+        if version == 25 && field(&mut lines, "partial_encrypted_sections")? != "declared-skip" {
+            return Err("product_plan_partial_encrypted_sections");
+        }
         let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18 | 21 | 22)
             || (matches!(version, 4..=6)
                 && lines
@@ -340,11 +348,11 @@ impl Plan {
         }
         let terrain_text = field(&mut lines, "terrain")?;
         let terrain =
-            if matches!(version, 12 | 13 | 20 | 24) && terrain_text == "all-available-maps" {
+            if matches!(version, 12 | 13 | 20 | 24 | 25) && terrain_text == "all-available-maps" {
                 Selection::All
             } else {
                 let selected = Selection::parse(terrain_text)?;
-                if matches!(version, 12 | 13 | 20 | 24) && selected == Selection::All {
+                if matches!(version, 12 | 13 | 20 | 24 | 25) && selected == Selection::All {
                     return Err("product_plan_selection");
                 }
                 selected
@@ -411,6 +419,8 @@ impl Plan {
                 PublicationProfile::Build70450SelectedGeometryV1
             } else if version == 23 {
                 PublicationProfile::Build70450SelectedNavigationV1
+            } else if version == 25 {
+                PublicationProfile::Build70450AuthenticatedTerrainPartialMapV1
             } else if version == 24 {
                 PublicationProfile::Build70450AuthenticatedTerrainV1
             } else if version == 16 {
@@ -467,6 +477,7 @@ impl Plan {
             && !self.is_v22()
             && !self.is_v23()
             && !self.is_v24()
+            && !self.is_v25()
         {
             map_domain::validate(self)?;
         }
@@ -501,6 +512,7 @@ impl Plan {
             && !self.is_v22()
             && !self.is_v23()
             && !self.is_v24()
+            && !self.is_v25()
         {
             return Err("product_plan_build");
         }
@@ -535,6 +547,7 @@ impl Plan {
             && !self.is_v22()
             && !self.is_v23()
             && !self.is_v24()
+            && !self.is_v25()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -634,6 +647,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v25() {
+            return 25;
+        }
         if self.is_v24() {
             return 24;
         }
@@ -706,6 +722,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v25() {
+            return "forever-product-v25";
+        }
         if self.is_v24() {
             return "forever-product-v24";
         }
@@ -886,6 +905,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build-70450 authenticated terrain with declared partial Map sections.
+    pub const fn is_v25(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450AuthenticatedTerrainPartialMapV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -894,7 +921,7 @@ impl Plan {
     }
 
     pub const fn is_available_terrain(&self) -> bool {
-        self.is_v12() || self.is_v13() || self.is_v20() || self.is_v24()
+        self.is_v12() || self.is_v13() || self.is_v20() || self.is_v24() || self.is_v25()
     }
 
     pub const fn is_any_available_terrain(&self) -> bool {
@@ -957,9 +984,14 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=24, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=25, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
+        };
+        let partial_encrypted_sections = if self.is_v25() {
+            "partial_encrypted_sections\tdeclared-skip\n"
+        } else {
+            ""
         };
         let collision_storage = self.collision_storage.render();
         let map_domain = if self.is_v22() {
@@ -983,7 +1015,7 @@ impl Plan {
             map_domain::render(self.map_domain)
         };
         let mut output = format!(
-            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{collision_storage}{map_domain}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
+            "forever-product\t{}\nbuild\t{}\nlocale\t{}\nindex\t{index}\nroot\t{root}\n{schema_catalog}{decryption}{partial_encrypted_sections}{collision_storage}{map_domain}components\t{components}\nterrain\t{}\npack\t{}\nnavigation\t{}\nbig-base-unit\t{}\nskip-liquids\t{}\nmaximum-slope\t{}\nnon-steep-slope\t{}\n",
             self.version(),
             self.build,
             self.locale.name(),
@@ -1098,3 +1130,6 @@ mod v23_tests;
 
 #[cfg(test)]
 mod v24_tests;
+
+#[cfg(test)]
+mod v25_tests;

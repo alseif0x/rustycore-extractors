@@ -7,6 +7,21 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### Linux build-70450 v25 declared-partial Map profile — 2026-10-22
+
+V25 adds a separate synthetic/software-only plan for authenticated build-70450
+Map acquisition with `partial_encrypted_sections=declared-skip`. Its explicit
+zero-fill route is intended to mirror TrinityCore's encrypted-section skip
+handling: only checksum-verified E wrappers with cipher S may be represented,
+and the wrapper count must equal the Map's `tact_declared` section count. The
+manifest declaration is limited to redacted lookup hex, frame ordinal and
+decoded size. The plan keeps v24's mask 9, one Map output, v20 terrain coverage
+v3 and package limits; no key or decryption is added. Synthetic verification,
+real extraction, whole-client/full-world, runtime, parity, Windows and release
+gates remain separate and unqualified. The v25 contract and source checks are
+tracked in `contracts/forever-product-contract-v25.json` and
+`docs/forever-product-v25.md`; no real client was read for this checkpoint.
+
 ### Linux build-70450 v24 software scope and first real attempt — 2026-10-22
 
 V24 software qualification remains synthetic-only: the plan combines the sealed

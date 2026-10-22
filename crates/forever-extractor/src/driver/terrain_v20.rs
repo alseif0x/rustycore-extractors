@@ -686,7 +686,7 @@ pub fn extract(
     run: &mut Run,
     context: Context,
 ) -> Result<(), Error> {
-    let producer_maps = if product.is_v24() {
+    let producer_maps = if product.is_v24() || product.is_v25() {
         Some(producer_map_identities(store, product.terrain)?)
     } else {
         None
@@ -816,7 +816,7 @@ pub fn extract(
     store
         .verify_unchanged()
         .map_err(|error| Error::from(error.code()))?;
-    let path = if product.is_v24() {
+    let path = if product.is_v24() || product.is_v25() {
         COVERAGE_PATH_V24
     } else {
         COVERAGE_PATH
@@ -835,7 +835,7 @@ pub fn extract_v24(
     run: &mut Run,
     context: Context,
 ) -> Result<(), Error> {
-    if !product.is_v24() {
+    if !product.is_v24() && !product.is_v25() {
         return Err("product_terrain_profile".into());
     }
     extract(product, store, run, context)
@@ -947,7 +947,7 @@ impl VerifyFacts {
         context: Context,
         map: &AuthenticatedMap,
     ) -> Result<(), Error> {
-        if !product.is_v24() {
+        if !product.is_v24() && !product.is_v25() {
             return Err("product_terrain_coverage_authentication".into());
         }
         self.finish_inner(product, context, Some(map))
@@ -960,7 +960,7 @@ impl VerifyFacts {
         authenticated_map: Option<&AuthenticatedMap>,
     ) -> Result<(), Error> {
         let coverage = self.coverage.ok_or("product_terrain_coverage")?;
-        if product.is_v24() != coverage.map_wdt_file_data_ids.is_some() {
+        if (product.is_v24() || product.is_v25()) != coverage.map_wdt_file_data_ids.is_some() {
             return Err("product_terrain_coverage_authentication".into());
         }
         require(
@@ -981,7 +981,7 @@ impl VerifyFacts {
                     && actual.count() as usize == outcome.converted_tiles,
             )?;
         }
-        if product.is_v24() {
+        if product.is_v24() || product.is_v25() {
             let map = authenticated_map.ok_or("product_terrain_coverage_authentication")?;
             authenticate_coverage_map(&coverage, map)?;
         } else if authenticated_map.is_some() {
@@ -1109,7 +1109,7 @@ fn admit_metadata_with_coverage_path(
 }
 
 pub fn admit_metadata_v24(product: &Plan, artifacts: &[Artifact]) -> Result<(), Error> {
-    if !product.is_v24() {
+    if !product.is_v24() && !product.is_v25() {
         return Err("product_terrain_profile".into());
     }
     let map_path = format!("dbc/{}/Map.db2", product.locale.name());

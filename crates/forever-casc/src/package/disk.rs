@@ -3,7 +3,11 @@
 #![cfg(target_os = "linux")]
 use super::*;
 pub(super) use model::receipt;
-use model::{Inventory, footer, header, manifest_fact, seal};
+use model::{
+    Inventory, PartialEncryptedSection, footer, header_with_partial_sections,
+    manifest_fact_with_partial_sections, parse_header_partial_sections, seal,
+    validate_partial_encrypted_sections,
+};
 use std::{
     fs::{DirBuilder, File, Metadata, OpenOptions},
     os::{
@@ -14,6 +18,8 @@ use std::{
 };
 #[cfg(test)]
 mod admission_tests;
+#[cfg(test)]
+mod partial_manifest_tests;
 mod recover;
 const NOFOLLOW: i32 = 0x20000;
 const DIRECTORY: i32 = 0x10000;
@@ -382,12 +388,13 @@ fn manifest(
     root: &Root,
     context: Context,
     inventory: &Inventory,
+    partial_sections: &[PartialEncryptedSection],
     dirs: &mut usize,
     limits: Limits,
 ) -> Result<(), Error> {
     if root.has(MANIFEST, limits)? {
         return root.hash(
-            &manifest_fact(context, inventory)?,
+            &manifest_fact_with_partial_sections(context, inventory, partial_sections)?,
             Limits {
                 file_bytes: limits.manifest_bytes,
                 ..limits
@@ -411,7 +418,7 @@ fn manifest(
         }
         f.write_all(s.as_bytes()).map_err(|_| Error::Io)
     };
-    emit(&header(context))?;
+    emit(&header_with_partial_sections(context, partial_sections)?)?;
     for (i, a) in inventory.facts.iter().enumerate() {
         emit(&format!(
             "{}{}\n",
@@ -460,6 +467,7 @@ pub struct Run {
     bytes: u64,
     failed: bool,
     replay: Option<recover::Replay>,
+    partial_encrypted_sections: Option<Vec<PartialEncryptedSection>>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Put {
@@ -537,6 +545,7 @@ impl Run {
             bytes: 0,
             failed: false,
             replay: None,
+            partial_encrypted_sections: None,
         })
     }
     /// All retained bytes are checked before returning a writer. The caller must
@@ -555,6 +564,53 @@ impl Run {
         self.state()?;
         let inventory = collect(&self.root, self.context, self.inventory_limits())?;
         seals(&self.root, self.context, &inventory, self.limits)
+    }
+    /// Attach the redacted E-frame declarations to the final manifest. This is
+    /// a product annotation only; it never authenticates or decodes plaintext.
+    pub fn set_partial_encrypted_sections(
+        &mut self,
+        sections: &[PartialEncryptedSection],
+    ) -> Result<(), Error> {
+        let result = (|| {
+            if self.failed {
+                return Err(Error::Incomplete);
+            }
+            self.state()?;
+            if self.context.build != 70450
+                || self.context.components != (Component::Db2.bit() | Component::Terrain.bit())
+            {
+                return Err(Error::Component);
+            }
+            validate_partial_encrypted_sections(sections)?;
+            if let Some(previous) = &self.partial_encrypted_sections {
+                if previous != sections {
+                    return Err(Error::Inventory);
+                }
+                return Ok(());
+            }
+            let mut retained = Vec::new();
+            retained
+                .try_reserve_exact(sections.len())
+                .map_err(|_| Error::Allocation)?;
+            for section in sections {
+                let mut lookup = String::new();
+                lookup
+                    .try_reserve_exact(section.lookup.len())
+                    .map_err(|_| Error::Allocation)?;
+                lookup.push_str(&section.lookup);
+                retained.push(PartialEncryptedSection {
+                    lookup,
+                    frame_ordinal: section.frame_ordinal,
+                    decoded_size: section.decoded_size,
+                });
+            }
+            self.partial_encrypted_sections = Some(retained);
+            Ok(())
+        })();
+        if result.is_err() {
+            self.failed = true;
+        }
+        result
     }
     /// Compare a caller-supplied identity with an already published, sealed
     /// artifact. This never publishes, acknowledges replay or changes counters.
@@ -709,6 +765,10 @@ impl Run {
             return Err(Error::Incomplete);
         }
         let inventory = collect(&self.root, self.context, self.inventory_limits())?;
+        let partial_sections = self
+            .partial_encrypted_sections
+            .as_deref()
+            .unwrap_or_default();
         check_seals(&self.root, self.context, &inventory, self.limits)?;
         for a in &inventory.facts {
             self.root.hash(a, self.limits)?;
@@ -717,7 +777,7 @@ impl Run {
         let published = self.root.has(MANIFEST, self.limits)?;
         if published {
             self.root.hash(
-                &manifest_fact(self.context, &inventory)?,
+                &manifest_fact_with_partial_sections(self.context, &inventory, partial_sections)?,
                 Limits {
                     file_bytes: self.limits.manifest_bytes,
                     ..self.limits
@@ -739,6 +799,7 @@ impl Run {
             &self.root,
             self.context,
             &inventory,
+            partial_sections,
             &mut self.dirs,
             self.limits,
         )?;
@@ -941,10 +1002,25 @@ fn scan(
     }
     Ok(w.dirs)
 }
+const MAX_MANIFEST_HEADER_BYTES: usize = 4096;
+fn manifest_header_line<R: BufRead>(reader: &mut R) -> Result<Vec<u8>, Error> {
+    let mut bytes = Vec::new();
+    Read::take(reader, (MAX_MANIFEST_HEADER_BYTES + 1) as u64)
+        .read_until(b'\n', &mut bytes)
+        .map_err(|_| Error::Io)?;
+    if bytes.len() > MAX_MANIFEST_HEADER_BYTES {
+        return Err(Error::Limit);
+    }
+    if bytes.last() != Some(&b'\n') {
+        return Err(Error::Schema);
+    }
+    Ok(bytes)
+}
+
 /// Offline integrity only. No client/CASC reads; refuses active writers and all
 /// incomplete markers, malformed manifests, missing/extra/changed payloads.
 pub fn verify(output: &Path, expected: Option<Context>, limits: Limits) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, None, None)
+    verify_inner(output, expected, limits, None, None, None)
 }
 
 /// Inspect read-only rooted artifacts while holding the shared package lock.
@@ -957,7 +1033,7 @@ pub fn verify_with(
     limits: Limits,
     mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
 ) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, None, Some(&mut inspect))
+    verify_inner(output, expected, limits, None, Some(&mut inspect), None)
 }
 /// Admit the complete canonical artifact metadata before any artifact payload
 /// hashing, reading or inspection. Manifest, receipt and seal metadata are
@@ -978,16 +1054,38 @@ pub fn verify_with_preflight(
         limits,
         Some(&mut admit),
         Some(&mut inspect),
+        None,
+    )
+}
+/// As `verify_with_preflight`, additionally exposing validated deterministic
+/// partial-section declarations to a product-specific offline verifier.
+pub fn verify_with_preflight_and_partial_sections(
+    output: &Path,
+    expected: Option<Context>,
+    limits: Limits,
+    mut partial_sections: impl FnMut(&[PartialEncryptedSection]) -> Result<(), Error>,
+    mut admit: impl FnMut(&[Artifact]) -> Result<(), Error>,
+    mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
+) -> Result<Summary, Error> {
+    verify_inner(
+        output,
+        expected,
+        limits,
+        Some(&mut admit),
+        Some(&mut inspect),
+        Some(&mut partial_sections),
     )
 }
 type Admitter<'a> = &'a mut dyn FnMut(&[Artifact]) -> Result<(), Error>;
 type Inspector<'a> = &'a mut dyn FnMut(&Artifact, &mut File) -> Result<(), Error>;
+type PartialVisitor<'a> = &'a mut dyn FnMut(&[PartialEncryptedSection]) -> Result<(), Error>;
 fn verify_inner(
     output: &Path,
     expected: Option<Context>,
     limits: Limits,
     admit: Option<Admitter<'_>>,
     inspect: Option<Inspector<'_>>,
+    partial_visitor: Option<PartialVisitor<'_>>,
 ) -> Result<Summary, Error> {
     limits.validate()?;
     let root = Root::open(output)?;
@@ -1015,9 +1113,10 @@ fn verify_inner(
         return Err(Error::Limit);
     }
     let mut reader = io::BufReader::new(f);
-    if line(&mut reader)? != header(context).as_bytes() {
-        return Err(Error::Schema);
-    }
+    let header_line = manifest_header_line(&mut reader)?;
+    let header_text = std::str::from_utf8(header_line.strip_suffix(b"\n").ok_or(Error::Schema)?)
+        .map_err(|_| Error::Schema)?;
+    let partial_sections = parse_header_partial_sections(header_text, context)?;
     let mut inventory = Inventory::new(limits);
     loop {
         let b = line(&mut reader)?;
@@ -1045,7 +1144,7 @@ fn verify_inner(
         // after parsing below; accepted text is checked against its own renderer.
     }
     let mut canonical = sha256::Sha256::new();
-    canonical.update(header(context).as_bytes());
+    canonical.update(&header_line);
     for (i, a) in inventory.facts.iter().enumerate() {
         canonical.update(
             format!(
@@ -1082,6 +1181,9 @@ fn verify_inner(
     check_seals(&root, context, &inventory, limits)?;
     if let Some(admit) = admit {
         admit(&inventory.facts)?;
+    }
+    if let Some(visitor) = partial_visitor {
+        visitor(&partial_sections)?;
     }
     for a in &inventory.facts {
         root.hash(a, limits)?;

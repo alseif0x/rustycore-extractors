@@ -110,6 +110,12 @@ impl AvailableSource {
     pub fn full_ckey_verified(&self) -> bool {
         self.data.full_ckey_verified()
     }
+    /// Consume the partial owner under the explicit v25 declared-skip policy.
+    /// The result contains zero-filled backing bytes and redacted per-frame
+    /// declarations; it does not upgrade the source's full-CKey claim.
+    pub fn into_zerofilled(self) -> (Vec<u8>, Vec<blte::available::PartialSection>) {
+        self.data.into_zerofilled()
+    }
     /// A strict complete return authenticates plaintext by CKey. Only the new
     /// partial pass additionally authenticates the full independently selected
     /// EKey/header and every encoded frame; these claims remain distinct.

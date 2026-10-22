@@ -39,6 +39,9 @@ fn main() {
                     "Linux v24 combines the sealed build-70450 Map DB2 artifact with v20 available-map terrain; offline verification independently re-derives Map identities from that artifact. This is software scope, not full-world or runtime acceptance."
                 );
                 println!(
+                    "Linux v25 combines build-70450 available Map terrain with an explicitly declared TACT-section skip projection; only checksum-verified S-cipher E frames matching tact_declared Map sections are represented, without decryption or a complete-source-decode claim."
+                );
+                println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
                 );
                 println!(
@@ -289,6 +292,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         ",\"collision_source_profile\":\"linux70450-selected-map-geometry-v1\",\"coverage_profile\":\"linux70450-selected-map-geometry-coverage-v1\",\"coverage_authentication\":\"producer_reported\",\"map_source_scope\":\"available_sections\",\"liquid_sources\":\"LiquidMaterial+LiquidType_complete\",\"liquid_object_scope\":\"out_of_scope\",\"complete_global_map_coverage_claim\":false"
     } else if plan.is_v24() {
         ",\"terrain_source_profile\":\"linux70450-authenticated-available-map-terrain-v1\",\"verification_coverage_authentication\":\"independently_derived\",\"db2_output\":[\"Map\"],\"whole_client_map_coverage\":false"
+    } else if plan.is_v25() {
+        ",\"terrain_source_profile\":\"linux70450-authenticated-available-map-terrain-partial-map-v1\",\"verification_coverage_authentication\":\"independently_derived\",\"db2_output\":[\"Map\"],\"partial_encrypted_sections\":\"declared-skip\",\"whole_client_map_coverage\":false"
     } else if plan.is_v20() {
         ",\"terrain_source_profile\":\"linux70450-compatible-full-maps-available-map-v1\",\"coverage_authentication\":\"producer_reported\",\"omission_policy\":\"missing-file-only\",\"whole_client_map_coverage\":false"
     } else if plan.is_v15() || plan.is_v18() {
@@ -361,7 +366,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     ));
                 }
                 let summary = verify::verify_links(&plan, path("--output")?, expected)?;
-                let authentication = if plan.is_v24() {
+                let authentication = if plan.is_v24() || plan.is_v25() {
                     ",\"coverage_authentication\":\"independently_derived\""
                 } else {
                     ""
@@ -375,6 +380,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                         forever_extractor::plan::SELECTED_GEOMETRY_VERIFY_SCOPE
                     } else if plan.is_v24() {
                         forever_extractor::plan::AUTHENTICATED_TERRAIN_VERIFY_SCOPE
+                    } else if plan.is_v25() {
+                        forever_extractor::plan::AUTHENTICATED_PARTIAL_MAP_VERIFY_SCOPE
                     } else if plan.is_v20() {
                         forever_extractor::plan::COMPATIBLE_TERRAIN_VERIFY_SCOPE_70450
                     } else if plan.is_v13() {
@@ -392,6 +399,8 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                         forever_extractor::plan::SELECTED_GEOMETRY_VERIFY_PROFILE
                     } else if plan.is_v24() {
                         forever_extractor::plan::AUTHENTICATED_TERRAIN_VERIFY_PROFILE
+                    } else if plan.is_v25() {
+                        forever_extractor::plan::AUTHENTICATED_PARTIAL_MAP_VERIFY_PROFILE
                     } else if plan.is_v14() {
                         forever_extractor::plan::COMPATIBLE_COLLISION_VERIFY_PROFILE
                     } else if plan.is_v20() {
@@ -422,6 +431,15 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
                     plan.contract(),
                     forever_extractor::plan::AUTHENTICATED_TERRAIN_VERIFY_SCOPE,
                     forever_extractor::plan::AUTHENTICATED_TERRAIN_VERIFY_PROFILE,
+                    summary.json()
+                ));
+            }
+            if plan.is_v25() {
+                return Ok(format!(
+                    "{{\"contract\":\"{}\",\"scope\":\"{}\",\"verification_profile\":\"{}\",\"client_reads\":false,\"coverage_authentication\":\"independently_derived\"{capability},\"full_extractor_complete\":false,\"package\":{}}}",
+                    plan.contract(),
+                    forever_extractor::plan::AUTHENTICATED_PARTIAL_MAP_VERIFY_SCOPE,
+                    forever_extractor::plan::AUTHENTICATED_PARTIAL_MAP_VERIFY_PROFILE,
                     summary.json()
                 ));
             }

@@ -64,6 +64,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review the build-70450 selected-filesystem navigation API and related evidence | [Navigation scope and evidence](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation) |
 | Use the build-70450 selected-navigation Linux CLI | [Product v23 guide](docs/forever-product-v23.md) and [real ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain) |
 | Review build-70450 v24 | [Product v24 scope](docs/forever-product-v24.md): synthetic/software only; the real esES Map attempt fails at DB2 encoding verification |
+| Review build-70450 v25 | [Product v25 scope](docs/forever-product-v25.md): authenticated Map with declared TACT-section skipping; synthetic/software gates only |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -104,6 +105,21 @@ was merged at `338203385`. Follow its
 for manual pinned sibling-source preparation before Cargo, compilation and
 package verification. CI workflow bootstrapping remains a separate unpublished
 follow-up pending the required GitHub OAuth workflow scope.
+
+### Implemented build-70450 product revisions
+
+| Revision | Component mask | Profile boundary |
+| --- | ---: | --- |
+| v15 | 16 | Compatible GNU15-v2 collision-only, disabled keys |
+| v16 / v17 | 1 | DB2-only, respectively disabled / supplied keys |
+| v18 | 16 | Compatible GNU15-v2 collision-only, supplied keys |
+| v19 | 7 | DB2 + GameTables + cameras |
+| v20 | 8 | Compatible available-map terrain-only |
+| v21 | 57 | One-map DB2 + terrain + collision + navigation |
+| v22 | 16 | Selected-map geometry with profile exclusions |
+| v23 | 32 | Selected navigation from sealed v20/v22 packages |
+| v24 | 9 | Authenticated sealed Map + available-map terrain |
+| v25 | 9 | Authenticated Map with explicitly declared partial encrypted-section skips + available-map terrain |
 
 ### Current build-specific scope
 
