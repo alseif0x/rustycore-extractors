@@ -956,6 +956,176 @@ fn available_vmap_section_size_and_successful_short_ranges_reject() {
     );
 }
 
+fn zero_tact_payloads(input: &mut Input) {
+    let count = u32::from_le_bytes(input.data[200..204].try_into().unwrap()) as usize;
+    for ordinal in 0..count {
+        let header = HEADER + ordinal * SECTION;
+        if input.data[header..header + 8].iter().any(|byte| *byte != 0) {
+            let range = payload(input, ordinal);
+            input.data[range].fill(0);
+        }
+    }
+}
+
+#[test]
+fn structural_70450_reports_ordered_tact_payload_sizes_without_schema_decode() {
+    let mut input = fixture(
+        "Map",
+        vec![
+            source_spec("Map", &[7], 1),
+            source_spec("Map", &[8], 2),
+            source_spec("Map", &[9], 3),
+        ],
+        &[false, true, true],
+    );
+    zero_tact_payloads(&mut input);
+    let admitted_payload = payload(&input, 0);
+    let expected_sizes = [
+        payload(&input, 1).len() as u64,
+        payload(&input, 2).len() as u64,
+    ];
+
+    let facts = available::read_structure_70450(&input).unwrap();
+    assert_eq!(facts.tact_payload_sizes, expected_sizes);
+    assert_eq!(facts.sections.len(), 3);
+    assert_eq!(facts.sections[0].state, SectionState::Admitted);
+    assert_eq!(facts.sections[1].state, SectionState::UnknownTact);
+    assert_eq!(facts.sections[2].state, SectionState::UnknownTact);
+    assert_eq!(
+        facts
+            .sections
+            .iter()
+            .map(|section| section.declared_records)
+            .collect::<Vec<_>>(),
+        [1, 1, 1]
+    );
+    assert!(
+        input.reads.borrow().iter().all(|read| {
+            read.end <= admitted_payload.start || read.start >= admitted_payload.end
+        })
+    );
+}
+
+#[test]
+fn structural_70450_rejects_nonzero_tact_payload() {
+    let mut input = fixture("Map", vec![source_spec("Map", &[7], 1)], &[true]);
+    zero_tact_payloads(&mut input);
+    let at = payload(&input, 0).start;
+    input.data[at] = 1;
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Unsupported)
+    );
+}
+
+#[test]
+fn structural_70450_rejects_noncontiguous_offsets_bad_id_size_wrong_rows_and_eof() {
+    let mut input = one("Map");
+    let offset = u32::from_le_bytes(input.data[HEADER + 8..HEADER + 12].try_into().unwrap());
+    put32(&mut input.data, HEADER + 8, offset + 1);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Bounds)
+    );
+
+    let mut input = one("Map");
+    let id_size = u32::from_le_bytes(input.data[HEADER + 24..HEADER + 28].try_into().unwrap());
+    put32(&mut input.data, HEADER + 24, id_size + 1);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Id)
+    );
+
+    let mut input = one("Map");
+    let rows = u32::from_le_bytes(input.data[136..140].try_into().unwrap());
+    put32(&mut input.data, 136, rows + 1);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Bounds)
+    );
+
+    let mut input = one("Map");
+    input.data.push(0);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Bounds)
+    );
+}
+
+#[test]
+fn structural_70450_rejects_out_of_bounds_tact_encrypted_id_block() {
+    let mut input = fixture("Map", vec![source_spec("Map", &[7], 1)], &[true]);
+    let prefix = payload(&input, 0).start;
+    put32(&mut input.data, prefix - 4, 100_000);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Bounds)
+    );
+}
+
+#[test]
+fn structural_70450_caps_file_size_and_encrypted_id_count() {
+    struct Huge;
+    impl Source for Huge {
+        fn declared_bytes(&self) -> u64 {
+            u64::MAX
+        }
+        fn range(&self, _: u64, _: usize) -> Result<&[u8], Unavailable> {
+            panic!("declared-size limit must reject before reading")
+        }
+    }
+    assert_eq!(
+        available::read_structure_70450(&Huge).err(),
+        Some(RecordError::Limit)
+    );
+
+    let mut input = fixture("Map", vec![source_spec("Map", &[7], 1)], &[true]);
+    let prefix = payload(&input, 0).start;
+    put32(&mut input.data, prefix - 4, 100_001);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Limit)
+    );
+}
+
+#[test]
+fn structural_70450_rejects_sparse_parent_and_policy_limit_shapes() {
+    let mut input = one("Map");
+    put16(&mut input.data, 172, 1);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Unsupported)
+    );
+
+    let mut input = one("Map");
+    put32(&mut input.data, 184, 1);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Unsupported)
+    );
+
+    for (at, value) in [
+        (200, 17),
+        (136, 100_001),
+        (176, 1_000_001),
+        (140, 1_000_001),
+        (HEADER + 36, 100_001),
+    ] {
+        let mut input = one("Map");
+        put32(&mut input.data, at, value);
+        assert_eq!(
+            available::read_structure_70450(&input).err(),
+            Some(RecordError::Limit)
+        );
+    }
+    let mut input = one("Map");
+    put32(&mut input.data, 144, 0);
+    assert_eq!(
+        available::read_structure_70450(&input).err(),
+        Some(RecordError::Bounds)
+    );
+}
+
 #[path = "target_70425_tests.rs"]
 mod target_70425_tests;
 #[path = "target_70450_tests.rs"]

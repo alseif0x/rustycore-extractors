@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     HEADER_SIZE, Header, Metadata, SECTION_SIZE,
-    availability::{AvailableRecords, SectionCoverage, SectionState, Source},
+    availability::{AvailableRecords, SectionCoverage, SectionState, Source, StructuralFacts},
 };
 use std::io::Cursor;
 
@@ -97,6 +97,139 @@ pub(crate) fn read_navigation_maps_70450(
         Collected::Navigation(records) => Ok(AvailableRecords { records, sections }),
         _ => Err(RecordError::Schema),
     }
+}
+
+/// Validate WDC5 framing without resolving any table schema or decoding rows.
+/// TACT-declared payloads are admitted only as complete zero-filled extents.
+pub(crate) fn read_structure(
+    input: &impl Source,
+    _target: Target,
+) -> Result<StructuralFacts, RecordError> {
+    let len = usize::try_from(input.declared_bytes()).map_err(|_| RecordError::Limit)?;
+    if len > MAX_BYTES {
+        return Err(RecordError::Limit);
+    }
+    let raw: &[u8; HEADER_SIZE] = bytes(input, 0, HEADER_SIZE)?.try_into().unwrap();
+    let h = Header::parse(raw).map_err(|_| RecordError::Metadata)?;
+    if h.section_count as usize > MAX_SECTIONS || h.record_count as usize > MAX_ROWS {
+        return Err(RecordError::Limit);
+    }
+    if h.record_size == 0 {
+        return Err(RecordError::Bounds);
+    }
+    if h.flags & SPARSE_FLAG != 0 || h.parent_lookup_count != 0 {
+        return Err(RecordError::Unsupported);
+    }
+    // Without table metadata, bound values conservatively by the larger raw
+    // and expanded field count declared in the WDC header.
+    let fields_per_record = h.total_field_count.max(h.field_count) as u64;
+    if (h.record_count as u64) * fields_per_record > MAX_VALUES as u64 {
+        return Err(RecordError::Limit);
+    }
+
+    let prefix = add(HEADER_SIZE, mul(h.section_count as usize, SECTION_SIZE)?)?;
+    let meta = Metadata::read(&mut Cursor::new(bytes(input, 0, prefix)?))
+        .map_err(|_| RecordError::Metadata)?;
+    let mut end = add(
+        add(
+            add(
+                add(prefix, mul(h.field_count as usize, 4)?)?,
+                h.column_meta_size as usize,
+            )?,
+            h.pallet_data_size as usize,
+        )?,
+        h.common_data_size as usize,
+    )?;
+    // Validate all global column/pallet/common bytes before parsing each
+    // TACT-declared encrypted-ID block. Those blocks precede every payload.
+    bytes(input, 0, end)?;
+    let mut encrypted_ids = 0usize;
+    for section in &meta.sections {
+        if section.tact_declared {
+            let count = word(input, end)? as usize;
+            encrypted_ids = add(encrypted_ids, count)?;
+            if encrypted_ids > MAX_ROWS {
+                return Err(RecordError::Limit);
+            }
+            let block = add(4, mul(count, 4)?)?;
+            bytes(input, end, block)?;
+            end = add(end, block)?;
+        }
+    }
+
+    let mut coverage = Vec::new();
+    coverage
+        .try_reserve_exact(meta.sections.len())
+        .map_err(|_| RecordError::Limit)?;
+    let tact_count = meta
+        .sections
+        .iter()
+        .filter(|section| section.tact_declared)
+        .count();
+    let mut tact_payload_sizes = Vec::new();
+    tact_payload_sizes
+        .try_reserve_exact(tact_count)
+        .map_err(|_| RecordError::Limit)?;
+
+    let (mut rows, mut copies, mut strings) = (0usize, 0usize, 0usize);
+    for (ordinal, section) in meta.sections.iter().enumerate() {
+        if section.catalog_data_count != 0
+            || section.catalog_data_offset != 0
+            || section.parent_lookup_data_size != 0
+        {
+            return Err(RecordError::Unsupported);
+        }
+        if section.file_offset as usize != end {
+            return Err(RecordError::Bounds);
+        }
+        rows = add(rows, section.record_count as usize)?;
+        copies = add(copies, section.copy_table_count as usize)?;
+        if rows > MAX_ROWS || copies > MAX_COPIES {
+            return Err(RecordError::Limit);
+        }
+        if section.id_table_size as usize != mul(section.record_count as usize, 4)? {
+            return Err(RecordError::Id);
+        }
+
+        let payload_start = end;
+        end = add(
+            end,
+            mul(section.record_count as usize, h.record_size as usize)?,
+        )?;
+        end = add(end, section.string_table_size as usize)?;
+        end = add(end, section.id_table_size as usize)?;
+        end = add(end, mul(section.copy_table_count as usize, 8)?)?;
+        if end > len {
+            return Err(RecordError::Bounds);
+        }
+        if section.tact_declared {
+            let payload = bytes(input, payload_start, end - payload_start)?;
+            if payload.iter().any(|byte| *byte != 0) {
+                // RecordError has no more granular zero-fill variant; report
+                // this as an unsupported encrypted-section representation.
+                return Err(RecordError::Unsupported);
+            }
+            tact_payload_sizes.push(u64::try_from(payload.len()).map_err(|_| RecordError::Limit)?);
+        }
+        strings = add(strings, section.string_table_size as usize)?;
+        coverage.push(SectionCoverage {
+            ordinal: ordinal as u32,
+            declared_records: section.record_count,
+            declared_copies: section.copy_table_count,
+            state: if section.tact_declared {
+                SectionState::UnknownTact
+            } else {
+                SectionState::Admitted
+            },
+        });
+    }
+    if end != len || rows != h.record_count as usize || strings != h.string_table_size as usize {
+        return Err(RecordError::Bounds);
+    }
+    Ok(StructuralFacts {
+        tact_payload_sizes,
+        sections: coverage,
+    })
 }
 
 fn bytes(input: &impl Source, at: usize, len: usize) -> Result<&[u8], RecordError> {

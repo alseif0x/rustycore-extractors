@@ -38,6 +38,18 @@ pub struct SectionCoverage {
     pub state: SectionState,
 }
 
+/// Schema-independent WDC5 framing facts for the explicit 70450 structural
+/// profile. TACT payload sizes are in section order and include records,
+/// strings, IDs, and copy pairs. This validates zero-filled TACT extents; it
+/// does not decrypt, decode, or admit their records.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StructuralFacts {
+    /// Complete payload byte lengths for TACT-declared sections, in file order.
+    pub tact_payload_sizes: Vec<u64>,
+    /// Per-section declared counts and structural admission state.
+    pub sections: Vec<SectionCoverage>,
+}
+
 /// Distinct partial-capable snapshot: no conversion to complete SourceRecords.
 /// Direct order/duplicates and raw copy pairs from admitted sections survive.
 /// Declared rows/copies in omitted sections still count against decoder caps.
@@ -245,6 +257,14 @@ pub fn read_navigation_maps_70450(
     input: &impl Source,
 ) -> Result<AvailableRecords<source::NavigationMapFields>, RecordError> {
     available_sections::read_navigation_maps_70450(input)
+}
+
+/// Validate only bounded WDC5 structure for the explicit 70450 target. No
+/// table catalog, field schema, key, CASC source, or record decoder is used.
+/// TACT-declared sections are accepted only when their entire declared payload
+/// is zero-filled; ordinary section payloads are bounds-checked, not decoded.
+pub fn read_structure_70450(input: &impl Source) -> Result<StructuralFacts, RecordError> {
+    available_sections::read_structure(input, available_sections::Target::Build70450)
 }
 
 #[cfg(test)]
