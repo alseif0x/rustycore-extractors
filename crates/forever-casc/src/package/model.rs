@@ -501,6 +501,7 @@ pub(super) fn header_with_partial_sections(
     ))
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(super) fn parse_header_partial_sections(
     header_text: &str,
     context: Context,

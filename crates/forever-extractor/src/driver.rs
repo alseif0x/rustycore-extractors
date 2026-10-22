@@ -964,7 +964,7 @@ fn db2(
             if file.bytes.is_empty() || file.bytes.len() as u64 > cap {
                 return Err("product_file_limit".into());
             }
-            (file.bytes, Vec::new())
+            (file.bytes, Vec::<package::PartialEncryptedSection>::new())
         };
         total = total
             .checked_add(bytes.len() as u64)
