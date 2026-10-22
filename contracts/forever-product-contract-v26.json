@@ -1,0 +1,120 @@
+{
+  "contract": "forever-product-v26",
+  "version": 26,
+  "publication_profile": "Build70450Db2PartialV1",
+  "builds": [70450],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "plan": {
+    "encoding": "ASCII canonical TSV with final LF",
+    "ordered_keys": [
+      "forever-product",
+      "build",
+      "locale",
+      "index",
+      "root",
+      "schema-catalog",
+      "decryption",
+      "partial_encrypted_sections",
+      "components",
+      "terrain",
+      "pack",
+      "navigation",
+      "big-base-unit",
+      "skip-liquids",
+      "maximum-slope",
+      "non-steep-slope"
+    ],
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 1,
+    "components": ["db2"],
+    "component_bits": {"db2": 1, "gt": 2, "cameras": 4, "maps": 8},
+    "decryption": "disabled",
+    "keys": "refused",
+    "partial_encrypted_sections": "declared-skip, required",
+    "db2_entries": "1..=1161 exact catalog name/FileDataID pairs, alphabetical names and unique IDs",
+    "storage": "resident",
+    "terrain": ["none"],
+    "navigation": ["none"],
+    "map_domain": "absent",
+    "offmesh": "absent",
+    "pack": true,
+    "big_base_unit": false,
+    "skip_liquids": false,
+    "maximum_slope": 55,
+    "non_steep_slope": 55
+  },
+  "admission": {
+    "build": 70450,
+    "schema_catalog": "wowdbdefs-70450-v1",
+    "component_mask": 1,
+    "collision_storage": "resident",
+    "decryption": "disabled",
+    "terrain": "none",
+    "navigation": "none",
+    "map_domain": "absent",
+    "offmesh": "absent",
+    "pack": true,
+    "big_base_unit": false,
+    "skip_liquids": false,
+    "slopes": [55, 55]
+  },
+  "package": {
+    "manifest": "forever-package.json (per-entry partial-section declarations are a later package phase)",
+    "component_order": ["db2"],
+    "db2_path": "dbc/<locale>/<table-name>.db2",
+    "partial_encrypted_sections_by_entry": "For each selected DB2 table, optional deterministic declarations [{lookup, frame_ordinal, decoded_size}]; no declaration means no skipped sections. The table name is the containing DB2 entry identity.",
+    "declaration_boundary": "This plan/contract phase does not add a package manifest field or claim that the declarations are emitted or verified yet."
+  },
+  "limits": {
+    "max_db2_entries": 1161,
+    "db2_file_bytes": 16777216,
+    "db2_total_bytes": 17179869184,
+    "db2_sections": "Existing bounded DB2 structural ceilings apply; partial-section handling must not enlarge them.",
+    "declaration_contents": ["redacted lookup", "frame ordinal", "decoded size"],
+    "client_bytes_in_reports_or_repository": false
+  },
+  "source_policy": {
+    "db2": "Only the exact selected build-70450 catalog entries are in scope. Ordinary decoded files retain the existing full-file validation and output-preservation requirements.",
+    "partial_sections": "The later acquisition/package implementation may skip only explicitly declared encrypted sections for their containing selected DB2 entry. It must preserve the original bounded framing and zero-fill checks; non-zero TACT-declared payload is product_partial_zerofill. No decryption or key material is admitted.",
+    "failure_policy": "A selected entry that fails source authentication, framing, schema validation, zero-fill validation, or a resource limit remains fatal; it is not silently omitted."
+  },
+  "verification": {
+    "scope": "offline package integrity and intrinsic selected-DB2 validation, subject to the not-yet-implemented per-entry declaration gate",
+    "partial_decryption_claim": false,
+    "client_reads": false,
+    "full_extractor_complete": false,
+    "whole_client_db2_coverage": false,
+    "runtime_claim": false,
+    "format_parity_claim": false
+  },
+  "acceptance_matrix": [
+    {"case": "canonical-profile", "expect": "admit only build 70450, wowdbdefs-70450-v1, component mask 1, resident storage, disabled decryption, exact DB2-only options and mandatory declared-skip"},
+    {"case": "synthetic-plan-fixtures", "expect": "accept canonical plans selecting one or multiple catalog entries; render and parse roundtrip without client data"},
+    {"case": "partial-plan-gate", "expect": "reject a missing or misdeclared partial_encrypted_sections field with product_plan_partial_encrypted_sections"},
+    {"case": "scope-and-decryption", "expect": "reject provided-salsa20-v1 and db2+maps with product_plan_component_scope; reject other builds/catalogs and any non-DB2 option"},
+    {"case": "catalog-limit", "expect": "accept at most 1161 selected catalog entries and reject entry 1162"},
+    {"case": "partial-source", "expect": "future source acceptance is per selected DB2 entry, declaration-bound, zero-fill checked, and fail-closed; no decryption"},
+    {"case": "legacy-preservation", "expect": "v16 disabled DB2-only and v25 authenticated partial-Map identities, grammars, and contracts remain unchanged"}
+  ],
+  "legacy_preservation": {
+    "v16_contract": "forever-product-v16; Build70450Db2OnlyV1; one to 1161 selected DB2 entries, decryption disabled",
+    "v16_plan_grammar_unchanged": true,
+    "v25_contract": "forever-product-v25; Build70450AuthenticatedTerrainPartialMapV1; Db2|Terrain mask 9",
+    "v25_plan_grammar_unchanged": true,
+    "v16_and_v25_acceptance_transferred_to_v26": false
+  },
+  "boundary": {
+    "decryption": false,
+    "key_discovery_or_use": false,
+    "complete_db2_or_client_coverage": false,
+    "runtime_acceptance": false,
+    "format_parity": false,
+    "full_extractor_complete": false,
+    "windows": false,
+    "release_acceptance": false
+  },
+  "full_extractor_complete": false
+}

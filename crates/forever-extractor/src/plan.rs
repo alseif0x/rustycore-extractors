@@ -224,6 +224,7 @@ impl Plan {
             "23" => 23,
             "24" => 24,
             "25" => 25,
+            "26" => 26,
             _ => return Err("product_plan_version"),
         };
         let build = decimal(field(&mut lines, "build")?)?;
@@ -257,7 +258,7 @@ impl Plan {
                 "wowdbdefs-70425-v1" => SchemaCatalog::WowDbDefs70425V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
-            15..=25 => match field(&mut lines, "schema-catalog")? {
+            15..=26 => match field(&mut lines, "schema-catalog")? {
                 "wowdbdefs-70450-v1" => SchemaCatalog::WowDbDefs70450V1,
                 _ => return Err("product_plan_schema_catalog"),
             },
@@ -273,14 +274,18 @@ impl Plan {
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
-            3..=6 | 8..=25 => match field(&mut lines, "decryption")? {
+            3..=6 | 8..=26 => match field(&mut lines, "decryption")? {
                 "disabled" => Decryption::Disabled,
                 "provided-salsa20-v1" => Decryption::ProvidedSalsa20V1,
                 _ => return Err("product_plan_decryption"),
             },
             _ => unreachable!("version was validated above"),
         };
-        if version == 25 && field(&mut lines, "partial_encrypted_sections")? != "declared-skip" {
+        if matches!(version, 25 | 26)
+            && field(&mut lines, "partial_encrypted_sections")
+                .map_err(|_| "product_plan_partial_encrypted_sections")?
+                != "declared-skip"
+        {
             return Err("product_plan_partial_encrypted_sections");
         }
         let collision_storage = if matches!(version, 3 | 8 | 14 | 15 | 18 | 21 | 22)
@@ -419,6 +424,8 @@ impl Plan {
                 PublicationProfile::Build70450SelectedGeometryV1
             } else if version == 23 {
                 PublicationProfile::Build70450SelectedNavigationV1
+            } else if version == 26 {
+                PublicationProfile::Build70450Db2PartialV1
             } else if version == 25 {
                 PublicationProfile::Build70450AuthenticatedTerrainPartialMapV1
             } else if version == 24 {
@@ -478,6 +485,7 @@ impl Plan {
             && !self.is_v23()
             && !self.is_v24()
             && !self.is_v25()
+            && !self.is_v26()
         {
             map_domain::validate(self)?;
         }
@@ -513,6 +521,7 @@ impl Plan {
             && !self.is_v23()
             && !self.is_v24()
             && !self.is_v25()
+            && !self.is_v26()
         {
             return Err("product_plan_build");
         }
@@ -548,6 +557,7 @@ impl Plan {
             && !self.is_v23()
             && !self.is_v24()
             && !self.is_v25()
+            && !self.is_v26()
         {
             return Err("product_plan_schema_catalog");
         }
@@ -647,6 +657,9 @@ impl Plan {
     }
 
     pub const fn version(&self) -> u8 {
+        if self.is_v26() {
+            return 26;
+        }
         if self.is_v25() {
             return 25;
         }
@@ -722,6 +735,9 @@ impl Plan {
     }
 
     pub const fn contract(&self) -> &'static str {
+        if self.is_v26() {
+            return "forever-product-v26";
+        }
         if self.is_v25() {
             return "forever-product-v25";
         }
@@ -913,6 +929,14 @@ impl Plan {
         )
     }
 
+    /// Explicit Linux build-70450 DB2-only publication with declared skipped sections.
+    pub const fn is_v26(&self) -> bool {
+        matches!(
+            self.publication_profile,
+            PublicationProfile::Build70450Db2PartialV1
+        )
+    }
+
     pub const fn is_v13(&self) -> bool {
         matches!(
             self.publication_profile,
@@ -984,11 +1008,11 @@ impl Plan {
             SchemaCatalog::WowDbDefs70450V1 => "schema-catalog\twowdbdefs-70450-v1\n",
         };
         let decryption = match (self.version(), self.decryption) {
-            (3..=6 | 8..=25, Decryption::Disabled) => "decryption\tdisabled\n",
+            (3..=6 | 8..=26, Decryption::Disabled) => "decryption\tdisabled\n",
             (_, Decryption::Disabled) => "",
             (_, Decryption::ProvidedSalsa20V1) => "decryption\tprovided-salsa20-v1\n",
         };
-        let partial_encrypted_sections = if self.is_v25() {
+        let partial_encrypted_sections = if matches!(self.version(), 25 | 26) {
             "partial_encrypted_sections\tdeclared-skip\n"
         } else {
             ""
@@ -1133,3 +1157,6 @@ mod v24_tests;
 
 #[cfg(test)]
 mod v25_tests;
+
+#[cfg(test)]
+mod v26_tests;

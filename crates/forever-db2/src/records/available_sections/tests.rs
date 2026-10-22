@@ -1014,7 +1014,11 @@ fn structural_70450_rejects_nonzero_tact_payload() {
     input.data[at] = 1;
     assert_eq!(
         available::read_structure_70450(&input).err(),
-        Some(RecordError::Unsupported)
+        Some(RecordError::PartialZerofill)
+    );
+    assert_eq!(
+        RecordError::PartialZerofill.code(),
+        "product_partial_zerofill"
     );
 }
 

@@ -205,9 +205,7 @@ pub(crate) fn read_structure(
         if section.tact_declared {
             let payload = bytes(input, payload_start, end - payload_start)?;
             if payload.iter().any(|byte| *byte != 0) {
-                // RecordError has no more granular zero-fill variant; report
-                // this as an unsupported encrypted-section representation.
-                return Err(RecordError::Unsupported);
+                return Err(RecordError::PartialZerofill);
             }
             tact_payload_sizes.push(u64::try_from(payload.len()).map_err(|_| RecordError::Limit)?);
         }
