@@ -3,6 +3,18 @@
   "version": 26,
   "publication_profile": "Build70450Db2PartialV1",
   "builds": [70450],
+  "reference": {
+    "repository": "advocaite/TrinityCore",
+    "branch": "forever",
+    "commit": "367ac384fa207c8f923782634a5e19d8bb141d68",
+    "product": "wow_classic_beta",
+    "builds": "1.60.1.70338 primary / 1.60.1.70450 preliminary",
+    "license": "GPL-2.0 / GPL-2.0-or-later headers",
+    "70450_data": "unchanged from 70425 per doc/Classic70450.md",
+    "no_70450_auth_key": true,
+    "comparison_performed": false,
+    "scope": "preliminary 70450; no 70338/70425/3.4.3 acceptance transfer"
+  },
   "platform": "linux",
   "backend": "rust-local",
   "offline": true,
@@ -62,27 +74,27 @@
     "slopes": [55, 55]
   },
   "package": {
-    "manifest": "forever-package.json (per-entry partial-section declarations are a later package phase)",
+    "manifest": "forever-package.json with deterministic per-entry partial-section declarations",
     "component_order": ["db2"],
     "db2_path": "dbc/<locale>/<table-name>.db2",
-    "partial_encrypted_sections_by_entry": "For each selected DB2 table, optional deterministic declarations [{lookup, frame_ordinal, decoded_size}]; no declaration means no skipped sections. The table name is the containing DB2 entry identity.",
-    "declaration_boundary": "This plan/contract phase does not add a package manifest field or claim that the declarations are emitted or verified yet."
+    "partial_encrypted_sections_by_entry": "For each selected DB2 table with TACT-declared available-source sections, emit deterministic declarations [{lookup, frame_ordinal, decoded_size}]; a complete table has no declaration. The table path binds each declaration to its containing DB2 entry.",
+    "declaration_boundary": "The plan phase does not add a package manifest field; the per-table package field is implemented by forever-casc and used by the v26 driver, which emits declarations only after 70450 WDC5 structure and zero-fill validation. Offline verification checks exact per-entry declaration coverage and decoded sizes; no decryption is performed."
   },
   "limits": {
     "max_db2_entries": 1161,
     "db2_file_bytes": 16777216,
     "db2_total_bytes": 17179869184,
-    "db2_sections": "Existing bounded DB2 structural ceilings apply; partial-section handling must not enlarge them.",
+    "db2_sections": "At most 16 partial sections per table and 18,576 total, within existing DB2 structural ceilings.",
     "declaration_contents": ["redacted lookup", "frame ordinal", "decoded size"],
     "client_bytes_in_reports_or_repository": false
   },
   "source_policy": {
-    "db2": "Only the exact selected build-70450 catalog entries are in scope. Ordinary decoded files retain the existing full-file validation and output-preservation requirements.",
-    "partial_sections": "The later acquisition/package implementation may skip only explicitly declared encrypted sections for their containing selected DB2 entry. It must preserve the original bounded framing and zero-fill checks; non-zero TACT-declared payload is product_partial_zerofill. No decryption or key material is admitted.",
-    "failure_policy": "A selected entry that fails source authentication, framing, schema validation, zero-fill validation, or a resource limit remains fatal; it is not silently omitted."
+    "db2": "Only the exact selected build-70450 catalog entries use the disabled-key available-source route. Each resulting DB2 is bounded and checked against build-70450 WDC5 structural rules before publication.",
+    "partial_sections": "Only authenticated available-source encrypted sections matching the containing selected DB2's ordered TACT-declared extents may be zero-filled and declared per table. The bounded WDC5 framing and zero-fill checks are mandatory; non-zero TACT-declared payload is product_partial_zerofill. No decryption or key material is admitted.",
+    "failure_policy": "A selected entry that fails source authentication, WDC5 framing, zero-fill validation, or a resource limit remains fatal; it is not silently omitted."
   },
   "verification": {
-    "scope": "offline package integrity and intrinsic selected-DB2 validation, subject to the not-yet-implemented per-entry declaration gate",
+    "scope": "offline package integrity, intrinsic selected-DB2 WDC5/zero-fill validation, and exact per-entry partial-section declaration matching",
     "partial_decryption_claim": false,
     "client_reads": false,
     "full_extractor_complete": false,
@@ -96,7 +108,7 @@
     {"case": "partial-plan-gate", "expect": "reject a missing or misdeclared partial_encrypted_sections field with product_plan_partial_encrypted_sections"},
     {"case": "scope-and-decryption", "expect": "reject provided-salsa20-v1 and db2+maps with product_plan_component_scope; reject other builds/catalogs and any non-DB2 option"},
     {"case": "catalog-limit", "expect": "accept at most 1161 selected catalog entries and reject entry 1162"},
-    {"case": "partial-source", "expect": "future source acceptance is per selected DB2 entry, declaration-bound, zero-fill checked, and fail-closed; no decryption"},
+    {"case": "partial-source-and-verification", "expect": "synthetic driver publishes partial and complete tables with per-entry declarations; verification rejects non-zero TACT payload, missing/extra declarations, absent declared DB2 files, and missing selected DB2 files; no real-client acceptance or decryption"},
     {"case": "legacy-preservation", "expect": "v16 disabled DB2-only and v25 authenticated partial-Map identities, grammars, and contracts remain unchanged"}
   ],
   "legacy_preservation": {

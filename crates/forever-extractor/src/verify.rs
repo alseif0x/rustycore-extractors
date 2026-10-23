@@ -3,6 +3,8 @@
 // Authored 2026-10-11: product inventory and bounded intrinsic format checks.
 //! Does not prove VMap associations, Detour topology, original output parity,
 //! full selected geometry inventories or runtime/client completeness.
+#[cfg(target_os = "linux")]
+use crate::driver::CompleteDb2Source;
 use crate::{
     Error,
     driver::validate_db2,
@@ -27,6 +29,9 @@ mod compatible_vmaps;
 mod tests;
 #[cfg(target_os = "linux")]
 mod v10;
+#[cfg(all(test, target_os = "linux"))]
+#[path = "verify/v26_tests.rs"]
+mod v26_tests;
 #[cfg(target_os = "linux")]
 mod v9;
 
@@ -212,6 +217,8 @@ fn verify_inner(
     #[cfg(target_os = "linux")]
     let mut manifest_partial_sections = Vec::new();
     #[cfg(target_os = "linux")]
+    let mut manifest_partial_tables = Vec::new();
+    #[cfg(target_os = "linux")]
     let verified = if plan.is_v25() {
         package::verify_with_preflight_and_partial_sections(
             output,
@@ -230,6 +237,28 @@ fn verify_inner(
                     package::Error::Schema
                 })
             },
+            inspect,
+        )
+    } else if plan.is_v26() {
+        package::verify_with_preflight_and_partial_declarations(
+            output,
+            expected,
+            limits,
+            |sections| {
+                manifest_partial_sections
+                    .try_reserve_exact(sections.len())
+                    .map_err(|_| package::Error::Allocation)?;
+                manifest_partial_sections.extend_from_slice(sections);
+                Ok(())
+            },
+            |tables| {
+                manifest_partial_tables
+                    .try_reserve_exact(tables.len())
+                    .map_err(|_| package::Error::Allocation)?;
+                manifest_partial_tables.extend_from_slice(tables);
+                Ok(())
+            },
+            |_| Ok(()),
             inspect,
         )
     } else {
@@ -290,6 +319,14 @@ fn verify_inner(
         }
     }
     #[cfg(target_os = "linux")]
+    if plan.is_v26() {
+        verify_v26_partial_declarations(
+            &facts.partial_db2_payload_sizes,
+            &manifest_partial_sections,
+            &manifest_partial_tables,
+        )?;
+    }
+    #[cfg(target_os = "linux")]
     if plan.is_v13() {
         facts
             .terrain_v13
@@ -331,6 +368,49 @@ fn verify_inner(
     Ok(summary)
 }
 
+#[cfg(target_os = "linux")]
+fn verify_v26_partial_declarations(
+    structural: &BTreeMap<String, Vec<u64>>,
+    global_sections: &[package::PartialEncryptedSection],
+    tables: &[package::PartialEncryptedTable],
+) -> Result<(), Error> {
+    if !global_sections.is_empty() {
+        return Err("product_partial_manifest_scope".into());
+    }
+    let mut declarations = BTreeMap::new();
+    for table in tables {
+        if !structural.contains_key(&table.path) {
+            return Err("product_partial_declared_file_missing".into());
+        }
+        if declarations.insert(table.path.as_str(), table).is_some() {
+            return Err("product_partial_declaration_extra".into());
+        }
+    }
+    for (path, payload_sizes) in structural {
+        let declaration = declarations.remove(path.as_str());
+        if payload_sizes.is_empty() {
+            if declaration.is_some() {
+                return Err("product_partial_overdeclared".into());
+            }
+            continue;
+        }
+        let table = declaration.ok_or("product_partial_undeclared")?;
+        if table.sections.len() != payload_sizes.len()
+            || table
+                .sections
+                .iter()
+                .zip(payload_sizes)
+                .any(|(section, decoded_size)| section.decoded_size != *decoded_size)
+        {
+            return Err("product_partial_section_count".into());
+        }
+    }
+    if !declarations.is_empty() {
+        return Err("product_partial_declared_file_missing".into());
+    }
+    Ok(())
+}
+
 #[derive(Default)]
 struct Facts {
     #[cfg(target_os = "linux")]
@@ -343,6 +423,8 @@ struct Facts {
     authenticated_map: Option<crate::driver::terrain_v20::AuthenticatedMap>,
     #[cfg(target_os = "linux")]
     partial_map_section_sizes: Option<Vec<u64>>,
+    #[cfg(target_os = "linux")]
+    partial_db2_payload_sizes: BTreeMap<String, Vec<u64>>,
     db2: BTreeSet<String>,
     gt: usize,
     cameras: BTreeSet<u32>,
@@ -411,6 +493,35 @@ impl Facts {
     fn inspect(&mut self, plan: &Plan, artifact: &Artifact, bytes: &[u8]) -> Result<(), Error> {
         if bytes.is_empty() {
             return Err("product_empty_artifact".into());
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v26() {
+            if artifact.component != Component::Db2 || bytes.len() > 16 * 1024 * 1024 {
+                return Err("product_inventory".into());
+            }
+            let prefix = format!("dbc/{}/", plan.locale.name());
+            let name = artifact
+                .path
+                .strip_prefix(&prefix)
+                .and_then(|value| value.strip_suffix(".db2"))
+                .ok_or("product_artifact_name")?;
+            if !plan.db2.iter().any(|entry| entry.name == name)
+                || artifact.path != format!("{prefix}{name}.db2")
+            {
+                return Err("product_inventory".into());
+            }
+            let structure =
+                forever_db2::availability::read_structure_70450(&CompleteDb2Source(bytes))
+                    .map_err(|error| Error::from(error.code()))?;
+            if self
+                .partial_db2_payload_sizes
+                .insert(artifact.path.clone(), structure.tact_payload_sizes)
+                .is_some()
+            {
+                return Err("product_inventory".into());
+            }
+            self.db2.insert(name.to_owned());
+            return Ok(());
         }
         #[cfg(target_os = "linux")]
         if plan.is_v24() || plan.is_v25() {

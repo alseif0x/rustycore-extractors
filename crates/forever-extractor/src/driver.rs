@@ -7,6 +7,8 @@ use crate::{
 };
 #[cfg(target_os = "linux")]
 use forever_casc::local_store::{ProductDiagnosticPhase, ProductDiagnosticRequestKind};
+#[cfg(target_os = "linux")]
+use forever_casc::package::PartialEncryptedSection;
 use forever_casc::{
     cameras,
     gametables::catalog as gt,
@@ -68,9 +70,13 @@ use windows::extract_inner;
 
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+#[cfg(target_os = "linux")]
+const DB2_PARTIAL_SECTIONS_PER_TABLE: usize = 16;
+#[cfg(target_os = "linux")]
+const DB2_PARTIAL_SECTIONS_TOTAL: usize = 1161 * DB2_PARTIAL_SECTIONS_PER_TABLE;
 
 #[cfg(target_os = "linux")]
-struct CompleteDb2Source<'a>(&'a [u8]);
+pub(crate) struct CompleteDb2Source<'a>(pub(crate) &'a [u8]);
 #[cfg(target_os = "linux")]
 impl forever_db2::availability::Source for CompleteDb2Source<'_> {
     fn declared_bytes(&self) -> u64 {
@@ -276,6 +282,7 @@ fn open_inner(
         || plan.is_v22()
         || plan.is_v24()
         || plan.is_v25()
+        || plan.is_v26()
     {
         #[cfg(target_os = "linux")]
         {
@@ -893,6 +900,65 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
         result => result.map_err(|error| Error::from(error.code())),
     }
 }
+#[cfg(target_os = "linux")]
+fn partial_db2_declarations(
+    bytes: &[u8],
+    frames: Vec<forever_casc::blte::available::PartialSection>,
+    section_total: &mut usize,
+) -> Result<Vec<PartialEncryptedSection>, Error> {
+    let facts = forever_db2::availability::read_structure_70450(&CompleteDb2Source(bytes))
+        .map_err(|error| Error::from(error.code()))?;
+    if frames.len() > DB2_PARTIAL_SECTIONS_PER_TABLE
+        || frames.len() != facts.tact_payload_sizes.len()
+    {
+        return Err("product_partial_section_count".into());
+    }
+    let new_total = section_total
+        .checked_add(frames.len())
+        .filter(|total| *total <= DB2_PARTIAL_SECTIONS_TOTAL)
+        .ok_or("product_partial_section_count")?;
+    let mut declarations = Vec::new();
+    declarations
+        .try_reserve_exact(frames.len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    for (frame, decoded_size) in frames.into_iter().zip(facts.tact_payload_sizes) {
+        if frame.decoded_size != decoded_size {
+            return Err("product_partial_section_count".into());
+        }
+        declarations.push(PartialEncryptedSection {
+            lookup: frame.lookup_hex,
+            frame_ordinal: frame.frame_ordinal,
+            decoded_size: frame.decoded_size,
+        });
+    }
+    *section_total = new_total;
+    Ok(declarations)
+}
+
+#[cfg(target_os = "linux")]
+fn publish_v26_db2_table(
+    plan: &Plan,
+    entry: &crate::plan::Entry,
+    bytes: &[u8],
+    frames: Vec<forever_casc::blte::available::PartialSection>,
+    run: &mut Run,
+    section_total: &mut usize,
+) -> Result<(), Error> {
+    if !plan.is_v26() {
+        return Err("product_partial_profile".into());
+    }
+    if bytes.is_empty() || bytes.len() as u64 > DB2_FILE_BYTES {
+        return Err("product_file_limit".into());
+    }
+    let declarations = partial_db2_declarations(bytes, frames, section_total)?;
+    let path = format!("dbc/{}/{}.db2", plan.locale.name(), entry.name);
+    if !declarations.is_empty() {
+        run.set_partial_encrypted_table(&path, &declarations)?;
+    }
+    run.put(Component::Db2, &path, bytes)?;
+    Ok(())
+}
+
 fn db2(
     plan: &Plan,
     store: &mut LocalStore,
@@ -900,6 +966,8 @@ fn db2(
     domain: Option<&crate::map_domain::Domain>,
 ) -> Result<(), Error> {
     let mut total = 0u64;
+    #[cfg(target_os = "linux")]
+    let mut partial_section_total = 0usize;
     for entry in &plan.db2 {
         let cap = db2_read_limit(plan, total)?;
         #[cfg(target_os = "linux")]
@@ -911,6 +979,41 @@ fn db2(
         } else {
             None
         };
+        if plan.is_v26() {
+            #[cfg(target_os = "linux")]
+            {
+                let source = store
+                    .read_file_data_id_available_70450_with_limit(entry.id, cap)
+                    .map_err(|error| Error::from(error.code()))?;
+                if source.declared_bytes() == 0
+                    || source.declared_bytes() > cap
+                    || (!source.full_ckey_verified() && !source.encoded_key_authenticated())
+                {
+                    return Err("product_partial_db2_authentication".into());
+                }
+                let (bytes, frames) = source.into_zerofilled();
+                if bytes.is_empty() || bytes.len() as u64 > cap {
+                    return Err("product_file_limit".into());
+                }
+                total = total
+                    .checked_add(bytes.len() as u64)
+                    .filter(|n| *n <= DB2_TOTAL_BYTES)
+                    .ok_or_else(|| Error::from("product_db2_total_limit"))?;
+                publish_v26_db2_table(
+                    plan,
+                    entry,
+                    &bytes,
+                    frames,
+                    run,
+                    &mut partial_section_total,
+                )?;
+                continue;
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                return Err("product_platform".into());
+            }
+        }
         let (bytes, _partial_sections) = if plan.is_v25() && entry.name == "Map" {
             #[cfg(target_os = "linux")]
             {
@@ -1072,10 +1175,12 @@ fn db2_read_limit(plan: &Plan, total: u64) -> Result<u64, Error> {
         || plan.is_v17()
         || plan.is_available_terrain()
     {
-        db2_remaining(total)
-    } else {
-        Ok(DB2_FILE_BYTES)
+        return db2_remaining(total);
     }
+    if plan.is_v26() {
+        return db2_remaining(total);
+    }
+    Ok(DB2_FILE_BYTES)
 }
 
 fn camera_remaining(total: usize) -> Result<u64, Error> {
@@ -1400,6 +1505,10 @@ fn navigation_connections(plan: &Plan, map_empty: bool) -> Result<Vec<offmesh::S
 
 #[cfg(test)]
 mod offmesh_tests;
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "driver/v26_tests.rs"]
+mod v26_tests;
 
 #[cfg(test)]
 mod platform_tests;
