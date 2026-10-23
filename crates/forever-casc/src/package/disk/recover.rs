@@ -24,12 +24,12 @@ pub(super) fn protocol(root: &Root, context: Context, limits: Limits) -> Result<
     }
     Ok(())
 }
-fn read_partial_sections_from_manifest(
+fn read_partial_declarations_from_manifest(
     root: &Root,
     path: &str,
     context: Context,
     limits: Limits,
-) -> Result<Vec<PartialEncryptedSection>, Error> {
+) -> Result<PartialEncryptedDeclarations, Error> {
     let mut file = root.open_file(path, limits)?;
     let before = file.metadata().map_err(|_| Error::Io)?;
     if !before.is_file() || before.len() > limits.manifest_bytes {
@@ -39,12 +39,12 @@ fn read_partial_sections_from_manifest(
     let line = manifest_header_line(&mut reader)?;
     let text = std::str::from_utf8(line.strip_suffix(b"\n").ok_or(Error::Schema)?)
         .map_err(|_| Error::Schema)?;
-    let sections = parse_header_partial_sections(text, context)?;
+    let declarations = parse_header_partial_declarations(text, context)?;
     if Identity::of(&before) != Identity::of(&file.metadata().map_err(|_| Error::Changed)?) {
         return Err(Error::Changed);
     }
     root.named_file(path, &file, limits)?;
-    Ok(sections)
+    Ok(declarations)
 }
 pub(super) fn transaction(context: Context, a: &Artifact) -> String {
     format!(
@@ -450,21 +450,35 @@ pub(super) fn resume(
         return Err(Error::Inventory);
     }
     let partial_manifest = if root.has(MANIFEST, limits)? {
-        Some(read_partial_sections_from_manifest(
+        Some(read_partial_declarations_from_manifest(
             &root, MANIFEST, expected, limits,
         )?)
     } else if root.has(".state/package.part", limits)? {
-        match read_partial_sections_from_manifest(&root, ".state/package.part", expected, limits) {
-            Ok(sections) => Some(sections),
+        match read_partial_declarations_from_manifest(
+            &root,
+            ".state/package.part",
+            expected,
+            limits,
+        ) {
+            Ok(declarations) => Some(declarations),
             Err(Error::Schema) => None,
             Err(error) => return Err(error),
         }
     } else {
         None
     };
-    let partial_sections = partial_manifest.as_deref().unwrap_or_default();
-    let manifest_expected =
-        manifest_fact_with_partial_sections(expected, &inventory, partial_sections)?;
+    let partial_sections = partial_manifest
+        .as_ref()
+        .map_or(&[][..], |declarations| declarations.sections.as_slice());
+    let partial_tables = partial_manifest
+        .as_ref()
+        .map_or(&[][..], |declarations| declarations.tables.as_slice());
+    let manifest_expected = manifest_fact_with_partial_declarations(
+        expected,
+        &inventory,
+        partial_sections,
+        partial_tables,
+    )?;
     if manifest_expected.bytes > limits.manifest_bytes {
         return Err(Error::Limit);
     }
@@ -544,6 +558,10 @@ pub(super) fn resume(
     }
     protocol(&root, expected, limits)?;
     root.named_file(".state/lock", &lock, limits)?;
+    let (partial_encrypted_sections, partial_encrypted_tables) = match partial_manifest {
+        Some(declarations) => (Some(declarations.sections), Some(declarations.tables)),
+        None => (None, None),
+    };
     Ok(Run {
         root,
         _lock: lock,
@@ -554,7 +572,8 @@ pub(super) fn resume(
         bytes,
         failed: false,
         replay,
-        partial_encrypted_sections: partial_manifest,
+        partial_encrypted_sections,
+        partial_encrypted_tables,
     })
 }
 

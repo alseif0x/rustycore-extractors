@@ -283,7 +283,24 @@ pub struct PartialEncryptedSection {
     pub decoded_size: u64,
 }
 
+/// Redacted unavailable encrypted sections associated with one DB2 table.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PartialEncryptedTable {
+    pub path: String,
+    pub sections: Vec<PartialEncryptedSection>,
+}
+
 const MAX_PARTIAL_ENCRYPTED_SECTIONS: usize = 16;
+const MAX_PARTIAL_ENCRYPTED_TABLES: usize = 1161;
+const MAX_PARTIAL_ENCRYPTED_TABLE_SECTIONS: usize =
+    MAX_PARTIAL_ENCRYPTED_TABLES * MAX_PARTIAL_ENCRYPTED_SECTIONS;
+const MAX_PARTIAL_HEADER_BYTES: usize = 4 * 1024 * 1024;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(super) struct PartialEncryptedDeclarations {
+    pub sections: Vec<PartialEncryptedSection>,
+    pub tables: Vec<PartialEncryptedTable>,
+}
 
 impl PartialEncryptedSection {
     pub fn json(&self) -> String {
@@ -312,10 +329,108 @@ impl PartialEncryptedSection {
     }
 }
 
+impl PartialEncryptedTable {
+    pub fn json(&self) -> String {
+        format!(
+            "{{\"path\":\"{}\",\"sections\":[{}]}}",
+            self.path,
+            self.sections
+                .iter()
+                .map(PartialEncryptedSection::json)
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    }
+
+    fn parse(entry: &Json) -> Result<Self, Error> {
+        let Json::Array(values) = value(entry, "sections")? else {
+            return Err(Error::Schema);
+        };
+        if values.len() > MAX_PARTIAL_ENCRYPTED_TABLE_SECTIONS {
+            return Err(Error::Limit);
+        }
+        let mut sections = Vec::new();
+        sections
+            .try_reserve_exact(values.len())
+            .map_err(|_| Error::Allocation)?;
+        for section in values {
+            sections.push(PartialEncryptedSection::parse(section)?);
+        }
+        let table = Self {
+            path: string(entry, "path")?.to_owned(),
+            sections,
+        };
+        validate_partial_encrypted_table(&table)?;
+        if let Json::Object(fields) = entry {
+            if fields.len() != 2 {
+                return Err(Error::Schema);
+            }
+        } else {
+            return Err(Error::Schema);
+        }
+        Ok(table)
+    }
+}
+
+pub(super) fn validate_partial_encrypted_table_path(path: &str) -> Result<(), Error> {
+    if path.starts_with('/')
+        || path.contains("..")
+        || path.contains('\0')
+        || !path.ends_with(".db2")
+    {
+        return Err(Error::Path);
+    }
+    self::path(path)
+}
+
+fn validate_partial_encrypted_table(table: &PartialEncryptedTable) -> Result<(), Error> {
+    validate_partial_encrypted_table_parts(&table.path, &table.sections)
+}
+
+pub(super) fn validate_partial_encrypted_table_parts(
+    path: &str,
+    sections: &[PartialEncryptedSection],
+) -> Result<(), Error> {
+    validate_partial_encrypted_table_path(path)?;
+    if sections.is_empty() {
+        return Err(Error::Schema);
+    }
+    validate_partial_encrypted_sections_bounded(sections, MAX_PARTIAL_ENCRYPTED_TABLE_SECTIONS)
+}
+
+pub(super) fn validate_partial_encrypted_tables(
+    tables: &[PartialEncryptedTable],
+) -> Result<(), Error> {
+    if tables.len() > MAX_PARTIAL_ENCRYPTED_TABLES {
+        return Err(Error::Limit);
+    }
+    let mut section_count = 0usize;
+    for table in tables {
+        validate_partial_encrypted_table(table)?;
+        section_count = section_count
+            .checked_add(table.sections.len())
+            .ok_or(Error::Limit)?;
+        if section_count > MAX_PARTIAL_ENCRYPTED_TABLE_SECTIONS {
+            return Err(Error::Limit);
+        }
+    }
+    if tables.windows(2).any(|pair| pair[0].path >= pair[1].path) {
+        return Err(Error::Schema);
+    }
+    Ok(())
+}
+
 pub(super) fn validate_partial_encrypted_sections(
     sections: &[PartialEncryptedSection],
 ) -> Result<(), Error> {
-    if sections.len() > MAX_PARTIAL_ENCRYPTED_SECTIONS
+    validate_partial_encrypted_sections_bounded(sections, MAX_PARTIAL_ENCRYPTED_SECTIONS)
+}
+
+fn validate_partial_encrypted_sections_bounded(
+    sections: &[PartialEncryptedSection],
+    max_sections: usize,
+) -> Result<(), Error> {
+    if sections.len() > max_sections
         || sections.iter().any(|section| {
             section.lookup.len() != 16
                 || !section
@@ -482,66 +597,142 @@ pub(super) fn header(context: Context) -> String {
         context.json()
     )
 }
+#[allow(dead_code)] // Retained for the v25 global-only manifest contract.
 pub(super) fn header_with_partial_sections(
     context: Context,
     sections: &[PartialEncryptedSection],
 ) -> Result<String, Error> {
+    header_with_partial_declarations(context, sections, &[])
+}
+
+pub(super) fn header_with_partial_declarations(
+    context: Context,
+    sections: &[PartialEncryptedSection],
+    tables: &[PartialEncryptedTable],
+) -> Result<String, Error> {
     validate_partial_encrypted_sections(sections)?;
-    if sections.is_empty() {
+    validate_partial_encrypted_tables(tables)?;
+    if sections.is_empty() && tables.is_empty() {
         return Ok(header(context));
     }
-    let declarations = sections
-        .iter()
-        .map(PartialEncryptedSection::json)
-        .collect::<Vec<_>>()
-        .join(",");
-    Ok(format!(
-        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"partial_encrypted_sections\":[{declarations}],\"artifacts\":[\n",
+    let mut rendered = format!(
+        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{}",
         context.json()
-    ))
+    );
+    if !sections.is_empty() {
+        let declarations = sections
+            .iter()
+            .map(PartialEncryptedSection::json)
+            .collect::<Vec<_>>()
+            .join(",");
+        rendered.push_str(&format!(",\"partial_encrypted_sections\":[{declarations}]"));
+    }
+    if !tables.is_empty() {
+        let declarations = tables
+            .iter()
+            .map(PartialEncryptedTable::json)
+            .collect::<Vec<_>>()
+            .join(",");
+        rendered.push_str(&format!(",\"partial_encrypted_tables\":[{declarations}]"));
+    }
+    rendered.push_str(",\"artifacts\":[\n");
+    Ok(rendered)
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+#[allow(dead_code)] // Retained for v25 callers that consume only global declarations.
 pub(super) fn parse_header_partial_sections(
     header_text: &str,
     context: Context,
 ) -> Result<Vec<PartialEncryptedSection>, Error> {
-    let standard = header(context);
-    if header_text == standard.strip_suffix('\n').ok_or(Error::Schema)? {
-        return Ok(Vec::new());
-    }
-    if header_text.len() > 4096 {
+    Ok(parse_header_partial_declarations(header_text, context)?.sections)
+}
+
+pub(super) fn parse_header_partial_declarations(
+    header_text: &str,
+    context: Context,
+) -> Result<PartialEncryptedDeclarations, Error> {
+    if header_text.len() > MAX_PARTIAL_HEADER_BYTES {
         return Err(Error::Limit);
     }
-    let prefix = format!(
-        "{{\"manifest_version\":1,\"scope\":\"artifact_integrity\",\"status\":\"complete\",\"context\":{},\"partial_encrypted_sections\":[",
-        context.json()
-    );
-    let suffix = "],\"artifacts\":[";
-    let body = header_text
-        .strip_prefix(&prefix)
-        .and_then(|text| text.strip_suffix(suffix))
-        .ok_or(Error::Schema)?;
-    let parsed = json::parse(&format!("[{body}]")).map_err(|_| Error::Schema)?;
-    let Json::Array(values) = parsed else {
+    // The manifest header intentionally ends with the open artifacts array.
+    let mut complete_header = String::new();
+    complete_header
+        .try_reserve_exact(header_text.len() + 2)
+        .map_err(|_| Error::Allocation)?;
+    complete_header.push_str(header_text);
+    complete_header.push_str("]}");
+    let parsed = json::parse(&complete_header).map_err(|_| Error::Schema)?;
+    let Json::Object(fields) = &parsed else {
         return Err(Error::Schema);
     };
+    let allowed = [
+        "manifest_version",
+        "scope",
+        "status",
+        "context",
+        "partial_encrypted_sections",
+        "partial_encrypted_tables",
+        "artifacts",
+    ];
+    if fields
+        .iter()
+        .any(|(key, _)| !allowed.contains(&key.as_str()))
+        || number(&parsed, "manifest_version")? != 1
+        || string(&parsed, "scope")? != "artifact_integrity"
+        || string(&parsed, "status")? != "complete"
+    {
+        return Err(Error::Schema);
+    }
+    let has_sections = fields
+        .iter()
+        .any(|(key, _)| key == "partial_encrypted_sections");
+    let has_tables = fields
+        .iter()
+        .any(|(key, _)| key == "partial_encrypted_tables");
+    if fields.len() != 5 + usize::from(has_sections) + usize::from(has_tables) {
+        return Err(Error::Schema);
+    }
+    let Json::Array(artifacts) = value(&parsed, "artifacts")? else {
+        return Err(Error::Schema);
+    };
+    if !artifacts.is_empty() {
+        return Err(Error::Schema);
+    }
+
     let mut sections = Vec::new();
-    sections
-        .try_reserve_exact(values.len())
-        .map_err(|_| Error::Allocation)?;
-    for value in &values {
-        sections.push(PartialEncryptedSection::parse(value)?);
+    if has_sections {
+        let Json::Array(values) = value(&parsed, "partial_encrypted_sections")? else {
+            return Err(Error::Schema);
+        };
+        sections
+            .try_reserve_exact(values.len())
+            .map_err(|_| Error::Allocation)?;
+        for declaration in values {
+            sections.push(PartialEncryptedSection::parse(declaration)?);
+        }
     }
     validate_partial_encrypted_sections(&sections)?;
-    if sections.is_empty() {
-        return Ok(sections);
+
+    let mut tables = Vec::new();
+    if has_tables {
+        let Json::Array(values) = value(&parsed, "partial_encrypted_tables")? else {
+            return Err(Error::Schema);
+        };
+        tables
+            .try_reserve_exact(values.len())
+            .map_err(|_| Error::Allocation)?;
+        for declaration in values {
+            tables.push(PartialEncryptedTable::parse(declaration)?);
+        }
     }
-    let canonical = header_with_partial_sections(context, &sections)?;
+    validate_partial_encrypted_tables(&tables)?;
+
+    let canonical = header_with_partial_declarations(context, &sections, &tables)?;
     if header_text != canonical.strip_suffix('\n').ok_or(Error::Schema)? {
         return Err(Error::Schema);
     }
-    Ok(sections)
+    Ok(PartialEncryptedDeclarations { sections, tables })
 }
 #[cfg(any(target_os = "linux", windows))]
 pub(super) fn footer(s: Summary) -> String {
@@ -560,10 +751,21 @@ pub(super) fn manifest_fact(context: Context, inventory: &Inventory) -> Result<A
 }
 
 #[cfg(any(target_os = "linux", windows))]
+#[allow(dead_code)] // Retained for the Windows v25 manifest implementation.
 pub(super) fn manifest_fact_with_partial_sections(
     context: Context,
     inventory: &Inventory,
     sections: &[PartialEncryptedSection],
+) -> Result<Artifact, Error> {
+    manifest_fact_with_partial_declarations(context, inventory, sections, &[])
+}
+
+#[cfg(any(target_os = "linux", windows))]
+pub(super) fn manifest_fact_with_partial_declarations(
+    context: Context,
+    inventory: &Inventory,
+    sections: &[PartialEncryptedSection],
+    tables: &[PartialEncryptedTable],
 ) -> Result<Artifact, Error> {
     let mut hash = sha256::Sha256::new();
     let mut bytes = 0u64;
@@ -572,7 +774,9 @@ pub(super) fn manifest_fact_with_partial_sections(
         hash.update(s.as_bytes());
         Ok(())
     };
-    emit(&header_with_partial_sections(context, sections)?)?;
+    emit(&header_with_partial_declarations(
+        context, sections, tables,
+    )?)?;
     for (i, a) in inventory.facts.iter().enumerate() {
         emit(&format!(
             "{}{}\n",

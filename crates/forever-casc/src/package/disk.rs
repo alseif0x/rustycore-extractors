@@ -4,9 +4,15 @@
 use super::*;
 pub(super) use model::receipt;
 use model::{
-    Inventory, PartialEncryptedSection, footer, header_with_partial_sections,
-    manifest_fact_with_partial_sections, parse_header_partial_sections, seal,
-    validate_partial_encrypted_sections,
+    Inventory, PartialEncryptedDeclarations, PartialEncryptedSection, PartialEncryptedTable,
+    footer, header_with_partial_declarations, manifest_fact_with_partial_declarations,
+    parse_header_partial_declarations, seal, validate_partial_encrypted_sections,
+    validate_partial_encrypted_table_parts, validate_partial_encrypted_tables,
+};
+#[cfg(test)]
+use model::{
+    header_with_partial_sections, parse_header_partial_sections,
+    validate_partial_encrypted_table_path,
 };
 use std::{
     fs::{DirBuilder, File, Metadata, OpenOptions},
@@ -24,6 +30,31 @@ mod recover;
 const NOFOLLOW: i32 = 0x20000;
 const DIRECTORY: i32 = 0x10000;
 const NONBLOCK: i32 = 0x800;
+fn clone_partial_encrypted_table(
+    table: &PartialEncryptedTable,
+) -> Result<PartialEncryptedTable, Error> {
+    let mut path = String::new();
+    path.try_reserve_exact(table.path.len())
+        .map_err(|_| Error::Allocation)?;
+    path.push_str(&table.path);
+    let mut sections = Vec::new();
+    sections
+        .try_reserve_exact(table.sections.len())
+        .map_err(|_| Error::Allocation)?;
+    for section in &table.sections {
+        let mut lookup = String::new();
+        lookup
+            .try_reserve_exact(section.lookup.len())
+            .map_err(|_| Error::Allocation)?;
+        lookup.push_str(&section.lookup);
+        sections.push(PartialEncryptedSection {
+            lookup,
+            frame_ordinal: section.frame_ordinal,
+            decoded_size: section.decoded_size,
+        });
+    }
+    Ok(PartialEncryptedTable { path, sections })
+}
 #[derive(PartialEq, Eq)]
 struct Identity {
     dev: u64,
@@ -389,12 +420,18 @@ fn manifest(
     context: Context,
     inventory: &Inventory,
     partial_sections: &[PartialEncryptedSection],
+    partial_tables: &[PartialEncryptedTable],
     dirs: &mut usize,
     limits: Limits,
 ) -> Result<(), Error> {
     if root.has(MANIFEST, limits)? {
         return root.hash(
-            &manifest_fact_with_partial_sections(context, inventory, partial_sections)?,
+            &manifest_fact_with_partial_declarations(
+                context,
+                inventory,
+                partial_sections,
+                partial_tables,
+            )?,
             Limits {
                 file_bytes: limits.manifest_bytes,
                 ..limits
@@ -418,7 +455,11 @@ fn manifest(
         }
         f.write_all(s.as_bytes()).map_err(|_| Error::Io)
     };
-    emit(&header_with_partial_sections(context, partial_sections)?)?;
+    emit(&header_with_partial_declarations(
+        context,
+        partial_sections,
+        partial_tables,
+    )?)?;
     for (i, a) in inventory.facts.iter().enumerate() {
         emit(&format!(
             "{}{}\n",
@@ -468,6 +509,7 @@ pub struct Run {
     failed: bool,
     replay: Option<recover::Replay>,
     partial_encrypted_sections: Option<Vec<PartialEncryptedSection>>,
+    partial_encrypted_tables: Option<Vec<PartialEncryptedTable>>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Put {
@@ -546,6 +588,7 @@ impl Run {
             failed: false,
             replay: None,
             partial_encrypted_sections: None,
+            partial_encrypted_tables: None,
         })
     }
     /// All retained bytes are checked before returning a writer. The caller must
@@ -605,6 +648,87 @@ impl Run {
                 });
             }
             self.partial_encrypted_sections = Some(retained);
+            Ok(())
+        })();
+        if result.is_err() {
+            self.failed = true;
+        }
+        result
+    }
+    /// Attach per-table redacted declarations for the supported DB2 profiles.
+    /// Repeating the same path and declarations is idempotent; conflicting
+    /// declarations for a path permanently poison this writer.
+    pub fn set_partial_encrypted_table(
+        &mut self,
+        path: &str,
+        sections: &[PartialEncryptedSection],
+    ) -> Result<(), Error> {
+        let result = (|| {
+            if self.failed {
+                return Err(Error::Incomplete);
+            }
+            self.state()?;
+            let db2 = Component::Db2.bit();
+            let db2_terrain = db2 | Component::Terrain.bit();
+            if self.context.build != 70450 || ![db2, db2_terrain].contains(&self.context.components)
+            {
+                return Err(Error::Component);
+            }
+            validate_partial_encrypted_table_parts(path, sections)?;
+
+            let current = self.partial_encrypted_tables.as_deref().unwrap_or_default();
+            if let Some(previous) = current.iter().find(|table| table.path == path) {
+                if previous.sections == sections {
+                    return Ok(());
+                }
+                return Err(Error::Inventory);
+            }
+            let current_section_count = current.iter().try_fold(0usize, |total, table| {
+                total.checked_add(table.sections.len()).ok_or(Error::Limit)
+            })?;
+            if current.len() >= 1161
+                || current_section_count
+                    .checked_add(sections.len())
+                    .is_none_or(|total| total > 1161 * 16)
+            {
+                return Err(Error::Limit);
+            }
+
+            let mut retained = Vec::new();
+            retained
+                .try_reserve_exact(current.len() + 1)
+                .map_err(|_| Error::Allocation)?;
+            for table in current {
+                retained.push(clone_partial_encrypted_table(table)?);
+            }
+            let mut retained_sections = Vec::new();
+            retained_sections
+                .try_reserve_exact(sections.len())
+                .map_err(|_| Error::Allocation)?;
+            for section in sections {
+                let mut lookup = String::new();
+                lookup
+                    .try_reserve_exact(section.lookup.len())
+                    .map_err(|_| Error::Allocation)?;
+                lookup.push_str(&section.lookup);
+                retained_sections.push(PartialEncryptedSection {
+                    lookup,
+                    frame_ordinal: section.frame_ordinal,
+                    decoded_size: section.decoded_size,
+                });
+            }
+            let mut retained_path = String::new();
+            retained_path
+                .try_reserve_exact(path.len())
+                .map_err(|_| Error::Allocation)?;
+            retained_path.push_str(path);
+            retained.push(PartialEncryptedTable {
+                path: retained_path,
+                sections: retained_sections,
+            });
+            retained.sort_unstable_by(|left, right| left.path.cmp(&right.path));
+            validate_partial_encrypted_tables(&retained)?;
+            self.partial_encrypted_tables = Some(retained);
             Ok(())
         })();
         if result.is_err() {
@@ -769,6 +893,7 @@ impl Run {
             .partial_encrypted_sections
             .as_deref()
             .unwrap_or_default();
+        let partial_tables = self.partial_encrypted_tables.as_deref().unwrap_or_default();
         check_seals(&self.root, self.context, &inventory, self.limits)?;
         for a in &inventory.facts {
             self.root.hash(a, self.limits)?;
@@ -777,7 +902,12 @@ impl Run {
         let published = self.root.has(MANIFEST, self.limits)?;
         if published {
             self.root.hash(
-                &manifest_fact_with_partial_sections(self.context, &inventory, partial_sections)?,
+                &manifest_fact_with_partial_declarations(
+                    self.context,
+                    &inventory,
+                    partial_sections,
+                    partial_tables,
+                )?,
                 Limits {
                     file_bytes: self.limits.manifest_bytes,
                     ..self.limits
@@ -800,6 +930,7 @@ impl Run {
             self.context,
             &inventory,
             partial_sections,
+            partial_tables,
             &mut self.dirs,
             self.limits,
         )?;
@@ -1002,7 +1133,7 @@ fn scan(
     }
     Ok(w.dirs)
 }
-const MAX_MANIFEST_HEADER_BYTES: usize = 4096;
+const MAX_MANIFEST_HEADER_BYTES: usize = 4 * 1024 * 1024;
 fn manifest_header_line<R: BufRead>(reader: &mut R) -> Result<Vec<u8>, Error> {
     let mut bytes = Vec::new();
     Read::take(reader, (MAX_MANIFEST_HEADER_BYTES + 1) as u64)
@@ -1020,7 +1151,7 @@ fn manifest_header_line<R: BufRead>(reader: &mut R) -> Result<Vec<u8>, Error> {
 /// Offline integrity only. No client/CASC reads; refuses active writers and all
 /// incomplete markers, malformed manifests, missing/extra/changed payloads.
 pub fn verify(output: &Path, expected: Option<Context>, limits: Limits) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, None, None, None)
+    verify_inner(output, expected, limits, None, None, None, None)
 }
 
 /// Inspect read-only rooted artifacts while holding the shared package lock.
@@ -1033,7 +1164,15 @@ pub fn verify_with(
     limits: Limits,
     mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
 ) -> Result<Summary, Error> {
-    verify_inner(output, expected, limits, None, Some(&mut inspect), None)
+    verify_inner(
+        output,
+        expected,
+        limits,
+        None,
+        Some(&mut inspect),
+        None,
+        None,
+    )
 }
 /// Admit the complete canonical artifact metadata before any artifact payload
 /// hashing, reading or inspection. Manifest, receipt and seal metadata are
@@ -1055,6 +1194,7 @@ pub fn verify_with_preflight(
         Some(&mut admit),
         Some(&mut inspect),
         None,
+        None,
     )
 }
 /// As `verify_with_preflight`, additionally exposing validated deterministic
@@ -1074,11 +1214,34 @@ pub fn verify_with_preflight_and_partial_sections(
         Some(&mut admit),
         Some(&mut inspect),
         Some(&mut partial_sections),
+        None,
+    )
+}
+/// As `verify_with_preflight`, exposing both v25 global declarations and v26
+/// per-table declarations to a product-specific offline verifier.
+pub fn verify_with_preflight_and_partial_declarations(
+    output: &Path,
+    expected: Option<Context>,
+    limits: Limits,
+    mut partial_sections: impl FnMut(&[PartialEncryptedSection]) -> Result<(), Error>,
+    mut partial_tables: impl FnMut(&[PartialEncryptedTable]) -> Result<(), Error>,
+    mut admit: impl FnMut(&[Artifact]) -> Result<(), Error>,
+    mut inspect: impl FnMut(&Artifact, &mut File) -> Result<(), Error>,
+) -> Result<Summary, Error> {
+    verify_inner(
+        output,
+        expected,
+        limits,
+        Some(&mut admit),
+        Some(&mut inspect),
+        Some(&mut partial_sections),
+        Some(&mut partial_tables),
     )
 }
 type Admitter<'a> = &'a mut dyn FnMut(&[Artifact]) -> Result<(), Error>;
 type Inspector<'a> = &'a mut dyn FnMut(&Artifact, &mut File) -> Result<(), Error>;
 type PartialVisitor<'a> = &'a mut dyn FnMut(&[PartialEncryptedSection]) -> Result<(), Error>;
+type PartialTablesVisitor<'a> = &'a mut dyn FnMut(&[PartialEncryptedTable]) -> Result<(), Error>;
 fn verify_inner(
     output: &Path,
     expected: Option<Context>,
@@ -1086,6 +1249,7 @@ fn verify_inner(
     admit: Option<Admitter<'_>>,
     inspect: Option<Inspector<'_>>,
     partial_visitor: Option<PartialVisitor<'_>>,
+    partial_tables_visitor: Option<PartialTablesVisitor<'_>>,
 ) -> Result<Summary, Error> {
     limits.validate()?;
     let root = Root::open(output)?;
@@ -1116,7 +1280,7 @@ fn verify_inner(
     let header_line = manifest_header_line(&mut reader)?;
     let header_text = std::str::from_utf8(header_line.strip_suffix(b"\n").ok_or(Error::Schema)?)
         .map_err(|_| Error::Schema)?;
-    let partial_sections = parse_header_partial_sections(header_text, context)?;
+    let partial_declarations = parse_header_partial_declarations(header_text, context)?;
     let mut inventory = Inventory::new(limits);
     loop {
         let b = line(&mut reader)?;
@@ -1183,7 +1347,10 @@ fn verify_inner(
         admit(&inventory.facts)?;
     }
     if let Some(visitor) = partial_visitor {
-        visitor(&partial_sections)?;
+        visitor(&partial_declarations.sections)?;
+    }
+    if let Some(visitor) = partial_tables_visitor {
+        visitor(&partial_declarations.tables)?;
     }
     for a in &inventory.facts {
         root.hash(a, limits)?;
