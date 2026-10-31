@@ -61,6 +61,8 @@ pub struct DetailMesh {
     vertices: Vec<Point>,
     triangles: Vec<[u8; 4]>,
     discarded_faces: u32,
+    center_fallbacks: u64,
+    unset_height_samples: u64,
 }
 impl DetailMesh {
     pub fn polygon_mesh(&self) -> &PolyMesh {
@@ -84,6 +86,12 @@ impl DetailMesh {
     pub const fn discarded_faces(&self) -> u32 {
         self.discarded_faces
     }
+    pub const fn center_fallbacks(&self) -> u64 {
+        self.center_fallbacks
+    }
+    pub const fn unset_height_samples(&self) -> u64 {
+        self.unset_height_samples
+    }
     pub fn capacity_bytes(&self) -> usize {
         self.mesh.capacity_bytes()
             + self.submeshes.capacity() * 16
@@ -92,7 +100,24 @@ impl DetailMesh {
     }
 }
 impl PolyMesh {
-    pub fn build_detail(mut self, options: DetailOptions) -> Result<DetailMesh, Error> {
+    pub fn build_detail(self, options: DetailOptions) -> Result<DetailMesh, Error> {
+        self.build_detail_impl(options, false, false)
+    }
+
+    pub fn build_detail_v55(self, options: DetailOptions) -> Result<DetailMesh, Error> {
+        self.build_detail_impl(options, true, false)
+    }
+
+    pub fn build_detail_v56(self, options: DetailOptions) -> Result<DetailMesh, Error> {
+        self.build_detail_impl(options, true, true)
+    }
+
+    fn build_detail_impl(
+        mut self,
+        options: DetailOptions,
+        allow_center_fallback: bool,
+        allow_unset_height: bool,
+    ) -> Result<DetailMesh, Error> {
         if !options.sample_distance.is_finite()
             || options.sample_distance <= 0.0
             || !options.maximum_error.is_finite()
@@ -116,6 +141,8 @@ impl PolyMesh {
         let mut vertices = Vec::new();
         let mut triangles = Vec::new();
         let mut discarded_faces = 0u32;
+        let mut center_fallbacks = 0u64;
+        let mut unset_height_samples = 0u64;
         for p in &self.polygons {
             b.charge(1)?;
             let mut poly = Vec::new();
@@ -130,13 +157,33 @@ impl PolyMesh {
                     ],
                 )?;
             }
-            let patch = b.height_patch(
-                field,
-                &self.vertices,
-                p,
-                self.contours.regions.options.border_size,
-            )?;
-            let local = b.detail_polygon(&poly, options, radius, field, &patch)?;
+            let mut patch = b
+                .height_patch(
+                    field,
+                    &self.vertices,
+                    p,
+                    self.contours.regions.options.border_size,
+                    allow_center_fallback,
+                    allow_unset_height,
+                )
+                .inspect_err(|&error| {
+                    if std::env::var_os("RCE_V52_DEBUG").is_some() {
+                        eprintln!("{{\"stage\":\"height_patch\",\"error\":{:?}}}", error);
+                    }
+                })?;
+            center_fallbacks = center_fallbacks
+                .checked_add(u64::from(patch.center_fallback))
+                .ok_or(Error::Limit)?;
+            let local = b
+                .detail_polygon(&poly, options, radius, field, &mut patch)
+                .inspect_err(|&error| {
+                    if std::env::var_os("RCE_V52_DEBUG").is_some() {
+                        eprintln!("{{\"stage\":\"detail_polygon\",\"error\":{:?}}}", error);
+                    }
+                })?;
+            unset_height_samples = unset_height_samples
+                .checked_add(patch.unset_height_samples)
+                .ok_or(Error::Limit)?;
             discarded_faces = discarded_faces
                 .checked_add(local.discarded_faces)
                 .ok_or(Error::Limit)?;
@@ -201,6 +248,8 @@ impl PolyMesh {
             vertices,
             triangles,
             discarded_faces,
+            center_fallbacks,
+            unset_height_samples,
         })
     }
 }

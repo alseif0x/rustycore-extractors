@@ -523,7 +523,7 @@ fn bounded(value: usize, extra: usize, cap: usize) -> Result<usize, ProjectionEr
 fn descriptor_status(d: &Descriptor<'_>) -> Result<(), ProjectionError> {
     match (d.class(), d.status()) {
         (Class::M2, Status::Collision | Status::NoCollision)
-        | (Class::Wmo, Status::Collision | Status::DoodadOnly) => Ok(()),
+        | (Class::Wmo, Status::Collision | Status::DoodadOnly | Status::Vacated) => Ok(()),
         _ => Err(ProjectionError::Model),
     }
 }
@@ -609,6 +609,15 @@ fn validate_bindings(
         && (metadata.set_count() == 0 || metadata.references().len() == 0)
     {
         return Err(ProjectionError::Model);
+    }
+    if status == Status::Vacated {
+        if metadata.bindings().len() != 0
+            || metadata.set_count() == 0
+            || metadata.references().len() != 0
+        {
+            return Err(ProjectionError::Model);
+        }
+        return Ok(());
     }
     let mut bindings = metadata.bindings();
     let mut previous = None;

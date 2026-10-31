@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Authored 2026-10-19: synthetic-only selected collision geometry coverage.
+// Authored 2026-10-19: synthetic-only selected/all-available collision geometry coverage.
 use super::*;
 use crate::collision::{
     Extractor, Limits as CollectorLimits, assemble::staged::models, gameobjects,
@@ -20,13 +20,13 @@ fn word(bytes: &[u8], at: usize) -> usize {
 }
 fn files_70450(maps: &[(u32, u32, i16)]) -> Vec<CollisionFile<'static>> {
     let mut files = fixture::files(maps);
-    // Poisonous present tables make any accidental GODI/LiquidObject request
-    // fail; the selected geometry route must not read either source.
+    // The excluded profiles read only their explicit startup and liquid sources;
+    // v47 has separate fixtures for executed GODI rows. LiquidObject stays poisoned.
     files.retain(|(id, _, _)| *id != gameobjects::TABLE_FILE_DATA_ID);
     files.push((
         gameobjects::TABLE_FILE_DATA_ID,
         None,
-        b"poisonous synthetic GODI must not be read".to_vec(),
+        fixture::gameobject_db2(&[], &[]),
     ));
     files.push((
         crate::terrain::run::OBJECT_ID,
@@ -38,6 +38,7 @@ fn files_70450(maps: &[(u32, u32, i16)]) -> Vec<CollisionFile<'static>> {
             world::MAP_FILE_DATA_ID => "Map",
             world::MATERIAL_FILE_DATA_ID => "LiquidMaterial",
             world::TYPE_FILE_DATA_ID => "LiquidType",
+            gameobjects::TABLE_FILE_DATA_ID => "GameObjectDisplayInfo",
             _ => continue,
         };
         let metadata = catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, name)
@@ -83,6 +84,130 @@ fn run_fixture(
     let fixture = CollisionFixture::for_build(files, 70450);
     let mut store = open(&fixture);
     extract_map(&mut store, map_id, sink, Limits::default())
+}
+fn run_all_with_root_absence(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_root_absence(&mut store, sink, Limits::default())
+}
+fn run_all_with_model_root_absence(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_model_root_absence(&mut store, sink, Limits::default())
+}
+fn run_all_with_model_root_absence_request_capacity(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_model_root_absence_request_capacity(&mut store, sink, Limits::default())
+}
+fn run_all_with_vacated_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_vacated_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_empty_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_empty_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_dependency_heavy_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_dependency_heavy_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_source_heavy_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_source_heavy_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_read_heavy_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_read_heavy_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_model_heavy_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_model_heavy_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_source_expanded_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_source_expanded_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_model_output_expanded_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_model_output_expanded_material_filtered_wmo(
+        &mut store,
+        sink,
+        Limits::default(),
+    )
+}
+fn run_all_with_model_bytes_expanded_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_model_bytes_expanded_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_source_expanded_v2_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_source_expanded_v2_material_filtered_wmo(&mut store, sink, Limits::default())
+}
+fn run_all_with_placement_expanded_material_filtered_wmo(
+    files: &[CollisionFile<'_>],
+    sink: &mut Stage,
+) -> Result<Completed, Error> {
+    let fixture = CollisionFixture::for_build(files, 70450);
+    let mut store = open(&fixture);
+    extract_all_with_placement_expanded_material_filtered_wmo(&mut store, sink, Limits::default())
 }
 fn with_tile_geometry() -> Vec<CollisionFile<'static>> {
     let mut files = files_70450(&[(7, 100, -1)]);
@@ -161,6 +286,12 @@ fn p1_one_active_map_acquires_complete_m2_and_wmo_without_godi() {
             gameobject_file_data_id: gameobjects::TABLE_FILE_DATA_ID,
             gameobject_block_reason: GameObjectBlockReason::ExcludedByProfile,
             gameobject_request_made: false,
+            gameobject_startup_reads: 0,
+            gameobject_sections: 0,
+            gameobject_direct_rows: 0,
+            gameobject_copy_records: 0,
+            gameobject_outcomes: 0,
+            model_scope: "placement-only-v1",
             liquid_object_scope: LiquidObjectScope::OutOfScope,
             liquid_object_request_made: false,
         }
@@ -173,6 +304,94 @@ fn p1_one_active_map_acquires_complete_m2_and_wmo_without_godi() {
     assert!(!out.coverage().gameobject_request_made);
     assert_eq!(out.coverage().liquid_object_scope.as_str(), "out_of_scope");
     assert!(!out.coverage().liquid_object_request_made);
+    assert!(out.gameobject_facts().is_none());
+}
+
+#[test]
+fn v47_executes_godi_direct_rows_once_and_reports_physical_outcomes() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    let godi = files
+        .iter_mut()
+        .find(|(id, _, _)| *id == gameobjects::TABLE_FILE_DATA_ID)
+        .unwrap();
+    godi.2 = fixture::gameobject_db2(&[(10, 300), (11, 0), (12, 301)], &[(20, 10)]);
+    godi.2[152..156].copy_from_slice(
+        &catalog::resolve_for(catalog::WOWDBDEFS_70450_CATALOG_ID, "GameObjectDisplayInfo")
+            .unwrap()
+            .unwrap()
+            .metadata()
+            .table_hash
+            .unwrap()
+            .to_le_bytes(),
+    );
+    files.extend([
+        (100, None, fixture::wdt(None, None)),
+        (300, None, fixture::m2(true)),
+        (301, None, fixture::m2(true)),
+    ]);
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut sink = Stage::default();
+    let out = extract_all_with_gameobject_expanded_material_filtered_wmo(
+        &mut store,
+        &mut sink,
+        Limits::default(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        out.profile(),
+        AVAILABLE_GAMEOBJECT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(out.selection(), plan::MapSelection::All);
+    assert_eq!(
+        out.coverage().gameobject_scope,
+        GameObjectScope::AvailableFdidDirectV1
+    );
+    assert_eq!(
+        out.coverage().gameobject_file_data_id,
+        gameobjects::TABLE_FILE_DATA_ID
+    );
+    assert_eq!(
+        out.coverage().gameobject_block_reason,
+        GameObjectBlockReason::None
+    );
+    assert!(out.coverage().gameobject_request_made);
+    assert_eq!(out.coverage().gameobject_startup_reads, 3);
+    assert_eq!(out.coverage().model_scope, "placement-and-gameobject-v1");
+    assert_eq!(out.report().run.model_reads, 0);
+    assert_eq!(out.report().run.ids.calls, 0);
+
+    let facts = out.gameobject_facts().unwrap();
+    assert_eq!(facts.direct_rows, 3);
+    assert_eq!(facts.copy_records, 1);
+    assert_eq!(facts.direct_outcomes, 3);
+    assert_eq!(facts.zero_fdids, 1);
+    assert_eq!(facts.collision_rows, 2);
+    assert_eq!(facts.list_rows, 2);
+    assert_eq!(facts.sections.len(), 1);
+    assert_eq!(facts.outcomes[0].ordinal, 0);
+    assert_eq!(facts.outcomes[1].ordinal, 1);
+    assert_eq!(facts.outcomes[2].ordinal, 2);
+    assert_eq!(
+        facts.outcomes[0].outcome,
+        available_70374::GameObjectOutcome::Collision
+    );
+    assert_eq!(
+        facts.outcomes[1].outcome,
+        available_70374::GameObjectOutcome::ZeroFileDataId
+    );
+    assert_eq!(
+        facts.outcomes[2].outcome,
+        available_70374::GameObjectOutcome::Collision
+    );
+    assert_eq!(out.gameobjects().outcomes().len(), 3);
+    assert_eq!(out.gameobjects().startup_facts().reads, 3);
+    assert_eq!(
+        out.world().startup().data().table().file_data_id(),
+        gameobjects::TABLE_FILE_DATA_ID
+    );
+    assert_eq!(sink.models, 2);
 }
 
 #[test]
@@ -293,6 +512,28 @@ fn n1_parent_in_unavailable_map_section_is_missing_parent() {
 }
 
 #[test]
+fn all_70450_empty_active_domain_has_an_explicit_empty_completion() {
+    let files = files_70450(&[(7, 0, -1)]);
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut sink = Stage::default();
+    let out = extract_all(&mut store, &mut sink, Limits::default()).unwrap();
+
+    assert_eq!(out.profile(), AVAILABLE_PROFILE);
+    assert_eq!(
+        out.world().profile(),
+        available_70374::PROFILE_70450_AVAILABLE_GEOMETRY
+    );
+    assert_eq!(out.selection(), plan::MapSelection::All);
+    assert_eq!(out.world().map_stats().rows, 1);
+    assert_eq!(out.world().map_stats().direct_rows, 1);
+    assert_eq!(out.world().map_stats().active_maps, 0);
+    assert_eq!(out.report().run.maps, 0);
+    assert_eq!(out.report().run.wdt_files, 0);
+    assert_eq!((sink.models, sink.placements.len()), (0, 0));
+}
+
+#[test]
 fn n2_zero_wdt_file_data_id_is_inactive_map() {
     let mut sink = Stage::default();
     let error = match run_fixture(&files_70450(&[(7, 0, -1)]), 7, &mut sink) {
@@ -392,4 +633,716 @@ fn global_vmo_model_profile_still_selects_temp_list_rows() {
     // The existing integration control exercises the global TempList union:
     // startup_duplicates_omissions_and_no_collision_preserve_list_union.
     // It remains part of this crate's full library-test acceptance.
+}
+
+#[test]
+fn all_with_root_absence_keeps_new_profile_and_present_empty_map_without_omissions() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.push((100, None, fixture::wdt(None, None)));
+    let mut sink = Stage::default();
+    let out = run_all_with_root_absence(&files, &mut sink).unwrap();
+
+    assert_eq!(out.profile(), AVAILABLE_ROOT_ABSENT_PROFILE);
+    assert_eq!(
+        out.world().profile(),
+        available_70374::PROFILE_70450_AVAILABLE_ROOT_ABSENT_GEOMETRY
+    );
+    assert_eq!(out.selection(), plan::MapSelection::All);
+    assert!(out.world().root_absent().is_empty());
+    assert_eq!((out.report().run.maps, out.report().run.wdt_files), (1, 1));
+    assert_eq!(out.report().run.placement_callbacks, 1);
+    assert_eq!(sink.models, 0);
+    assert_eq!(sink.placements.len(), 1);
+    assert_eq!(sink.placements[0].0.kind, run::Kind::Global);
+    assert!(sink.placements[0].1.is_empty());
+    assert_eq!(out.world().startup().data().table().file_data_id(), 0);
+    assert_eq!(out.world().startup().data().startup_facts().reads, 0);
+}
+
+#[test]
+fn all_with_root_absence_declares_raw_missing_wdt_while_previous_route_rejects() {
+    let files = files_70450(&[(7, 100, -1)]);
+    let mut sink = Stage::default();
+    let out = run_all_with_root_absence(&files, &mut sink).unwrap();
+
+    assert_eq!(out.profile(), AVAILABLE_ROOT_ABSENT_PROFILE);
+    assert_eq!(
+        out.world().root_absent(),
+        &[run::RootAbsent {
+            map_id: 7,
+            wdt_file_data_id: 100,
+        }]
+    );
+    assert_eq!((out.report().run.maps, out.report().run.wdt_files), (1, 0));
+    assert_eq!(out.report().run.tile_positions, 4096);
+    assert_eq!(out.report().run.ids.calls, 0);
+    assert_eq!((sink.models, sink.placements.len()), (0, 0));
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut sink = Stage::default();
+    let error = match extract_all(&mut store, &mut sink, Limits::default()) {
+        Ok(_) => panic!("previous strict route accepted a missing WDT"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code(), "file_unavailable");
+    assert_eq!((sink.models, sink.placements.len()), (0, 0));
+}
+
+#[test]
+fn model_root_absence_profile_is_distinct_even_without_omissions() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.push((100, None, fixture::wdt(None, None)));
+    let mut sink = Stage::default();
+    let out = run_all_with_model_root_absence(&files, &mut sink).unwrap();
+    assert_eq!(out.profile(), AVAILABLE_MODEL_ROOT_ABSENT_PROFILE);
+    assert_eq!(
+        out.world().profile(),
+        available_70374::PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_GEOMETRY
+    );
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert_eq!((out.report().run.maps, out.report().run.wdt_files), (1, 1));
+    assert_eq!((sink.models, sink.placements.len()), (0, 1));
+
+    let mut sink = Stage::default();
+    let previous = run_all_with_root_absence(&files, &mut sink).unwrap();
+    assert_eq!(previous.profile(), AVAILABLE_ROOT_ABSENT_PROFILE);
+    assert!(previous.world().missing_m2().is_empty());
+}
+
+#[test]
+fn model_root_absence_retains_wmo_root_and_placement() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, fixture::wmo_root(30, Some(20))),
+        (30, None, fixture::wmo_group(true, true, false)),
+    ]);
+    let mut sink = Stage::default();
+    let out = run_all_with_model_root_absence(&files, &mut sink).unwrap();
+    assert_eq!(out.profile(), AVAILABLE_MODEL_ROOT_ABSENT_PROFILE);
+    assert!(out.world().root_absent().is_empty());
+    assert_eq!(out.world().missing_m2(), &[20]);
+    assert_eq!(out.report().run.model_callbacks, 1);
+    assert_eq!(out.report().run.ids.calls, 1);
+    assert!((sink.models, sink.placements.len()) == (1, 1));
+}
+
+#[test]
+fn vacated_wmo_geometry_profile_uses_request_heavy_and_emits_no_wmo_placement() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, fixture::wmo_root(30, Some(20))),
+        (30, None, fixture::wmo_group(false, true, false)),
+    ]);
+    let mut sink = Stage::default();
+    let out = run_all_with_vacated_wmo(&files, &mut sink).unwrap();
+    assert_eq!(out.profile(), AVAILABLE_VACATED_WMO_PROFILE);
+    assert_eq!(out.world().profile(), AVAILABLE_VACATED_WMO_PROFILE);
+    assert_eq!(out.world().missing_m2(), &[20]);
+    assert_eq!(out.world().missing_wmo(), &[10]);
+    assert!(out.world().empty_wmo().is_empty());
+    assert_eq!(out.report().run.model_callbacks, 1);
+    assert_eq!(out.report().run.no_collision_models, 1);
+    assert_eq!(
+        (
+            out.report().run.placement_records,
+            out.report().run.ids.calls
+        ),
+        (0, 0)
+    );
+    assert_eq!(sink.models, 1);
+    assert!(sink.placements.iter().all(|(_, bytes)| bytes.is_empty()));
+}
+
+#[test]
+fn empty_wmo_geometry_profile_reports_intrinsic_empty_fdids_separately() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    let mut root = fixture::wmo_root(30, None);
+    let mut mods: Vec<_> = b"MODS".iter().rev().copied().collect();
+    mods.extend_from_slice(&32u32.to_le_bytes());
+    mods.extend_from_slice(&[0; 32]);
+    root.extend(mods);
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, root),
+        (30, None, fixture::wmo_group(false, false, false)),
+    ]);
+    let mut sink = Stage::default();
+    let out = run_all_with_empty_wmo(&files, &mut sink).unwrap();
+    assert_eq!(out.profile(), AVAILABLE_EMPTY_WMO_PROFILE);
+    assert_eq!(out.world().profile(), AVAILABLE_EMPTY_WMO_PROFILE);
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert!(out.world().missing_wmo().is_empty());
+    assert_eq!(out.world().empty_wmo(), &[10]);
+    assert_eq!(out.report().run.model_callbacks, 1);
+    assert_eq!(out.report().run.no_collision_models, 1);
+    assert_eq!(
+        (
+            out.report().run.placement_records,
+            out.report().run.ids.calls
+        ),
+        (0, 0)
+    );
+    assert_eq!(sink.models, 1);
+    assert!(sink.placements.iter().all(|(_, bytes)| bytes.is_empty()));
+}
+
+#[test]
+fn placement_expanded_material_filtered_wmo_profile_is_public_and_preserves_omissions() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    let mut root = fixture::wmo_root(30, None);
+    let mut mods: Vec<_> = b"MODS".iter().rev().copied().collect();
+    mods.extend_from_slice(&32u32.to_le_bytes());
+    mods.extend_from_slice(&[0; 32]);
+    root.extend(mods);
+    let mut group = fixture::wmo_group(true, false, false);
+    group[84..86].copy_from_slice(&0x26u16.to_le_bytes());
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, root),
+        (30, None, group),
+    ]);
+
+    let mut baseline_sink = Stage::default();
+    let baseline = run_all_with_material_filtered_wmo(&files, &mut baseline_sink).unwrap();
+    let mut v44_sink = Stage::default();
+    let v44 = run_all_with_source_expanded_v2_material_filtered_wmo(&files, &mut v44_sink).unwrap();
+    let mut sink = Stage::default();
+    let out = run_all_with_placement_expanded_material_filtered_wmo(&files, &mut sink).unwrap();
+
+    assert_eq!(
+        out.profile(),
+        AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        out.world().profile(),
+        AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(out.world().root_absent(), baseline.world().root_absent());
+    assert_eq!(out.world().missing_m2(), baseline.world().missing_m2());
+    assert_eq!(out.world().missing_wmo(), baseline.world().missing_wmo());
+    assert_eq!(out.world().empty_wmo(), baseline.world().empty_wmo());
+    assert_eq!(
+        out.world().unselected_wmo(),
+        baseline.world().unselected_wmo()
+    );
+    assert_eq!(out.world().material_filtered_wmo(), &[10]);
+    assert_eq!(
+        out.world().material_filtered_wmo(),
+        v44.world().material_filtered_wmo()
+    );
+    assert_eq!(out.report().run, baseline.report().run);
+    assert_eq!(out.report().run, v44.report().run);
+    assert_eq!(sink.models, baseline_sink.models);
+    assert_eq!(sink.models, v44_sink.models);
+    assert_eq!(sink.placements, baseline_sink.placements);
+    assert_eq!(sink.placements, v44_sink.placements);
+}
+
+#[test]
+fn material_filtered_wmo_geometry_profile_is_public_and_disjoint() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    let mut root = fixture::wmo_root(30, None);
+    let mut mods: Vec<_> = b"MODS".iter().rev().copied().collect();
+    mods.extend_from_slice(&32u32.to_le_bytes());
+    mods.extend_from_slice(&[0; 32]);
+    root.extend(mods);
+    let mut group = fixture::wmo_group(true, false, false);
+    group[84..86].copy_from_slice(&0x26u16.to_le_bytes());
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, root),
+        (30, None, group),
+    ]);
+    let mut sink = Stage::default();
+    let out = run_all_with_material_filtered_wmo(&files, &mut sink).unwrap();
+    assert_eq!(out.profile(), AVAILABLE_MATERIAL_FILTERED_WMO_PROFILE);
+    assert_eq!(
+        out.world().profile(),
+        AVAILABLE_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert!(out.world().missing_wmo().is_empty());
+    assert!(out.world().empty_wmo().is_empty());
+    assert!(out.world().unselected_wmo().is_empty());
+    assert_eq!(out.world().material_filtered_wmo(), &[10]);
+    assert_eq!(out.report().run.no_collision_models, 1);
+    assert_eq!(
+        (
+            out.report().run.placement_records,
+            out.report().run.ids.calls
+        ),
+        (0, 0)
+    );
+    assert_eq!(sink.models, 1);
+    assert!(sink.placements.iter().all(|(_, bytes)| bytes.is_empty()));
+}
+
+#[test]
+fn dependency_heavy_material_filtered_wmo_profile_is_public_and_distinct() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    let mut root = fixture::wmo_root(30, None);
+    let mut mods: Vec<_> = b"MODS".iter().rev().copied().collect();
+    mods.extend_from_slice(&32u32.to_le_bytes());
+    mods.extend_from_slice(&[0; 32]);
+    root.extend(mods);
+    let mut group = fixture::wmo_group(true, false, false);
+    group[84..86].copy_from_slice(&0x26u16.to_le_bytes());
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, root),
+        (30, None, group),
+    ]);
+
+    let mut sink = Stage::default();
+    let out = run_all_with_dependency_heavy_material_filtered_wmo(&files, &mut sink).unwrap();
+    assert_eq!(
+        out.profile(),
+        AVAILABLE_DEPENDENCY_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        out.world().profile(),
+        AVAILABLE_DEPENDENCY_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert!(out.world().missing_wmo().is_empty());
+    assert!(out.world().empty_wmo().is_empty());
+    assert!(out.world().unselected_wmo().is_empty());
+    assert_eq!(out.world().material_filtered_wmo(), &[10]);
+    assert_eq!(out.report().run.no_collision_models, 1);
+    assert_eq!(out.report().run.ids.calls, 0);
+    assert_eq!(sink.models, 1);
+    assert_eq!(sink.placements.len(), 1);
+    assert!(sink.placements.iter().all(|(_, bytes)| bytes.is_empty()));
+
+    let mut v36_sink = Stage::default();
+    let v36_fixture = CollisionFixture::for_build(&files, 70450);
+    let mut v36_store = open(&v36_fixture);
+    let v36 =
+        extract_all_with_material_filtered_wmo(&mut v36_store, &mut v36_sink, Limits::default())
+            .unwrap();
+    assert_eq!(v36.profile(), AVAILABLE_MATERIAL_FILTERED_WMO_PROFILE);
+    assert_eq!(v36.world().material_filtered_wmo(), &[10]);
+    assert_eq!(v36_sink.models, sink.models);
+    assert_eq!(v36_sink.placements, sink.placements);
+}
+
+#[test]
+fn source_heavy_material_filtered_wmo_profile_is_public_and_distinct() {
+    let files = {
+        let mut files = files_70450(&[(7, 100, -1)]);
+        let mut root = fixture::wmo_root(30, None);
+        let mut mods: Vec<_> = b"MODS".iter().rev().copied().collect();
+        mods.extend_from_slice(&32u32.to_le_bytes());
+        mods.extend_from_slice(&[0; 32]);
+        root.extend(mods);
+        let mut group = fixture::wmo_group(true, false, false);
+        group[84..86].copy_from_slice(&0x26u16.to_le_bytes());
+        files.extend([
+            (100, None, fixture::wdt(Some(10), None)),
+            (10, None, root),
+            (30, None, group),
+        ]);
+        files
+    };
+
+    let mut sink = Stage::default();
+    let out = run_all_with_source_heavy_material_filtered_wmo(&files, &mut sink).unwrap();
+    assert_eq!(
+        out.profile(),
+        AVAILABLE_SOURCE_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        out.world().profile(),
+        AVAILABLE_SOURCE_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert!(out.world().missing_wmo().is_empty());
+    assert!(out.world().empty_wmo().is_empty());
+    assert!(out.world().unselected_wmo().is_empty());
+    assert_eq!(out.world().material_filtered_wmo(), &[10]);
+    assert_eq!(out.report().run.no_collision_models, 1);
+    assert_eq!(out.report().run.ids.calls, 0);
+    assert_eq!(sink.models, 1);
+    assert_eq!(sink.placements.len(), 1);
+    assert!(sink.placements.iter().all(|(_, bytes)| bytes.is_empty()));
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_source_heavy_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_SOURCE_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(alias.world().material_filtered_wmo(), &[10]);
+    assert_eq!(alias_sink.models, sink.models);
+    assert_eq!(alias_sink.placements, sink.placements);
+
+    let mut v37_sink = Stage::default();
+    let v37 = run_all_with_dependency_heavy_material_filtered_wmo(&files, &mut v37_sink).unwrap();
+    assert_eq!(
+        v37.profile(),
+        AVAILABLE_DEPENDENCY_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(v37.world().material_filtered_wmo(), &[10]);
+    assert_eq!(v37_sink.models, sink.models);
+    assert_eq!(v37_sink.placements, sink.placements);
+
+    let mut v36_sink = Stage::default();
+    let v36 = run_all_with_material_filtered_wmo(&files, &mut v36_sink).unwrap();
+    assert_eq!(v36.profile(), AVAILABLE_MATERIAL_FILTERED_WMO_PROFILE);
+    assert_eq!(v36.world().material_filtered_wmo(), &[10]);
+    assert_eq!(v36_sink.models, sink.models);
+    assert_eq!(v36_sink.placements, sink.placements);
+
+    let mut v39_sink = Stage::default();
+    let v39 = run_all_with_read_heavy_material_filtered_wmo(&files, &mut v39_sink).unwrap();
+    assert_eq!(
+        v39.profile(),
+        AVAILABLE_READ_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v39.world().profile(),
+        AVAILABLE_READ_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v39.world().material_filtered_wmo(),
+        out.world().material_filtered_wmo()
+    );
+    assert_eq!(v39.world().root_absent(), out.world().root_absent());
+    assert_eq!(v39.world().missing_m2(), out.world().missing_m2());
+    assert_eq!(v39.world().missing_wmo(), out.world().missing_wmo());
+    assert_eq!(v39.world().empty_wmo(), out.world().empty_wmo());
+    assert_eq!(v39.world().unselected_wmo(), out.world().unselected_wmo());
+    assert_eq!(v39.report().run, out.report().run);
+    assert_eq!(v39_sink.models, sink.models);
+    assert_eq!(v39_sink.placements, sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_read_heavy_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_READ_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v39.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v39.report().run);
+    assert_eq!(alias_sink.models, v39_sink.models);
+    assert_eq!(alias_sink.placements, v39_sink.placements);
+
+    let mut v40_sink = Stage::default();
+    let v40 = run_all_with_model_heavy_material_filtered_wmo(&files, &mut v40_sink).unwrap();
+    assert_eq!(
+        v40.profile(),
+        AVAILABLE_MODEL_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v40.world().profile(),
+        AVAILABLE_MODEL_HEAVY_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v40.world().material_filtered_wmo(),
+        out.world().material_filtered_wmo()
+    );
+    assert_eq!(v40.world().root_absent(), out.world().root_absent());
+    assert_eq!(v40.world().missing_m2(), out.world().missing_m2());
+    assert_eq!(v40.world().missing_wmo(), out.world().missing_wmo());
+    assert_eq!(v40.world().empty_wmo(), out.world().empty_wmo());
+    assert_eq!(v40.world().unselected_wmo(), out.world().unselected_wmo());
+    assert_eq!(v40.report().run, out.report().run);
+    assert_eq!(v40_sink.models, sink.models);
+    assert_eq!(v40_sink.placements, sink.placements);
+
+    let mut v41_sink = Stage::default();
+    let v41 = run_all_with_source_expanded_material_filtered_wmo(&files, &mut v41_sink).unwrap();
+    assert_eq!(
+        v41.profile(),
+        AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v41.world().profile(),
+        AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v41.world().material_filtered_wmo(),
+        out.world().material_filtered_wmo()
+    );
+    assert_eq!(v41.world().root_absent(), out.world().root_absent());
+    assert_eq!(v41.world().missing_m2(), out.world().missing_m2());
+    assert_eq!(v41.world().missing_wmo(), out.world().missing_wmo());
+    assert_eq!(v41.world().empty_wmo(), out.world().empty_wmo());
+    assert_eq!(v41.world().unselected_wmo(), out.world().unselected_wmo());
+    assert_eq!(v41.report().run, out.report().run);
+    assert_eq!(v41_sink.models, sink.models);
+    assert_eq!(v41_sink.placements, sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_source_expanded_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v41.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v41.report().run);
+    assert_eq!(alias_sink.models, v41_sink.models);
+    assert_eq!(alias_sink.placements, v41_sink.placements);
+
+    let mut v42_sink = Stage::default();
+    let v42 =
+        run_all_with_model_output_expanded_material_filtered_wmo(&files, &mut v42_sink).unwrap();
+    assert_eq!(
+        v42.profile(),
+        AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v42.world().profile(),
+        AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v42.world().material_filtered_wmo(),
+        v41.world().material_filtered_wmo()
+    );
+    assert_eq!(v42.world().root_absent(), v41.world().root_absent());
+    assert_eq!(v42.world().missing_m2(), v41.world().missing_m2());
+    assert_eq!(v42.world().missing_wmo(), v41.world().missing_wmo());
+    assert_eq!(v42.world().empty_wmo(), v41.world().empty_wmo());
+    assert_eq!(v42.world().unselected_wmo(), v41.world().unselected_wmo());
+    assert_eq!(v42.report().run, v41.report().run);
+    assert_eq!(v42_sink.models, v41_sink.models);
+    assert_eq!(v42_sink.placements, v41_sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_model_output_expanded_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v42.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v42.report().run);
+    assert_eq!(alias_sink.models, v42_sink.models);
+    assert_eq!(alias_sink.placements, v42_sink.placements);
+
+    let mut v43_sink = Stage::default();
+    let v43 =
+        run_all_with_model_bytes_expanded_material_filtered_wmo(&files, &mut v43_sink).unwrap();
+    assert_eq!(
+        v43.profile(),
+        AVAILABLE_MODEL_BYTES_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v43.world().profile(),
+        AVAILABLE_MODEL_BYTES_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v43.world().material_filtered_wmo(),
+        v42.world().material_filtered_wmo()
+    );
+    assert_eq!(v43.world().root_absent(), v42.world().root_absent());
+    assert_eq!(v43.world().missing_m2(), v42.world().missing_m2());
+    assert_eq!(v43.world().missing_wmo(), v42.world().missing_wmo());
+    assert_eq!(v43.world().empty_wmo(), v42.world().empty_wmo());
+    assert_eq!(v43.world().unselected_wmo(), v42.world().unselected_wmo());
+    assert_eq!(v43.report().run, v42.report().run);
+    assert_eq!(v43_sink.models, v42_sink.models);
+    assert_eq!(v43_sink.placements, v42_sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_model_bytes_expanded_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_MODEL_BYTES_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v43.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v43.report().run);
+    assert_eq!(alias_sink.models, v43_sink.models);
+    assert_eq!(alias_sink.placements, v43_sink.placements);
+
+    let mut v44_sink = Stage::default();
+    let v44 = run_all_with_source_expanded_v2_material_filtered_wmo(&files, &mut v44_sink).unwrap();
+    assert_eq!(
+        v44.profile(),
+        AVAILABLE_SOURCE_EXPANDED_V2_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v44.world().profile(),
+        AVAILABLE_SOURCE_EXPANDED_V2_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v44.world().material_filtered_wmo(),
+        v43.world().material_filtered_wmo()
+    );
+    assert_eq!(v44.world().root_absent(), v43.world().root_absent());
+    assert_eq!(v44.world().missing_m2(), v43.world().missing_m2());
+    assert_eq!(v44.world().missing_wmo(), v43.world().missing_wmo());
+    assert_eq!(v44.world().empty_wmo(), v43.world().empty_wmo());
+    assert_eq!(v44.world().unselected_wmo(), v43.world().unselected_wmo());
+    assert_eq!(v44.report().run, v43.report().run);
+    assert_eq!(v44_sink.models, v43_sink.models);
+    assert_eq!(v44_sink.placements, v43_sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_source_expanded_v2_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_SOURCE_EXPANDED_V2_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v44.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v44.report().run);
+    assert_eq!(alias_sink.models, v44_sink.models);
+    assert_eq!(alias_sink.placements, v44_sink.placements);
+
+    let mut v45_sink = Stage::default();
+    let v45 = run_all_with_placement_expanded_material_filtered_wmo(&files, &mut v45_sink).unwrap();
+    assert_eq!(
+        v45.profile(),
+        AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v45.world().profile(),
+        AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        v45.world().material_filtered_wmo(),
+        v44.world().material_filtered_wmo()
+    );
+    assert_eq!(v45.world().root_absent(), v44.world().root_absent());
+    assert_eq!(v45.world().missing_m2(), v44.world().missing_m2());
+    assert_eq!(v45.world().missing_wmo(), v44.world().missing_wmo());
+    assert_eq!(v45.world().empty_wmo(), v44.world().empty_wmo());
+    assert_eq!(v45.world().unselected_wmo(), v44.world().unselected_wmo());
+    assert_eq!(v45.report().run, v44.report().run);
+    assert_eq!(v45_sink.models, v44_sink.models);
+    assert_eq!(v45_sink.placements, v44_sink.placements);
+
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let mut alias_sink = Stage::default();
+    let alias = extract_all_with_placement_expanded_material_filtered_wmo_70450(
+        &mut store,
+        &mut alias_sink,
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        alias.profile(),
+        AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_PROFILE
+    );
+    assert_eq!(
+        alias.world().material_filtered_wmo(),
+        v45.world().material_filtered_wmo()
+    );
+    assert_eq!(alias.report().run, v45.report().run);
+    assert_eq!(alias_sink.models, v45_sink.models);
+    assert_eq!(alias_sink.placements, v45_sink.placements);
+}
+
+#[test]
+fn previous_vacated_wmo_profile_still_rejects_intrinsic_empty_wmo() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.extend([
+        (100, None, fixture::wdt(Some(10), None)),
+        (10, None, fixture::wmo_root(30, None)),
+        (30, None, fixture::wmo_group(false, false, false)),
+    ]);
+    let fixture = CollisionFixture::for_build(&files, 70450);
+    let mut store = open(&fixture);
+    let startup = gameobjects::extract_startup_without_godi_with_resources(
+        &mut store,
+        gameobjects::Limits::default(),
+        crate::collision::resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    let error = available_70374::extract_all_with_vacated_wmo_70450(
+        startup,
+        &mut Stage::default(),
+        world::Limits::default(),
+    );
+    assert_eq!(
+        error.err(),
+        Some(available_70374::Error::Run(run::Error::Collision(
+            crate::collision::Error::NoCollision
+        )))
+    );
+}
+
+#[test]
+fn request_capacity_geometry_profile_is_distinct_without_omissions() {
+    let mut files = files_70450(&[(7, 100, -1)]);
+    files.push((100, None, fixture::wdt(None, None)));
+    let mut sink = Stage::default();
+    let out = run_all_with_model_root_absence_request_capacity(&files, &mut sink).unwrap();
+    assert_eq!(
+        out.profile(),
+        AVAILABLE_MODEL_ROOT_ABSENT_REQUEST_CAPACITY_PROFILE
+    );
+    assert_eq!(
+        out.world().profile(),
+        available_70374::PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_REQUEST_CAPACITY_GEOMETRY
+    );
+    assert!(out.world().root_absent().is_empty());
+    assert!(out.world().missing_m2().is_empty());
+    assert_eq!((out.report().run.maps, out.report().run.wdt_files), (1, 1));
+    assert_eq!((sink.models, sink.placements.len()), (0, 1));
 }

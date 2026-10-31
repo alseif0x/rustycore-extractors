@@ -6,12 +6,20 @@ use super::*;
 pub struct Limits {
     pub heap_bytes: usize,
     pub work: u64,
+    pub allow_partial_triangulation: bool,
+    pub allow_detail_center_fallback: bool,
+    pub allow_unset_detail_height: bool,
+    pub expand_detour_vertical_bounds: bool,
 }
 impl Default for Limits {
     fn default() -> Self {
         Self {
             heap_bytes: 512 * 1024 * 1024,
             work: 16_000_000_000,
+            allow_partial_triangulation: false,
+            allow_detail_center_fallback: false,
+            allow_unset_detail_height: false,
+            expand_detour_vertical_bounds: false,
         }
     }
 }
@@ -20,6 +28,9 @@ pub struct Statistics {
     pub subtiles: u16,
     pub nonempty_subtiles: u16,
     pub discarded_detail_faces: u32,
+    pub partial_triangulations: u64,
+    pub detail_center_fallbacks: u64,
+    pub unset_height_samples: u64,
     pub work: u64,
     /// Conservative maximum reservation across stages, not measured RSS.
     pub heap_reservation: usize,
@@ -58,6 +69,12 @@ fn remaining(limits: Limits, resident: usize, work: u64) -> Result<(usize, u64),
         limits.work.checked_sub(work).ok_or(Error::Limit)?,
     ))
 }
+pub(crate) fn include_detail_vertical_bounds(options: &mut detour::Options, vertices: &[[f32; 3]]) {
+    for vertex in vertices {
+        options.min[1] = options.min[1].min(vertex[1]);
+        options.max[1] = options.max[1].max(vertex[1]);
+    }
+}
 /// Processes all 625 subtiles, in original order, with complete supplied mesh and
 /// already selected connections. A failing subtile aborts the whole operation;
 /// original continue-on-failure partial tiles are never returned as success.
@@ -94,7 +111,7 @@ pub fn build(
             stage.work = stage.work.min(work);
             stats.heap_reservation = stats.heap_reservation.max(resident + stage.heap_bytes);
             let run = || -> Result<recast::TileMesh, recast::Error> {
-                Ok(recast::build(
+                let contours = recast::build(
                     mesh,
                     cfg.grid(x, y).expect("bounded loop"),
                     cfg.request.slopes,
@@ -103,10 +120,20 @@ pub fn build(
                 )?
                 .prepare(cfg.radius)?
                 .build_regions(cfg.region_options())?
-                .build_contours(cfg.contour_options())?
-                .build_mesh(6)?
-                .build_detail(cfg.detail_options())?
-                .into_tile_mesh())
+                .build_contours(cfg.contour_options())?;
+                let mesh = if limits.allow_partial_triangulation {
+                    contours.build_mesh_v53(6)?
+                } else {
+                    contours.build_mesh(6)?
+                };
+                let detail = if limits.allow_unset_detail_height {
+                    mesh.build_detail_v56(cfg.detail_options())?
+                } else if limits.allow_detail_center_fallback {
+                    mesh.build_detail_v55(cfg.detail_options())?
+                } else {
+                    mesh.build_detail(cfg.detail_options())?
+                };
+                Ok(detail.into_tile_mesh())
             };
             let piece = run().map_err(|source| Error::Subtile { index, source })?;
             resident = resident
@@ -131,8 +158,15 @@ pub fn build(
     let merged = recast::TileMesh::merge(pieces, merge).map_err(Error::Merge)?;
     stats.work = merged.processing_work();
     stats.discarded_detail_faces = merged.discarded_faces();
+    stats.partial_triangulations = merged.partial_triangulations();
+    stats.detail_center_fallbacks = merged.center_fallbacks();
+    stats.unset_height_samples = merged.unset_height_samples();
     if merged.vertices().is_empty() || merged.polygons().is_empty() {
         return Ok(Outcome::Empty(stats));
+    }
+    let mut options = options;
+    if limits.expand_detour_vertical_bounds {
+        include_detail_vertical_bounds(&mut options, merged.detail_vertices());
     }
     let (heap, work) = remaining(limits, merged.capacity_bytes(), stats.work)?;
     let mut d = detour::Limits::default();

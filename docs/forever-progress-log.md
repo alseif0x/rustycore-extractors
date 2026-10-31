@@ -7,6 +7,1399 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### 2026-10-31 — v57 all-map queries, navigation loader and reproducible v15
+
+All 69 planned maps now complete one real native Detour query with clean unload:
+66 internal-tile cases and four-tile cross-boundary cases in maps 25, 29 and 42,
+78 loaded/unloaded tiles total and no network. World report SHA-256 is
+`5ec61a01e6ee951d9035cfa6b50c5941a304f446a128c06ec7b3cce6322c15af`.
+The world-server navigation loader accepts the real v57 package in 215.13
+seconds; this is not a listener/full-bootstrap or gameplay result. Runtime
+report SHA-256 is `12db752453b8d9dbfd745066a28456e02039ccf743fb70209d7a9b748b01d6ee`.
+A separate full-bootstrap attempt exposed and corrected the Rust
+`ChrSpecialization` physical ParentLookupCount gate from zero to one, matching
+the acquired header and pinned C++ parent field. The focused regression passes;
+its file hash and correction are recorded in RustyCore's Forever operations
+guide. Temporary diagnostics were removed and the local database was stopped.
+
+Distribution v15 has two identical fresh archives and binaries and an identical
+moved offline rebuild. Archive SHA-256 is
+`4c88833ddef4f31671794cbc4d90e5d8d7a2fb7319ca06ef4c6ee83f271bb931`;
+binary SHA-256 is `ebcca9b454f3953154b8827b3172e5e39bfe37b7be6983aad3bc74cd0a3b2db4`.
+The rebuilt binary passes real v57 `inspect`, `verify` and `verify-links` in
+473.805 seconds with no network. Distribution discovery passes 171 tests with
+one skip. The final integrated closeout passes 101 suites, 4,867 tests, zero
+failures, 31 ignores and 613 contracts; log SHA-256 is
+`f3fcbb882c50523507b8d6aeb9509fd87cc5cd2b6421235d43f00cd029756bad`.
+Receipt SHA-256 is
+`a3d93f1ffed6a1ea7ea27aa3be2e17c465b807a94272d900dbc2704e1ef12a60`.
+This accepts the reproducible scoped candidate, not per-tile pathfinding, full
+server bootstrap, gameplay or full-world. `full_extractor_complete=false` and no
+publication is authorized.
+
+### 2026-10-31 — v57 available-world extraction and real worker query
+
+Run `v57-available-navigation-esES-20261031T123222Z` completed offline from
+sealed v51. `verify`, `verify-links` and an independent rehash pass for 3,137
+artifacts / 1,589,926,833 bytes, with 69 planned maps, two ROOT-absent maps and
+3,067 written tiles. Every tile passes the independent vertical-bounds audit
+with zero invalid tiles. Extraction report SHA-256 is
+`ca188d075f56157ee1281c027f14b615fe5bcab6a8b9ef1674016f1708466cfe`.
+The real RustyCore worker admits the package, resolves a two-polygon Detour
+corridor and unloads cleanly; report SHA-256 is
+`32e39189ac30225ff033f7ac1ab076bb32894abd3c5e5b7d0487fac45492ce6d`.
+The first 300-second verification-wrapper timeout and an external auditor's
+SHA-name defect were retained and corrected without changing producer or
+package bytes. An all-planned-map native query campaign is active. Actual
+server-resource admission, available-world pathfinding, gameplay and v57
+distribution remain open; `full_world_complete=false` and
+`full_extractor_complete=false`.
+
+### 2026-10-31 — real Detour queries and v57 vertical-bounds correction
+
+The real RustyCore worker now completes a map-0 ground query with Detour
+success, a two-polygon corridor and clean unload, with no network attempt. A
+separate water tile exposed a v56 limit: all 677 vertices were outside its
+zero vertical header. The map-0 audit found 270 invalid tiles among 736, so
+available-world pathfinding and gameplay remain unaccepted. The amended
+runtime report SHA-256 is
+`80222c7f93177610b51d9f4d341772767dd2bace32ccbb961bc7f77269db65e0`.
+
+V57 adds an explicit generated-detail vertical-bounds option, leaving v56 and
+its package unchanged. The corrected real tile has zero vertical outliers,
+identical vertex bytes and a successful two-polygon native water query. An
+independent audit found 1,309 invalid tiles among 3,067 in the v56 package.
+Focused helper, driver, six package and eight CLI tests pass; the CLI campaign
+finished in 370.38 seconds. Report SHA-256 is
+`1db450c2a469d29acd9919f4892d78551b86e8ecb1b55e17765c2f697b23d253`.
+The synthetic RustyCore worker suite passes 11/11 and runtime admission 2/2;
+the real v57 package is not yet admitted. Run
+`v57-available-navigation-esES-20261031T123222Z` is active offline with its own
+output directory. Final closeout exits 0: 101 suites, 4,867 passed, zero
+failures, 31 ignores and 613 contracts; log SHA-256 is
+`6e1b1dc743420d694ffb2d055cfdd1faa4c60e441151464de24e7b9dcafcfe01`.
+Full v57 extraction, real runtime integration and reproducible distribution
+remain open. See
+[v57 scope and evidence](forever-product-v57.md).
+
+### 2026-10-31 — Forever server navigation resource admission accepted
+
+`forever-world-server` now admits an explicit v56 package and PLAN into its
+`Runtime`, keeping the native worker alive without enabling gameplay. The
+synthetic PLAN-binding test and real package admission pass; the real call
+finished in 207.86 seconds. Compiling SFMT.c into its consumer's static library
+resolved the retained native-link failure. The broader suite passed 98 tests,
+with one pre-existing NaN comparison failure in `spells/tests/dependencies.rs`
+and one explicit ignore. Report SHA-256 is
+`80222c7f93177610b51d9f4d341772767dd2bace32ccbb961bc7f77269db65e0`.
+This accepts verified server-resource startup only, not gameplay or complete
+world/runtime. See [consumer evidence](forever-rustycore-navigation-consumer.md).
+
+### 2026-10-31 — all-available-map native lifecycle accepted
+
+Four nonoverlapping release shards completed all 69 planned v56 maps with one
+real native tile load and clean unload per map. Every map returned exit0 and no
+network was attempted. This accepts the available-world native resource scope;
+two ROOT-absent maps and all prior source/geometry omissions remain explicit,
+so `full_world_complete=false` and server/gameplay acceptance remain open.
+Report SHA-256 is
+`1af43203b63dc710b62fc2dfe6243c9f7b3324305ea7e22f666e8e457d254c24`.
+The initial serial attempt was stopped before results and retained; the final
+campaign used four independent shards and binary SHA-256
+`8fe3fc893a3844a94c35f4ba1ce19a1150cf4f5c0aa0c1784438530d6178f232`.
+
+### 2026-10-31 — reproducible v14 Linux distribution and packaged real CLI
+
+The v14 source profile packages the complete v56 producer/consumer closure and
+redacted evidence. Two fresh candidates have identical source, binary and
+archive bytes; the verified extracted archive also rebuilds offline to the same
+binary. Archive SHA-256 is
+`bf7b861bf3a779fd574aa7772e5a909e625760e9e07ac8a8d2da170c6dd8169a`;
+binary SHA-256 is
+`360c541c6c8d9882917475e40230b1718e23127263efd93ffa5cb0adaeac042d`.
+The packaged executable passes real v56 `inspect`, `verify` and `verify-links`
+with output identical to the original acceptance and no network attempt.
+Distribution tests pass 90/90. Final closeout exited0: 100 suites, 4,849
+passed, zero failed, 28 explicit ignores and 610 contracts; log SHA-256 is
+`575b6c09de063392ab1216c12ce75fd7f9fd96900d3949fae0dc12bb505e69d0`.
+Receipt SHA-256 is
+`489fd682b911a16e0f2b3676a8793cc355e63c056e085fd93bbf4b64aa176b1b`.
+The archive retains earlier pending-status prose. This closes the scoped
+reproducible Linux candidate gate, not server/gameplay, full-world or release
+authorization. See [distribution evidence](forever-distribution.md).
+
+### 2026-10-31 — bounded RustyCore v56 native-worker acceptance
+
+The shared v56 codec and complete-package reader now feed an explicit v56
+backend in the existing RustyCore owner/worker, preserving v23 behavior and
+checked native ingress. Public worker tests pass 10/10 and the navigation
+library passes 368 tests with 20 explicit ignores. The real worker verified
+the unchanged v56 package, loaded one map-0 tile of 102,364 bytes and unloaded
+it with zero final tiles or queries. Report SHA-256 is
+`79853abdfa0411870d24534fa46fe06aafa581da3f6af77a4d7e4f1ae19159d7`.
+This accepts only bounded native-worker lifecycle. Server activation,
+gameplay, full-world, complete runtime and reproducible distribution remain
+open. See [consumer evidence](forever-rustycore-navigation-consumer.md).
+
+### 2026-10-31 — v56 available-navigation real acceptance
+
+V56 preserves native `RC_UNSET_HEIGHT` returns and has completed the real esES
+all-available-map run from sealed v51 in 2h46m8s with exit0. `verify`,
+`verify-links` and the independent full-artifact rehash pass with no client
+reacquisition or network attempt. The package contains 3,137 files /
+1,589,926,833 bytes and covers 71 maps: 69 planned, two ROOT-absent, 3,722
+candidate tiles and 3,067 written tiles. Coverage records 21 partial
+triangulations in seven maps, four unset-height samples in one map and zero
+center fallbacks. Report SHA-256 is
+`8599ae7572cf3ce9b60e105bb0c3f82fd61429b53a0541d85d8f324d57ed229d`;
+audit SHA-256 is
+`89b6da7870314dad612430f0a60bc986d7d72e17b3b6782afd24a7ba14ec0d78`.
+
+The retained verification history includes one 300-second caller timeout after
+`verify` passed, followed by successful `verify-links` with a larger caller
+limit. Two external-auditor-only defects were corrected: reversed map-order
+comparison and hyphen/underscore state indexing. Producer and package bytes were
+not changed. Final software closeout exited0: 100 suites, 4,845 passed, zero
+failed, 28 explicit ignores and 610 contracts, with formatting, Clippy,
+diff-check and locked release passing. Log SHA-256 is
+`5741e2548c66e652864c47589e79d699e13043fa207b5b465f3293e812d87c79`.
+This is scoped available-navigation acceptance only; no accepted prefix,
+complete extractor, full-world, RustyCore runtime or reproducible Linux
+distribution is claimed. See [v56 scope and evidence](forever-product-v56.md).
+
+### 2026-10-30 — v55 retains DetailHeight; map-509 sampling diagnosed
+
+V55 implements and counts the native last-visited-node fallback for exhausted
+polygon-center walks. Focused validation and regression passed. Final software
+closeout passed 99 suites, 4,834 tests with zero failures and 27 explicit
+ignores, plus 607 contracts and the locked release build; log SHA-256 is
+`e397b4dcc632590d3ef47b6c9c6cc9902eb3d47e84cc259558dd4f71ab447841`.
+
+The real esES run again closed 39 maps with 2,320 provisional tiles before
+exiting 9 at map 509, subtile 179, `DetailHeight`, after 7,603 seconds. No final
+coverage, verifier, counter total or prefix was accepted. Report SHA-256 is
+`3c7846fcd4b0730200f8f404a5b2107734b960cd31b60beb8c8d22d04edb4f44`.
+A bounded map-509 diagnostic distinguishes the seed stage from detail sampling;
+native `getHeight` may also return `RC_UNSET_HEIGHT`. No later behavior change
+is justified until the actual stage is recorded. Full-world, runtime and
+distribution acceptance remain open. See
+[v55 scope and retained failure](forever-product-v55.md).
+
+### 2026-10-30 — v54 closes 39 maps, then reaches DetailHeight
+
+V54 raises only the model/compact vertex budget to 1,000,000 with 48 MiB mesh
+heaps. Focused validation and regression passed. Final software closeout passed
+98 suites, 4,822 tests with zero failures and 26 explicit ignores, plus 604
+contracts and the locked release build; log SHA-256 is
+`a26a24913afb140ae0eaec92f36dd6f566eb094b48ea4079ff37848e9260a888`.
+
+The real esES run crossed v53's vertex failure and closed 39 maps with 2,320
+provisional tiles, then exited 9 after 7,447 seconds at map 509, subtile 179,
+`DetailHeight`. No final coverage, verifier or prefix was accepted. Report
+SHA-256 is `fd5e735c7d4e40d32b37f35f347f335ff54cb318e70907664e2538ef9dd7acdc`.
+Native Recast warns and uses the last visited node when the polygon-center walk
+is exhausted; the existing disconnected-center fixture confirms that strict
+v54 rejects instead. A later profile may enable and count only that fallback.
+Full-world, runtime and distribution acceptance remain open. See
+[v54 scope and retained failure](forever-product-v54.md).
+
+### 2026-10-30 — v53 crosses triangulation, then identifies the vertex ceiling
+
+V53 preserves native partial triangulation, records per-map counters and closes
+legacy client-entry APIs for the sealed-source profile. Focused CLI regression,
+formatting and Clippy passed. Final software closeout passed 97 suites, 4,811
+tests with zero failures and 26 explicit ignores, plus 601 contracts and the
+locked release build; log SHA-256 is
+`410b0a1b4e62e217ea6743143270f33f473181fbcbed0588b9ec0b1941294fba`.
+
+The real esES run crossed v52's triangulation failure, then exited 9 at map 0
+with `navigation_policy_limit` / `Models(Geometry(Limit))` after 1,895 seconds.
+One global and 473 tiles remain incomplete and unaccepted. Report SHA-256 is
+`9038b1424d80594340651ac78feafde4d75275d2f3ba6b1eda13d0ab76446a70`.
+An unchanged-binary diagnostic reproduced the failure with 437,718 solid and
+66,564 liquid vertices (504,282 total), exceeding only the 500,000 vertex
+ceiling by 4,282; triangles total 278,495. Diagnostic report SHA-256 is
+`3ff709885e9e9cbc12fe43de5965c760868ab07cde6807de29141da160324294`.
+No final coverage, partial total, verifier result, full-world or runtime
+acceptance exists. See [v53 scope and retained failure](forever-product-v53.md).
+
+### 2026-10-30 — v52 retained triangulation failure and software closeout
+
+V52 introduced all-available-map MMaps from the sealed v51 package with strict
+triangulation. Its software closeout passed 96 suites, 4,799 tests, 598
+contracts, formatting, Clippy and the locked release build; log SHA-256 is
+`03d1c0767215412e33ef9888e0a888a2f60d7563102bfc8ce4cf2a7b8407c05b`.
+The real esES run then failed at map 0, subtile 24, with
+`Builder(Subtile { index: 24, source: Triangulation })` after 948 seconds. Its
+406 incomplete files were not promoted; verify and verify-links did not run.
+The retained report is
+`reports/acceptance/v52-available-navigation-esES-vertices-20261030T041000Z-acceptance.json`,
+SHA-256 `46d57717d8c1bd8979967581664fa83e0a58149303e0330afef73d421515df2c`.
+This is software qualification and a retained real failure, not extraction,
+full-world or runtime acceptance.
+
+### 2026-10-30 — v51 final scoped real acceptance and software closeout recorded
+
+Run `v51-db2-terrain-liquid-vmap-20261029T220401Z` passed with
+`target_status=accepted`, `real_gate=true`, all stage exits0 in 1,190 seconds,
+`red=false`, unchanged client metadata/inputs, no accepted prefix, and fresh
+output equal to the promoted audit. The combined mask25 package contains five
+DB2 artifacts and 15,448 files / 708,743,828 bytes overall. Terrain records
+71 available maps, 69 loaded WDTs, two unavailable WDTs, 3,322 tiles and
+71 tilelists. Complete LiquidObject source facts are 57 direct rows, 1,213
+ordered copies and 1,270 materialized rows; LiquidMaterial and LiquidType are
+also complete. Shared payload parity with v25/v50 matched. V49 GODI outcomes
+and omissions are retained without changing identities or resource limits.
+
+Report SHA-256 `058a607138d0f12bb1115f55045acbf3aeae58b9dc286b12ef61e55da4f13e1e`;
+audit SHA-256 `16e71e43c46c47928596bddbbc817ec4f46f68176d4b9fbed6e7cf3576c6f35b`;
+binary SHA-256 `3ac80914a56388d74d2d90f717c277b8a446f1142b513843d0d31af48bb3d700`.
+The external auditor authenticates both historical and candidate terrain
+coverage against their manifests before excluding context from fact comparison;
+its synthetic regression rejects altered historical coverage with the original
+manifest preserved.
+
+The first closeout failed because the package-context test listed eight masks
+and omitted25. The correction was test-only: nine masks, exact six-field wire,
+roundtrip25 and unchanged Linux/rejection checks. Production stayed unchanged,
+and the release executable remained byte-identical with the same SHA-256 before
+final closeout; no repeat real attempt was needed for that test-only change.
+Final closeout passed with exit0: 95 suites, 4,788 passed, 0 failed, 26 ignored,
+595 contracts, formatting/Clippy/release passed. Log:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/kimi/checks/closeout-20261029T223522Z-2741011.log`,
+SHA-256 `11322eae6c14fdb1df1d87e55b776103a64a9bb914e9cd9b15dadafe6d65c916`.
+Final independent Astra review passed. The earlier failure remains historical
+evidence, not the basis of final software qualification.
+
+`real_target_attempted=true` and `real_extraction_accepted=true` accept only this
+combined available-domain scope. `accepted_prefix=false`,
+`full_real_target_acceptance=false` and `full_extractor_complete=false` remain.
+No full-world, complete VMap, MMaps, RustyCore runtime, distribution or
+publication acceptance is claimed. See [v51 scope](forever-product-v51.md) and
+its [contract](../contracts/forever-product-contract-v51.json).
+
+### 2026-10-29 — v51 combined package, synthetic-only checkpoint (historical)
+
+V51 combines five DB2 sources (GODI, Map, LiquidObject, LiquidMaterial,
+LiquidType), v25 all-available terrain and v50 available geometry under the
+stable component mask 25. The previous partial implementation's 21-to-25 alias
+was removed without changing older product masks. Terrain coverage remains v3;
+geometry keeps RCVGEO1 layout 22 with distinct v51 identities. RCLIQ01 remains a
+separate 112-byte source-evidence artifact. Geometry budgets are unchanged;
+common package limits include terrain, DB2 and liquid evidence.
+
+Focused synthetic validation passed: v51 unit tests **6/6**, v51 CLI **8/8**
+(three product scenarios), v50 CLI **8/8**, v25 CLI **8/8**, v49 CLI **10/10**,
+v26 driver regression **4/4**, package context **2/2**, partial manifests **9/9**,
+and the v51 Python contract **3/3**. CLI evidence includes interrupted-component
+resume, both offline verifiers, determinism, v25/v50 shared-payload parity and
+bidirectional profile rejection, exact ten resource numbers, fatal partial
+liquid sources, redacted failure diagnostics, forbidden sealed partial
+liquid declarations and payload tampering. The combined verifier recomputes
+LiquidMaterial/LiquidType facts against geometry coverage and independently
+checks the terrain Map projection and LiquidObject evidence.
+
+`tools/checks fmt-check`, `tools/checks clippy` (workspace/all targets,
+`-D warnings`) and the offline locked release build passed. Final focused logs:
+`test-20261029T213436Z-2698741.log` (units),
+`test-20261029T213438Z-2699065.log` (v50/v51 CLI), and
+`clippy-20261029T213527Z-2700086.log`, retained under the external
+`rustycore-extractor-work/reports/kimi/checks/` directory. Earlier synthetic
+failures (locale mismatch in the parity fixture and an incorrect expectation
+that successful runs emit failure diagnostics) were corrected; their logs
+remain retained.
+
+At this historical checkpoint, no real acceptance, full extraction, closeout,
+commit or push had run for v51. No navigation, runtime, full-world completeness,
+Windows, distribution or publication claim followed. Independent final review
+and a bounded real attempt were subsequent gates; their final scoped results
+are recorded in the newer entry above, not inferred from this synthetic evidence.
+See [v51 scope](forever-product-v51.md) and its
+[contract](../contracts/forever-product-contract-v51.json).
+
+### 2026-10-29 — v50 final scoped real acceptance and software closeout
+
+The final v50 run `v50-liquid-object-complete-source-20261029T135738Z` is
+accepted only for complete LiquidObject source facts and the retained v49
+available-map geometry scope. Inspect, extract, probe, verify and verify-links
+all exited 0 in 1,088 seconds; `red=false`, `real_gate=true`, no network attempt,
+client metadata and inputs unchanged, `accepted_prefix=false`, and fresh output
+matched the promoted audit. The package records 12,052 files / 493,068,435 bytes,
+71 active maps (69 present, two ROOT-absent), and complete LiquidObject source
+facts: 57 direct rows, 1,213 ordered copies and 1,270 materialized rows, without
+partial declarations. V49's producer-reported GODI dispositions remain 20
+missing-ROOT rows and one encrypted-unavailable row (FDID 7385605); the complete
+missing-ROOT list remains in the v49 contract. No geometry or limits were added.
+
+The acceptance report is
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v50-liquid-object-complete-source-20261029T135738Z-acceptance.json`
+(SHA-256 `f368b1e715f86502c85d80675668cce3fbcf680336a752f1259990de13f38bde`);
+audit SHA-256 `9286430073704beef9a7b1c272f6dc79baf3d697b94e5fc94aced00ff822d8c6`,
+binary SHA-256 `295e780066351503f4321334cb17c3550d5979d254058367f8b9d3c6bade77d9`.
+The separate software closeout passed: 94 suites, 4,774 passed, 0 failed,
+26 ignored, 592 contracts, formatting/Clippy/release passed. Log
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/kimi/checks/closeout-20261029T143338Z-2456466.log`,
+SHA-256 `c7b3518c16fefe0f230e12e811c72c996f787f727df57b8eefc6a89d23dcc884`,
+exit 0. The final independent review was apta and source/snapshot hashes were
+verified. Earlier failed audit/closeout attempts remain distinct historical
+failures and are not substituted for this accepted run or passing closeout.
+`real_target_attempted=true` and `real_extraction_accepted=true` are scoped;
+`full_real_target_acceptance=false`, `full_extractor_complete=false`, and no
+accepted prefix, full-world coverage, complete VMap component, MMaps, RustyCore
+runtime or distribution acceptance is claimed. See [v50 scope and evidence](forever-product-v50.md)
+and the [v50 contract](../contracts/forever-product-contract-v50.json).
+
+### 2026-10-29 — v50 synthetic LiquidObject source capability (earlier checkpoint)
+
+This earlier checkpoint preceded the accepted real run and final software closeout.
+Its “not attempted” fields below describe that checkpoint only; the final status
+is recorded immediately above and in the machine-readable contract.
+
+Build-70450 v50 adds a complete physical LiquidObject source declaration and
+sealed source facts, retaining the v49 available-map geometry base and its
+geometry resource limits. The v50 CLI suite passed **8/8 harness tests** across
+three product scenarios; PLAN admission passed **4/4**, the v49 CLI regression
+passed **10/10**, and the v50 Python contract checks passed **3/3**. Coverage is
+RCVGEO1 layout 22 with a v50 identity; v49/v50 profiles remain isolated, and
+shared synthetic geometry bytes match apart from versioned coverage and the
+v50-only DB2/evidence artifacts. Source tests cover ordered direct records and
+copy replay, signed-16 bit preservation, exact reported limits, and fatal
+missing/partial/trailing-source cases. Only the source facts are added: there is
+no LiquidObject geometry or consumer output. The profile remains
+`real_target_attempted=false`, `real_extraction_accepted=false`,
+`full_real_target_acceptance=false` and `full_extractor_complete=false`.
+Focused rustfmt and global `tools/checks fmt-check` passed. Global Clippy passed
+after removing the unused `package_limits_v28` wrapper and routing v28 callers
+to the shared extra-files helper with zero extra files; the package byte/file
+limits are unchanged. The shared fixture now groups optional LiquidObject data
+in a typed struct, clearing strict Clippy without lint suppressions. Final focused
+CLI runs passed v50 **8/8** and v49 **10/10**; `tools/checks clippy` passed and
+the release build succeeded. Release executable SHA-256:
+`538c7ab0ae72c5b25688a914eb3e78c3944b4a79e5c7d54ec4c03efd374c61c9`.
+No live acceptance, real extraction or closeout is part of this synthetic checkpoint. See [v50 scope and checks](forever-product-v50.md)
+and the [v50 contract](../contracts/forever-product-contract-v50.json).
+
+### 2026-10-29 — v49 scoped real acceptance and closeout
+
+The previously synthetic-qualified Build-70450 v49 profile received its own real
+acceptance: `v49-gameobject-root-encrypted-wmo-20261029T033410Z`. Inspect, extract,
+missing-M2 probe, verify and verify-links all exited 0 in 1,112 seconds; network was
+not attempted, inputs and client metadata were unchanged, and fresh output matched
+the promoted audit. Report:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v49-gameobject-root-encrypted-wmo-20261029T033410Z-acceptance.json`,
+SHA-256 `04e63482a957c5361c3fa966d4b4efa3d296ed53b4d490bf48b9f9ea30449045`;
+audit SHA-256 `c3c9e2a81fe5048e369f5c66726cf27b73f46a8a59a1d27e61f16194844bb4a2`.
+This accepts only available-map v49 GameObject ROOT-absent/encrypted-unavailable
+material-filtered-WMO geometry. The output has 12,050 files (2 DB2, 12,048 VMap),
+493,057,703 bytes, 71 active maps (69 present and two ROOT-absent), and 73
+materialized direct rows from 81 declared. It has 1,158,879 placements (90,392,562
+bytes) and 5,801 placement-model artifacts. The sealed Map contains 10,006 available
+bytes out of 10,581 declared across two partial frames (575 bytes); its encoded key
+is authenticated but its full CKey is not verified. GODI dispositions remain
+producer-reported: 20 missing-root rows and one encrypted-unavailable row (FDID
+7385605); the missing-root IDs and output hashes are in the v49 contract. No
+accepted prefix, complete VMap, full-world, runtime, or full-extractor claim follows.
+
+The final `forever-extractor --all-targets` run records **1,310/1,310** tests over
+49 targets. The separate closeout
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/kimi/checks/closeout-20261029T035441Z-2130343.log`
+(SHA-256 `16dfdee0ec3d2fb3a15c9d1b14d018b82f000afe5246b7d3ebf770b616c8887f`)
+records 93 suites, 4,759 passed, 0 failed and 26 ignored; it started 1,892
+`forever-casc` tests and completed 589 repository contracts. That software
+qualification must not be conflated with extraction acceptance. The v49 contract
+and product page record both evidence scopes while retaining v22,
+the 4,096 ceilings, `full_real_target_acceptance=false` and
+`full_extractor_complete=false`.
+
+### 2026-10-28 — v49 synthetic integration and v47/v48 CLI regressions
+
+Build-70450 v49 adds a disjoint producer-reported `EncryptedUnavailable`
+GameObject outcome for direct GODI FDIDs found in raw ROOT but unavailable only
+because local BLTE acquisition encountered encrypted frames. This remains distinct
+from producer-reported ROOT absence. V49 retains the v48 resource ceilings,
+versions coverage as RCVGEO1 v22, bounds each sorted/unique/nonzero outcome list
+at 4,096, and requires the lists to be disjoint. Offline verification authenticates
+sealed GODI rows and enforces outcome/list consistency, canonicality and missing
+artifact/placement rejection; it does not independently re-derive raw ROOT absence
+or encrypted-frame diagnosis.
+
+Synthetic checks passed: PLAN admission **5/5**, v49 CLI **10/10**, v48 CLI **11/11**,
+v47 CLI **7/7**, and v49 contract tests **3/3**. The v49 CLI covers inspect,
+extract, verify, verify-links, resume, deterministic package bytes, bidirectional
+v47/v48 rejection, simultaneous ROOT-absent and ROOT-present encrypted-unavailable
+rows, absent model artifacts for both outcomes, and resealed crossed/noncanonical
+outcome-list attacks. The v48 regression initially exposed a missing synthetic
+fixture helper; adding the version-aware counter/list replacement restored its two
+resealed count/limit attack cases. No production v48 behavior changed. At that
+checkpoint the offline locked `forever-extractor --all-targets` suite passed
+**1,307/1,307** tests across 49 targets; this is retained as prior evidence and was
+later superseded by the 1,310-test run. No real extraction had yet been performed
+for v49 at that checkpoint. See [v49 scope and evidence](forever-product-v49.md)
+and the [v49 contract](../contracts/forever-product-contract-v49.json).
+
+### 2026-10-29 — second v48 real attempt also failed; both failures retained
+
+Build-70450 v48 remains the distinct RCVGEO1 v21 product with unchanged resource
+ceilings. Its 4,096 ceiling applies to direct nonzero GODI candidate rows and
+separately to unique missing-ROOT FDIDs in the canonical list. Repeated rows may
+share an FDID: the row counter counts every MissingRoot outcome, while the list
+deduplicates IDs. Replay rejects more than 4,096 candidate rows even when a
+resealed package lists one repeated FDID.
+
+The v48 integration adds the common-driver DB2-available startup path, authenticated
+partial GODI manifest/publication and opt-in failure diagnostics. The synthetic
+CLI target passed 11/11, including an authenticated synthetic BLTE with a TACT
+GODI section: the package publishes the partial `GameObjectDisplayInfo.db2`, then
+continues geometry extraction and publishes `GameObjectModels.dtree`; resume also
+reconstructs partial GODI and continues geometry. The DB2 startup failure now emits
+one redacted `phase=db2`, `request_kind=db2_table` diagnostic and attributes the
+CLI error to `component=db2`; the ROOT-present/missing-body case retains its
+`phase=startup`, `request_kind=gameobject_model`, FDID 60000 diagnostic and
+`component=vmaps`. The v47 CLI regression passed 7/7 after the shared fixture
+changes. PLAN admission remains 4/4. The offline locked workspace suite passed
+4,735 tests, 0 failed, and 26 ignored across 92 test targets; Clippy, release build,
+scoped formatting and repository contract tests passed. These software checks do
+not alter either real attempt.
+
+Two separate real attempts are retained, and both failed without acceptance:
+
+- `v48-gameobject-missing-root-wmo-20261028T153819Z`: extract exited 9 in `db2`
+  with `local_store_no_verified_encoding`; no source diagnostic, accepted prefix
+  or package. Report SHA-256
+  `a1f87dfc7f123c87427ce496fd32da94336f7879d0f7de86c3b98d238575e5df` at
+  `/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v48-gameobject-missing-root-wmo-20261028T153819Z-acceptance.json`.
+- `v48-gameobject-missing-root-wmo-20261028T180420Z`: extract exited 9 in `vmaps`
+  with `local_store_no_verified_encoding`; redacted startup diagnostic reports
+  FDID 7385605, ordinal 3765, `blte_encrypted_unsupported`, one encrypted
+  candidate failure and `NoLocalEncoding`. Inspect/preflight/baseline/scratch
+  passed; probe, verify and verify-links did not run; no accepted prefix or package.
+  Report SHA-256
+  `8af85a9fbfd22be59763852b2160056eb8ce2c418f6b85ce1e434ae44b6742bc` at
+  `/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v48-gameobject-missing-root-wmo-20261028T180420Z-acceptance.json`.
+
+Keep `real_target_attempted=true`, `real_extraction_accepted=false`,
+`full_real_target_acceptance=false`, and `full_extractor_complete=false` for v48.
+Neither failure is superseded by the later v49 scoped acceptance. Runtime acceptance
+and publication are not claimed. See [v48 scope and evidence](forever-product-v48.md)
+and the [v48 contract](../contracts/forever-product-contract-v48.json).
+
+### 2026-10-28 — v47 synthetic lifecycle and verifier qualification
+
+Build-70450 v47 `GameObjectExpandedV1` now passes its synthetic CLI suite (7/7),
+PLAN admission (4/4), forever-extractor library (824/824), v46 CLI regression
+(16/16), and v47 contract tests (3/3). The CLI covers extract, verify,
+verify-links, resume, deterministic package bytes, bidirectional v46/v47 package
+rejection, missing GODI VMO failure, four ordered Dtree rows (including a repeated
+FDID) with all referenced VMOs parsed, reconstructed temporary-tree/Dtree hashes,
+and independent placement accounting. Resealed v19 and each altered v47 identity are rejected by both
+verifiers; all ten pairwise omission overlaps are rejected; each of the five
+omission lists accepts 4,096 IDs and rejects 4,097 with verify and verify-links;
+ten emitted numeric resource limits are checked for exact value, type and
+presence. Verification independently derives GODI physical row order, display
+IDs and FDIDs from sealed DB2; row dispositions remain producer-reported and are
+checked only for consistency with those source rows. Dtree bounds and transformed
+raw geometry remain producer-reported. The fixture exercises four Dtree rows,
+including a repeated FDID, and publishes three unique referenced VMOs. No native
+producer behavior was changed.
+
+This checkpoint records synthetic software qualification only; its no-attempt
+status was current at that time and was superseded by a later real attempt. Run
+`v47-gameobject-expanded-wmo-20261028T032635Z` failed at extract (exit 9) with
+`file_unavailable` in `vmaps`; inspect passed, the redacted diagnostic identifies
+phase `db2` and FDID 2198569, and probe/verify/verify-links did not run. No prefix
+was accepted. The report SHA-256 is
+`d8d1f10bc62d38363d4e277c83c06b4de037d3d08111ff22b1fe50c093b6fc95`.
+Current status is `attempted-failed-unaccepted`, `real_target_attempted=true`,
+`real_extraction_accepted=false`, and `full_extractor_complete=false`. This
+establishes neither full-world/complete VMap coverage, runtime acceptance nor
+release authorization. See [v47 scope and evidence](forever-product-v47.md) and
+the [v47 contract](../contracts/forever-product-contract-v47.json).
+
+The separate software-only qualification snapshot records 91 workspace suites
+(4,712 passed, 0 failed, 26 ignored), 824/824 forever-extractor library tests,
+7/7 v47 CLI, 4/4 PLAN admission, 43/43 CASC available, 81/81 compatible_vmaps
+replay, and 582/582 repository contracts; formatting, Clippy, diff-check, Windows
+GNU and release build passed. The release executable and reported inspect result,
+plus each gate-log SHA-256, are recorded in the v47 contract. This is evidence
+received for the record, not an independent re-read of the external binary or logs.
+Inspect checked ten numeric limits and the v47 resource/source/coverage/scope
+identities; checking those values did not modify any identity or limit. That
+software-only snapshot predates the failed real attempt described above; its
+`target-not-run` and `real_target_attempted=false` fields describe only its own
+historical point in time, not v47's current status.
+
+### 2026-10-27 — v46 scoped real acceptance and separate software qualification
+
+Build-70450 v46 is the separately versioned `AssemblyExpandedV1` material-filtered
+WMO geometry profile, with RCVGEO1 v19 and a configured 256 MiB assembled-domain
+limit. The software-only release qualification remains separately recorded:
+97 workspace suites (4,689 passed, 0 failed, 26 ignored), forever-extractor
+library 811/811, v46 CLI 16/16, PLAN admission 4/4, CASC resource identity 1/1,
+and 579 repository contracts. Formatting, Clippy, diff-check, Windows GNU, and
+release-build checks passed. Its release executable SHA-256 is
+`54fb39d2452dde9fd2637e731fa8df2c794bebb477ae34e1d2c392e4bd1c17dc`; its offline
+inspect checked the v46 status, limits, resource/source/coverage identities, and
+reported `full_extractor_complete=false`. Retained logs are under
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v46-software-20261027T140834Z`;
+per-gate hashes are in the
+[`v46 contract`](../contracts/forever-product-contract-v46.json).
+
+The later real run `v46-assembly-expanded-wmo-20261027T180034Z` passed in 1,107
+seconds: inspect, extract, missing-M2 probe, verify, and verify-links all exited 0.
+It is accepted only for available assembly-expanded material-filtered-WMO
+geometry (`target_status=accepted`, `real_target_attempted=true`,
+`real_extraction_accepted=true`). The fresh extraction matches the promoted audit;
+network was not attempted and client metadata/inputs were unchanged. No prefix was
+accepted, and `full_extractor_complete=false`. Four earlier verification, service-timeout,
+audit-gate, and missing-`resource_profile` reports remain retained as failed,
+unaccepted attempts; the verifier correction was checked against the retained
+package, while this acceptance comes from the fresh run. Their report hashes are
+listed in the structured contract. The package has 11,237 files /
+473,186,807 bytes; 71 active maps (69 present, two root-absent), 1,158,879
+placements / 90,392,562 bytes, and 4,990 model artifacts. Exact omissions and
+report/audit/source/software/binary and inventory/manifest/coverage/plan hashes
+are retained in the structured contract.
+
+This run does not test the real 256 MiB assembled-domain boundary or establish
+source/model/placement/domain capacity sufficiency. GODI/global GameObjects,
+LiquidObject, full-world coverage, complete VMap component, MMaps, RustyCore
+runtime, distribution and release publication remain open/false; the v45 failure
+cause remains unconfirmed. See [v46 scope and evidence](forever-product-v46.md).
+
+### 2026-10-27 — v44 synthetic integration and real failure; v45 synthetic integration and real attempt failed without acceptance
+
+V44 defines Linux build-70450 `SourceExpandedV2` material-filtered-WMO geometry
+under `forever-product-v44`. Only `max_source_bytes` is proposed to increase from
+1073741824 to 2147483648; models=65536, model-output/staging=536870912,
+reads=1000000, requests/dependency requests=16000000/16000000, raw=268435456,
+and other limits stay unchanged. RCVGEO1 v17 keeps the v16 field layout and five
+ordered, pairwise-disjoint omission lists capped at 4096. The canonical synthetic
+v44 PLAN fixture `tests/contracts/fixtures/forever-product-v44/all.tsv` is used
+by PLAN admission; separately, the CLI derives its temporary v44 PLAN in memory
+from the v43 fixture. The integrated synthetic suites passed: v43 CLI **13/13**, v44 CLI **15/15**,
+PLAN admission **5/5**, and the complete forever-extractor library **794/794**;
+Clippy also passed for all forever-extractor targets.
+The CLI covers lifecycle/resume/determinism, both v43↔v44 package crossing
+directions, resealed version/profile attacks, all ten omission overlaps, each
+list's 4096/4097 boundary with both verifiers, and reduced-plan resource metadata.
+Coverage v17's no-omission golden is 1,022 bytes, SHA-256
+`6ca62a384a97721adfaba63477df1b95921832d72571bbdc9298ccadbc60b418`. Normalizing
+to v16 matches the static v16 golden (1,033 bytes, SHA-256
+`3b05c44c5226eee5c163e3af878f32c61e0eb49fb5aa069b75b3e480def70e8a`); both
+empty and populated omission samples also match dynamically encoded equivalent
+v16 bytes after version and profile identities are substituted.
+
+A real v44 attempt `v44-source-expanded-v2-wmo-20261027T092051Z` failed after
+426 seconds. Report:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v44-source-expanded-v2-wmo-20261027T092051Z-acceptance.json`, SHA-256
+`2a29530f77a5f6f72415288f6c6c266d8697fc424d95b6e0c7db8e7891a1966d`; software
+SHA-256 `312a01d66144e8fbb6ab76b54871c2eb030bd67c43ba9c2762d47b30a865c3ad`, and
+binary SHA-256 `622b3c88d9c24c30109a90a8f3e09d7f1bfb9fb689ea6e5b0f9ddb74442b65e3`.
+The qualified software evidence is 88 suites, 4634 passed, 0 failed, 26 ignored,
+and 569 contracts. Inspect exited 0; extract exited 9 with
+`product_selected_geometry_limit`; probe, verify, and verify-links did not run
+(exit -1). Network was not attempted, and inputs and client metadata were
+unchanged. No accepted prefix, audit artifact digest (`audit_sha256`), or geometry
+was produced; source diagnostic and final counters are unavailable. The cause is
+unconfirmed. The effective staged-placement cap is 128 MiB versus the existing
+256 MiB PLAN budget; this is a candidate to investigate, not a confirmed cause.
+
+V45 `PlacementExpandedV1` has a synthetic CLI integration and PLAN admission. It
+raises staged placements to the existing 256 MiB PLAN cap, retains 64 MiB per map
+and the other SourceExpandedV2 limits, versions coverage v18, and treats total
+placements, per-map placements, and placement domain as independent optional
+diagnostics. The canonical synthetic PLAN fixture
+`tests/contracts/fixtures/forever-product-v45/all.tsv` is used by PLAN admission;
+the CLI independently derives its temporary PLAN in memory from the v44 fixture.
+The synthetic results are CLI binary **16/16 Rust tests** (covering six CLI
+scenarios plus JSON/oracle validation), forever-extractor library **803/803**, and
+repository contract suite **574/574**. CLI coverage includes
+inspect/extract/resume/verify/verify-links, determinism, both v44↔v45 crossing
+directions, resealed version/profile attacks, ten omission overlaps, 4096/4097
+list boundaries with both verifiers, and reduced-plan metadata.
+
+A real v45 attempt `v45-placement-expanded-wmo-20261027T120702Z` ran for 441
+seconds. Report:
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v45-placement-expanded-wmo-20261027T120702Z-acceptance.json`, SHA-256
+`482bca44af93d72cba8ea3b7a8f28b048fe63592296563070e98469b907c4f08`; software
+SHA-256 `1a28e98bdf582f1f3bab5a18d16390e4ae5c5ab50e9a1057d05bf5541afe63d7`, source
+SHA-256 `8e126c04ec1716e9fd15d0236416fda00d168173c18b4cb2e66085e718b74c68`, and
+binary SHA-256 `aec16378970121c8d521cf4e58671e9bcd4cf4fc0ae9b6136401b02f2ab9f690`.
+The qualified software record is 96 suites, 4663 passed, 0 failed, 26 ignored,
+and 574 contracts; fmt, Clippy, diff, release, and Windows GNU checks passed.
+Inspect exited 0; extract exited 9 with `product_selected_geometry_limit` in
+`vmaps`; probe, verify, and verify-links did not run (exit -1). Network was not
+attempted; inputs and client metadata were unchanged. No prefix was accepted and
+`audit_sha256` is null. The incomplete package contained 125548426 bytes and had
+published geometry. The error
+is generic and does not confirm the cause. `MAX_ASSEMBLED_DOMAIN_BYTES` is 128 MiB
+versus a 256 MiB PLAN map limit; this is only a candidate for a separately
+versioned follow-up, not a diagnosis or a retrospective v45 limit change. V45
+acceptance remains **target-not-run**; `real_target_attempted=true`,
+`real_extraction_accepted=false`, and `full_extractor_complete=false`. No real
+256 MiB placement-boundary or capacity-sufficiency claim is made. GODI/global
+GameObjects, LiquidObject, full-world geometry, MMaps, RustyCore runtime and
+distribution remain open.
+
+The earlier draft result of 11 passed and 5 failed was an incomplete integration
+checkpoint: inspect then lacked resource limits, synthetic extracts returned
+`unsupported_client`, and verifier match arms were unfinished. It is **superseded**
+by the passing synthetic integration counts above, not evidence of product
+acceptance. The v44 attempt remains separately failed and unaccepted; no real 2 GiB
+boundary or successful v44 extraction acceptance is claimed.
+
+Historical v43 evidence is kept separate: report SHA-256
+`69c44bfae09f60200640758c741d2f0607dd893fa5bbede96fae3bfed96e1a81`; the bounded
+offline probe observed 314478 decoded bytes against 311233 remaining, an excess
+of 3245 bytes without independently declared catalogue length. This establishes
+neither that v44's 2 GiB cap suffices nor any WMO admission. See [product v44](forever-product-v44.md)
+and its [machine-readable contract](../contracts/forever-product-contract-v44.json).
+
+### 2026-10-27 — v43 synthetic integration passed; real attempt failed; v44 design-only
+
+The v43 ModelBytesExpandedV1 product integration is present in the concurrent
+extractor and verifier changes. Synthetic validation run against this integrated
+tree passed: v43 CLI **13/13**, v42 CLI regression **12/12**, forever-extractor
+library **788/788**, v43 PLAN admission **5/5**, and Python v43 contract tests
+**6/6**. The CLI exercises inspect/extract/resume/verify/verify-links, deterministic
+package outputs, two-way v42↔v43 rejection, resealed coverage identity attacks,
+all ten omission overlaps, each of five omission lists at 4096/4097 with both
+verifiers, and reduced-plan metadata. This is synthetic evidence only. The RCVGEO1
+v16 golden is 1,033 bytes with SHA-256
+`3b05c44c5226eee5c163e3af878f32c61e0eb49fb5aa069b75b3e480def70e8a`; normalizing
+the version and v43 profile identities to v15 produces byte-for-byte identical v15
+encoding. This is synthetic codec evidence, not real-target acceptance.
+
+The v43 PLAN admission suite contains four functional tests plus a separate
+canonical-fixture check, hence 5 passing tests. Keep this count distinct from the
+six Python contract tests. The v43 PLAN fixture
+`tests/contracts/fixtures/forever-product-v43/all.tsv` is used by PLAN admission;
+the CLI independently derives its test PLAN by transforming the v42 fixture in a
+private temporary directory. Both inputs are synthetic and contain no client data.
+
+A real Linux build-70450 v43 attempt, run
+`v43-model-bytes-expanded-wmo-20261027T070025Z`, failed after 220 seconds:
+inspect=0; extract=9 with `local_store_policy_limit` in `vmaps`; probe, verify and
+verify-links=-1. No network was attempted, inputs and client metadata were
+unchanged, and there was no accepted prefix, audit, or geometry. The acceptance
+report at
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v43-model-bytes-expanded-wmo-20261027T070025Z-acceptance.json`
+has SHA-256
+`69c44bfae09f60200640758c741d2f0607dd893fa5bbede96fae3bfed96e1a81`. Local
+`software.json` and the report's `software_sha256`/`software_json_sha256` both
+record SHA-256
+`be1ea515cbe30f3989ceeefcac56378385dd3cd24a0ec37fbd7cfb59e71eeac6`; it is not
+the prior v42 software hash `4cb7b734d0f92a1a99566f959a5f44ad6ac8ce8ef71fdd73eb0cbb7de09a9c54`.
+The diagnostic is `diagnostic.jsonl`, SHA-256
+`cc44adc0b1d2648ecb8fac9d9d9d5fa4485a61d292c8ee5722775a6a518ad0d7`, not
+`diagnostic.json` and not the software JSON hash.
+
+The diagnostic identifies phase `models`, request `wmo_group`, FDID 248722,
+ordinal 1034, typed cause `Limit`, and false guards. Source bytes at failure were
+1073430591 of the configured 1073741824, leaving 311233. Other counters:
+raw=174255498, models=7432, reads=16805, requests=638555,
+dependency_requests=52704, resident=520358907, external=294467663,
+external_source=11866356, store_resident=306605630, memory_limit=1073741824;
+tolerated absences were 2 WDT and 10 child. These are failure counters only; no
+omission lists, WMO admission, or completeness inference follows.
+
+The bounded offline source-limit probe's redacted report
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/v43-source-limit-probe-20261027T070617Z/report.redacted.json`
+has SHA-256
+`aad35ce11039b604a01e2d8a1bc4b220147c6dd735d06ee70d07506d882f586d`; the original
+probe output SHA-256 is
+`7585ab52cdc9151f402ac97c8ccb9438e0148c9bbf8e0f175ed8cf707466e25b`. For the
+same build/FDID/ordinal, strict read failed with `local_store_policy_limit`, while
+an authenticated complete diagnostic read and group parse succeeded. Decoded
+source bytes were 314478 versus 311233 remaining, a 3245-byte excess and
+hypothetical total 1073745069. LocalStore exposes no independent catalogue-declared
+length, so the excess uses decoded length only. The parsed group had MOGP payload
+314458 bytes, 2 outer chunks, 12 group chunks, 6777 triangles, 20331 indices,
+5863 vertices, 12 batches and no liquid. This bounded single-file probe is not
+extraction acceptance or proof that a higher cap suffices.
+
+The proposed v44 follow-up is design-only: a separately versioned
+`SourceExpandedV2`, raising only `max_source_bytes` from 1 GiB to 2 GiB; preserve
+all other acquisition and model-output limits, plan coverage layout v17, and keep
+the disk-world profile explicit. V44 has not been implemented or run. Source
+capacity sufficiency, model-output sufficiency, WMO 462695 admission, full-world
+coverage and runtime acceptance remain unproven. See [product v43](forever-product-v43.md)
+and its [machine-readable contract](../contracts/forever-product-contract-v43.json).
+
+The requested `ModelBytesExpandedV1` limits raise `MAX_STAGED_MODEL_BYTES` from
+402653184 (384 MiB) to 536870912 (512 MiB), and separately raise PLAN
+`collision-vmo-bytes` from 268435456 (256 MiB) to 536870912 (512 MiB). The
+configured effective budget is `min(536870912, 536870912) = 536870912` (512 MiB).
+Preserve source=1073741824, models=65536, reads=1000000, requests/dependency
+requests=16000000/16000000, raw=268435456, memory, and all other limits. RCVGEO1
+v16 retains the v15 field sequence and five ordered, disjoint omission lists
+bounded to 4096. These configured ceilings are not proven sufficient in real use.
+
+The v42 predecessor failed with `product_selected_geometry_model_bytes_limit`;
+report SHA-256 is
+`347548262472d679b08efa89b4a988dfa3e05c9cb5307ff4586fe5af24ccc651`. Final
+source/model/read counters remain unknown. The error establishes only that the
+failing model passed v42's configured model-count check (maximum 65536) before
+the byte-budget check; it does not establish a final model count or that more than
+4096 models were present. V42 PLAN and staging limits were separately 256 MiB
+and 384 MiB, yielding an effective 256 MiB budget. No acceptance, source/model
+sufficiency, WMO admission, full-world, or runtime claim transfers to v43.
+
+### 2026-10-27 — v42 ModelOutputExpandedV1 synthetic integration and failed real attempt; v43 proposed
+
+V42 has a **partial synthetic implementation** for Linux build 70450; its real
+target was attempted and **failed** at the converted model-output byte limit.
+PLAN, extract, resume, verify and verify-links are integrated. The canonical synthetic PLAN fixture is
+`tests/contracts/fixtures/forever-product-v42/all.tsv`, used by PLAN admission
+and CLI tests; it contains no client data and is not real extraction evidence.
+Reported results are v42 CLI **12/12**, v41 CLI regression **11/11**,
+forever-extractor library **782/782**, PLAN **6/6**, current contract **6/6**,
+and auditor **50 cases / 142 reports**. These synthetic/coordinator-reported
+results are separate from the real v42 attempt below. The documentation update
+itself reruns only the v42 contract tests, JSON parse, report hash and diff checks.
+
+The profile keeps SourceExpanded acquisition limits: source=1073741824 bytes,
+models=65536, reads=1000000, requests/dependency requests=16000000/16000000,
+raw=268435456. The plan collision-vmo-bytes budget is 268435456; staging allows
+up to 402653184 converted model-output bytes. Model-output identity capacity is configured coherently at
+65536; separate WDT/cache entries, callbacks, memory, storage, parser, geometry
+and other limits remain unchanged. No nominal 65536 identity boundary has been
+established. RCVGEO1 v15 preserves the v14 field layout and five pairwise-disjoint
+omission lists bounded to 4096. The exact v15 golden SHA-256 is
+`433d78046326fdc9a2c40eee6b55c139e86ea844695bda1201546fadbba01b41`.
+
+Distinct count and converted-output-byte codes are integrated:
+`product_selected_geometry_model_count_limit` and
+`product_selected_geometry_model_bytes_limit`. Count/byte diagnostics are direct
+Sink unit tests in `collision_geometry_v22/tests.rs`, not CLI diagnostic tests.
+The sink performs default VMO conversion before checking the accumulated converted
+model-output byte budget; the byte-limit diagnostic is validated after conversion.
+A direct `stage_model` test accepts 4097 identities in v42 and rejects 4097 in
+v41. This is not a CLI extraction or 4097-artifact package test. The auditor
+passed 50 cases / 142 reports. Real inspect compatibility passed with six
+inspect mutations: missing and wrong values for each of `source_bytes_max`,
+`models_max` and `reads_max`; this covers inspect only. `model_output_inventory_max`
+is independent metadata and is not required in stdout. These checks do not establish extraction
+acceptance, real capacity sufficiency, or the nominal 65536 boundary. Coverage
+omission-list 4096/4097 tests remain separate from model-output staging limits.
+
+Real run `v42-model-output-expanded-wmo-20261027T044414Z` failed after 169 seconds:
+inspect=0; extract=9 with `product_selected_geometry_model_bytes_limit`;
+probe/verify/verify-links=-1. Network was false, inputs and client metadata were
+unchanged, `accepted_prefix=false`, audit/geometry were null, and no diagnostic
+or final CASC counters exist. Source/model/read counts at failure remain unknown.
+The byte-limit code establishes that the failing model passed v42's configured
+model-count check (maximum 65536) before the converted-byte budget check. It does
+not establish the total model count or that more than 4096 models were present.
+
+PLAN `collision-vmo-bytes` was capped at 268435456 (256 MiB), while
+`MAX_STAGED_MODEL_BYTES` was 402653184 (384 MiB). The effective model-output byte
+budget is the minimum of those separate limits:
+`min(268435456, 402653184) = 268435456` (256 MiB). This is the effective budget,
+not the staging ceiling; there is no evidence that the 384 MiB staging ceiling
+was reached.
+
+Report
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v42-model-output-expanded-wmo-20261027T044414Z-acceptance.json`
+SHA-256 `347548262472d679b08efa89b4a988dfa3e05c9cb5307ff4586fe5af24ccc651`;
+software SHA-256 `4cb7b734d0f92a1a99566f959a5f44ad6ac8ce8ef71fdd73eb0cbb7de09a9c54`;
+binary SHA-256 `c5eebbeec9e2e4fbd556c0b35f8cead8389465dc1f558047e8b29078a8ff8f7e`.
+Software qualification recorded 86 suites, 4589 passed, 26 ignored and 558
+contracts. No extraction prefix was accepted; no sufficiency, WMO 462695
+admission, full-world coverage or runtime acceptance follows from this failed run.
+
+Prior real run `v41-source-expanded-wmo-20261027T020021Z` failed with inspect=0,
+extract=9, generic `product_selected_geometry_limit`, and probes/verifiers=-1.
+Its report SHA-256 is
+`d3c2bef14736c0d7523ccf3e7469a2db9c18b92665283a2b9db9e93d753cad72`. The report
+has no diagnostic or final CASC counters, so source/model/read values and the
+count-versus-byte cause are unknown. The driver guard
+`self.models.len() >= 4096` is a possible inventory blocker only; its activation
+in the run is unproven. No v41 acceptance or capacity sufficiency transfers to
+v42. V42 source sufficiency, WMO 462695 admission, full-world coverage and
+runtime acceptance remain unproven. See [product v42](forever-product-v42.md)
+and its [machine-readable contract](../contracts/forever-product-contract-v42.json).
+
+### 2026-10-27 — v41 real extraction failed; v42 ModelOutputExpandedV1 proposal at that time
+
+V41 uses the canonical synthetic PLAN fixture
+`tests/contracts/fixtures/forever-product-v41/all.tsv`, shared by plan-admission
+and CLI tests. It contains no client data and is not real extraction evidence. The
+v41 profile raises only `max_source_bytes` versus v40: 536870912 to 1073741824;
+models remain 65536, reads 1000000, requests/dependency requests 16M/16M, raw
+bytes 268435456 and other profile limits remain unchanged. RCVGEO1 v14 retains
+the v13 field layout and five pairwise-disjoint omission lists bounded to 4096.
+
+Synthetic evidence remains: CLI **11/11** including resume plus verify and
+verify-links, plan admission **7/7**, codec v14 **2/2**, forever-extractor library
+**766/766**, and contract tests **5/5**. These synthetic passes do not imply real
+acceptance or a real 1 GiB boundary.
+
+Real run `v41-source-expanded-wmo-20261027T020021Z` **failed** after 115 seconds:
+inspect exit 0; extract exit 9 in `vmaps` with `product_selected_geometry_limit`;
+probe, verify and verify-links exit -1. `accepted_prefix=false`; network was not
+attempted; inputs and client metadata were unchanged; audit and geometry are null.
+The external report
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v41-source-expanded-wmo-20261027T020021Z-acceptance.json`
+has SHA-256 `d3c2bef14736c0d7523ccf3e7469a2db9c18b92665283a2b9db9e93d753cad72`.
+Software SHA-256 is `4ca63bee25f512c13452d129b5bb3fa209170380d98a186c7793b1b43e42497d`;
+reported binary SHA-256 is `18219365db26c56466deaa0257687228475bf7ebc25fd7377a345a464d2700d9`.
+Qualification recorded 85 suites, 4558 passed, 26 ignored and 552 contracts.
+`diagnostic.jsonl` is absent and the report has no final CASC counters; no source,
+model or read count at failure is known.
+
+Driver review found `collision_geometry_v22.rs:2555` guards the model output
+inventory at `self.models.len() >= 4096`, below the profile's `models_max=65536`.
+This is a potential direct inventory blocker, but the generic error and missing
+diagnostic do not prove it triggered in this run or whether count or bytes caused
+the failure.
+
+At the time of this v41 failure checkpoint, follow-up v42 `ModelOutputExpandedV1`
+was **design-only; target-not-run**. That historical proposal was later integrated
+synthetically; current validation results and remaining real-target boundaries
+are recorded in the current v42 checkpoint above. V42 does not select
+DiskWorldV1 or establish sufficiency, WMO 462695 admission, full-world coverage
+or runtime acceptance.
+See [product v41](forever-product-v41.md) and
+[its contract](../contracts/forever-product-contract-v41.json).
+
+### 2026-10-27 — v40 ModelHeavyV1 real extraction failed; v41 proposed
+
+Earlier synthetic v40 evidence remains: CLI 12/12, library tests 757/757, and a
+synthetic CLI-plus-auditor pass covering 46 cases / 125 reports. The synthetic
+esES PLAN fixture contains no client data. Those results do not override the
+subsequent failed real extraction. The configured `geometry_limits` values are
+ModelHeavy 65,536 and ReadHeavy 4,096, not a structural 65,536/65,537 boundary;
+WDT/cache inventory and callbacks remain 4,096, and the reduced placement test
+was exact/excess 4,100/4,101.
+
+Real run `v40-model-heavy-wmo-20261027T000044Z` failed after 72 seconds:
+inspect exited 0; extract exited 9 with `local_store_policy_limit`; probe, verify
+and verify-links did not run (exit -1). Network was false, inputs and client were
+unchanged, `accepted_prefix=false`, and audit/geometry are null. External report
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v40-model-heavy-wmo-20261027T000044Z-acceptance.json`
+has SHA-256 `f1851ba06cf85679f4f83d5c080352c81dff533c655843f78232f2b67b3cc0c9`.
+The diagnostic SHA-256 is
+`bcebb01353a9908a19fe2e9c94c4ee8482609fb438cccbc63f5ec08dbecba10b`; software
+and binary SHA-256 are `f7776c05e70428a3a0477ee5d84f11ab836b0f66f0f4da163f143dfe27fe5bac`
+and `ba3f30864d4066c3f7963fa38463452bb65511169df27c5df2ae951e867e80b6`.
+Software validation was 84 suites, 4,534 passed, 26 ignored and 547 contracts.
+
+The diagnostic reports a typed Limit in phase `models`, stage `wmo_group`,
+FDID 7957271, ordinal 174, guards false: source=536853486 / 536870912 with
+17,426 remaining; raw=80938708; models=4450; reads=7885 / 1000000;
+requests=150556; dependency requests=30466; resident=391147989;
+external=280577537; external source=11840280; store=306605630; memory limit
+1073741824; tolerated WDT/child 2/2. This identifies the source-byte limit as
+failure frontier, not the model/read limit.
+
+The bounded probe report at
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/v40-source-limit-probe-20261027T000438Z/report.redacted.json`
+has SHA-256 `93cbe5e506bd21d0f8799001b148c83168001fb718ce5e676ce1f1a5b9d29051`; original
+evidence SHA-256 `9c68fc294b28bc0628b7ca7baf85e7b8ec6abfac1f109a66ad9155bd4b184784`.
+It records decoded=22224, excess=4798, successful parse, 313 triangles, 939
+indices, 502 vertices, 13 batches, 2 outer chunks, 14 group chunks and no liquid.
+This supports the source-byte frontier rather than parser failure, memory
+exhaustion, model-capacity exhaustion or read-cap exhaustion; it does not prove
+WMO admission. No target omission lists were observed, and no full-world or
+runtime acceptance is established.
+
+Follow-up v41 `SourceExpandedV1` is **design-only; target-not-run**: raise only
+`max_source_bytes` from 536870912 to 1073741824; preserve models=65536,
+reads=1000000, requests/dependency requests=16M/16M, raw=268435456 and all other
+limits; planned coverage layout v14. This does not imply DiskWorldV1 or capacity
+sufficiency. See [product v40](forever-product-v40.md) and
+[machine-readable contract](../contracts/forever-product-contract-v40.json).
+
+### 2026-10-26 — v39 ReadHeavyV1 real extraction failed at model limit
+
+V39 defines a separate build-70450 Linux product with ReadHeavyV1 and RCVGEO1
+v12; versus v38 SourceHeavyV1 it raises only `max_reads` to 1,000,000 while
+retaining requests/dependency requests at 16M/16M, source at 536870912 bytes,
+raw at 268435456 bytes, other limits and all five disjoint WMO predicates.
+
+Real run `v39-read-heavy-wmo-20261026T181306Z` **failed** after 64 seconds:
+inspect exited 0; extract exited 9 with `collision_policy_limit`, cause
+`max_models`; probe, verify and verify-links did not run (exit -1). Network was
+false, client metadata and inputs were unchanged, `accepted_prefix=false`, and
+audit/geometry are null. The report is external to this checkout at
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v39-read-heavy-wmo-20261026T181306Z-acceptance.json`
+(SHA-256 `443644827f14008e4b04ae9bcea53b965114d92614010c38f6a767e4be99e128`);
+it is not copied into the repository. Local diagnostic
+`/home/joe/.local/share/rustycore-extractor-work/runs/candidate/v39-read-heavy-wmo-20261026T181306Z/diagnostic.jsonl`,
+SHA-256 `03819305bb2c919d5b36287cc81158e80ba560c1689ffafadb4a2aec361bd701`.
+Software and binary SHA-256 are `aa2fa1e905b27c0c8766f28d275d84d178b8f6e228473592a7b3f2af80ee8c53`
+and `86cdfd8bee9a29e377e68bc407459313ef338246253508e10a3096010b046992`.
+
+At failure, counters were request_calls=128773, reads=7218 (<1M),
+dependency_requests=29131, source_bytes=507339175 (<536870912),
+raw_bytes=77203828, models=4096 (exact cap), resident=376113281,
+external=279511403, external_source=11870712, store=306605630,
+memory_limit=1073741824, tolerated WDT/child=2/2, guards=false. The model cap
+was the frontier for this run only. Model identity limits span collector/startup,
+spool identity records, placements, model staging and package inventory; the
+WDT/cache inventory entry and per-map/tile callback limits use separate units.
+Raising only the collector model cap is not presumed sufficient. Software
+validation was 83 suites, 4504 passed, 26 ignored and 542 contracts.
+
+No target omission lists were observed; WMO 462695 admission, capacity
+sufficiency, full-world coverage and runtime remain unproven. A v40
+`ModelHeavyV1` with coherent 65536 model-identity caps and coverage v13 is a
+design-only follow-up, **target-not-run**. WDT/cache inventory remains 4096 entries
+and stage callbacks remain 4096 per map/tile, distinct from model identities;
+preserve ReadHeavy request/read/source/raw, memory, storage and other limits, and
+do not imply DiskWorld or sufficiency. No v40 is implemented. Synthetic validations
+remain contract 5/5, CLI 16/16,
+plan 6/6, codec 2/2 and collision_geometry_v22 38/38 after the v38 oracle fix.
+See [product v39](forever-product-v39.md).
+
+### 2026-10-26 — v37 dependency-heavy material-filtered WMO real run failed
+
+Product v37 is a distinct build-70450 Linux profile bound to
+`DependencyHeavyV1`, RCVGEO1 v10, five disjoint producer-reported omission lists,
+and the synthetic esES plan fixture. Its resource policy retains
+`max_requests=16000000` and sets `max_dependency_requests=16000000` in the
+collector and startup limits; compared with RequestHeavyV1, only the dependency
+request ceiling changes. DiskWorldV1 remains opt-in and is not implied.
+
+The real run `v37-dependency-heavy-wmo-20261026T120824Z` **failed**: inspect
+exited 0; extract exited 9 with `local_store_policy_limit`; probe and verify did
+not run (exit -1); elapsed time was 25 seconds. Network access was false; client
+and input were unchanged; `accepted_prefix=false`, with audit and geometry null.
+The report is
+`reports/acceptance/v37-dependency-heavy-wmo-20261026T120824Z-acceptance.json`,
+SHA-256 `e86bf2370e84897b74b6df7ac3c6fb42fa508fccd67d763b6c72181804a1e552`.
+
+Its diagnostic records `stage=models`, `resource=wmo_group`,
+`file_data_id=7964744`, `ordinal=7029`, `result=typed Limit`,
+`guards_triggered=false`, `tolerated_wdt=2` and `tolerated_child=1`. Follow-up
+report `reports/acceptance/v37-source-limit-diagnostic-20261026T130445Z-evidence.json`
+(SHA-256 `a5ae7cf86a3613359bdf67c956377b26d5b0367a1707397e032cb2b4600c55a5`)
+confirms `max_source_bytes` for this failure. Instrumentation in
+`driver/disk/compatible.rs` emits cause and snapshot together on one line without
+duplicate diagnostic lines; it records `source_bytes=268259239`, cap
+`268435456`, remaining `176217`, declared `407338`, excess `231121`,
+`resident_bytes=341795444`, `store_bytes=306605630`, `memory_limit_bytes=1073741824`,
+`request_calls=32842`, `reads=3878`, `dependency_requests=11286` and `models=2362`.
+The isolated group parsed correctly (prior report SHA-256
+`74058259c6aeba9b72594a37ad39449569800246bb974ceca2537d2a4a9ed838`), ruling out
+memory exhaustion and parser failure for this failure only. WMO 462695 admission
+remains unproven.
+
+The follow-up design is `SourceHeavyV1`: raise only `max_source_bytes` to
+`536870912`, retain `max_requests=16000000` and
+`max_dependency_requests=16000000`, and leave all other limits unchanged from
+v37 `DependencyHeavyV1`. Coverage layout v11 is `target-not-run`; this design
+proves neither total extraction sufficiency nor admission of WMO 462695.
+
+Associated software qualification: 81 suites, 4,444 passed, 26 ignored and 525
+contracts. Binary SHA-256
+`de894778f770fbb091331677dcb8d5592a5f5882091cac5e4bcd20d40e5881b0`, source
+SHA-256 `06a58e70b99225dfb80bfa840432709705b27941799f8f9442730f108bcc4bc7`, and
+software SHA-256 `44ddc1ecc3847cd591673b26254cb1cbbd7edfadd3f77ccb106f30852ff7c4cc`.
+The intended lists remain a target only, not observed or accepted output. Earlier
+v36 failure evidence remains separate and is not transferred to v37. Full-world
+coverage and runtime acceptance remain open. See
+[product v37](forever-product-v37.md).
+
+### 2026-10-26 — v38 source-heavy material-filtered WMO real run failed at read limit
+
+Product v38 binds `SourceHeavyV1`, RCVGEO1 v11, the build-70450 Linux
+`db2,vmaps` plan and five disjoint producer-reported omission lists. Relative to
+v37 `DependencyHeavyV1`, it raises only nominal `max_source_bytes` from 256 MiB
+to 512 MiB; request ceilings remain 16,000,000 and `max_raw_bytes` remains
+256 MiB. `max_reads` remains 4,096. The seven canonical PLAN storage budgets
+stay synthetic downward-only 1 MiB; `geometry_limits` caps both source and raw
+bytes by the PLAN `raw_bytes` budget, so those tests do not exercise the nominal
+profile ceilings.
+
+The valid run `v38-source-heavy-wmo-20261026T163808Z` **failed**: inspect exited
+0; extract exited 9 with `collision_policy_limit`; probe, verify and verify-links
+did not run (exit -1); elapsed time was 25 seconds. Network access was false;
+client metadata and inputs were unchanged; `accepted_prefix=false`, with audit
+and geometry null. Its external report
+`/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v38-source-heavy-wmo-20261026T163808Z-acceptance.json`
+has SHA-256 `67a07b1b6fcbe87eb89eba504541252b26ada1295d899dd4ef5c9a3e93b4d54d`;
+`diagnostic.jsonl` has SHA-256
+`caf57ba9f6687544fd16d237517dae87de9fd04cb24946d57dbb2c8a86acb2ee`.
+
+The diagnostic is `kind=resource_limit`, `guards_triggered=false`, with
+`cause=max_reads` at `reads=4096`. Snapshot values are
+`request_calls=34486`, `dependency_requests=11497`,
+`source_bytes=305392091`, `raw_bytes=43744216`, `models=2424`,
+`resident_bytes=330762107`, `external_bytes=270738115`,
+`external_source_bytes=11875616`, `store_resident_bytes=306605630`,
+`memory_limit_bytes=1073741824`, `tolerated_wdt=2`, and `tolerated_child=1`.
+For this run, source512MiB, raw256MiB, memory, models and request ceilings were
+not the cause; the evidence identifies the 4,096-read cap as the new frontier
+for this failed run only, not the sufficiency of any proposed increase.
+
+Software qualification recorded 82 suites, 4,479 passed, 26 ignored and 535
+contracts. Software SHA-256 `e82599a49f1a393023eb782956946deb4af117bef33cd82cb5cf44a4728b0314`;
+binary SHA-256 `1e49c7cba7c725fb0c666c5da7a19199213dec4bfec0f2e2351db19f825195c1`.
+The five intended lists, including `material_filtered_wmo=[462695]`, were not
+observed output; WMO 462695 is not admitted. Full-world coverage and runtime
+acceptance remain false.
+
+A separate earlier setup attempt, `v38-source-heavy-wmo-20261026T150518Z`,
+has report SHA-256 `d180720a5800c2531bb76a45dc43ee86c005dad97749d95dd8e627e769f4df31`.
+It used the wrong old binary `f9ebb...`; inspect exited 2 with
+`product_plan_version`, extract did not run (exit -1). This is not a product
+failure or capacity evidence and is not the valid run above.
+
+A follow-up v39 `ReadHeavyV1` is recorded only as **design-only; target-not-run**:
+raise only `max_reads` from 4,096 to 1,000,000; retain requests 16M/16M,
+source 512 MiB, raw 256 MiB and all other SourceHeavyV1 limits; proposed
+coverage layout v12. No sufficiency or WMO admission claim is made, and no v39
+implementation or acceptance is included. See [product v38](forever-product-v38.md)
+and its [machine-readable contract](../contracts/forever-product-contract-v38.json).
+
+### Linux build-70450 v35 bounded real acceptance failure — 2026-10-26.
+
+Real run `v35-unselected-wmo-20261026T040320Z` was performed under the v35
+profile and failed during the `vmaps` component. `inspect` exited 0; `extract`
+exited 9 with `collision_no_valid_collision`; probe, verify and verify-links
+did not run (exit -1). The 12-second run attempted no network access and
+reported unchanged client metadata and inputs. No accepted prefix, audit or
+geometry result exists. The cause is recorded in the external diagnostic; this
+entry does not infer a `skip_reason` or promote v36.
+
+The redacted acceptance report
+`reports/acceptance/v35-unselected-wmo-20261026T040320Z-acceptance.json` has
+SHA-256 `dc088ff8159a276b2004586b86437bd86cb2c3c23abf37f3ec102c214b6a237a`.
+Software qualification separately recorded 79 Rust suites (4,376 passed, 26
+ignored, zero failed) and 513 contract tests. The binary, source and software
+SHA-256 values are respectively
+`82c6f97ea009bfebfae92a03b9549a5cd5609493cb078b4876eca9f72f8195a6`,
+`66375ae9280743b196e73b5a5b81bd2965dc776f0d2eae19825815a0776c0013` and
+`3f90d258d30578b073fa956355948e8cb590ada6e0aad9fdc72054087cfc4b1d`. These
+software results do not turn the failed real run into acceptance.
+
+The required target lists remain
+`missing_m2=[970793]`, `missing_wmo=[]`, `empty_wmo=[]` and
+`unselected_wmo=[462695]`; none is reported as an accepted real result. V34's
+failed acceptance and diagnostic remain preserved as separate prior evidence,
+and acceptance is not transferred across profiles. Full-world resources,
+complete VMap geometry, runtime and distribution remain open.
+
+A separate redacted selection probe for WMO FDID 462695/group 463228 has report
+SHA-256 `9779537a4dccccfeac45f4b30eab90a4f03c7536b0ed0806d5685bdbbb013425`,
+canonical evidence SHA-256
+`1d0d798af16e711e10c5ce1f6b16bfdc12f1cc3f33d801b0df01a5cce0ebcf3d`, and tool
+SHA-256 `df3d88bc4b8809f5f1a20321d49408ea2b41e0770d026691487b6fec547f1212`.
+It records `skip_reason=null`, 368 source triangles / 1,104 indices / 591
+vertices / one batch, no skipped source geometry, an unskipped group, no liquid,
+and zero projected collision triangles, indices and vertices. MOPY flags 38
+(`0x26`) ×60 and 102 (`0x66`) ×308 are all rejected by
+`flags&0x08!=0 || (flags&0x20!=0 && flags&0x04==0)`. This explains the
+material-filtering branch of the real failure and why v35's skipped-source
+`unselected_wmo` predicate does not apply; it is not a complete RAW/doodad audit
+or acceptance, and no `skip_reason` is inferred for the failed extraction.
+V35 remains `failed`, `accepted=false`, `audit=null`, `geometry=null`.
+
+A possible v36 `material_filtered_wmo` category, RCVGEO1 v9, and unchanged limits
+are recorded only as design: the full proposed predicate requires WMO FileDataId
+origin, `local_missing_m2=0`, `omitted_usable=false`, RAW output `None`, empty
+bindings/references, present nonempty selection sets, at least one unskipped
+source group, no skipped groups, all source triangles material-filtered, and no
+liquid. The probe proves only the group/material subpredicate, not all RAW,
+doodad or category conditions. V36 remains `target-not-run`, unimplemented and
+unaccepted; no v36 contract is created. See [product v35](forever-product-v35.md).
+
+### Linux build-70450 v33 synthetic vacated-WMO profile — 2026-10-25
+
+V33 adds a separate `Build70450AvailableVacatedWmoGeometryV1` profile for a
+narrow producer-declared WMO omission after a local ROOT-absent doodad M2. It
+retains v32 RequestHeavyV1 and raises no additional resource ceilings; coverage
+is versioned as RCVGEO1 v6. Synthetic checks passed: 13/13 CLI integration
+cases, 9/9 linked plan tests and 4/4 contract tests. No real v33 extraction was
+performed: its acceptance status remains `target-not-run`.
+
+The real v32 attempt remains **failed** with `collision_no_valid_collision`
+for WMO FDID 462695; extraction produced no accepted package or prefix and
+verification did not run. Its report SHA-256 is
+`6dd3118c6df2878b5b1b03c18c199fdc1c979e008bc266d6046ffd88c294eccf`; the
+redacted diagnostic SHA-256 is
+`304ed0879e6a5553e5e2a1461d518c14bf986681ef330ea913b9d657522d0c3f`. This is
+historical v32 failure evidence, not v33 acceptance. Full-world resources,
+complete geometry/component, runtime and distribution remain open. See
+[product v33](forever-product-v33.md).
+
+### Linux build-70450 v29 missing-WDT diagnosis — 2026-10-24
+
+The follow-up v29 producer is
+`99ee9df05eeffea1553e7a57d8bc70871b298eac01f0b07e58b1a9b1d87a7952`,
+bound to worktree diff
+`c56e22863e9b54f8f75453288cde8c33691f0b368a2f2b391c1ddca99ebe2320`.
+Software qualification passed 4,117 Rust tests with 26 explicit ignores and 479
+contract tests. The second real attempt again failed with `file_unavailable`
+after 37 seconds. Its opt-in redacted observer identified a WDT read in
+`placements`, FDID 857697, with `MissingFile`; no network or input change was
+observed and no package prefix was accepted. The failed report has SHA-256
+`597ad8e3e276f087d2bf8fdc273d0ca6f71c6c3338b10bb2fa59185ac4f867aa`.
+
+An offline census using the existing Rust Map/ROOT readers found 73
+materialized rows, 71 active maps and two WDT-zero rows. Sixty-nine active maps
+have ROOT routes; maps 13 and 3109 have no ROOT row for WDT FDIDs 857697 and
+7937200 respectively. No root-present/encoding-absent case exists and no
+content was decrypted. Both missing maps are roots without children. The census
+summary SHA-256 is
+`5a376d5853f42ee505eebc7df5eee6cf53aaabce16caa781d55a1a0abda6df0f`; its
+redacted acceptance report has SHA-256
+`2a8483ddce57924f157be0c04d855a228df7665a869b2e900aba14e92144a48d`.
+The diagnostic helper source SHA-256 is
+`0d7ac763c113df909134f399d20a41a620c85301e199d2a414daabd7adace14e`.
+
+The pinned C++ `getWDT` skips a WDT it cannot open and uses no fallback when the
+parent cannot be opened. Strict v29 intentionally rejects that source instead;
+it cannot complete against this local collection and remains unaccepted. A
+separate profile must record root-only omissions rather than inventing trees or
+changing v29. Full-world, runtime and `full_extractor_complete` remain false.
+
+### Linux build-70450 v29 all-available geometry initial failure — 2026-10-24
+
+V29 introduces `MapSelection::All`, RCVGEO1 v2 and independently derived active
+Map/VMap coverage over the sealed available Map, with one partial Map and
+per-table declarations. The initial software qualification passed 4,108 Rust
+tests with 26 explicit ignores and 479 contract tests. Its producer SHA-256 is
+`d293e71913f0d901704d1853d33d0ca81fddc6f762f9d57815ae12677a986336`; the
+pre-attempt worktree diff SHA-256 is
+`fc580ab08cc460e9e3151182a7677c90997b3e1d2a6f941f07d59b731328f913`, with 25
+new source files bound individually in the retained source record.
+
+The first real esES run `v29-available-geometry-20261024T144152Z` failed during
+VMap acquisition after 38 seconds with `file_unavailable`. It used fresh output
+and scratch, disabled decryption and network denial, and retained stable
+client metadata, plan and producer. DB2 sealed, but no final manifest or VMap
+coverage exists; verify and verify-links did not run and no prefix is accepted.
+The redacted failed report
+`v29-available-geometry-20261024T144152Z-acceptance.json` has SHA-256
+`20b0735f0fc85808b502451c7a642109bfa441f37ec57cba20aa6a6d294043a9`.
+
+Follow-up source changes reject foreign recovered declarations, cap the complete
+package at 65,536 files and reject inherited payloads from inactive or
+unselected parents. Valid shared-parent inheritance has a positive control.
+Offline verification now explicitly documents that it does not independently
+prove WDT/ADT presence or readability for empty outputs. Focused package,
+producer, resume and 34 verifier tests pass; a redacted phase/FDID diagnostic is
+being added before a new real attempt. Those changes have no new full-suite or
+real acceptance claim yet. Full-world, complete acquisition, runtime and
+`full_extractor_complete` remain open.
+
+### Linux build-70450 v28 authenticated selected-geometry acceptance — 2026-10-24
+
+V28 adds a sealed partial `Map.db2` to selected VMap geometry and independently
+re-derives Map sections, VMap direct/copy/materialized facts and the active
+ancestor graph from that artifact. v22 retains mask 16 and producer-reported
+coverage; v28 uses mask 17 and exclusively per-table declarations. Producer
+SHA-256 is
+`795a065776ffa24ca81b47ac52366f0c54a032bd352df921e5b203610e6e7430`.
+The source binds HEAD `365221fe6f22c66c95d47cfa4c67b876cd719648`,
+pre-documentation worktree diff SHA-256
+`8db7cdf176969e895ba3600c514eecdea1b302b4122dd71d75f30fc26637deee` and every
+new source file by hash. Software qualification passed 4,072 workspace tests
+with 26 explicit ignores, 471 contract tests, Clippy and formatting. Rust log
+SHA-256 is `80c61fde53d9c793c15cef328e4bd12f8a3a4087cfa2efc5636c90fac4a136e3`.
+
+The real esES run `v28-authenticated-geometry-map48-20261024T125226Z-2022337`
+passed inspect, extract, offline verify and verify-links in 44 seconds with a
+fresh private scratch. It published 67 artifacts / 2,090,335 bytes: one partial
+Map and 66 VMap artifacts including coverage. Inventory SHA-256 is
+`e848ec9121147667461918c9d38edbb5f88f0c679b7bbf92fe9a79f9a7514833`.
+The Map payload matches v26 and all 65 non-coverage geometry payloads match the
+retained v22 run. Coverage and manifest identities differ because the plan,
+profile and producer context changed. The Map has three per-table frames / 575
+zero-filled bytes and no global declaration. No network attempt was recorded;
+client metadata, producer and plan remained stable. The persistent run used
+900-second, 3-GiB, one-CPU and 64-task limits.
+
+The redacted report
+`v28-authenticated-geometry-map48-acceptance-20261024T125226Z-2022337.json` has
+SHA-256
+`0e9a83c3b56416fc31eeb4a93b89b062c37e5181dc5fda2561671cd138df8165`.
+Synthetic lifecycle checks also cover resume with DB2 sealed, Collision sealed
+without a final manifest, and Collision incomplete, plus parent, WDT, depth,
+`is_parent`, section and materialized-row tampering. The complete graph, not
+only the published closure, determines `is_parent`; VMap retains WDT-zero rows.
+
+This accepts selected-map and active-ancestor geometry only. GODI/global
+GameObjects, LiquidObject, all-available geometry, full-world, runtime, a new
+distribution and release remain open. Acquisition CKey/EKey flags remain
+producer-reported; no encrypted content was decoded.
+
+### Linux build-70450 v27 selected-catalog and available-terrain acceptance — 2026-10-24
+
+V27 combines the selected v26 DB2 catalog with authenticated v25 terrain and
+uses exclusively per-table declarations, including `Map`; v25 global
+manifest declarations are not admitted. The matching producer SHA-256 is
+`7045052db299b8d7dbf7b43673f6edfb9ca549fa8ee8012dd6452702dba0d6b8`,
+with HEAD `365221fe6f22c66c95d47cfa4c67b876cd719648` and pre-documentation
+worktree diff SHA-256
+`513b42c06d94709daf34c194348cf4b6a7bdfe44bb998264bcc43a8f1bb8f791`.
+The source record also binds every newly added source file by hash. Software
+qualification passed 4,044 workspace tests with 26 explicit ignores, 464
+contract tests, Clippy and formatting. Rust log SHA-256 is
+`9a5acfb158b89292a5a678c1435da678f91823c9fef89e19926121e8e0553940`.
+
+The bounded `v27-catalog-map48-20261024T111647Z-1965505` run passed `extract`,
+offline `verify` and `verify-links` in 104 seconds. It published 1,163 artifacts
+/ 55,737,931 bytes, with every DB2 payload matching v26 and the non-coverage
+terrain payload matching v25. It has one tilelist and one coverage file, but
+zero converted MAPS tiles, so it is not nonempty-terrain evidence. Inventory
+SHA-256 is
+`b90ca193ae7b3b909a27d99094e5ce4602d75a27c5c2ed988992bc87b5b7bee9`.
+Its redacted report has SHA-256
+`bfd0db301e521dd330a1110094b4c319639b184fe44822b7616bb84788c15ace`.
+
+The expanded `v27-catalog-all-available-20261024T113558Z-1989523` run passed all
+three operations in 445 seconds. It published 4,555 artifacts / 271,392,871
+bytes: 1,161 DB2 artifacts, 3,322 MAPS tiles, 71 tilelists and one coverage-v3
+file. All 1,161 DB2 payloads match v26 and all 3,393 non-coverage terrain
+payloads match v25. Every artifact hash was independently rechecked. Inventory
+SHA-256 is
+`8ba5d6866ce779a97b410c82283e1c89d213a5e414d75b78d508b3ee4ffe6157`.
+Its redacted report has SHA-256
+`de15dce370d7b9526f66e7a11c3f84dcff077726763a816a81480c66499eb3b7`.
+The reports are `v27-catalog-map48-acceptance-20261024T111647Z-1965505.json` and
+`v27-catalog-all-available-acceptance-20261024T113558Z-1989523.json` in the
+external acceptance directory.
+
+Both plans have 1,055 complete and 106 declared-partial tables, with 478
+zero-filled frames / 350,009 bytes. `Map` has three frames / 575 bytes solely in
+its per-table declaration, and no global declaration. No network attempt was
+recorded, and client metadata, producer and plans were stable. Both runs used
+900-second, 3-GiB, one-CPU and 64-task limits.
+
+This accepts the selected DB2 artifact catalog and available terrain, not
+complete decoded content, whole-client coverage, complete geometry/full-world,
+navigation, runtime, a new distribution or release. The next VMap gate must
+independently authenticate selected-map and active-ancestor coverage from the
+sealed Map; it is not established by this DB2+terrain result.
+
+### Linux build-70450 v25 real partial-Map and available-terrain acceptance — 2026-10-24
+
+Two fresh esES v25 runs passed `extract`, offline `verify` and `verify-links`
+with producer SHA-256
+`3c214d49f33bc703460b55ef56a4b77787cc074cf556cca35f3b504d950f1767` and
+pre-documentation worktree diff SHA-256
+`6b4f08c410bd1a74e84e0897484375c4e8a5483af1beb9f90fcb0c1f444f18cd`.
+The software qualification for that source passed 4,023 workspace tests with 26
+explicit ignores, 456 contract tests, Clippy and formatting. No network attempt
+was recorded; client metadata, producer and plan were stable. The runs retained
+900-second, 3-GiB, one-CPU and 64-task limits.
+
+The bounded run `v25-map48-partial-20261024T103316Z-1943267` published three
+artifacts / 15,344 bytes in 33 seconds: one partial `Map` and two terrain
+artifacts. Inventory SHA-256 is
+`a6dd9dedd49ca945d456c3f474145b3cb9e8da2b7dc575d4c0648f0d69f7566d`.
+Its redacted report `v25-map48-partial-acceptance-20261024T103316Z-1943267.json`
+has SHA-256
+`52bcb95f42713c21ed740ea778fe50e0659625fcd261863d7c13cfcc3013d9ea`.
+
+The expanded run `v25-all-available-20261024T103622Z-1944471` completed in 357
+seconds with 3,395 artifacts / 215,670,284 bytes: one partial `Map`, 3,322 MAPS
+tiles, 71 tilelists and one coverage-v3 file. Inventory SHA-256 is
+`b36f7e063fc65a32acfdccd6ebfd23e8b8ce8b9efbfd265da0a469c7e0d551c9`.
+Every artifact hash was independently rechecked. Its redacted report
+`v25-all-available-acceptance-20261024T103622Z-1944471.json` has SHA-256
+`240d9e57b318b0448e2c6da1bf42d5504693403cc14fa3b76ac7d3f6a1586a0b`.
+The partial `Map` has three declared frames / 575 zero-filled bytes in both
+runs. The independently derived coverage-v3 check passed against the sealed
+available Map projection.
+
+This accepts the selected partial Map and available terrain, not complete
+decoded content, whole-client Map coverage or full-world terrain. No keys were
+recovered or used, and no encrypted records were decoded. Geometry, full-world,
+runtime, distribution and release remain open; this evidence is not transferred
+to the separately gated v27 composition.
+
+### Linux build-70450 v26 selected-catalog DB2 artifact acceptance — 2026-10-24
+
+The full 1,161-entry esES v26 plan passed real `extract`, offline `verify` and
+`verify-links` in run `v26-full-after-spelleffect-20261024T102054Z-1936654`.
+The package has 1,161 artifacts / 55,733,168 bytes: 1,055 complete tables and
+106 explicitly partial tables with 478 zero-filled declared frames / 350,009
+bytes. Inventory SHA-256 is
+`9c001a3ab0047482cce5ccc889e7af0794499a650a76b55e9a33d6d9adce26a8`; an
+independent rehash matched every artifact and expected plan path. All three
+operations exited zero, with no network attempt and unchanged client metadata,
+producer and plan. The persistent run completed in 102 seconds under 900-second,
+3-GiB, one-CPU and 64-task limits.
+
+Producer SHA-256 is
+`3c214d49f33bc703460b55ef56a4b77787cc074cf556cca35f3b504d950f1767`; plan
+SHA-256 is
+`8ba2aed1f9f7e701d6b9ddd6a7f72bc8438b00eeff040e694b2535ac2a71a1e6`.
+The pre-documentation worktree diff SHA-256 is
+`4a0b218a3c8923888f00d410cc2c49189a6d2a7ea11b6d66be9ae4665de82ff2`.
+Software qualification passed 4,023 workspace tests with 26 explicit ignores,
+456 contract tests, workspace all-target Clippy and formatting. Rust log SHA-256
+is `83d9c9390dd2e4ff44ec05ded29529a836d01e41ddd53247428cfaf603efe4c7`;
+Clippy log SHA-256 is
+`99f71393b9903dca098310bb446022a4bdee195ea9996f351a787195555210a6`.
+The redacted report
+`v26-full-db2-catalog-acceptance-20261024T102054Z-1936654.json` has SHA-256
+`a1b84ce4c1e19de2c76f0f3d0419e66ea438b3d43661c5d0751a1298aa271f74`.
+
+The source corrections retain the default 16-section / 1,000,000-value budget
+except for the observed exact table shapes. `Item` admits one additional
+ordinary section (17 total), `ItemSparse` admits 1,309,884 values and exact
+multi-frame TACT coverage, and `SpellEffect` admits 1,276,783 values. Synthetic
+boundary tests reject one extra record or section. Each table passed a separate
+real extract/verify/verify-links run before the complete selection. The earlier
+failed full attempts at `Item` (475 files), `ItemSparse` (547 files) and
+`SpellEffect` (905 files) remain retained and are not accepted prefixes.
+
+This qualifies selected catalog artifact coverage only. The 106 partial tables
+still have explicitly zero-filled unavailable encrypted frames; no encrypted
+records were decoded or keys recovered. Complete decoded content, other
+components, complete geometry/full-world, RustyCore runtime, a new Linux
+distribution and release acceptance remain open.
+
+### Linux build-70450 v26 bounded real DB2 partial acceptance — 2026-10-24
+
+V26 adds the separate Linux `Build70450Db2PartialV1` profile: DB2 only, build
+70450, disabled decryption and mandatory per-table declarations for zero-filled
+TACT-encrypted sections. It neither decrypts those sections nor transfers v16
+or v25 acceptance. The current source is HEAD
+`365221fe6f22c66c95d47cfa4c67b876cd719648` with pre-documentation worktree
+diff SHA-256 `663b1d93edda98d96a459efb1e8cc251fea0821f20e4381e2d18895b1fd97ec1`.
+Workspace all-target tests pass 4,004 with 26 explicit ignores; all 456
+contract tests, workspace all-target Clippy and formatting also pass. Rust log
+SHA-256 is `c056ad50bdecbb4feeb906eb0e23ae0d4d7bf7e0987913a2b9eb31fbdbc89d82`;
+Clippy log SHA-256 is
+`9a1833ae59ad889d8dea9db3e93cf5ba9d48c9b671a47745fe3a34c2068e6491`.
+
+The retained real esES run
+`v26-five-tables-verified-20261023T022644Z-35eff781` selected five tables.
+Extraction exited zero with `selected_producers_complete`; separate offline
+verification exited zero with a verified five-file / 49,533-byte package and
+inventory SHA-256
+`9bd9f8c799f361a58a388a356a95398f3e8d38fc9d5cb5dfe5d69778e9089e0e`.
+`Achievement.db2` has the sole partial-section declaration; the other four
+selected tables are complete. No network attempt was recorded and client
+metadata remained unchanged. Plan SHA-256 is
+`e34c66a671bc5217f4b6cd0a62f66a30b73bd0e909e118af74c830d993ce320d`.
+
+The current debug producer SHA-256
+`2a349ad61751c42ef417f4e4272021bea09ce254c370d9495c2f384d635e34ff` exactly
+matches that real run. A separate offline closeout therefore reused the
+retained package rather than repeating extraction: plan-only `inspect` and
+`verify-links` both exited zero under run
+`v26-current-binding-20261023T230433Z-1634544`, preserving the same verified
+inventory. The final five-table and ActionBarGroup-only attempts remain failed
+at offline verification with `record_data_bounds`; an earlier five-table verify
+exit 9 is also retained. None is an accepted prefix.
+
+Redacted addendum
+`v26-db2-current-binding-20261023T230433Z-1634544.json` has SHA-256
+`37d55b708115e31fc06de182bdf189d21f8ca86de1645ea49623bf868acf4351` and binds
+the source, plan, producer, real run, offline closeout and retained failures.
+It is retained in the external acceptance-report directory. This is bounded
+five-table evidence only: full 1,161-entry DB2 coverage, complete decoded
+content, full-world resources, runtime/parity, a new distribution, Windows and
+release acceptance remain open.
+
 ### Linux build-70450 v25 declared-partial Map profile — 2026-10-22
 
 V25 adds a separate synthetic/software-only plan for authenticated build-70450
@@ -5123,3 +6516,145 @@ All earlier acceptance counts, timings, receipts and retained failures remain
 attached to their original campaigns. The v13 archive, frozen source and binary
 are unchanged; this docs/status delta qualifies no new archive and transfers no
 extractor-product, complete-geometry, full-world or server-runtime acceptance.
+
+## 2026-10-24: v30 WDT omissions tolerated; later M2 acquisition failed
+
+The qualified v30 source passed 4,166 workspace tests with 26 explicit ignores
+across 74 suites, Clippy, formatting and 487 source-contract checks. The frozen
+producer has SHA-256
+`2c0df54f0e6b266ab475a33e587feec8dc45709f8b0b7269887fab876654e53d`.
+These software results qualify that source only, not the later failed package.
+
+Real esES run `v30-root-absent-geometry-20261024T193255Z` passed inspect and
+reported two tolerated WDT ROOT absences, then exited 9 after 38 seconds with
+`file_unavailable` in `models/child` for FDID 970793. Verify and verify-links
+did not run. There is no final manifest, accepted prefix, complete VMap
+component, full-world or runtime acceptance. Inputs remained unchanged and no
+network attempt was recorded. The redacted report is
+`47b3057c3f6be62bdeca22af4da5a4807ad031ac5c43c32f126543e8621bd17e`.
+
+A separate v31 gate is being developed for the narrow case of WMO-doodad M2
+requests by FDID whose raw ROOT contains no rows. Source inspection establishes
+that `models/child` belongs to `convert_wmo`; direct M2 placements use
+`root_m2`. The new gate must omit the absent child, its model binding and its
+derived spawns while retaining the parent WMO and its placement. Direct M2,
+WMO roots/groups, logical names, ADT, corruption, encryption, guard changes and
+resource failures remain fatal. The initial direct-M2 design was corrected
+before acceptance; no run was performed under that design. This does not relabel
+v30, transfer earlier acceptance or establish that v31 has passed synthetic
+validation or a real run. See [v30](forever-product-v30.md) and the versioned
+v31 contract when qualified.
+
+## 2026-10-25: v34 separates intrinsically empty WMO declarations; real gate not run
+
+The retained v33 diagnostic established that WMO FDID 462695 was intrinsically
+empty before any omission (`local_missing_m2=0`, `omitted_usable=0`), rather than
+vacated by a local M2 ROOT absence. V33 correctly retained
+`collision_no_valid_collision`; its failed acceptance and diagnostic remain
+unchanged. V34 introduces a separate `Build70450AvailableEmptyWmoGeometryV1`
+profile and RCVGEO1 v7, with `empty_wmo` immediately after and disjoint from
+`missing_wmo` and `missing_m2`. It preserves RequestHeavyV1 and every other
+resource limit. Any remaining geometry, binding or usable dependency stays
+fatal, and neither WMO category may publish VMOs, model IDs or placements.
+
+The current synthetic checkpoint passes 9/9 v34 plan tests, 29/29 coverage
+codec tests, 65/65 compatible-VMap verifier tests, 688/688 extractor library
+tests, 13/13 retained v33 CLI tests and 508 source-contract tests. An
+independent Sol review found duplicate `coverage_authentication` members in the
+new v34 verify JSON; the v34-only composition was corrected without changing
+older profiles. The replacement CLI must prove unique JSON keys and genuine v34
+extract/resume/verify behavior; the initially copied v33 CLI is not evidence.
+
+The initial external auditor under
+`artifacts/v34-acceptance-tools-20261025T195554Z` passed 18 synthetic cases,
+including 16 negatives, four placement-bounds cases, six report gates and a
+65-ID/two-batch probe. The retained initial `selftest.json` had SHA-256
+`d447c259355617c64029a1a5a32126b81b754f83d62142bf49c45ae94bc6aa25`.
+Independent review subsequently retained three tooling failures: synthetic
+report promotion, incomplete GODI/Map-section/liquid validation and possible
+evidence overwrite on a reused run. Those initial results are not auditor
+qualification. The corrected auditor passes 32 additional parser negatives,
+56 promotion cases with zero synthetic promotions and eight runner cases,
+including byte-identical preservation on reuse. The coordinator repeated the
+complete selftest successfully. The revised `selftest.json` has SHA-256
+`7d8b53877363808e036c4a7561b9d0d21c5de606482eff7c44db75dee88027f5`.
+The real gate requires exactly `missing_m2=[970793]`, `missing_wmo=[]`,
+`empty_wmo=[462695]` and `RCE_V34_REAL_ACCEPTANCE=1`.
+
+The CASC block now passes 1,820 library tests with five explicit ignores and
+its complete crate targets also pass. Independent CASC review confirmed the
+geometry/memory predicates; its Windows lint and stale-comment findings are
+fixed, and Windows Clippy with warnings denied now passes without warnings.
+The initial v34 CLI passed 20/20 cases and Clippy, but independent review found
+uncovered residual-WMO modes, mutations exercised only by the test parser,
+incorrect EmptyWmoOnly identity and missing ID-allocation proof. The corrected
+CLI now passes 23/23 and Clippy, covering every finding. The first shared
+workspace run reached its 300-second limit during v30 and was retained as
+incomplete. The full rerun then passed 78 suites, 4,342 tests with 26 explicit
+ignores and zero failures in 537.537 seconds; its log SHA-256 is
+`524bb4fd58b7f7371fc1f49c148e240972e3689f16925233943d5b9ad691e430`.
+The real v34 run nevertheless failed: inspect passed, extract exited 9 with
+`collision_no_valid_collision`, and probe/verify/verify-links did not run. No
+final package or prefix was accepted. Its retained acceptance SHA-256 is
+`3a00385706ce85359bd5032fb47853d0a4fed9335436ddf3df1ffd81fdaf019c`.
+A bounded offline parser then proved group FDID 463228 has 368 triangles,
+1,104 indices, 591 vertices and one batch, without liquid. The WMO is not
+intrinsically empty and v34 correctly rejects residual geometry; a distinct
+unselected-geometry profile would need its own version and acceptance. The
+redacted diagnostic has SHA-256
+`8bbaa2e588292980ac2894d30e6c3bac446571439f233e051376d2ab43d3f68f`.
+Full-world resources, complete VMap component, RustyCore runtime and
+reproducible distribution remain open. See
+[v34 scope and acceptance gate](forever-product-v34.md).
+
+### 2026-10-26 — v36 synthetic material-filtered WMO geometry
+
+The v36 completion profile now matches the emitted CASC profile,
+`linux70450-available-material-filtered-wmo-collision-v1`; the previous extractor
+expectation omitted `available-` and rejected the v36 product during selected
+geometry coverage validation. The synthetic v36 CLI now passes 14/14 tests,
+including inspect/extract/resume/verify/verify-links, material-filtered and useful
+geometry controls, omission predicates, verifier mutation attacks and the
+4,096/4,097 list limits. The v36 contract suite passes 5/5, and
+`tools/checks fmt-check` passes after formatting only the two v36 test files.
+
+The useful-reference fixture verifies child M2 placement and distinct model
+bytes without emitting a VMO for the WMO; useful-bindings verifies both
+placements of the shared model. Local missing doodad M2 remains reported as
+`missing_m2=[970793]`, distinct from `missing_wmo=[462701]`; it is not classified
+as material-filtered. This checkpoint records synthetic evidence only; a later
+real run and its failed result are recorded below. Full-world resources,
+complete VMap geometry, RustyCore runtime and reproducible distribution remain
+open. See [v36 scope and acceptance gate](forever-product-v36.md).
+
+### 2026-10-26 — v36 real run failed at collision policy limit
+
+The run `v36-material-filtered-wmo-20261026T085714Z` inspected successfully
+(exit 0), then extraction exited 9 with `collision_policy_limit`. Probe and
+verify did not run (exit -1); elapsed time was 23 seconds. Network access was
+false and both client and input were unchanged. No accepted prefix, audit or
+geometry was produced. The retained report is
+`reports/acceptance/v36-material-filtered-wmo-20261026T085714Z-acceptance.json`,
+SHA-256 `dfcca8f3c29b655d5d3a0a2e9794cad7d2484bbf2edb25e29bbe9eefff039e03`.
+This failure does not prove that WMO 462695 was admitted as
+`material_filtered_wmo`.
+
+Diagnostic counters: `request_calls=19243`, `reads=3362`,
+`dependency_requests=4096`, `models=2118`, `source_bytes=221090913`,
+`raw_bytes=31135205`, `external_bytes=269362435`,
+`external_source_bytes=11872896`, `resident_bytes=314993930`,
+`store_bytes=306605630`, `memory_limit_bytes=1073741824`. Associated software
+evidence: 80 suites, 4,414 passed, 26 ignored, and 519 contracts; binary
+SHA-256 `1a6fc2bf5de707b82ebb3e2c3e72d77a1eb2fcfd9dad4a8bee04e9ceb22f624c`, source
+SHA-256 `26ab8317baead71a3434b4af7906418057344211075c65bf661169b4d4fa6625`, and
+software SHA-256 `a289aeffc2aa216a731f1bce1ff24a2126fb9c5fcb0c997d4c9f820af397ff85`.
+The target lists remain intended only: `missing_m2=[970793]`,
+`missing_wmo=[]`, `empty_wmo=[]`, `unselected_wmo=[]`,
+`material_filtered_wmo=[462695]`; no such output was accepted.
+
+A future v37 DependencyHeavyV1 is proposed, not implemented or accepted: set
+only `max_dependency_requests=16000000`, retain RequestHeavyV1
+`max_requests=16000000` and all other limits, and plan coverage layout v10 for
+the same intended lists. Its target status is `target-not-run`. It requires its
+own versioned contract and acceptance and inherits no v36 admission claim. See
+[v36 scope and acceptance gate](forever-product-v36.md).

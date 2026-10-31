@@ -13,6 +13,20 @@ pub enum Profile {
     #[default]
     BoundedV1,
     DiskWorldV1,
+    RequestHeavyV1,
+    DependencyHeavyV1,
+    SourceHeavyV1,
+    ReadHeavyV1,
+    ModelHeavyV1,
+    SourceExpandedV1,
+    ModelOutputExpandedV1,
+    ModelBytesExpandedV1,
+    SourceExpandedV2,
+    PlacementExpandedV1,
+    AssemblyExpandedV1,
+    GameObjectExpandedV1,
+    GameObjectMissingRootExpandedV1,
+    GameObjectRootAndEncryptedUnavailableExpandedV1,
 }
 fn wide(bytes: u64) -> usize {
     if usize::BITS >= 64 {
@@ -26,10 +40,60 @@ impl Profile {
         match self {
             Self::BoundedV1 => "linux-collision-bounded-resources-v1",
             Self::DiskWorldV1 => "linux-collision-disk-world-resources-v1",
+            Self::RequestHeavyV1 => "linux-collision-request-heavy-resources-v1",
+            Self::DependencyHeavyV1 => "linux-collision-dependency-heavy-resources-v1",
+            Self::SourceHeavyV1 => "linux-collision-source-heavy-resources-v1",
+            Self::ReadHeavyV1 => "linux-collision-read-heavy-resources-v1",
+            Self::ModelHeavyV1 => "linux-collision-model-heavy-resources-v1",
+            Self::SourceExpandedV1 => "linux-collision-source-expanded-resources-v1",
+            Self::ModelOutputExpandedV1 => "linux-collision-model-output-expanded-resources-v1",
+            Self::ModelBytesExpandedV1 => "linux-collision-model-bytes-expanded-resources-v1",
+            Self::SourceExpandedV2 => "linux-collision-source-expanded-resources-v2",
+            Self::PlacementExpandedV1 => "linux-collision-placement-expanded-resources-v1",
+            Self::AssemblyExpandedV1 => "linux-collision-assembly-expanded-resources-v1",
+            Self::GameObjectExpandedV1 => "linux-collision-gameobject-expanded-resources-v1",
+            Self::GameObjectMissingRootExpandedV1 => {
+                "linux-collision-gameobject-missing-root-expanded-resources-v1"
+            }
+            Self::GameObjectRootAndEncryptedUnavailableExpandedV1 => {
+                "linux-collision-gameobject-root-encrypted-unavailable-expanded-resources-v1"
+            }
         }
     }
+    pub(crate) const fn model_heavy(self) -> bool {
+        matches!(
+            self,
+            Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        )
+    }
     pub(crate) const fn supported(self) -> bool {
-        matches!(self, Self::BoundedV1) || usize::BITS >= 64
+        match self {
+            Self::BoundedV1 => true,
+            Self::DiskWorldV1 => usize::BITS >= 64,
+            Self::RequestHeavyV1
+            | Self::DependencyHeavyV1
+            | Self::SourceHeavyV1
+            | Self::ReadHeavyV1
+            | Self::ModelHeavyV1
+            | Self::SourceExpandedV1
+            | Self::ModelOutputExpandedV1
+            | Self::ModelBytesExpandedV1
+            | Self::SourceExpandedV2
+            | Self::PlacementExpandedV1
+            | Self::AssemblyExpandedV1
+            | Self::GameObjectExpandedV1
+            | Self::GameObjectMissingRootExpandedV1
+            | Self::GameObjectRootAndEncryptedUnavailableExpandedV1 => cfg!(target_arch = "x86_64"),
+        }
     }
     pub fn collector_limits(self) -> super::Limits {
         let mut d = super::Limits::default();
@@ -40,6 +104,83 @@ impl Profile {
             d.max_dependency_requests = 16_000_000;
             d.max_source_bytes = wide(256 * 1024 * 1024 * 1024);
             d.max_raw_bytes = wide(64 * 1024 * 1024 * 1024);
+        }
+        if matches!(
+            self,
+            Self::RequestHeavyV1
+                | Self::DependencyHeavyV1
+                | Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.max_requests = 16_000_000;
+        }
+        if matches!(
+            self,
+            Self::DependencyHeavyV1
+                | Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.max_dependency_requests = 16_000_000;
+        }
+        if matches!(
+            self,
+            Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.max_source_bytes = 512 * 1024 * 1024;
+        }
+        if matches!(
+            self,
+            Self::SourceExpandedV1 | Self::ModelOutputExpandedV1 | Self::ModelBytesExpandedV1
+        ) {
+            d.max_source_bytes = 1024 * 1024 * 1024;
+        }
+        if matches!(
+            self,
+            Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.max_source_bytes = 2 * 1024 * 1024 * 1024;
+        }
+        if self == Self::ReadHeavyV1 || self.model_heavy() {
+            d.max_reads = 1_000_000;
+        }
+        if self.model_heavy() {
+            d.max_models = 65_536;
         }
         d
     }
@@ -52,12 +193,29 @@ impl Profile {
             d.max_reloads = 16_000_000;
             d.max_reload_bytes = wide(4 * 1024 * 1024 * 1024 * 1024);
         }
+        if self.model_heavy() {
+            d.max_records = self.collector_limits().max_models;
+        }
         d
     }
     pub fn list_profile(self) -> forever_vmap::gameobject_models::streaming::BudgetProfile {
         use forever_vmap::gameobject_models::streaming::BudgetProfile;
         match self {
-            Self::BoundedV1 => BudgetProfile::BoundedV1,
+            Self::BoundedV1
+            | Self::RequestHeavyV1
+            | Self::DependencyHeavyV1
+            | Self::SourceHeavyV1
+            | Self::ReadHeavyV1
+            | Self::ModelHeavyV1
+            | Self::SourceExpandedV1
+            | Self::ModelOutputExpandedV1
+            | Self::ModelBytesExpandedV1
+            | Self::SourceExpandedV2
+            | Self::PlacementExpandedV1
+            | Self::AssemblyExpandedV1
+            | Self::GameObjectExpandedV1
+            | Self::GameObjectMissingRootExpandedV1
+            | Self::GameObjectRootAndEncryptedUnavailableExpandedV1 => BudgetProfile::BoundedV1,
             Self::DiskWorldV1 => BudgetProfile::RepeatedRowsV1,
         }
     }
@@ -67,6 +225,83 @@ impl Profile {
             d.collision = self.collector_limits();
             d.max_candidate_requests = gameobjects::MAX_DIRECT_ROWS;
             d.lists = self.list_profile().limits();
+        }
+        if matches!(
+            self,
+            Self::RequestHeavyV1
+                | Self::DependencyHeavyV1
+                | Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.collision.max_requests = 16_000_000;
+        }
+        if matches!(
+            self,
+            Self::DependencyHeavyV1
+                | Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.collision.max_dependency_requests = 16_000_000;
+        }
+        if matches!(
+            self,
+            Self::SourceHeavyV1
+                | Self::ReadHeavyV1
+                | Self::ModelHeavyV1
+                | Self::SourceExpandedV1
+                | Self::ModelOutputExpandedV1
+                | Self::ModelBytesExpandedV1
+                | Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.collision.max_source_bytes = 512 * 1024 * 1024;
+        }
+        if matches!(
+            self,
+            Self::SourceExpandedV1 | Self::ModelOutputExpandedV1 | Self::ModelBytesExpandedV1
+        ) {
+            d.collision.max_source_bytes = 1024 * 1024 * 1024;
+        }
+        if matches!(
+            self,
+            Self::SourceExpandedV2
+                | Self::PlacementExpandedV1
+                | Self::AssemblyExpandedV1
+                | Self::GameObjectExpandedV1
+                | Self::GameObjectMissingRootExpandedV1
+                | Self::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            d.collision.max_source_bytes = 2 * 1024 * 1024 * 1024;
+        }
+        if self == Self::ReadHeavyV1 || self.model_heavy() {
+            d.collision.max_reads = 1_000_000;
+        }
+        if self.model_heavy() {
+            d.collision.max_models = 65_536;
         }
         d
     }
@@ -90,6 +325,9 @@ impl Profile {
             d.max_records = 8_000_000;
             d.world.world.run.placements.max_models = self.collector_limits().max_models;
         }
+        if self.model_heavy() {
+            d.world.world.run.placements.max_models = self.collector_limits().max_models;
+        }
         d
     }
     pub fn model_limits(self) -> staged::models::Limits {
@@ -102,6 +340,9 @@ impl Profile {
             d.max_raw_visit_bytes = 256 * 1024 * 1024 * 1024;
             d.max_bih_work = 8_000_000_000;
             d.max_validation_bytes = 4 * 1024 * 1024 * 1024 * 1024;
+        }
+        if self.model_heavy() {
+            d.max_models = self.collector_limits().max_models;
         }
         d
     }
@@ -120,6 +361,9 @@ impl Profile {
             d.max_records = self.stage_limits().max_records;
             d.max_associations = 256_000_000;
             d.max_ancestor_steps = 256_000_000;
+        }
+        if self.model_heavy() {
+            d.max_models = self.model_limits().max_models;
         }
         d
     }

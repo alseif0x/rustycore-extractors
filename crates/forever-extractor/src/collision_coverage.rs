@@ -148,6 +148,8 @@ impl Encoder {
                     gameobjects::Outcome::Collision(_) => 2,
                     gameobjects::Outcome::M2NoCollision(_) => 3,
                     gameobjects::Outcome::WmoDoodadOnly(_) => 4,
+                    gameobjects::Outcome::MissingRoot => 9,
+                    gameobjects::Outcome::EncryptedUnavailable => return Err(SCHEMA.into()),
                 },
                 startup::Disposition::Omitted(o) => match o {
                     compatible::Omission::MissingRoot => 5,

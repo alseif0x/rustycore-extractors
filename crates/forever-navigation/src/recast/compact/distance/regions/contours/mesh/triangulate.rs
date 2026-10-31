@@ -103,7 +103,10 @@ impl Budget {
         }
         Ok(true)
     }
-    pub(super) fn triangulate(&mut self, vertices: &[Vertex]) -> Result<Vec<[usize; 3]>, Error> {
+    fn triangulate_with_partial(
+        &mut self,
+        vertices: &[Vertex],
+    ) -> Result<(Vec<[usize; 3]>, bool), Error> {
         if vertices.len() < 3 {
             return Err(Error::Triangulation);
         }
@@ -153,7 +156,9 @@ impl Budget {
                     }
                 }
             }
-            let (_, i) = best.ok_or(Error::Triangulation)?;
+            let Some((_, i)) = best else {
+                return Ok((tris, true));
+            };
             let mut i1 = next(i, n);
             let i2 = next(i1, n);
             self.push(
@@ -191,6 +196,21 @@ impl Budget {
             ],
         )?;
         self.release(&indices);
+        Ok((tris, false))
+    }
+
+    pub(super) fn triangulate(&mut self, vertices: &[Vertex]) -> Result<Vec<[usize; 3]>, Error> {
+        let (tris, partial) = self.triangulate_with_partial(vertices)?;
+        if partial {
+            return Err(Error::Triangulation);
+        }
         Ok(tris)
+    }
+
+    pub(super) fn triangulate_v53(
+        &mut self,
+        vertices: &[Vertex],
+    ) -> Result<(Vec<[usize; 3]>, bool), Error> {
+        self.triangulate_with_partial(vertices)
     }
 }

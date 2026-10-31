@@ -252,3 +252,27 @@ fn tile_limits_are_downward_and_failure_identifies_subtile() {
     );
     assert!(e.to_string().contains("0: recast_policy_limit"));
 }
+
+#[test]
+fn generated_detail_expands_only_vertical_detour_bounds() {
+    let mesh = Mesh {
+        solid_vertices: vec![[0.0, 2.0, 0.0]],
+        ..Default::default()
+    };
+    let r = request(1, false);
+    let config = Config::new(r, &mesh).unwrap();
+    let params = global_params(&[r.tile]).unwrap();
+    let mut options = config.detour_options(params).unwrap();
+    let original = options;
+    super::build::include_detail_vertical_bounds(
+        &mut options,
+        &[[0.0, -4.0, 0.0], [0.0, 9.0, 0.0]],
+    );
+    assert_eq!((options.min[1], options.max[1]), (-4.0, 9.0));
+    for axis in [0, 2] {
+        assert_eq!(options.min[axis], original.min[axis]);
+        assert_eq!(options.max[axis], original.max[axis]);
+    }
+    assert_eq!(options.tile, original.tile);
+    assert_eq!(options.walkable_climb, original.walkable_climb);
+}

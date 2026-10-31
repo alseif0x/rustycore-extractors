@@ -32,6 +32,9 @@ mod v10;
 #[cfg(all(test, target_os = "linux"))]
 #[path = "verify/v26_tests.rs"]
 mod v26_tests;
+#[cfg(all(test, target_os = "linux"))]
+#[path = "verify/v27_tests.rs"]
+mod v27_tests;
 #[cfg(target_os = "linux")]
 mod v9;
 
@@ -58,8 +61,65 @@ pub fn verify(
     verify_inner(plan, output, expected, Scope::Intrinsic)
 }
 
-/// Linux-only cross-artifact checks over the same complete verification traversal.
-/// Does not establish VMap associations, topology or unobserved map completeness.
+#[cfg(target_os = "linux")]
+pub fn verify_available_navigation_links(
+    plan: &Plan,
+    source: &Path,
+    source_plan: &Path,
+    output: &Path,
+    expected: Option<Context>,
+) -> Result<package::Summary, Error> {
+    if plan.is_v57() {
+        crate::driver::navigation_v23::v57::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    } else if plan.is_v56() {
+        crate::driver::navigation_v23::v56::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    } else if plan.is_v55() {
+        crate::driver::navigation_v23::v55::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    } else if plan.is_v54() {
+        crate::driver::navigation_v23::v54::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    } else if plan.is_v53() {
+        crate::driver::navigation_v23::v53::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    } else {
+        crate::driver::navigation_v23::v52::verify_links(
+            plan,
+            source,
+            source_plan,
+            output,
+            expected,
+        )
+    }
+}
+
 #[cfg(target_os = "linux")]
 pub fn verify_links(
     plan: &Plan,
@@ -147,6 +207,65 @@ fn verify_inner(
     expected: Option<Context>,
     scope: Scope,
 ) -> Result<package::Summary, Error> {
+    plan.validate()?;
+    #[cfg(target_os = "linux")]
+    if plan.is_v57() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v57::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v56() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v56::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v55() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v55::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v54() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v54::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v53() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v53::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v52() {
+        if matches!(scope, Scope::Links) {
+            return Err("product_navigation_inputs_required".into());
+        }
+        return crate::driver::navigation_v23::v52::verify(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v50() || plan.is_v51() {
+        return compatible_vmaps::verify_selected_geometry_v50(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v49() {
+        return compatible_vmaps::verify_selected_geometry_v49(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v48() {
+        return compatible_vmaps::verify_selected_geometry_v48(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v47() {
+        return compatible_vmaps::verify_selected_geometry_v47(plan, output, expected);
+    }
     crate::driver::admit(plan)?;
     #[cfg(target_os = "linux")]
     if plan.is_v23() {
@@ -160,6 +279,82 @@ fn verify_inner(
         return compatible_vmaps::verify_selected_geometry_v22(plan, output, expected);
     }
     #[cfg(target_os = "linux")]
+    if plan.is_v28() {
+        return compatible_vmaps::verify_selected_geometry_v28(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v29() {
+        return compatible_vmaps::verify_selected_geometry_v29(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v30() {
+        return compatible_vmaps::verify_selected_geometry_v30(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v31() {
+        return compatible_vmaps::verify_selected_geometry_v31(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v32() {
+        return compatible_vmaps::verify_selected_geometry_v32(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v33() {
+        return compatible_vmaps::verify_selected_geometry_v33(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v34() {
+        return compatible_vmaps::verify_selected_geometry_v34(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v35() {
+        return compatible_vmaps::verify_selected_geometry_v35(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v46() {
+        return compatible_vmaps::verify_selected_geometry_v46(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v45() {
+        return compatible_vmaps::verify_selected_geometry_v45(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v44() {
+        return compatible_vmaps::verify_selected_geometry_v44(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v43() {
+        return compatible_vmaps::verify_selected_geometry_v43(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v42() {
+        return compatible_vmaps::verify_selected_geometry_v42(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v41() {
+        return compatible_vmaps::verify_selected_geometry_v41(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v40() {
+        return compatible_vmaps::verify_selected_geometry_v40(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v39() {
+        return compatible_vmaps::verify_selected_geometry_v39(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v38() {
+        return compatible_vmaps::verify_selected_geometry_v38(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v37() {
+        return compatible_vmaps::verify_selected_geometry_v37(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
+    if plan.is_v36() {
+        return compatible_vmaps::verify_selected_geometry_v36(plan, output, expected);
+    }
+    #[cfg(target_os = "linux")]
     if plan.is_v14() || plan.is_v15() || plan.is_v18() {
         return compatible_vmaps::verify(plan, output, expected);
     }
@@ -168,7 +363,9 @@ fn verify_inner(
         limits.total_bytes = budget.output_bytes;
     }
     #[cfg(target_os = "linux")]
-    if plan.is_v24() || plan.is_v25() {
+    if plan.is_v27() {
+        limits = crate::driver::terrain_v20::package_limits_v27();
+    } else if plan.has_authenticated_map_terrain() {
         limits = crate::driver::terrain_v20::package_limits_v24();
     } else if plan.is_v20() {
         limits = crate::driver::terrain_v20::package_limits();
@@ -187,6 +384,12 @@ fn verify_inner(
     #[cfg(not(target_os = "linux"))]
     let _ = scope;
     let mut failure = None;
+    #[cfg(target_os = "linux")]
+    let partial_db2_paths = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
+    #[cfg(target_os = "linux")]
+    {
+        facts.partial_db2_paths = std::rc::Rc::clone(&partial_db2_paths);
+    }
     let inspect = |artifact: &Artifact, file: ArtifactReader<'_>| {
         let mut bytes = Vec::new();
         let result = (|| {
@@ -239,7 +442,7 @@ fn verify_inner(
             },
             inspect,
         )
-    } else if plan.is_v26() {
+    } else if plan.is_v26() || plan.is_v27() {
         package::verify_with_preflight_and_partial_declarations(
             output,
             expected,
@@ -256,9 +459,24 @@ fn verify_inner(
                     .try_reserve_exact(tables.len())
                     .map_err(|_| package::Error::Allocation)?;
                 manifest_partial_tables.extend_from_slice(tables);
+                let mut paths = partial_db2_paths.borrow_mut();
+                paths
+                    .try_reserve_exact(tables.len())
+                    .map_err(|_| package::Error::Allocation)?;
+                paths.extend(tables.iter().map(|table| table.path.clone()));
                 Ok(())
             },
-            |_| Ok(()),
+            |artifacts| {
+                if plan.is_v27() {
+                    crate::driver::terrain_v20::admit_metadata_v24(plan, artifacts).map_err(
+                        |error| {
+                            metadata_failure = Some(error);
+                            package::Error::Schema
+                        },
+                    )?;
+                }
+                Ok(())
+            },
             inspect,
         )
     } else {
@@ -319,7 +537,7 @@ fn verify_inner(
         }
     }
     #[cfg(target_os = "linux")]
-    if plan.is_v26() {
+    if plan.is_v26() || plan.is_v27() {
         verify_v26_partial_declarations(
             &facts.partial_db2_payload_sizes,
             &manifest_partial_sections,
@@ -341,7 +559,7 @@ fn verify_inner(
             .take()
             .ok_or("product_terrain_coverage")?
             .finish(plan, context)?;
-    } else if plan.is_v24() || plan.is_v25() {
+    } else if plan.has_authenticated_map_terrain() {
         let map = facts
             .authenticated_map
             .as_ref()
@@ -366,6 +584,36 @@ fn verify_inner(
         links.finish(plan)?;
     }
     Ok(summary)
+}
+
+#[cfg(target_os = "linux")]
+fn v26_partial_extents_match(
+    payload_sizes: &[u64],
+    sections: &[package::PartialEncryptedSection],
+) -> bool {
+    let mut index = 0usize;
+    for payload_size in payload_sizes {
+        let mut remaining = *payload_size;
+        if remaining == 0 {
+            while sections
+                .get(index)
+                .is_some_and(|section| section.decoded_size == 0)
+            {
+                index += 1;
+            }
+        }
+        while remaining > 0 {
+            let Some(section) = sections.get(index) else {
+                return false;
+            };
+            if section.decoded_size == 0 || section.decoded_size > remaining {
+                return false;
+            }
+            remaining -= section.decoded_size;
+            index += 1;
+        }
+    }
+    index == sections.len()
 }
 
 #[cfg(target_os = "linux")]
@@ -395,13 +643,7 @@ fn verify_v26_partial_declarations(
             continue;
         }
         let table = declaration.ok_or("product_partial_undeclared")?;
-        if table.sections.len() != payload_sizes.len()
-            || table
-                .sections
-                .iter()
-                .zip(payload_sizes)
-                .any(|(section, decoded_size)| section.decoded_size != *decoded_size)
-        {
+        if !v26_partial_extents_match(payload_sizes, &table.sections) {
             return Err("product_partial_section_count".into());
         }
     }
@@ -413,6 +655,8 @@ fn verify_v26_partial_declarations(
 
 #[derive(Default)]
 struct Facts {
+    #[cfg(target_os = "linux")]
+    partial_db2_paths: std::rc::Rc<std::cell::RefCell<Vec<String>>>,
     #[cfg(target_os = "linux")]
     terrain_v12: Option<crate::driver::terrain_v12::VerifyFacts>,
     #[cfg(target_os = "linux")]
@@ -495,7 +739,14 @@ impl Facts {
             return Err("product_empty_artifact".into());
         }
         #[cfg(target_os = "linux")]
-        if plan.is_v26() {
+        if plan.is_v27() && artifact.component == Component::Terrain {
+            return self
+                .terrain_v20
+                .get_or_insert_with(crate::driver::terrain_v20::VerifyFacts::new)
+                .inspect(artifact, bytes);
+        }
+        #[cfg(target_os = "linux")]
+        if plan.is_v26() || plan.is_v27() {
             if artifact.component != Component::Db2 || bytes.len() > 16 * 1024 * 1024 {
                 return Err("product_inventory".into());
             }
@@ -510,12 +761,39 @@ impl Facts {
             {
                 return Err("product_inventory".into());
             }
-            let structure =
-                forever_db2::availability::read_structure_70450(&CompleteDb2Source(bytes))
+            let payload_sizes = if self
+                .partial_db2_paths
+                .borrow()
+                .iter()
+                .any(|path| path == &artifact.path)
+            {
+                forever_db2::availability::read_structure_70450_for_table(
+                    &CompleteDb2Source(bytes),
+                    name,
+                )
+                .map_err(|error| Error::from(error.code()))?
+                .tact_payload_sizes
+            } else {
+                let metadata = forever_db2::Metadata::read(&mut std::io::Cursor::new(bytes))
                     .map_err(|error| Error::from(error.code()))?;
+                if metadata
+                    .sections
+                    .iter()
+                    .any(|section| section.tact_declared)
+                {
+                    return Err("product_partial_undeclared".into());
+                }
+                Vec::new()
+            };
+            if plan.is_v27() && name == "Map" {
+                if self.authenticated_map.is_some() {
+                    return Err("product_inventory".into());
+                }
+                self.authenticated_map = Some(crate::driver::terrain_v20::authenticate_map(bytes)?);
+            }
             if self
                 .partial_db2_payload_sizes
-                .insert(artifact.path.clone(), structure.tact_payload_sizes)
+                .insert(artifact.path.clone(), payload_sizes)
                 .is_some()
             {
                 return Err("product_inventory".into());

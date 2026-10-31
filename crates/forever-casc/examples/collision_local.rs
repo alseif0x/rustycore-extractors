@@ -460,6 +460,7 @@ mod qa {
             Status::Collision => "collision",
             Status::NoCollision => "no_collision",
             Status::DoodadOnly => "doodad_only",
+            Status::Vacated => "vacated",
         }
     }
 
@@ -642,6 +643,7 @@ mod qa {
         let mut collision = 0usize;
         let mut no_collision = 0usize;
         let mut doodad_only = 0usize;
+        let mut vacated = 0usize;
         for model in result.models() {
             match model.class() {
                 Class::M2 => m2 += 1,
@@ -651,6 +653,7 @@ mod qa {
                 Status::Collision => collision += 1,
                 Status::NoCollision => no_collision += 1,
                 Status::DoodadOnly => doodad_only += 1,
+                Status::Vacated => vacated += 1,
             }
             if let Some(bytes) = model.raw() {
                 raw_files += 1;
@@ -695,7 +698,7 @@ mod qa {
             .map_err(|_| "qa_output_sync")?;
         let facts = result.facts();
         println!(
-            "{{\"status\":\"ok\",\"requests\":{},\"models\":{},\"m2\":{m2},\"wmo\":{wmo},\"collision\":{collision},\"no_collision\":{no_collision},\"doodad_only\":{doodad_only},\"raw_files\":{raw_files},\"raw_bytes\":{raw_bytes},\"refs\":{refs},\"source_reads\":{},\"source_bytes\":{},\"dependency_requests\":{},\"names_enabled\":{names},\"liquid_tables_loaded\":{liquid_tables_loaded},\"lookup_source_reads\":{},\"lookup_source_bytes\":{},\"lookup_resident_bytes\":{}}}",
+            "{{\"status\":\"ok\",\"requests\":{},\"models\":{},\"m2\":{m2},\"wmo\":{wmo},\"collision\":{collision},\"no_collision\":{no_collision},\"doodad_only\":{doodad_only},\"vacated\":{vacated},\"raw_files\":{raw_files},\"raw_bytes\":{raw_bytes},\"refs\":{refs},\"source_reads\":{},\"source_bytes\":{},\"dependency_requests\":{},\"names_enabled\":{names},\"liquid_tables_loaded\":{liquid_tables_loaded},\"lookup_source_reads\":{},\"lookup_source_bytes\":{},\"lookup_resident_bytes\":{}}}",
             plan.requests.len(),
             facts.models,
             facts.reads,

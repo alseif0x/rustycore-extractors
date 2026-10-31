@@ -3,11 +3,19 @@
 use super::super::{Extractor, InputRef};
 use super::*;
 use crate::collision::spool::{Limits as SpoolLimits, ProtectedInputs, Spool};
-use crate::local_store::tests::CollisionFixture;
+use crate::{
+    local_store::tests::CollisionFixture,
+    local_store::{
+        ProductDiagnosticObserver, ProductDiagnosticPhase, ProductDiagnosticRequest,
+        ProductDiagnosticRequestKind, ProductDiagnosticResource,
+    },
+};
 use std::{
+    cell::RefCell,
     fs,
     os::unix::fs::{DirBuilderExt, PermissionsExt},
     path::PathBuf,
+    rc::Rc,
     sync::atomic::{AtomicU64, Ordering},
 };
 struct Lookup;
@@ -1048,6 +1056,76 @@ fn generic_callback_cause_survives_plain_failure_and_changed_guard() {
         assert!(e.descriptor(h).is_err());
     }
 }
+#[derive(Default)]
+struct ResourceObserver(Rc<RefCell<Vec<ProductDiagnosticResource>>>);
+impl ProductDiagnosticObserver for ResourceObserver {
+    fn set_phase(&mut self, _: ProductDiagnosticPhase) {}
+    fn begin_request(
+        &mut self,
+        _: ProductDiagnosticRequestKind,
+        _: Option<u32>,
+    ) -> Option<ProductDiagnosticRequest> {
+        None
+    }
+    fn tolerated_absence(&mut self, _: ProductDiagnosticRequest) {}
+    fn resource_limit(&mut self, resource: ProductDiagnosticResource) {
+        self.0.borrow_mut().push(resource);
+    }
+    fn source_failure(
+        &mut self,
+        _: ProductDiagnosticRequest,
+        _: crate::local_store::Error,
+        _: bool,
+    ) {
+    }
+    fn finish(&mut self, _: Option<&'static str>, _: bool) {}
+}
+
+#[test]
+fn final_external_failure_records_one_resource_snapshot_before_checked() {
+    let f = CollisionFixture::new(&[(10, None, m2(true))]);
+    let p = Private::new();
+    let mut store = f.open(false);
+    let store_resident_bytes = store.stats().resident_bytes;
+    let resources = Rc::new(RefCell::new(Vec::new()));
+    store.set_product_diagnostic_observer(Some(Box::new(ResourceObserver(resources.clone()))));
+    let mut e = SpoolingExtractor::new(
+        &mut store,
+        &Lookup,
+        CollisionLimits::default(),
+        p.spool(&f, SpoolLimits::default()),
+    )
+    .unwrap();
+    let result = e.finish_external_operation(Err::<(), _>(77u32));
+    assert!(matches!(
+        result,
+        Err(CallbackFailure::Callback {
+            cause: 77,
+            guard: None
+        })
+    ));
+    assert_eq!(resources.borrow().len(), 1);
+    assert_eq!(
+        resources.borrow()[0],
+        ProductDiagnosticResource {
+            request_calls: 0,
+            reads: 0,
+            dependency_requests: 0,
+            source_bytes: 0,
+            raw_bytes: 0,
+            models: 0,
+            resident_bytes: e.inner.live,
+            external_bytes: e.inner.external,
+            external_source_bytes: e.inner.external_sources,
+            store_resident_bytes,
+            memory_limit: e.inner.limits.max_memory_bytes,
+        }
+    );
+    assert!(e.facts().is_err());
+    assert!(e.finish().is_err());
+    assert_eq!(resources.borrow().len(), 1);
+}
+
 #[test]
 fn final_external_failure_retains_cause_and_poison_even_without_io_failure() {
     let f = CollisionFixture::new(&[(10, None, m2(true))]);

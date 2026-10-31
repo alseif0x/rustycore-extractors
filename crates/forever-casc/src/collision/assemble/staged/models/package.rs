@@ -210,7 +210,9 @@ impl Limits {
         }
         let d = Self::default();
         let mut bounded = self;
-        bounded.max_models = bounded.max_models.min(d.max_models);
+        if !profile.model_heavy() {
+            bounded.max_models = bounded.max_models.min(d.max_models);
+        }
         bounded.max_output_bytes = bounded.max_output_bytes.min(d.max_output_bytes);
         bounded.max_vertices = bounded.max_vertices.min(d.max_vertices);
         bounded.max_triangles = bounded.max_triangles.min(d.max_triangles);
@@ -221,9 +223,13 @@ impl Limits {
         bounded.max_records = bounded.max_records.min(d.max_records);
         bounded.max_associations = bounded.max_associations.min(d.max_associations);
         bounded.max_ancestor_steps = bounded.max_ancestor_steps.min(d.max_ancestor_steps);
-        bounded.validate()
+        bounded.validate_with_model_limit(cap.max_models)
     }
+    #[cfg(test)]
     fn validate(self) -> Result<(), Kind> {
+        self.validate_with_model_limit(resident::MAX_MODELS)
+    }
+    fn validate_with_model_limit(self, max_models: usize) -> Result<(), Kind> {
         let d = Self::default();
         let c = self.assembly;
         let a = d.assembly;
@@ -232,7 +238,7 @@ impl Limits {
         if self.max_memory_bytes > d.max_memory_bytes
             || self.max_maps > d.max_maps
             || self.max_files > d.max_files
-            || self.max_models > d.max_models
+            || self.max_models > max_models
             || self.max_records > d.max_records
             || self.max_output_bytes > d.max_output_bytes
             || self.max_vertices > d.max_vertices

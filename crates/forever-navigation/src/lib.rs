@@ -9,6 +9,10 @@ pub mod models;
 pub mod offmesh;
 #[cfg(target_os = "linux")]
 pub mod package_v23;
+#[cfg(target_os = "linux")]
+pub mod package_v56;
+#[cfg(target_os = "linux")]
+pub mod package_v57;
 pub mod pipeline;
 pub mod recast;
 pub mod terrain;
@@ -74,6 +78,35 @@ impl Limits {
         }
         Ok(())
     }
+
+    pub fn validate_available_v52(self) -> Result<(), Error> {
+        if self.vertices != 500_000 {
+            return self.validate();
+        }
+        let max = Self {
+            vertices: 500_000,
+            ..Self::default()
+        };
+        if self.triangles > max.triangles || self.heap_bytes > max.heap_bytes {
+            return Err(Error::Limit);
+        }
+        Ok(())
+    }
+
+    pub fn validate_available_v54(self) -> Result<(), Error> {
+        if self.vertices != 1_000_000 {
+            return self.validate_available_v52();
+        }
+        let max = Self {
+            vertices: 1_000_000,
+            heap_bytes: 48 * 1024 * 1024,
+            ..Self::default()
+        };
+        if self.triangles > max.triangles || self.heap_bytes > max.heap_bytes {
+            return Err(Error::Limit);
+        }
+        Ok(())
+    }
 }
 
 /// Separate indexed solid and liquid meshes in Recast (y, height, x) coordinates.
@@ -117,7 +150,7 @@ impl Mesh {
     /// positions remain separate when they had different source vertex indices.
     /// Consumes the mesh so errors cannot expose partially rewritten indices.
     pub fn compact(mut self, limits: Limits) -> Result<Self, Error> {
-        limits.validate()?;
+        limits.validate_available_v54()?;
         if self.solid_vertices.len() + self.liquid_vertices.len() > limits.vertices
             || self.solid_triangles.len() + self.liquid_triangles.len() > limits.triangles
         {

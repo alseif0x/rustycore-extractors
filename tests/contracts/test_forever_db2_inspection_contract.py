@@ -48,6 +48,7 @@ class Db2InspectionContract(unittest.TestCase):
                 },
                 "other_declarations_and_builds": "retain the 100000 direct-record, 100000 copy-pair, 100000 parent-entry, and 1000000 retained-value defaults unless another build-specific profile independently admits them",
                 "default_limits_changed": False,
+                "v26_available_source": "For v26 only, use the authenticated build-70450 available-source route and zero-filled declared encrypted frames; classify partial inputs with structural WDC5/zero-fill validation and exact multi-frame coverage of each TACT extent without decoding rows. Other plans retain complete-file reads.",
             },
         )
 
@@ -79,6 +80,9 @@ class Db2InspectionContract(unittest.TestCase):
         self.assertEqual(report["numeric_section_type_codes"]["1"],
                          "sparse WDC5 record variant; Header.Flags bit 0 set")
         self.assertIn("TACT value is not emitted", report["section_flags"])
+        self.assertIn("decoded/structural extent sizes", report["v26_partial_reason"])
+        self.assertIn("decoded (not archive) offsets", report["v26_partial_reason"])
+        self.assertIn("never emitted", report["v26_partial_reason"])
         self.assertIn("CompressionType", report["compression_kinds"])
         self.assertIn("byte offset +8", report["compression_kinds"])
         self.assertIn("range 0..5", report["compression_kinds"])
@@ -101,6 +105,10 @@ class Db2InspectionContract(unittest.TestCase):
             "keys_supplied",
             "output_path(client, output)",
             "open_keyless_store_70450",
+            "read_file_data_id_available_70450_with_limit",
+            "inspect_bytes_with_partial",
+            "plan.is_v26() && !partial_sections.is_empty()",
+            "partial frame ordinal",
             "validate_db2(plan, table_name, bytes)",
             "atomic_write(client, &output",
         ]:
@@ -111,11 +119,15 @@ class Db2InspectionContract(unittest.TestCase):
             "synthetic_sparse_parent_matches_real_shape_and_is_redacted_deterministic",
             "synthetic_unsupported_sparse_common_data_is_reported_as_rejected",
             "compression_kinds_are_fixed_offset_numeric_codes_filtered_to_reader_range",
+            "v26_partial_classification_uses_structure_without_decoding_rows",
+            "v26_partial_classification_reports_only_numeric_size_mismatch_details",
         ]:
             self.assertIn(name, inspector)
         for name in [
             "inspect_db2_refuses_keys_and_non_70450_plans_before_client_access",
             "inspect_db2_refuses_client_and_git_checkout_output_paths",
+            "inspect_db2_v26_complete_source_preserves_the_redacted_report",
+            "inspect_db2_v26_partial_source_uses_structure_without_decoding_rows",
         ]:
             self.assertIn(name, cli)
 

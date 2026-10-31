@@ -618,10 +618,10 @@ impl AvailableSelectedPlan {
     pub fn sections(&self) -> &[SectionCoverage] {
         &self.sections
     }
-    /// Internal pipeline access keeps the partial-coverage owner attached at
-    /// the API boundary while reusing the established plan execution path.
+    /// Read-only plan access keeps the partial-coverage owner attached at the
+    /// API boundary while reusing the established plan execution path.
     #[cfg(target_os = "linux")]
-    pub(crate) fn inventory_plan(&self) -> &Plan {
+    pub fn inventory_plan(&self) -> &Plan {
         &self.plan
     }
     pub fn all_sections_admitted(&self) -> bool {

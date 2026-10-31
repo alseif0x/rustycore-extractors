@@ -67,13 +67,18 @@ impl Limits {
             return Err(Error::InvalidLimits);
         }
         let mut bounded = self;
-        bounded.max_models = bounded.max_models.min(MAX_MODELS);
-        bounded.validate()
+        if !profile.model_heavy() {
+            bounded.max_models = bounded.max_models.min(MAX_MODELS);
+        }
+        bounded.validate_for_model_limit(profile.collector_limits().max_models)
     }
     fn validate(self) -> Result<(), Error> {
+        self.validate_for_model_limit(MAX_MODELS)
+    }
+    fn validate_for_model_limit(self, max_models: usize) -> Result<(), Error> {
         if self.max_batches > MAX_BATCHES
             || self.max_maps > MAX_MAPS
-            || self.max_models > MAX_MODELS
+            || self.max_models > max_models
             || self.max_source_requests > MAX_SOURCE_REQUESTS
             || self.max_records > MAX_RECORDS
             || self.max_output_bytes > MAX_OUTPUT_BYTES
@@ -191,6 +196,17 @@ pub struct Session {
 impl Session {
     pub fn new(limits: Limits) -> Result<Self, Error> {
         limits.validate()?;
+        Self::new_validated(limits)
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn new_with_resources(
+        limits: Limits,
+        profile: super::resources::Profile,
+    ) -> Result<Self, Error> {
+        limits.validate_resources(profile)?;
+        Self::new_validated(limits)
+    }
+    fn new_validated(limits: Limits) -> Result<Self, Error> {
         let allocator = ids::IdAllocator::new(limits.ids).map_err(Error::Ids)?;
         Ok(Self {
             limits,
@@ -212,10 +228,24 @@ impl Session {
         extraction: ExtractionView<'_>,
         batches: &[Batch<'_, '_>],
     ) -> Result<Output, Error> {
+        self.project_view_with_omissions(extraction, batches, &[])
+    }
+    pub(crate) fn project_view_with_omissions(
+        &mut self,
+        extraction: ExtractionView<'_>,
+        batches: &[Batch<'_, '_>],
+        missing_m2: &[u32],
+    ) -> Result<Output, Error> {
         if let Some(error) = self.failed {
             return Err(error);
         }
-        let result = project(extraction, batches, self.limits, &mut self.allocator);
+        let result = project(
+            extraction,
+            batches,
+            self.limits,
+            &mut self.allocator,
+            missing_m2,
+        );
         if let Err(error) = &result {
             self.failed = Some(*error);
         }
@@ -247,6 +277,7 @@ fn project(
     batches: &[Batch<'_, '_>],
     limits: Limits,
     allocator: &mut ids::IdAllocator,
+    missing_m2: &[u32],
 ) -> Result<Output, Error> {
     if batches.len() > limits.max_batches || extraction.models.len() > limits.max_models {
         return Err(Error::Limit);
@@ -341,7 +372,7 @@ fn project(
                     let metadata = model.wmo_metadata().ok_or(Error::Model)?;
                     if roots[handle.index()].is_none() {
                         let root = metadata.root().map_err(Error::Wmo)?;
-                        check_bindings(extraction, metadata, &root)?;
+                        check_bindings(extraction, metadata, &root, missing_m2)?;
                         roots[handle.index()] = Some(root);
                     }
                     let root = roots[handle.index()].as_ref().ok_or(Error::Model)?;
@@ -484,6 +515,16 @@ fn check_status(model: &Model) -> Result<(), Error> {
         {
             Ok(())
         }
+        (Class::Wmo, Status::Vacated, false, true)
+            if model.wmo.as_ref().is_some_and(|metadata| {
+                metadata.bindings().is_empty()
+                    && metadata.selection.set_count() != 0
+                    && metadata.selection.references().is_empty()
+                    && metadata.selection.outcome(false) == wmo::doodads::Outcome::FailedNoCollision
+            }) =>
+        {
+            Ok(())
+        }
         _ => Err(Error::Model),
     }
 }
@@ -496,9 +537,30 @@ fn check_bindings(
     extraction: ExtractionView<'_>,
     metadata: &super::WmoMetadata,
     root: &wmo::Root<'_>,
+    missing_m2: &[u32],
 ) -> Result<(), Error> {
+    if missing_m2.contains(&0)
+        || metadata
+            .bindings()
+            .windows(2)
+            .any(|bindings| bindings[0].name_index >= bindings[1].name_index)
+    {
+        return Err(Error::Binding);
+    }
     let mut count = 0;
     for request in wmo::doodads::requests(root) {
+        if let wmo::doodads::Target::FileDataId(id) = request.target
+            && missing_m2.contains(&id)
+        {
+            if metadata
+                .bindings()
+                .binary_search_by_key(&request.name_index, |binding| binding.name_index)
+                .is_ok()
+            {
+                return Err(Error::Binding);
+            }
+            continue;
+        }
         let binding = metadata.bindings().get(count).ok_or(Error::Binding)?;
         if binding.name_index != request.name_index {
             return Err(Error::Binding);

@@ -688,3 +688,31 @@ fn retained_capacity_charge_matches_data_and_releases_on_finish() {
     assert!(startup.collector.retained_bytes() >= startup.data.stats.resident_bytes);
     assert!(startup.finish().is_ok());
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn resource_startup_rejects_disk_world_and_preserves_godi_sentinel() {
+    let fixture = CollisionFixture::new(&[]);
+    let mut store = fixture.open(false);
+    assert_eq!(
+        extract_startup_without_godi_with_resources(
+            &mut store,
+            Limits::default(),
+            crate::collision::resources::Profile::DiskWorldV1,
+        )
+        .err(),
+        Some(Error::Collision(super::super::Error::InvalidLimits))
+    );
+
+    let mut store = fixture.open(false);
+    let startup = extract_startup_without_godi_with_resources(
+        &mut store,
+        Limits::default(),
+        crate::collision::resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    assert_eq!(startup.data.source.file_data_id(), 0);
+    assert_eq!(startup.data.startup_facts().reads, 0);
+    assert!(startup.data.outcomes.is_empty());
+    assert!(startup.finish().is_ok());
+}

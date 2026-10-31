@@ -46,6 +46,8 @@ pub struct SectionCoverage {
 pub struct StructuralFacts {
     /// Complete payload byte lengths for TACT-declared sections, in file order.
     pub tact_payload_sizes: Vec<u64>,
+    /// Decoded start offsets for those same TACT payloads, in matching order.
+    pub tact_payload_offsets: Vec<u64>,
     /// Per-section declared counts and structural admission state.
     pub sections: Vec<SectionCoverage>,
 }
@@ -265,6 +267,27 @@ pub fn read_navigation_maps_70450(
 /// is zero-filled; ordinary section payloads are bounds-checked, not decoded.
 pub fn read_structure_70450(input: &impl Source) -> Result<StructuralFacts, RecordError> {
     available_sections::read_structure(input, available_sections::Target::Build70450)
+}
+
+/// The closed v26 table policy distinguishes total WDC5 sections from partial
+/// frames and structural value counts. Item permits one additional ordinary
+/// section; ItemSparse and SpellEffect permit only their exact declared shapes.
+pub fn read_structure_70450_for_table(
+    input: &impl Source,
+    table_name: &str,
+) -> Result<StructuralFacts, RecordError> {
+    let (max_sections, max_values) = match table_name {
+        "Item" => (17, 1_000_000),
+        "ItemSparse" => (16, 1_309_884),
+        "SpellEffect" => (16, 1_276_783),
+        _ => (16, 1_000_000),
+    };
+    available_sections::read_structure_with_limits(
+        input,
+        available_sections::Target::Build70450,
+        max_sections,
+        max_values,
+    )
 }
 
 #[cfg(test)]

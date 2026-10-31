@@ -521,8 +521,14 @@ impl State {
             reserve(&mut facts, 1, &mut e.live, cap)?;
             facts.push(fact);
         }
-        let (selection, raw, omitted_usable) =
-            e.convert_wmo_geometry(&root, &groups, &facts, &valid, &omitted)?;
+        let (selection, raw, omitted_usable, _, _) = e.convert_wmo_geometry(
+            &root,
+            &groups,
+            &facts,
+            &valid,
+            &omitted,
+            super::GeometryInspection::None,
+        )?;
         // Strict Selection remains sorted. Only the explicitly selected v2
         // retains the separate GNU15 traversal while physical group bytes live.
         let native_references = if self.native_order {

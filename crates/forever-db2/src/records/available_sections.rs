@@ -103,7 +103,16 @@ pub(crate) fn read_navigation_maps_70450(
 /// TACT-declared payloads are admitted only as complete zero-filled extents.
 pub(crate) fn read_structure(
     input: &impl Source,
+    target: Target,
+) -> Result<StructuralFacts, RecordError> {
+    read_structure_with_limits(input, target, MAX_SECTIONS, MAX_VALUES)
+}
+
+pub(crate) fn read_structure_with_limits(
+    input: &impl Source,
     _target: Target,
+    max_sections: usize,
+    max_values: usize,
 ) -> Result<StructuralFacts, RecordError> {
     let len = usize::try_from(input.declared_bytes()).map_err(|_| RecordError::Limit)?;
     if len > MAX_BYTES {
@@ -111,19 +120,17 @@ pub(crate) fn read_structure(
     }
     let raw: &[u8; HEADER_SIZE] = bytes(input, 0, HEADER_SIZE)?.try_into().unwrap();
     let h = Header::parse(raw).map_err(|_| RecordError::Metadata)?;
-    if h.section_count as usize > MAX_SECTIONS || h.record_count as usize > MAX_ROWS {
+    if h.section_count as usize > max_sections || h.record_count as usize > MAX_ROWS {
         return Err(RecordError::Limit);
     }
     if h.record_size == 0 {
         return Err(RecordError::Bounds);
     }
-    if h.flags & SPARSE_FLAG != 0 || h.parent_lookup_count != 0 {
-        return Err(RecordError::Unsupported);
-    }
+    let sparse = h.flags & SPARSE_FLAG != 0;
     // Without table metadata, bound values conservatively by the larger raw
     // and expanded field count declared in the WDC header.
     let fields_per_record = h.total_field_count.max(h.field_count) as u64;
-    if (h.record_count as u64) * fields_per_record > MAX_VALUES as u64 {
+    if (h.record_count as u64) * fields_per_record > max_values as u64 {
         return Err(RecordError::Limit);
     }
 
@@ -170,13 +177,15 @@ pub(crate) fn read_structure(
     tact_payload_sizes
         .try_reserve_exact(tact_count)
         .map_err(|_| RecordError::Limit)?;
+    let mut tact_payload_offsets = Vec::new();
+    tact_payload_offsets
+        .try_reserve_exact(tact_count)
+        .map_err(|_| RecordError::Limit)?;
 
     let (mut rows, mut copies, mut strings) = (0usize, 0usize, 0usize);
+    let (mut catalog_rows, mut parent_rows) = (0usize, 0usize);
     for (ordinal, section) in meta.sections.iter().enumerate() {
-        if section.catalog_data_count != 0
-            || section.catalog_data_offset != 0
-            || section.parent_lookup_data_size != 0
-        {
+        if !sparse && (section.catalog_data_count != 0 || section.catalog_data_offset != 0) {
             return Err(RecordError::Unsupported);
         }
         if section.file_offset as usize != end {
@@ -187,29 +196,98 @@ pub(crate) fn read_structure(
         if rows > MAX_ROWS || copies > MAX_COPIES {
             return Err(RecordError::Limit);
         }
-        if section.id_table_size as usize != mul(section.record_count as usize, 4)? {
-            return Err(RecordError::Id);
-        }
-
-        let payload_start = end;
-        end = add(
-            end,
-            mul(section.record_count as usize, h.record_size as usize)?,
-        )?;
-        end = add(end, section.string_table_size as usize)?;
-        end = add(end, section.id_table_size as usize)?;
-        end = add(end, mul(section.copy_table_count as usize, 8)?)?;
-        if end > len {
-            return Err(RecordError::Bounds);
-        }
-        if section.tact_declared {
-            let payload = bytes(input, payload_start, end - payload_start)?;
-            if payload.iter().any(|byte| *byte != 0) {
-                return Err(RecordError::PartialZerofill);
-            }
-            tact_payload_sizes.push(u64::try_from(payload.len()).map_err(|_| RecordError::Limit)?);
-        }
         strings = add(strings, section.string_table_size as usize)?;
+        let payload_start = end;
+        if sparse {
+            catalog_rows = add(catalog_rows, section.catalog_data_count as usize)?;
+            if catalog_rows > MAX_ROWS {
+                return Err(RecordError::Limit);
+            }
+            let catalog_start = section.catalog_data_offset as usize;
+            if catalog_start < payload_start || catalog_start > len {
+                return Err(RecordError::Bounds);
+            }
+            if !section.tact_declared {
+                bytes(input, payload_start, catalog_start - payload_start)?;
+            }
+
+            // Sparse WDC5 rows are addressed by raw catalog entries. The
+            // section's catalog area is IDs, copies, and packed {offset,size}
+            // records; the trailing ID table and parent lookup remain opaque.
+            let catalog_ids = mul(section.catalog_data_count as usize, 4)?;
+            let catalog_copies = mul(section.copy_table_count as usize, 8)?;
+            let catalog_entries = mul(section.catalog_data_count as usize, 6)?;
+            let catalog_bytes = add(add(catalog_ids, catalog_copies)?, catalog_entries)?;
+            let catalog = bytes(input, catalog_start, catalog_bytes)?;
+            if !section.tact_declared {
+                let entries_at = add(catalog_ids, catalog_copies)?;
+                for index in 0..section.catalog_data_count as usize {
+                    let at = add(entries_at, mul(index, 6)?)?;
+                    let entry_end = add(at, 6)?;
+                    let entry = catalog.get(at..entry_end).ok_or(RecordError::Bounds)?;
+                    let record_at =
+                        u32::from_le_bytes(entry[..4].try_into().map_err(|_| RecordError::Bounds)?)
+                            as usize;
+                    let record_size = u16::from_le_bytes(
+                        entry[4..6].try_into().map_err(|_| RecordError::Bounds)?,
+                    ) as usize;
+                    let record_end = add(record_at, record_size)?;
+                    if record_at < payload_start || record_size == 0 || record_end > catalog_start {
+                        return Err(RecordError::Bounds);
+                    }
+                }
+            }
+            let id_table_bytes = checked_id_table_size(section)?;
+            end = add(catalog_start, catalog_bytes)?;
+            bytes(input, end, id_table_bytes)?;
+            end = add(end, id_table_bytes)?;
+            end = skip_parent_lookup(
+                input,
+                end,
+                h.parent_lookup_count,
+                section,
+                section.tact_declared,
+                &mut parent_rows,
+            )?;
+            if section.tact_declared {
+                let payload = bytes(input, payload_start, end - payload_start)?;
+                if payload.iter().any(|byte| *byte != 0) {
+                    return Err(RecordError::PartialZerofill);
+                }
+                tact_payload_offsets.push(payload_start as u64);
+                tact_payload_sizes
+                    .push(u64::try_from(payload.len()).map_err(|_| RecordError::Limit)?);
+            }
+        } else {
+            let id_table_bytes = checked_id_table_size(section)?;
+            end = add(
+                end,
+                mul(section.record_count as usize, h.record_size as usize)?,
+            )?;
+            end = add(end, section.string_table_size as usize)?;
+            end = add(end, id_table_bytes)?;
+            end = add(end, mul(section.copy_table_count as usize, 8)?)?;
+            if end > len {
+                return Err(RecordError::Bounds);
+            }
+            end = skip_parent_lookup(
+                input,
+                end,
+                h.parent_lookup_count,
+                section,
+                section.tact_declared,
+                &mut parent_rows,
+            )?;
+            if section.tact_declared {
+                let payload = bytes(input, payload_start, end - payload_start)?;
+                if payload.iter().any(|byte| *byte != 0) {
+                    return Err(RecordError::PartialZerofill);
+                }
+                tact_payload_offsets.push(payload_start as u64);
+                tact_payload_sizes
+                    .push(u64::try_from(payload.len()).map_err(|_| RecordError::Limit)?);
+            }
+        }
         coverage.push(SectionCoverage {
             ordinal: ordinal as u32,
             declared_records: section.record_count,
@@ -226,8 +304,57 @@ pub(crate) fn read_structure(
     }
     Ok(StructuralFacts {
         tact_payload_sizes,
+        tact_payload_offsets,
         sections: coverage,
     })
+}
+
+fn skip_parent_lookup(
+    input: &impl Source,
+    at: usize,
+    parent_lookup_count: u32,
+    section: &crate::Section,
+    tact_declared: bool,
+    total_entries: &mut usize,
+) -> Result<usize, RecordError> {
+    if parent_lookup_count == 0 {
+        if section.parent_lookup_data_size != 0 {
+            return Err(RecordError::Bounds);
+        }
+        return Ok(at);
+    }
+
+    let block_bytes = if tact_declared {
+        let declared = section.parent_lookup_data_size as usize;
+        if declared < 12 || !(declared - 12).is_multiple_of(8) {
+            return Err(RecordError::Bounds);
+        }
+        declared
+    } else {
+        let entries = word(input, at)? as usize;
+        let block_bytes = add(12, mul(entries, 8)?)?;
+        if section.parent_lookup_data_size as usize != block_bytes {
+            return Err(RecordError::Bounds);
+        }
+        block_bytes
+    };
+    let entries = (block_bytes - 12) / 8;
+    *total_entries = add(*total_entries, entries)?;
+    if *total_entries > MAX_ROWS {
+        return Err(RecordError::Limit);
+    }
+    bytes(input, at, block_bytes)?;
+    add(at, block_bytes)
+}
+
+fn checked_id_table_size(section: &crate::Section) -> Result<usize, RecordError> {
+    let id_table_bytes = section.id_table_size as usize;
+    let record_ids = mul(section.record_count as usize, 4)?;
+    let catalog_ids = mul(section.catalog_data_count as usize, 4)?;
+    if id_table_bytes != 0 && id_table_bytes != record_ids && id_table_bytes != catalog_ids {
+        return Err(RecordError::Id);
+    }
+    Ok(id_table_bytes)
 }
 
 fn bytes(input: &impl Source, at: usize, len: usize) -> Result<&[u8], RecordError> {

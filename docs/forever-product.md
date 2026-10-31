@@ -1,4 +1,4 @@
-# Forever product interface: v1–v6 and Linux v8–v11
+# Forever product interface
 
 `forever-extractor` connects the existing Rust-local acquisition, DB2 catalog,
 20 game tables, camera discovery, terrain conversion, collision assembly and
@@ -31,10 +31,74 @@ synthetic/native evidence and independently accepted bounded real26 lifecycle
 are recorded below. Issue #62 separately accepts the current local Linux bundle;
 release and full extraction remain open.
 
+For build 70450, [product v25](forever-product-v25.md) has real partial-Map and
+available-terrain acceptance, while [product v26](forever-product-v26.md) has
+real acceptance for all 1,161 selected DB2 artifacts. [Product v27](forever-product-v27.md)
+separately combines the selected DB2 catalog including `Map` with authenticated
+available-map terrain and exclusively per-table partial declarations. It has
+real acceptance for all 1,161 selected tables with `map:48` and
+`all-available-maps`: 1,163 and 4,555 artifacts respectively, with the DB2 and
+non-coverage terrain payloads matching v26/v25. None of these profiles decrypts
+omitted encrypted sections or establishes full-world/runtime acceptance.
+
+[Product v28](forever-product-v28.md) separately adds a sealed Map to selected
+VMap geometry and authenticates its VMap section/materialization facts and
+active-ancestor domain from the complete materialized graph. Real map:48
+acceptance passed with 67 artifacts / 2,090,335 bytes and 65 non-coverage
+geometry payloads matching v22. It retains the v22 geometry exclusions and adds
+no all-available or full-world claim.
+
+[Product v29](forever-product-v29.md) extends that independently derived
+Map/VMap domain to every admitted active map with RCVGEO1 v2 and
+`MapSelection::All`, including required trees/proofs for empty maps. Both real
+attempts failed with `file_unavailable` during VMap acquisition and are retained
+without a final package or accepted prefix. The offline census found two
+root-missing WDTs among 71 active maps, so strict v29 cannot complete against
+this collection and a separate omission profile is required. It does not
+establish all-available real acceptance, complete source acquisition,
+full-world or runtime support.
+
+[Product v30](forever-product-v30.md) adds RCVGEO1 v3 and declares only
+root-absent WDT omissions while producing geometry for every present map.
+Missing maps receive no invented tree, proof or tiles; Map/domain and
+associations are independently verified, while root absence remains
+producer-reported. Synthetic lifecycle, resume, inheritance and source-failure
+checks pass. Its real esES run passed inspect and tolerated two WDT ROOT
+absences, but extract then failed on M2 child FDID 970793. Verify and
+verify-links did not run and no final package or prefix was accepted. This is
+not full-world or a complete VMap component.
+
+[Product v31](forever-product-v31.md) separately adds RCVGEO1 v4 and a policy
+limited to WMO-doodad M2 FDIDs whose raw ROOT has no rows. The absent child has
+no VMO/binding/spawn; the WMO root, its placement and present children remain.
+Direct ADT M2, WMO roots/groups, names, ADT and other failures stay fatal. Its
+real run passed inspect but failed at `request_calls=4096` with
+`collision_policy_limit`; extract exited 9 and neither package verification ran.
+No package or prefix was accepted. This is not a complete VMap component,
+full-world or runtime support.
+
+[Product v32](forever-product-v32.md) preserves those v31 omission and artifact
+rules with RCVGEO1 v5 and the separate resident RequestHeavyV1 profile. Only
+`max_requests` is raised to 16,000,000; reads, dependencies, source/RAW bytes,
+models, memory and all other ceilings remain unchanged. Its real run crossed the
+former ceiling but failed with `collision_no_valid_collision` for WMO FDID
+462695 after its declared M2 omission left no geometry or usable doodad
+selection. Extract exited 9 and neither verification ran; no package or prefix
+was accepted. Full-world resources, complete geometry/component, RustyCore
+runtime and reproducible distribution remain open.
+
+[Product v33](forever-product-v33.md) preserves v32 and adds a separate,
+producer-declared omission for a WMO vacated after a local ROOT-absent doodad
+M2 omission. It uses RequestHeavyV1 and RCVGEO1 v6, with no additional limit
+increases relative to v32. Its real run failed with `collision_no_valid_collision`
+for intrinsically empty WMO FDID 462695; inspect passed, extract exited 9 and
+neither verification ran, with no accepted package or prefix. Full-world,
+complete VMap component, runtime and distribution acceptance remain open.
+
 ## Build and inspect
 
 ```bash
-source .opencode/environment.sh
+source tools/environment.sh
 cargo build --offline --locked --release -p forever-extractor
 "$CARGO_TARGET_DIR/release/forever-extractor" inspect --plan /absolute/private/plan.tsv
 ```
@@ -82,6 +146,14 @@ reason. It never emits DB2 records, string values, payload bytes, content keys o
 hashes, index prefixes, archive offsets, or client paths. The command extracts
 nothing and refuses `--keys`, unknown catalogue file data IDs, and a
 non-build-70450 plan.
+
+With a v26 plan, the inspector uses the authenticated available-source route and
+the same zero-filled declared encrypted frames as extraction. Partial inputs are
+classified by bounded WDC5 structure, zero-fill and exact multi-frame coverage
+of each TACT extent without decoding rows. A mismatch reports only its frame
+ordinal and numeric offset/count/size details, never its lookup. Other plan
+revisions retain complete-file reads. This adds no report fields and does not
+publish a package or DB2 artifact.
 
 The report schema has an intentionally pinned field set in
 `forever-db2-inspection-contract-v1.json`. Section `numeric_type` is a report

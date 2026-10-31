@@ -27,6 +27,10 @@ pub use schema::{
 pub use verify::{
     Expected, ReadBatch, ReadLimits, RequestedTile, VerifiedNavigation, read_batch, verify,
 };
+pub type ByteParts = (
+    Vec<u8>,
+    Vec<(crate::tilebuilder::Coordinate, Option<Vec<u8>>)>,
+);
 
 /// A stable product or package diagnostic from v23 schema admission.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

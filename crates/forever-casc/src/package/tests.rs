@@ -645,7 +645,7 @@ fn target70374_context_is_linux_explicit_db2_triple_or_terrain_without_changing_
 }
 
 #[test]
-fn target70450_seven_masks_are_linux_only_and_keep_the_six_field_wire() {
+fn target70450_nine_masks_are_linux_only_and_keep_the_six_field_wire() {
     for components in 0..=255 {
         let context = Context {
             build: 70450,
@@ -657,7 +657,7 @@ fn target70450_seven_masks_are_linux_only_and_keep_the_six_field_wire() {
         };
         assert_eq!(
             context.validate().is_ok(),
-            cfg!(target_os = "linux") && [16, 1, 7, 8, 57, 32, 9].contains(&components)
+            cfg!(target_os = "linux") && [16, 1, 7, 8, 57, 32, 9, 17, 25].contains(&components)
         );
         if components == 13 {
             assert!(
@@ -665,10 +665,24 @@ fn target70450_seven_masks_are_linux_only_and_keep_the_six_field_wire() {
                 "mask {components} remains rejected"
             );
         }
-        if components == Component::Navigation.bit() {
+        if [Component::Navigation.bit(), 25].contains(&components) {
+            let wire = context.json();
             assert_eq!(
-                Context::parse(&context.json()).is_ok(),
-                cfg!(target_os = "linux")
+                wire,
+                format!(
+                    "{{\"build\":70450,\"locale\":\"enUS\",\"components\":{components},\"source_sha256\":\"{}\",\"plan_sha256\":\"{}\",\"producer_sha256\":\"{}\"}}",
+                    "01".repeat(32),
+                    "02".repeat(32),
+                    "03".repeat(32)
+                )
+            );
+            assert_eq!(
+                Context::parse(&wire),
+                if cfg!(target_os = "linux") {
+                    Ok(context)
+                } else {
+                    Err(Error::Context)
+                }
             );
         }
     }

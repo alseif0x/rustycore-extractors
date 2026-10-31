@@ -58,6 +58,55 @@ fn section(lookup: &str, frame_ordinal: u32) -> PartialEncryptedSection {
 }
 
 #[test]
+fn scope_admission_rejects_foreign_recovered_declarations_and_poisons_the_writer() {
+    let global_lab = Lab::new();
+    let mut global = Run::create(
+        &global_lab.0.join("global"),
+        context_with_components(Component::Db2.bit() | Component::Collision.bit()),
+        &[],
+        Limits::default(),
+    )
+    .unwrap();
+    global.partial_encrypted_sections = Some(vec![section("1122334455667788", 1)]);
+    global.admit_partial_encrypted_scope(true, &[]).unwrap();
+    assert_eq!(
+        global.admit_partial_encrypted_scope(false, &[]),
+        Err(Error::Inventory)
+    );
+    assert_eq!(
+        global.admit_partial_encrypted_scope(true, &[]),
+        Err(Error::Incomplete)
+    );
+
+    let tables_lab = Lab::new();
+    let mut tables = Run::create(
+        &tables_lab.0.join("tables"),
+        context_with_components(Component::Db2.bit() | Component::Collision.bit()),
+        &[],
+        Limits::default(),
+    )
+    .unwrap();
+    let map = "dbc/enUS/Map.db2".to_owned();
+    tables
+        .set_partial_encrypted_table(&map, &[section("1122334455667788", 1)])
+        .unwrap();
+    tables
+        .admit_partial_encrypted_scope(false, std::slice::from_ref(&map))
+        .unwrap();
+    tables
+        .set_partial_encrypted_table("dbc/enUS/Other.db2", &[section("8877665544332211", 2)])
+        .unwrap();
+    assert_eq!(
+        tables.admit_partial_encrypted_scope(false, std::slice::from_ref(&map)),
+        Err(Error::Inventory)
+    );
+    assert_eq!(
+        tables.admit_partial_encrypted_scope(false, std::slice::from_ref(&map)),
+        Err(Error::Incomplete)
+    );
+}
+
+#[test]
 fn finish_writes_deterministic_partial_declarations_and_verifier_returns_them() {
     let lab = Lab::new();
     let output = lab.0.join("package");
@@ -436,4 +485,49 @@ fn v25_global_header_roundtrips_unchanged_and_accepts_both_declaration_fields() 
     let parsed = parse_header_partial_declarations(combined_header.trim_end(), context()).unwrap();
     assert_eq!(parsed.sections, [global]);
     assert_eq!(parsed.tables, [table]);
+}
+
+#[test]
+fn per_table_setter_admits_db2_collision_and_recovers_declarations() {
+    let lab = Lab::new();
+    let output = lab.0.join("db2-collision");
+    let context = context_with_components(Component::Db2.bit() | Component::Collision.bit());
+    let table = PartialEncryptedTable {
+        path: "dbc/enUS/Map.db2".into(),
+        sections: vec![section("1122334455667788", 1)],
+    };
+    let mut run = Run::create(&output, context, &[], Limits::default()).unwrap();
+    run.set_partial_encrypted_table(&table.path, &table.sections)
+        .unwrap();
+    run.set_partial_encrypted_table(&table.path, &table.sections)
+        .unwrap();
+    run.put(Component::Db2, &table.path, b"synthetic map")
+        .unwrap();
+    run.finish_component(Component::Db2).unwrap();
+    run.finish_component(Component::Collision).unwrap();
+    run.finish().unwrap();
+
+    let manifest = fs::read_to_string(output.join(MANIFEST)).unwrap();
+    let header = manifest.lines().next().unwrap();
+    assert!(header.contains("\"partial_encrypted_tables\":[{"));
+    assert!(!header.contains("\"partial_encrypted_sections\":"));
+    let declarations = parse_header_partial_declarations(header, context).unwrap();
+    assert_eq!(declarations.tables, std::slice::from_ref(&table));
+    assert!(declarations.sections.is_empty());
+
+    fs::write(output.join(INCOMPLETE), b"incomplete\n").unwrap();
+    let resumed = Run::resume(&output, context, &[], Limits::default()).unwrap();
+    assert_eq!(
+        resumed.partial_encrypted_tables.as_deref(),
+        Some([table].as_slice())
+    );
+    resumed.finish().unwrap();
+    assert!(!output.join(INCOMPLETE).exists());
+
+    let output = lab.0.join("db2-collision-global");
+    let mut run = Run::create(&output, context, &[], Limits::default()).unwrap();
+    assert_eq!(
+        run.set_partial_encrypted_sections(&[section("1122334455667788", 1)]),
+        Err(Error::Component)
+    );
 }

@@ -341,6 +341,43 @@ pub(super) fn archive_path(
     Ok(path)
 }
 
+#[cfg(all(target_os = "linux", unix))]
+fn open_archive_candidate(path: &Path, strict: bool) -> std::io::Result<File> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    if strict {
+        let named = std::fs::symlink_metadata(path)?;
+        if !named.is_file() || named.file_type().is_symlink() {
+            return Err(std::io::ErrorKind::InvalidInput.into());
+        }
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(0x800 | 0x20000)
+            .open(path)?;
+        let held = file.metadata()?;
+        if !held.is_file() || Identity::from(&named) != Identity::from(&held) {
+            return Err(std::io::ErrorKind::InvalidInput.into());
+        }
+        Ok(file)
+    } else {
+        File::open(path)
+    }
+}
+
+#[cfg(not(all(target_os = "linux", unix)))]
+fn open_archive_candidate(path: &Path, _: bool) -> std::io::Result<File> {
+    File::open(path)
+}
+
+#[cfg(all(target_os = "linux", unix))]
+fn verify_archive_path_identity(path: &Path, before: &Metadata) -> Result<(), Error> {
+    let named = std::fs::symlink_metadata(path).map_err(|_| Error::InputChanged)?;
+    if !named.is_file() || Identity::from(before) != Identity::from(&named) {
+        return Err(Error::InputChanged);
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 enum Rejection {
     Missing,
@@ -355,6 +392,12 @@ pub(super) enum ProbeRead {
         class: &'static str,
         blte_code: Option<&'static str>,
     },
+}
+#[derive(Clone, Copy)]
+pub(super) struct ReadPolicy {
+    pub(super) max_decoded: u64,
+    pub(super) capture_blte_code: bool,
+    pub(super) strict_encrypted_framing: bool,
 }
 struct BlteCodeCapture<'a> {
     enabled: bool,
@@ -417,7 +460,11 @@ impl Reader<'_> {
             ekey,
             ckey,
             u64::from(size),
-            max_decoded,
+            ReadPolicy {
+                max_decoded,
+                capture_blte_code: true,
+                strict_encrypted_framing: false,
+            },
             &mut capture,
         )? {
             Ok(bytes) => {
@@ -442,8 +489,7 @@ impl Reader<'_> {
         ckey: [u8; 16],
         size: Option<u32>,
         ekeys: impl Iterator<Item = [u8; 16]>,
-        max_decoded: u64,
-        capture_blte_code: bool,
+        policy: ReadPolicy,
         blte_code: &mut Option<&'static str>,
     ) -> Result<(Vec<u8>, usize), Error> {
         let Self {
@@ -453,13 +499,13 @@ impl Reader<'_> {
             ..
         } = self;
         let size = u64::from(size.ok_or(Error::UnknownSize)?);
-        if size > max_decoded {
+        if size > policy.max_decoded {
             return Err(Error::Limit);
         }
         let mut failures = CandidateFailures::default();
         let mut attempts = 0_usize;
         let mut blte_capture = BlteCodeCapture {
-            enabled: capture_blte_code,
+            enabled: policy.capture_blte_code,
             code: blte_code,
         };
         for ekey in ekeys {
@@ -484,7 +530,7 @@ impl Reader<'_> {
                     ekey,
                     ckey,
                     size,
-                    max_decoded,
+                    policy,
                     &mut blte_capture,
                 )? {
                     Ok(bytes) => return Ok((bytes, attempts)),
@@ -501,7 +547,7 @@ impl Reader<'_> {
         ekey: [u8; 16],
         ckey: [u8; 16],
         size: u64,
-        max_decoded: u64,
+        policy: ReadPolicy,
         blte_capture: &mut BlteCodeCapture<'_>,
     ) -> Result<Result<Vec<u8>, Rejection>, Error> {
         let Self {
@@ -510,13 +556,18 @@ impl Reader<'_> {
             budget,
             ..
         } = self;
+        let ReadPolicy {
+            max_decoded,
+            strict_encrypted_framing,
+            ..
+        } = policy;
         // CascStructs.h declares CASC_MAX_DATA_FILES = 0x1000 for this local profile.
         if entry.archive_index >= 0x1000 {
             return Ok(Err(Rejection::Unsupported));
         }
         let path = archive_path(dir, entry.archive_index, limits.max_path_bytes)?;
         #[cfg(not(windows))]
-        let mut file = match File::open(&path) {
+        let mut file = match open_archive_candidate(&path, strict_encrypted_framing) {
             Ok(file) => file,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Err(Rejection::Missing));
@@ -546,18 +597,18 @@ impl Reader<'_> {
             Err(_) => return Ok(Err(Rejection::Corrupt)),
         };
         let span = usize::try_from(plan.encoded_size()).map_err(|_| Error::Limit)?;
-        // Opt-in decoding can hold one decrypted frame while the complete
-        // encoded span and decoded output remain live. Reserve a whole extra
-        // span conservatively, even when this particular object is N/Z.
+        // The encoded span and output coexist. Keyed decoding may additionally
+        // retain a decrypted frame; strict keyless inspection allocates scratch
+        // only when it must decode an observable Z frame.
+        let decoded_size = usize::try_from(size).map_err(|_| Error::Limit)?;
         let encoded_scratch = if self.keys.is_some() {
             add(span, span)?
         } else {
             span
         };
-        budget.phase(add(
-            encoded_scratch,
-            usize::try_from(size).map_err(|_| Error::Limit)?,
-        )?)?;
+        // The decoded-size charge covers either verification scratch or final
+        // output; those buffers are not retained at the same time.
+        budget.phase(add(encoded_scratch, decoded_size)?)?;
         let mut encoded = Vec::new();
         reserve(&mut encoded, span)?;
         encoded.resize(span, 0);
@@ -568,7 +619,18 @@ impl Reader<'_> {
         let read_result = file.read_exact(&mut encoded);
         #[cfg(not(windows))]
         let after = Identity::from(&file.metadata().map_err(|_| Error::InputChanged)?);
-        #[cfg(not(windows))]
+        #[cfg(all(target_os = "linux", unix))]
+        if let Err(rejection) = classify_read(read_result, &Identity::from(&before), after)? {
+            if strict_encrypted_framing {
+                verify_archive_path_identity(&path, &before)?;
+            }
+            return Ok(Err(rejection));
+        }
+        #[cfg(all(target_os = "linux", unix))]
+        if strict_encrypted_framing {
+            verify_archive_path_identity(&path, &before)?;
+        }
+        #[cfg(all(not(target_os = "linux"), not(windows)))]
         if let Err(rejection) = classify_read(read_result, &Identity::from(&before), after)? {
             return Ok(Err(rejection));
         }
@@ -579,17 +641,44 @@ impl Reader<'_> {
             max_decoded_bytes: max_decoded,
             max_frames: limits.max_blte_frames,
         };
-        let result = match self.keys {
-            Some(keys) => archive_record::decode_span_with_keys(
-                &encoded,
-                &plan,
-                ekey,
-                ckey,
-                size,
-                decode_limits,
-                keys,
-            ),
-            None => archive_record::decode_span(&encoded, &plan, ekey, ckey, size, decode_limits),
+        let strict_inspection: Option<Result<(), blte::Error>> =
+            if strict_encrypted_framing && self.keys.is_none() {
+                let mut decoded = Vec::new();
+                match blte::framing::inspect_encrypted_unavailable_with_dynamic_scratch(
+                    &encoded[30..],
+                    size,
+                    ekey,
+                    decode_limits,
+                    &mut decoded,
+                ) {
+                    Ok(evidence) if evidence.encrypted_frames > 0 => {
+                        Some(Err(blte::Error::EncryptedUnsupported))
+                    }
+                    Ok(_) => None,
+                    Err(error) => Some(Err(error)),
+                }
+            } else {
+                None
+            };
+        let result = if let Some(result) = strict_inspection {
+            result
+                .map(|()| Vec::new())
+                .map_err(archive_record::Error::Blte)
+        } else {
+            match self.keys {
+                Some(keys) => archive_record::decode_span_with_keys(
+                    &encoded,
+                    &plan,
+                    ekey,
+                    ckey,
+                    size,
+                    decode_limits,
+                    keys,
+                ),
+                None => {
+                    archive_record::decode_span(&encoded, &plan, ekey, ckey, size, decode_limits)
+                }
+            }
         };
         #[cfg(not(windows))]
         if Identity::from(&before)

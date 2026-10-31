@@ -36,7 +36,7 @@ impl Budget {
         options: DetailOptions,
         radius: i32,
         field: &Compact,
-        patch: &Patch,
+        patch: &mut Patch,
     ) -> Result<LocalDetail, Error> {
         if input.len() < 3 || input.len() > MAX_NVP {
             return Err(Error::DetailTriangulation);

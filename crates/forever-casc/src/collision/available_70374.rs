@@ -2,12 +2,15 @@
 // Modified by the RustyCore Extractors project, 2026-10-19.
 // Modified 2026-10-19: strict empty-startup sentinel and target/profile binding;
 // authored 2026-10-15: separate Linux70374 available DB2 startup/world owner.
-//! Available GODI/Map coverage stays distinct from complete source facts. Model,
-//! liquid, WDT and object dependencies retain strict complete acquisition. There
-//! is no missing-input omission policy, package publication or runtime claim.
-//! All phases move one collector/cache/ledger through lookup transitions. Sink
-//! callbacks remain provisional until whole completion. The existing strict
-//! startup/world APIs and their public owners are unchanged.
+//! Available GODI/Map coverage stays distinct from complete source facts. Existing
+//! APIs reject missing dependencies. Separate opt-in profiles declare only WDT
+//! or WMO-doodad M2 FDIDs whose raw ROOT has no rows; v34 can also declare a
+//! strictly proven intrinsically empty WMO, v35 can declare valid source
+//! geometry skipped before selection, and v36 can declare geometry removed by
+//! the production material filter. Other sources remain strict;
+//! there is no package publication or runtime claim. All phases move one
+//! collector/cache/ledger through lookup transitions. Sink callbacks remain
+//! provisional until whole completion.
 #![cfg(target_os = "linux")]
 
 use super::{Extraction, Extractor, Facts, Model, ModelHandle, gameobjects, plan, run, world};
@@ -23,6 +26,47 @@ mod tests;
 
 pub const PROFILE: &str = "linux70374-disabled-key-available-collision-world-v1";
 pub const PROFILE_70450_SELECTED_GEOMETRY: &str = "linux70450-selected-map-geometry-collision-v1";
+pub const PROFILE_70450_AVAILABLE_GEOMETRY: &str = "linux70450-available-map-geometry-collision-v1";
+pub const PROFILE_70450_AVAILABLE_ROOT_ABSENT_GEOMETRY: &str =
+    "linux70450-available-map-root-omissions-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_GEOMETRY: &str =
+    "linux70450-available-map-model-root-omissions-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_REQUEST_CAPACITY_GEOMETRY: &str =
+    "linux70450-available-map-model-root-omissions-request-capacity-collision-v1";
+pub const PROFILE_70450_AVAILABLE_VACATED_WMO_GEOMETRY: &str =
+    "linux70450-available-vacated-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_EMPTY_WMO_GEOMETRY: &str =
+    "linux70450-available-empty-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_UNSELECTED_WMO_GEOMETRY: &str =
+    "linux70450-available-unselected-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_DEPENDENCY_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-dependency-heavy-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_SOURCE_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-source-heavy-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_READ_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-read-heavy-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MODEL_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-model-heavy-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-source-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-model-output-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_MODEL_BYTES_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-model-bytes-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_V2_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-source-expanded-v2-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-placement-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_ASSEMBLY_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-assembly-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_GAMEOBJECT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-gameobject-expanded-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_GAMEOBJECT_MISSING_ROOT_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-gameobject-missing-root-material-filtered-wmo-collision-v1";
+pub const PROFILE_70450_AVAILABLE_GAMEOBJECT_ROOT_ENCRYPTED_UNAVAILABLE_MATERIAL_FILTERED_WMO_GEOMETRY: &str =
+    "linux70450-available-gameobject-root-encrypted-unavailable-material-filtered-wmo-collision-v1";
 static EMPTY: gameobjects::EmptyLookup = gameobjects::EmptyLookup;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -82,6 +126,9 @@ impl TableFacts {
     pub fn sections(&self) -> impl Iterator<Item = &db2::SectionCoverage> {
         self.sections.iter().flatten()
     }
+    pub fn work(&self) -> acquired::Work {
+        self.work
+    }
     pub fn all_sections_admitted(&self) -> bool {
         self.sections()
             .all(|s| s.state == db2::SectionState::Admitted)
@@ -90,6 +137,31 @@ impl TableFacts {
 pub struct Data {
     table: TableFacts,
     engine: gameobjects::EngineData,
+    missing_root: Vec<u32>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SectionFact {
+    pub ordinal: u32,
+    pub declared_records: u32,
+    pub declared_copies: u32,
+    pub admitted: bool,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GameObjectOutcome {
+    ZeroFileDataId,
+    Texture,
+    Collision,
+    M2NoCollision,
+    WmoDoodadOnly,
+    MissingRoot,
+    EncryptedUnavailable,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GameObjectOutcomeFact {
+    pub ordinal: u64,
+    pub display_id: u32,
+    pub file_data_id: u32,
+    pub outcome: GameObjectOutcome,
 }
 impl Data {
     pub const fn table(&self) -> &TableFacts {
@@ -107,6 +179,70 @@ impl Data {
     pub const fn startup_facts(&self) -> Facts {
         self.engine.startup_facts
     }
+    pub fn missing_root(&self) -> &[u32] {
+        &self.missing_root
+    }
+    pub fn encrypted_unavailable(&self) -> &[u32] {
+        &self.engine.encrypted_unavailable
+    }
+    pub fn encrypted_unavailable_rows(&self) -> usize {
+        self.engine.stats.encrypted_unavailable_rows
+    }
+    pub fn missing_root_rows(&self) -> usize {
+        self.engine
+            .outcomes
+            .iter()
+            .filter(|outcome| matches!(outcome.outcome(), gameobjects::Outcome::MissingRoot))
+            .count()
+    }
+    pub fn section_facts(&self) -> impl Iterator<Item = SectionFact> + '_ {
+        self.table.sections().map(|section| SectionFact {
+            ordinal: section.ordinal,
+            declared_records: section.declared_records,
+            declared_copies: section.declared_copies,
+            admitted: section.state == db2::SectionState::Admitted,
+        })
+    }
+    pub fn outcome_facts(&self) -> impl Iterator<Item = GameObjectOutcomeFact> + '_ {
+        self.engine
+            .outcomes
+            .iter()
+            .map(|outcome| GameObjectOutcomeFact {
+                ordinal: outcome.ordinal() as u64,
+                display_id: outcome.display_id(),
+                file_data_id: outcome.file_data_id(),
+                outcome: match outcome.outcome() {
+                    gameobjects::Outcome::ZeroFileDataId => GameObjectOutcome::ZeroFileDataId,
+                    gameobjects::Outcome::Texture => GameObjectOutcome::Texture,
+                    gameobjects::Outcome::Collision(_) => GameObjectOutcome::Collision,
+                    gameobjects::Outcome::M2NoCollision(_) => GameObjectOutcome::M2NoCollision,
+                    gameobjects::Outcome::WmoDoodadOnly(_) => GameObjectOutcome::WmoDoodadOnly,
+                    gameobjects::Outcome::MissingRoot => GameObjectOutcome::MissingRoot,
+                    gameobjects::Outcome::EncryptedUnavailable => {
+                        GameObjectOutcome::EncryptedUnavailable
+                    }
+                },
+            })
+    }
+    pub fn collision_model_handles(
+        &self,
+    ) -> impl Iterator<Item = (GameObjectOutcomeFact, ModelHandle)> + '_ {
+        self.engine.outcomes.iter().filter_map(|outcome| {
+            let handle = match outcome.outcome() {
+                gameobjects::Outcome::Collision(handle) => handle,
+                _ => return None,
+            };
+            Some((
+                GameObjectOutcomeFact {
+                    ordinal: outcome.ordinal() as u64,
+                    display_id: outcome.display_id(),
+                    file_data_id: outcome.file_data_id(),
+                    outcome: GameObjectOutcome::Collision,
+                },
+                handle,
+            ))
+        })
+    }
 }
 pub type Startup<'store> = Context<'store, 'static, gameobjects::EmptyLookup>;
 pub struct Context<'store, 'lookup, L: LiquidLookup + ?Sized> {
@@ -119,6 +255,9 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
     }
     pub fn model(&self, handle: ModelHandle) -> Option<&Model> {
         self.collector.model(handle)
+    }
+    pub(crate) const fn resources(&self) -> crate::collision::resources::Profile {
+        self.collector.resources()
     }
     pub fn collector_mut(&mut self) -> &mut Extractor<'store, 'lookup, L> {
         &mut self.collector
@@ -158,17 +297,104 @@ impl CompletedStartup {
     }
 }
 
-/// Physical admitted direct GODI rows only. Copies are checked/countable but
-/// never trigger model acquisition. Known-section holes or missing models fail.
+/// Build 70374 physical admitted direct GODI rows only. Copies are
+/// checked/countable but never trigger model acquisition.
 pub fn extract_startup_fdid(
     store: &mut LocalStore,
     limits: gameobjects::Limits,
 ) -> Result<Startup<'_>, Error> {
-    limits.validate().map_err(Error::Startup)?;
-    let mut collector =
-        Extractor::new(store, &EMPTY, limits.collision).map_err(Error::Collision)?;
+    extract_startup_fdid_with_target(
+        store,
+        limits,
+        super::target::Target::Build70374,
+        crate::collision::resources::Profile::BoundedV1,
+        false,
+        false,
+    )
+}
+
+/// Build 70450 physical admitted direct GODI rows for the v47 producer path.
+#[cfg(target_os = "linux")]
+pub fn extract_startup_fdid_70450(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+) -> Result<Startup<'_>, Error> {
+    super::target::Target::Build70450
+        .check(store)
+        .map_err(Error::Collision)?;
+    extract_startup_fdid_with_target(
+        store,
+        limits,
+        super::target::Target::Build70450,
+        crate::collision::resources::Profile::GameObjectExpandedV1,
+        false,
+        false,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub fn extract_startup_fdid_70450_with_gameobject_root_absence(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+) -> Result<Startup<'_>, Error> {
+    super::target::Target::Build70450
+        .check(store)
+        .map_err(Error::Collision)?;
+    extract_startup_fdid_with_target(
+        store,
+        limits,
+        super::target::Target::Build70450,
+        crate::collision::resources::Profile::GameObjectMissingRootExpandedV1,
+        true,
+        false,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub fn extract_startup_fdid_70450_with_root_or_encrypted_unavailable(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+) -> Result<Startup<'_>, Error> {
+    super::target::Target::Build70450
+        .check(store)
+        .map_err(Error::Collision)?;
+    extract_startup_fdid_with_target(
+        store,
+        limits,
+        super::target::Target::Build70450,
+        crate::collision::resources::Profile::GameObjectRootAndEncryptedUnavailableExpandedV1,
+        true,
+        true,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub fn extract_startup_fdid_70450_with_root_absence(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+) -> Result<Startup<'_>, Error> {
+    extract_startup_fdid_70450_with_gameobject_root_absence(store, limits)
+}
+
+fn extract_startup_fdid_with_target(
+    store: &mut LocalStore,
+    limits: gameobjects::Limits,
+    target: super::target::Target,
+    resource: crate::collision::resources::Profile,
+    prove_godi_root_absent: bool,
+    encrypted_unavailable_profile: bool,
+) -> Result<Startup<'_>, Error> {
+    limits
+        .validate_resources(resource)
+        .map_err(Error::Startup)?;
+    let mut collector = Extractor::new_with_resources(store, &EMPTY, limits.collision, resource)
+        .map_err(Error::Collision)?;
     let file = collector
-        .read_available_source(gameobjects::TABLE_FILE_DATA_ID, limits.max_db2_bytes)
+        .read_available_source_target(
+            gameobjects::TABLE_FILE_DATA_ID,
+            limits.max_db2_bytes,
+            target,
+        )
         .map_err(Error::Collision)?;
     let source_resident = file
         .resident_bytes()
@@ -182,7 +408,12 @@ pub fn extract_startup_fdid(
     collector
         .reserve_external(allowance)
         .map_err(Error::Collision)?;
-    let snapshot = db2::read_gameobject_display_info_70374(&file).map_err(Error::Db2)?;
+    let snapshot = match target {
+        super::target::Target::Build70374 => db2::read_gameobject_display_info_70374(&file),
+        super::target::Target::Build70425 => db2::read_gameobject_display_info_70425(&file),
+        super::target::Target::Build70450 => db2::read_gameobject_display_info_70450(&file),
+    }
+    .map_err(Error::Db2)?;
     let mut table = table_facts(
         &file,
         snapshot.sections(),
@@ -195,14 +426,24 @@ pub fn extract_startup_fdid(
     {
         return Err(Error::Limit);
     }
-    let (outcomes, stats) = gameobjects::collect_direct(
+    let gameobjects::DirectRows {
+        outcomes,
+        stats,
+        mut missing_root,
+        encrypted_unavailable,
+    } = gameobjects::collect_direct(
         &mut collector,
         snapshot.direct_records(),
         snapshot.copies().len(),
         allowance,
         limits,
+        prove_godi_root_absent,
+        encrypted_unavailable_profile,
     )
     .map_err(Error::Startup)?;
+    missing_root.sort_unstable();
+    missing_root.dedup();
+    let missing_root_capacity = capacity(&missing_root)?;
     drop(snapshot);
     drop(file);
     collector
@@ -211,11 +452,22 @@ pub fn extract_startup_fdid(
     collector
         .release_source(source_resident)
         .map_err(Error::Collision)?;
-    let engine = gameobjects::finish_lists(&mut collector, outcomes, stats, limits)
-        .map_err(Error::Startup)?;
+    let mut engine = gameobjects::finish_lists(
+        &mut collector,
+        outcomes,
+        stats,
+        limits,
+        encrypted_unavailable,
+    )
+    .map_err(Error::Startup)?;
+    engine.stats.resident_bytes = add(engine.stats.resident_bytes, missing_root_capacity)?;
     table.materialized_rows = table.direct_rows; // No copy replay for GODI.
     Ok(Context {
-        data: Data { table, engine },
+        data: Data {
+            table,
+            engine,
+            missing_root,
+        },
         collector,
     })
 }
@@ -257,12 +509,19 @@ pub struct Completed {
     profile: &'static str,
     startup: CompletedStartup,
     report: run::SharedReport,
+    root_absent: Vec<run::RootAbsent>,
+    missing_m2: Vec<u32>,
+    missing_wmo: Vec<u32>,
+    empty_wmo: Vec<u32>,
+    unselected_wmo: Vec<u32>,
+    material_filtered_wmo: Vec<u32>,
     map: TableFacts,
     liquids: [world::TableFacts; 2],
     lookups: world::LookupStats,
     maps: plan::Stats,
     topology: Topology,
     resident_bytes: usize,
+    startup_reads: usize,
 }
 impl Completed {
     pub const fn profile(&self) -> &'static str {
@@ -273,6 +532,27 @@ impl Completed {
     }
     pub const fn report(&self) -> &run::SharedReport {
         &self.report
+    }
+    pub fn root_absent(&self) -> &[run::RootAbsent] {
+        &self.root_absent
+    }
+    pub fn missing_m2(&self) -> &[u32] {
+        &self.missing_m2
+    }
+    pub fn missing_wmo(&self) -> &[u32] {
+        &self.missing_wmo
+    }
+    pub fn empty_wmo(&self) -> &[u32] {
+        &self.empty_wmo
+    }
+    pub fn unselected_wmo(&self) -> &[u32] {
+        &self.unselected_wmo
+    }
+    pub fn material_filtered_wmo(&self) -> &[u32] {
+        &self.material_filtered_wmo
+    }
+    pub fn gameobject_missing_root(&self) -> &[u32] {
+        self.startup.data().missing_root()
     }
     pub const fn map(&self) -> &TableFacts {
         &self.map
@@ -296,6 +576,9 @@ impl Completed {
     pub const fn store_resident_bytes(&self) -> usize {
         self.startup.extraction().store_resident_bytes()
     }
+    pub const fn startup_reads(&self) -> usize {
+        self.startup_reads
+    }
 }
 
 /// Consume the successful available startup; Map first, then complete liquid
@@ -312,6 +595,433 @@ pub fn extract(
         limits,
         super::target::Target::Build70374,
         plan::MapSelection::All,
+    )
+}
+
+/// Available Build 70450 runner over every admitted active VMap row. Unknown
+/// sections remain unknown and no full-client or full-world claim is made.
+pub(in crate::collision) fn extract_all_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_selection(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_root_absence_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_policy(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        run::MissingWdtPolicy::DeclareRootAbsent,
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_model_root_absence_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::Reject,
+            resource: crate::collision::resources::Profile::BoundedV1,
+        },
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_model_root_absence_request_capacity_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::Reject,
+            resource: crate::collision::resources::Profile::RequestHeavyV1,
+        },
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_vacated_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2,
+            resource: crate::collision::resources::Profile::RequestHeavyV1,
+        },
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_empty_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmpty,
+            resource: crate::collision::resources::Profile::RequestHeavyV1,
+        },
+    )
+}
+
+pub(in crate::collision) fn extract_all_with_unselected_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselected,
+            resource: crate::collision::resources::Profile::RequestHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::RequestHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_dependency_heavy_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::DependencyHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_source_heavy_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::SourceHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_read_heavy_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::ReadHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_model_heavy_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::ModelHeavyV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_source_expanded_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::SourceExpandedV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_source_expanded_v2_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::SourceExpandedV2,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_placement_expanded_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::PlacementExpandedV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_assembly_expanded_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_all_with_assembly_expanded_startup_70450(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        crate::collision::resources::Profile::AssemblyExpandedV1,
+        crate::collision::resources::Profile::AssemblyExpandedV1,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_gameobject_expanded_material_filtered_wmo_70450(
+    startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_all_with_assembly_expanded_startup_70450(
+        startup,
+        sink,
+        limits,
+        crate::collision::resources::Profile::GameObjectExpandedV1,
+        crate::collision::resources::Profile::GameObjectExpandedV1,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_gameobject_missing_root_material_filtered_wmo_70450(
+    startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_all_with_assembly_expanded_startup_70450(
+        startup,
+        sink,
+        limits,
+        crate::collision::resources::Profile::GameObjectMissingRootExpandedV1,
+        crate::collision::resources::Profile::GameObjectMissingRootExpandedV1,
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_gameobject_root_or_encrypted_unavailable_material_filtered_wmo_70450(
+    startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_all_with_assembly_expanded_startup_70450(
+        startup,
+        sink,
+        limits,
+        crate::collision::resources::Profile::GameObjectRootAndEncryptedUnavailableExpandedV1,
+        crate::collision::resources::Profile::GameObjectRootAndEncryptedUnavailableExpandedV1,
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn extract_all_with_assembly_expanded_startup_70450(
+    startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+    collector_resource: crate::collision::resources::Profile,
+    completion_resource: crate::collision::resources::Profile,
+) -> Result<Completed, Error> {
+    if startup.resources() != collector_resource {
+        return Err(Error::State);
+    }
+    extract_with_omissions(
+        startup,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: completion_resource,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_model_output_expanded_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::ModelOutputExpandedV1,
+        },
+    )
+}
+
+#[cfg(target_os = "linux")]
+pub(in crate::collision) fn extract_all_with_model_bytes_expanded_material_filtered_wmo_70450(
+    startup: gameobjects::Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        empty_startup(startup)?,
+        sink,
+        limits,
+        super::target::Target::Build70450,
+        plan::MapSelection::All,
+        OmissionOptions {
+            missing_wdt: run::MissingWdtPolicy::DeclareRootAbsent,
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            resource: crate::collision::resources::Profile::ModelBytesExpandedV1,
+        },
     )
 }
 
@@ -346,9 +1056,10 @@ fn empty_startup(startup: gameobjects::Startup<'_>) -> Result<Startup<'_>, Error
     {
         return Err(Error::State);
     }
-    let (engine, collector) = startup.into_engine_parts();
+    let (engine, missing_root, collector) = startup.into_engine_parts();
     Ok(Context {
         data: Data {
+            missing_root,
             table: TableFacts {
                 file_data_id: 0,
                 declared_bytes: 0,
@@ -371,15 +1082,231 @@ fn empty_startup(startup: gameobjects::Startup<'_>) -> Result<Startup<'_>, Error
     })
 }
 
+#[cfg(test)]
 fn completion_profile(
     target: super::target::Target,
     selection: plan::MapSelection,
 ) -> Result<&'static str, Error> {
-    match (target, selection) {
-        (super::target::Target::Build70374, plan::MapSelection::All) => Ok(PROFILE),
-        (super::target::Target::Build70450, plan::MapSelection::MapAndAncestors(_)) => {
-            Ok(PROFILE_70450_SELECTED_GEOMETRY)
-        }
+    completion_profile_with_policy(target, selection, run::MissingWdtPolicy::Reject)
+}
+
+#[cfg(test)]
+fn completion_profile_with_policy(
+    target: super::target::Target,
+    selection: plan::MapSelection,
+    missing_wdt: run::MissingWdtPolicy,
+) -> Result<&'static str, Error> {
+    completion_profile_with_omissions(
+        target,
+        selection,
+        missing_wdt,
+        run::MissingModelPolicy::Reject,
+        run::MissingWmoPolicy::Reject,
+        crate::collision::resources::Profile::BoundedV1,
+    )
+}
+
+fn completion_profile_with_omissions(
+    target: super::target::Target,
+    selection: plan::MapSelection,
+    missing_wdt: run::MissingWdtPolicy,
+    missing_model: run::MissingModelPolicy,
+    missing_wmo: run::MissingWmoPolicy,
+    resource: crate::collision::resources::Profile,
+) -> Result<&'static str, Error> {
+    match (
+        target,
+        selection,
+        missing_wdt,
+        missing_model,
+        missing_wmo,
+        resource,
+    ) {
+        (
+            super::target::Target::Build70374,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::Reject,
+            run::MissingModelPolicy::Reject,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::BoundedV1,
+        ) => Ok(PROFILE),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::Reject,
+            run::MissingModelPolicy::Reject,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::BoundedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::Reject,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::BoundedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_ROOT_ABSENT_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::BoundedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::RequestHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_REQUEST_CAPACITY_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2,
+            crate::collision::resources::Profile::RequestHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_VACATED_WMO_GEOMETRY),
+        // Only v34 admits intrinsic emptiness; v33 retains its separate policy and profile.
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmpty,
+            crate::collision::resources::Profile::RequestHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_EMPTY_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselected,
+            crate::collision::resources::Profile::RequestHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_UNSELECTED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::RequestHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::DependencyHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_DEPENDENCY_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::SourceHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_SOURCE_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::ReadHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_READ_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::ModelHeavyV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MODEL_HEAVY_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::SourceExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::SourceExpandedV2,
+        ) => Ok(PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_V2_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::ModelOutputExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::ModelBytesExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_MODEL_BYTES_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::PlacementExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::AssemblyExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_ASSEMBLY_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::GameObjectExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_GAMEOBJECT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::GameObjectMissingRootExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_GAMEOBJECT_MISSING_ROOT_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::All,
+            run::MissingWdtPolicy::DeclareRootAbsent,
+            run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            crate::collision::resources::Profile::GameObjectRootAndEncryptedUnavailableExpandedV1,
+        ) => Ok(PROFILE_70450_AVAILABLE_GAMEOBJECT_ROOT_ENCRYPTED_UNAVAILABLE_MATERIAL_FILTERED_WMO_GEOMETRY),
+        (
+            super::target::Target::Build70450,
+            plan::MapSelection::MapAndAncestors(_),
+            run::MissingWdtPolicy::Reject,
+            run::MissingModelPolicy::Reject,
+            run::MissingWmoPolicy::Reject,
+            crate::collision::resources::Profile::BoundedV1,
+        ) => Ok(PROFILE_70450_SELECTED_GEOMETRY),
         // No profile silently inherits 70374. Add an explicit target/scope pair
         // only when its complete reader and completion gate are implemented.
         _ => Err(Error::State),
@@ -387,15 +1314,78 @@ fn completion_profile(
 }
 
 fn extract_with_selection(
-    mut startup: Startup<'_>,
+    startup: Startup<'_>,
     sink: &mut impl run::Sink,
     limits: world::Limits,
     target: super::target::Target,
     selection: plan::MapSelection,
 ) -> Result<Completed, Error> {
-    let profile = completion_profile(target, selection)?;
+    extract_with_policy(
+        startup,
+        sink,
+        limits,
+        target,
+        selection,
+        run::MissingWdtPolicy::Reject,
+    )
+}
+
+#[derive(Clone, Copy)]
+struct OmissionOptions {
+    missing_wdt: run::MissingWdtPolicy,
+    missing_model: run::MissingModelPolicy,
+    missing_wmo: run::MissingWmoPolicy,
+    resource: crate::collision::resources::Profile,
+}
+
+fn extract_with_policy(
+    startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+    target: super::target::Target,
+    selection: plan::MapSelection,
+    missing_wdt: run::MissingWdtPolicy,
+) -> Result<Completed, Error> {
+    extract_with_omissions(
+        startup,
+        sink,
+        limits,
+        target,
+        selection,
+        OmissionOptions {
+            missing_wdt,
+            missing_model: run::MissingModelPolicy::Reject,
+            missing_wmo: run::MissingWmoPolicy::Reject,
+            resource: crate::collision::resources::Profile::BoundedV1,
+        },
+    )
+}
+
+fn extract_with_omissions(
+    mut startup: Startup<'_>,
+    sink: &mut impl run::Sink,
+    limits: world::Limits,
+    target: super::target::Target,
+    selection: plan::MapSelection,
+    options: OmissionOptions,
+) -> Result<Completed, Error> {
+    let OmissionOptions {
+        missing_wdt,
+        missing_model,
+        missing_wmo,
+        resource,
+    } = options;
+    let profile = completion_profile_with_omissions(
+        target,
+        selection,
+        missing_wdt,
+        missing_model,
+        missing_wmo,
+        resource,
+    )?;
+    let godi_startup_reads = startup.data().startup_facts().reads;
     let result = (|| {
-        limits.validate().map_err(Error::World)?;
+        limits.validate_resources(resource).map_err(Error::World)?;
         prepare_available_target(startup.collector_mut(), limits, target).map_err(|e| match e {
             PrepareFailure::Available(e) => e,
             PrepareFailure::Collector(e) => Error::Collision(e),
@@ -465,8 +1455,117 @@ fn extract_with_selection(
         retained_bytes: add(capacity(&lookup.materials)?, capacity(&lookup.types)?)?,
     };
     let mut context = startup.with_lookup(&lookup)?;
-    let report = run::shared::extract_collector(context.collector_mut(), &maps, sink, limits.run)
-        .map_err(Error::Run)?;
+    let (
+        report,
+        root_absent,
+        missing_m2,
+        missing_wmo,
+        empty_wmo,
+        unselected_wmo,
+        material_filtered_wmo,
+    ) = match missing_wmo {
+            run::MissingWmoPolicy::Reject => {
+                let (report, root_absent, missing_m2) =
+                    run::shared::extract_collector_with_omissions(
+                        context.collector_mut(),
+                        &maps,
+                        sink,
+                        limits.run,
+                        missing_wdt,
+                        missing_model,
+                    )
+                    .map_err(Error::Run)?;
+                (
+                    report,
+                    root_absent,
+                    missing_m2,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )
+            }
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2 => {
+                let (report, root_absent, missing_m2, missing_wmo, empty_wmo) =
+                    run::shared::extract_collector_with_vacated_wmo(
+                        context.collector_mut(),
+                        &maps,
+                        sink,
+                        limits.run,
+                        missing_wdt,
+                        missing_model,
+                    )
+                    .map_err(Error::Run)?;
+                (
+                    report,
+                    root_absent,
+                    missing_m2,
+                    missing_wmo,
+                    empty_wmo,
+                    Vec::new(),
+                    Vec::new(),
+                )
+            }
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmpty => {
+                let (report, root_absent, missing_m2, missing_wmo, empty_wmo) =
+                    run::shared::extract_collector_with_empty_wmo(
+                        context.collector_mut(),
+                        &maps,
+                        sink,
+                        limits.run,
+                        missing_wdt,
+                        missing_model,
+                    )
+                    .map_err(Error::Run)?;
+                (
+                    report,
+                    root_absent,
+                    missing_m2,
+                    missing_wmo,
+                    empty_wmo,
+                    Vec::new(),
+                    Vec::new(),
+                )
+            }
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselected => {
+                let (report, root_absent, missing_m2, missing_wmo, empty_wmo, unselected_wmo) =
+                    run::shared::extract_collector_with_unselected_wmo(
+                        context.collector_mut(),
+                        &maps,
+                        sink,
+                        limits.run,
+                        missing_wdt,
+                        missing_model,
+                    )
+                    .map_err(Error::Run)?;
+                (
+                    report,
+                    root_absent,
+                    missing_m2,
+                    missing_wmo,
+                    empty_wmo,
+                    unselected_wmo,
+                    Vec::new(),
+                )
+            }
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered => {
+                run::shared::extract_collector_with_material_filtered_wmo(
+                    context.collector_mut(),
+                    &maps,
+                    sink,
+                    limits.run,
+                    missing_wdt,
+                    missing_model,
+                )
+                .map_err(Error::Run)?
+            }
+        };
+    let root_absent_bytes = capacity(&root_absent)?;
+    let missing_m2_bytes = capacity(&missing_m2)?;
+    let missing_wmo_bytes = capacity(&missing_wmo)?;
+    let empty_wmo_bytes = capacity(&empty_wmo)?;
+    let unselected_wmo_bytes = capacity(&unselected_wmo)?;
+    let material_filtered_wmo_bytes = capacity(&material_filtered_wmo)?;
     let mut context = context.with_lookup(&EMPTY)?;
     drop(maps);
     drop(owner);
@@ -487,17 +1586,30 @@ fn extract_with_selection(
         )?,
         topology.resident_bytes(),
     )?;
+    let resident_bytes = add(resident_bytes, root_absent_bytes)?;
+    let resident_bytes = add(resident_bytes, missing_m2_bytes)?;
+    let resident_bytes = add(resident_bytes, missing_wmo_bytes)?;
+    let resident_bytes = add(resident_bytes, empty_wmo_bytes)?;
+    let resident_bytes = add(resident_bytes, unselected_wmo_bytes)?;
+    let resident_bytes = add(resident_bytes, material_filtered_wmo_bytes)?;
     map.materialized_rows = map_stats.rows;
     Ok(Completed {
         profile,
         startup,
         report,
+        root_absent,
+        missing_m2,
+        missing_wmo,
+        empty_wmo,
+        unselected_wmo,
+        material_filtered_wmo,
         map,
         liquids,
         lookups: lookup_stats,
         maps: map_stats,
         topology: Topology { inner: topology },
         resident_bytes,
+        startup_reads: godi_startup_reads,
     })
 }
 pub(in crate::collision) struct Prepared {
@@ -726,6 +1838,104 @@ mod profile_tests {
     use super::*;
 
     #[test]
+    fn placement_expanded_completion_requires_exact_v45_scope_and_omissions() {
+        use crate::collision::resources::Profile;
+        use crate::collision::target::Target;
+
+        let material_filtered =
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered;
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::PlacementExpandedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_PLACEMENT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY)
+        );
+        for (target, selection, missing_wdt, missing_model, missing_wmo) in [
+            (
+                Target::Build70425,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::MapAndAncestors(7),
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::Reject,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+            ),
+        ] {
+            assert_eq!(
+                completion_profile_with_omissions(
+                    target,
+                    selection,
+                    missing_wdt,
+                    missing_model,
+                    missing_wmo,
+                    Profile::PlacementExpandedV1,
+                ),
+                Err(Error::State)
+            );
+        }
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::DiskWorldV1,
+            ),
+            Err(Error::State)
+        );
+    }
+
+    #[test]
+    fn assembly_expanded_completion_has_its_own_v46_identity() {
+        use crate::collision::resources::Profile;
+        use crate::collision::target::Target;
+
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+                Profile::AssemblyExpandedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_ASSEMBLY_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY)
+        );
+    }
+
+    #[test]
     fn target_and_selection_require_an_explicit_completion_profile() {
         assert_eq!(
             completion_profile(
@@ -748,5 +1958,278 @@ mod profile_tests {
             ),
             Err(Error::State)
         );
+    }
+
+    #[test]
+    fn completion_profile_follows_missing_wdt_policy_not_map_selection() {
+        assert_eq!(
+            completion_profile_with_policy(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile_with_policy(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_ROOT_ABSENT_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile_with_policy(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::MapAndAncestors(2),
+                run::MissingWdtPolicy::DeclareRootAbsent,
+            ),
+            Err(Error::State)
+        );
+    }
+
+    #[test]
+    fn model_omission_profile_requires_both_explicit_policies() {
+        assert_eq!(
+            completion_profile_with_omissions(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+                crate::collision::resources::Profile::BoundedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile_with_omissions(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::Reject,
+                run::MissingWmoPolicy::Reject,
+                crate::collision::resources::Profile::BoundedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_ROOT_ABSENT_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile_with_omissions(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+                crate::collision::resources::Profile::BoundedV1,
+            ),
+            Err(Error::State)
+        );
+    }
+
+    #[test]
+    fn request_capacity_profile_requires_exact_target_policies_and_resource() {
+        assert_eq!(
+            completion_profile_with_omissions(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+                crate::collision::resources::Profile::RequestHeavyV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_REQUEST_CAPACITY_GEOMETRY)
+        );
+        for resource in [
+            crate::collision::resources::Profile::BoundedV1,
+            crate::collision::resources::Profile::DiskWorldV1,
+        ] {
+            assert_eq!(
+                completion_profile_with_omissions(
+                    crate::collision::target::Target::Build70450,
+                    plan::MapSelection::All,
+                    run::MissingWdtPolicy::DeclareRootAbsent,
+                    run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                    run::MissingWmoPolicy::Reject,
+                    resource,
+                ),
+                if resource == crate::collision::resources::Profile::BoundedV1 {
+                    Ok(PROFILE_70450_AVAILABLE_MODEL_ROOT_ABSENT_GEOMETRY)
+                } else {
+                    Err(Error::State)
+                }
+            );
+        }
+        assert_eq!(
+            completion_profile_with_omissions(
+                crate::collision::target::Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+                crate::collision::resources::Profile::RequestHeavyV1,
+            ),
+            Err(Error::State)
+        );
+    }
+
+    #[test]
+    fn model_output_expanded_completion_requires_exact_build_scope_and_omissions() {
+        use crate::collision::resources::Profile;
+        use crate::collision::target::Target;
+
+        let material_filtered =
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered;
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::ModelOutputExpandedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_MODEL_OUTPUT_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY)
+        );
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::SourceExpandedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY)
+        );
+        for (target, selection, missing_wdt, missing_model, missing_wmo, resource) in [
+            (
+                Target::Build70425,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::ModelOutputExpandedV1,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::MapAndAncestors(7),
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::ModelOutputExpandedV1,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::ModelOutputExpandedV1,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::Reject,
+                material_filtered,
+                Profile::ModelOutputExpandedV1,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+                Profile::ModelOutputExpandedV1,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::DiskWorldV1,
+            ),
+        ] {
+            assert_eq!(
+                completion_profile_with_omissions(
+                    target,
+                    selection,
+                    missing_wdt,
+                    missing_model,
+                    missing_wmo,
+                    resource,
+                ),
+                Err(Error::State)
+            );
+        }
+    }
+
+    #[test]
+    fn source_expanded_completion_requires_exact_build_scope_and_omissions() {
+        use crate::collision::resources::Profile;
+        use crate::collision::target::Target;
+
+        let material_filtered =
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered;
+        assert_eq!(
+            completion_profile_with_omissions(
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+                Profile::SourceExpandedV1,
+            ),
+            Ok(PROFILE_70450_AVAILABLE_SOURCE_EXPANDED_MATERIAL_FILTERED_WMO_GEOMETRY)
+        );
+        for (target, selection, missing_wdt, missing_model, missing_wmo) in [
+            (
+                Target::Build70425,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::MapAndAncestors(7),
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::Reject,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::Reject,
+                material_filtered,
+            ),
+            (
+                Target::Build70450,
+                plan::MapSelection::All,
+                run::MissingWdtPolicy::DeclareRootAbsent,
+                run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                run::MissingWmoPolicy::Reject,
+            ),
+        ] {
+            assert_eq!(
+                completion_profile_with_omissions(
+                    target,
+                    selection,
+                    missing_wdt,
+                    missing_model,
+                    missing_wmo,
+                    Profile::SourceExpandedV1,
+                ),
+                Err(Error::State)
+            );
+        }
     }
 }

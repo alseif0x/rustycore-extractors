@@ -48,7 +48,7 @@ struct SectionFacts {
 struct Classification {
     outcome: &'static str,
     reason_code: Option<&'static str>,
-    reason: &'static str,
+    reason: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -96,7 +96,45 @@ pub(crate) fn run(
         .try_reserve_exact(declarations.len())
         .map_err(|_| Error::from("product_db2_inspection_limit"))?;
     for declaration in declarations {
-        let facts =
+        let facts = if plan.is_v26() {
+            match store.read_file_data_id_available_70450_with_limit(
+                declaration.file_data_id,
+                MAX_FILE_BYTES,
+            ) {
+                Ok(source)
+                    if source.declared_bytes() == 0
+                        || source.declared_bytes() > MAX_FILE_BYTES
+                        || (!source.full_ckey_verified()
+                            && !source.encoded_key_authenticated()) =>
+                {
+                    unavailable(
+                        declaration.file_data_id,
+                        declaration.name,
+                        "product_partial_db2_authentication",
+                    )
+                }
+                Ok(source) => {
+                    let (bytes, sections, coverage) = source.into_zerofilled_with_coverage();
+                    if bytes.is_empty() || bytes.len() as u64 > MAX_FILE_BYTES {
+                        unavailable(
+                            declaration.file_data_id,
+                            declaration.name,
+                            "product_file_limit",
+                        )
+                    } else {
+                        inspect_bytes_with_partial(
+                            plan,
+                            declaration.file_data_id,
+                            declaration.name,
+                            &bytes,
+                            &coverage,
+                            &sections,
+                        )
+                    }
+                }
+                Err(error) => unavailable(declaration.file_data_id, declaration.name, error.code()),
+            }
+        } else {
             match store.read_file_data_id_with_limit(declaration.file_data_id, MAX_FILE_BYTES) {
                 Ok(file) => inspect_bytes(
                     plan,
@@ -105,7 +143,8 @@ pub(crate) fn run(
                     &file.bytes,
                 ),
                 Err(error) => unavailable(declaration.file_data_id, declaration.name, error.code()),
-            };
+            }
+        };
         files.push(facts);
     }
     store
@@ -161,6 +200,17 @@ fn inspect_bytes(
     table_name: &'static str,
     bytes: &[u8],
 ) -> FileFacts {
+    inspect_bytes_with_partial(plan, file_data_id, table_name, bytes, &[], &[])
+}
+
+fn inspect_bytes_with_partial(
+    plan: &Plan,
+    file_data_id: u32,
+    table_name: &'static str,
+    bytes: &[u8],
+    coverage: &[forever_casc::blte::available::CoverageRange],
+    partial_sections: &[forever_casc::blte::available::PartialSection],
+) -> FileFacts {
     let table = CharacterTable::from_catalog_id(plan.schema_catalog.id(), table_name)
         .ok()
         .flatten();
@@ -199,7 +249,15 @@ fn inspect_bytes(
     let compression_kinds = parsed_header
         .as_ref()
         .map_or_else(Vec::new, |header| compression_kinds(bytes, header));
-    let classification = classify(plan, table_name, table, parsed_header.as_ref(), bytes);
+    let classification = classify(
+        plan,
+        table_name,
+        table,
+        parsed_header.as_ref(),
+        bytes,
+        coverage,
+        partial_sections,
+    );
     FileFacts {
         file_data_id,
         table_name,
@@ -232,6 +290,8 @@ fn classify(
     table: Option<CharacterTable>,
     header: Option<&Header>,
     bytes: &[u8],
+    coverage: &[forever_casc::blte::available::CoverageRange],
+    partial_sections: &[forever_casc::blte::available::PartialSection],
 ) -> Classification {
     let Some(table) = table else {
         return rejected(
@@ -239,6 +299,26 @@ fn classify(
             "catalogue declaration did not resolve to a reviewed reader",
         );
     };
+    if plan.is_v26() && !partial_sections.is_empty() {
+        return match forever_db2::availability::read_structure_70450_for_table(
+            &super::CompleteDb2Source(bytes),
+            table_name,
+        ) {
+            Ok(facts) => {
+                if let Err(reason) =
+                    super::validate_v26_partial_coverage(&facts, coverage, partial_sections)
+                {
+                    return rejected("product_partial_section_count", reason);
+                }
+                Classification {
+                    outcome: "accepted_raw_only",
+                    reason_code: None,
+                    reason: "partial WDC5 structure and zero-fill validation succeeded; rows were not decoded".into(),
+                }
+            }
+            Err(error) => rejected(error.code(), reason_for(error.code())),
+        };
+    }
     let row_reader = DecodedTable::read(bytes, table);
     let parent_index = catalog::resolve_for(plan.schema_catalog.id(), table_name)
         .ok()
@@ -250,12 +330,13 @@ fn classify(
             Ok(_) => Classification {
                 outcome: "accepted",
                 reason_code: None,
-                reason: "complete build-specific DB2 validation succeeded",
+                reason: "complete build-specific DB2 validation succeeded".into(),
             },
             Err(error) => Classification {
                 outcome: "accepted_raw_only",
                 reason_code: Some(error.code()),
-                reason: "product source validation succeeded without materializing decoded rows",
+                reason: "product source validation succeeded without materializing decoded rows"
+                    .into(),
             },
         },
         Err(error) => {
@@ -283,11 +364,11 @@ fn classify(
     }
 }
 
-fn rejected(code: &'static str, reason: &'static str) -> Classification {
+fn rejected(code: &'static str, reason: impl Into<String>) -> Classification {
     Classification {
         outcome: "rejected",
         reason_code: Some(code),
-        reason,
+        reason: reason.into(),
     }
 }
 
@@ -333,7 +414,7 @@ fn unavailable(file_data_id: u32, table_name: &'static str, code: &'static str) 
         classification: Classification {
             outcome: "unavailable",
             reason_code: Some(code),
-            reason: "LocalStore did not provide a complete decoded file",
+            reason: "LocalStore did not provide a complete decoded file".into(),
         },
     }
 }
@@ -460,7 +541,7 @@ fn render_file(output: &mut String, facts: &FileFacts) -> Result<(), Error> {
             .map(quote)
             .transpose()?
             .unwrap_or_else(|| "null".to_owned()),
-        quote(facts.classification.reason)?,
+        quote(&facts.classification.reason)?,
     )
     .map_err(|_| Error::from("product_db2_inspection_limit"))?;
     Ok(())
@@ -570,6 +651,13 @@ mod tests {
         include_str!("../../../../tests/contracts/fixtures/forever-product-v16/disabled.tsv");
     const V10_PLAN: &str =
         include_str!("../../../../tests/contracts/fixtures/forever-product-v10/disabled.tsv");
+    const V26_PLAN: &str =
+        include_str!("../../../../tests/contracts/fixtures/forever-product-v26/multiple.tsv");
+    // Reuse the test-only fixture without cloning its checksum implementation.
+    #[allow(clippy::duplicate_mod)]
+    mod v26_partial_fixture {
+        include!("../../tests/v25_partial_map_db2.rs");
+    }
     static NEXT: AtomicU64 = AtomicU64::new(0);
 
     struct Lab(PathBuf);
@@ -684,6 +772,99 @@ mod tests {
         }
         let header = Header::parse(bytes[..HEADER_SIZE].try_into().unwrap()).unwrap();
         assert_eq!(compression_kinds(&bytes, &header), [0, 5]);
+    }
+
+    fn map_coverage(
+        offset: usize,
+        bytes: usize,
+    ) -> Vec<forever_casc::blte::available::CoverageRange> {
+        vec![
+            forever_casc::blte::available::CoverageRange {
+                offset: 0,
+                bytes: offset as u64,
+                state: forever_casc::blte::available::RangeState::Available,
+            },
+            forever_casc::blte::available::CoverageRange {
+                offset: offset as u64,
+                bytes: bytes as u64,
+                state: forever_casc::blte::available::RangeState::EncryptedUnavailable,
+            },
+        ]
+    }
+
+    #[test]
+    fn v26_partial_classification_uses_structure_without_decoding_rows() {
+        let plan = Plan::parse(V26_PLAN).unwrap();
+        let (bytes, hidden_start, hidden_size) = v26_partial_fixture::partial_map();
+        let coverage = map_coverage(hidden_start, hidden_size);
+        let frame = forever_casc::blte::available::PartialSection {
+            lookup_hex: "1122334455667788".into(),
+            frame_ordinal: 1,
+            decoded_size: hidden_size as u64,
+        };
+        let facts = inspect_bytes_with_partial(
+            &plan,
+            1_349_477,
+            "Map",
+            &bytes,
+            &coverage,
+            std::slice::from_ref(&frame),
+        );
+        assert_eq!(facts.sections.len(), 2);
+        assert_eq!(facts.sections[1].flags, 1);
+        assert_eq!(facts.classification.outcome, "accepted_raw_only");
+        assert_eq!(facts.classification.reason_code, None);
+        assert_eq!(
+            facts.classification.reason,
+            "partial WDC5 structure and zero-fill validation succeeded; rows were not decoded"
+        );
+        let report = render_report(&plan, &[facts]).unwrap();
+        assert!(!report.contains(&frame.lookup_hex));
+        for forbidden in [
+            "content_key",
+            "encoding_key",
+            "payload",
+            "record_values",
+            "hash",
+            "index_prefix",
+        ] {
+            assert!(!report.contains(forbidden), "report contains {forbidden}");
+        }
+    }
+
+    #[test]
+    fn v26_partial_classification_reports_only_numeric_size_mismatch_details() {
+        let plan = Plan::parse(V26_PLAN).unwrap();
+        let (bytes, hidden_start, hidden_size) = v26_partial_fixture::partial_map();
+        let coverage = map_coverage(hidden_start, hidden_size);
+        let frame = forever_casc::blte::available::PartialSection {
+            lookup_hex: "1122334455667788".into(),
+            frame_ordinal: 1,
+            decoded_size: hidden_size as u64 - 1,
+        };
+        let facts = inspect_bytes_with_partial(
+            &plan,
+            1_349_477,
+            "Map",
+            &bytes,
+            &coverage,
+            std::slice::from_ref(&frame),
+        );
+        assert_eq!(facts.classification.outcome, "rejected");
+        assert_eq!(
+            facts.classification.reason_code,
+            Some("product_partial_section_count")
+        );
+        assert_eq!(
+            facts.classification.reason,
+            format!(
+                "partial frame ordinal 1 decoded size {} does not match coverage ordinal 1 size {}",
+                hidden_size - 1,
+                hidden_size
+            )
+        );
+        let report = render_report(&plan, &[facts]).unwrap();
+        assert!(!report.contains(&frame.lookup_hex));
     }
 
     #[test]

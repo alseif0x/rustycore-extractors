@@ -1,0 +1,31 @@
+forever-product	47
+build	70450
+locale	esES
+index	contiguous
+root	header-50893-v2
+schema-catalog	wowdbdefs-70450-v1
+decryption	disabled
+partial_encrypted_sections	declared-skip
+collision-storage	linux-leased-append-disk-world-v1
+collision-raw-bytes	1048576
+collision-wdt-bytes	1048576
+collision-cache-bytes	1048576
+collision-placement-bytes	1048576
+collision-vmo-bytes	1048576
+collision-map-bytes	1048576
+collision-output-bytes	1048576
+collision-profile	linux70450-gameobject-expanded-material-filtered-wmo-vmap-product-v1
+collision-domain	all-available-maps
+collision-coverage	linux70450-gameobject-expanded-material-filtered-wmo-coverage-v20
+gameobject-scope	available-fdid-direct-v1
+model-scope	placement-and-gameobject-v1
+components	db2,vmaps
+terrain	none
+pack	true
+navigation	none
+big-base-unit	false
+skip-liquids	false
+maximum-slope	55
+non-steep-slope	55
+db2	GameObjectDisplayInfo	1266277
+db2	Map	1349477

@@ -963,7 +963,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
     ) -> Result<Self, CollectorError> {
         spool.verify_unchanged()?;
         limits.validate_resources(spool.resources())?;
-        let mut inner = Extractor::new_validated(store, lookup, limits)?;
+        let mut inner = Extractor::new_validated(store, lookup, limits, spool.resources())?;
         inner.payloads = Some(Repository {
             spool,
             mapping: Vec::new(),
@@ -1047,6 +1047,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
                 .and(result)
         };
         if let Err(e) = result {
+            self.inner.record_product_diagnostic_resource();
             self.failed = Some(e);
             self.inner.failed.get_or_insert(CollisionError::Aborted);
         }
@@ -1164,6 +1165,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         if model.pending
             || model.class != shape.class
             || (model.status == Status::Collision) != shape.raw_bytes.is_some()
+            || (model.status == Status::Vacated && model.class != Class::Wmo)
         {
             return Err(CollisionError::State.into());
         }
@@ -1405,6 +1407,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
         match result {
             Ok(v) => guard.map(|()| v).map_err(CallbackFailure::Collector),
             Err(cause) => {
+                self.inner.record_product_diagnostic_resource();
                 self.failed
                     .get_or_insert(CollectorError::Collision(CollisionError::Aborted));
                 self.inner.failed.get_or_insert(CollisionError::Aborted);
@@ -1459,6 +1462,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             store: old.store,
             lookup,
             limits: old.limits,
+            resource_profile: old.resource_profile,
             models: old.models,
             requests: old.requests,
             live: old.live,
@@ -1471,6 +1475,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> SpoolingExtractor<'s, 'l, L> {
             source_bytes: old.source_bytes,
             raw_bytes: old.raw_bytes,
             failed: old.failed,
+            diagnostic_resource_recorded: old.diagnostic_resource_recorded,
             payloads: old.payloads,
             compatible_descriptors: old.compatible_descriptors,
         };
@@ -1585,6 +1590,7 @@ impl SpoolingExtraction {
         if model.pending
             || model.class != shape.class
             || (model.status == Status::Collision) != shape.raw_bytes.is_some()
+            || (model.status == Status::Vacated && model.class != Class::Wmo)
         {
             return Err(CollisionError::State.into());
         }

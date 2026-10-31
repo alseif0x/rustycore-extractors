@@ -363,6 +363,210 @@ fn modn_acquires_unused_names_and_retains_byte_offset_bindings() {
     assert_eq!(result.models().len(), 3);
 }
 #[test]
+fn named_wmo_doodad_is_not_omitted_by_the_fdid_policy() {
+    let fixture = CollisionFixture::new(&[
+        (10, None, named_root(&[30], b"A/missing.m2\0")),
+        (30, None, group(true, false, &[0])),
+    ]);
+    let mut store = fixture.open(true);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let mut missing_m2 = Vec::new();
+    let mut missing_wmo_ids = Vec::new();
+    let mut omissions = OmissionOptions {
+        missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+        missing_wmo: run::MissingWmoPolicy::Reject,
+        missing_m2: &mut missing_m2,
+        missing_m2_limit: placements::MAX_MODELS,
+        missing_wmo_ids: &mut missing_wmo_ids,
+        missing_wmo_limit: 0,
+        empty_wmo_ids: &mut Vec::new(),
+        empty_wmo_limit: 0,
+        unselected_wmo_ids: &mut Vec::new(),
+        unselected_wmo_limit: 0,
+        material_filtered_wmo_ids: &mut Vec::new(),
+        material_filtered_wmo_limit: 0,
+    };
+    let error = match e.extract_placement_with_omissions(wmo_request(10), &mut omissions) {
+        Ok(_) => panic!("named doodad was omitted without an FDID proof"),
+        Err(error) => error,
+    };
+    assert_eq!(error, Error::Store(local_store::Error::MissingFile));
+    assert!(missing_m2.is_empty());
+    assert_eq!(e.request_calls, 1);
+    assert_eq!(e.dependency_requests, 1);
+    assert_eq!(e.facts().reads, 2);
+    assert_eq!(e.finish().err(), Some(error));
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn material_filtered_list_respects_explicit_capacity_without_growth() {
+    let fixture = CollisionFixture::new(&[
+        (10, None, root(&[30], &[], true)),
+        (30, None, {
+            let mut bytes = vec![0; 68];
+            put(&mut bytes, 56, 99);
+            bytes.extend(chunk(b"MOPY", &[0x26, 0]));
+            bytes.extend(chunk(b"MOVI", &[0, 0, 1, 0, 2, 0]));
+            bytes.extend(chunk(
+                b"MOVT",
+                &words(&[0, 0, 0, 0x3f80_0000, 0, 0, 0, 0x3f80_0000, 0]),
+            ));
+            chunk(b"MOGP", &bytes)
+        }),
+    ]);
+    let mut store = fixture.open(false);
+    let mut extractor = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let mut material_filtered = Vec::with_capacity(1);
+    let mut missing_m2 = Vec::new();
+    let mut missing_wmo = Vec::new();
+    let mut empty_wmo = Vec::new();
+    let mut unselected_wmo = Vec::new();
+    let mut omissions = OmissionOptions {
+        missing_model: run::MissingModelPolicy::Reject,
+        missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+        missing_m2: &mut missing_m2,
+        missing_m2_limit: 0,
+        missing_wmo_ids: &mut missing_wmo,
+        missing_wmo_limit: 0,
+        empty_wmo_ids: &mut empty_wmo,
+        empty_wmo_limit: 0,
+        unselected_wmo_ids: &mut unselected_wmo,
+        unselected_wmo_limit: 0,
+        material_filtered_wmo_ids: &mut material_filtered,
+        material_filtered_wmo_limit: 1,
+    };
+    extractor
+        .extract_placement_with_omissions(wmo_request(10), &mut omissions)
+        .unwrap();
+    assert_eq!(material_filtered, [10]);
+    assert_eq!(material_filtered.capacity(), 1);
+    assert_eq!(
+        extractor.finish().unwrap().models()[0].status(),
+        Status::Vacated
+    );
+
+    let mut files = vec![
+        (10, None, root(&[30], &[], true)),
+        (11, None, root(&[31], &[], true)),
+        (30, None, {
+            let mut bytes = vec![0; 68];
+            put(&mut bytes, 56, 99);
+            bytes.extend(chunk(b"MOPY", &[0x26, 0]));
+            bytes.extend(chunk(b"MOVI", &[0, 0, 1, 0, 2, 0]));
+            bytes.extend(chunk(
+                b"MOVT",
+                &words(&[0, 0, 0, 0x3f80_0000, 0, 0, 0, 0x3f80_0000, 0]),
+            ));
+            chunk(b"MOGP", &bytes)
+        }),
+        (31, None, {
+            let mut bytes = vec![0; 68];
+            put(&mut bytes, 56, 99);
+            bytes.extend(chunk(b"MOPY", &[0x26, 0]));
+            bytes.extend(chunk(b"MOVI", &[0, 0, 1, 0, 2, 0]));
+            bytes.extend(chunk(
+                b"MOVT",
+                &words(&[0, 0, 0, 0x3f80_0000, 0, 0, 0, 0x3f80_0000, 0]),
+            ));
+            chunk(b"MOGP", &bytes)
+        }),
+    ];
+    let fixture = CollisionFixture::new(&files);
+    let mut store = fixture.open(false);
+    let mut extractor = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let mut material_filtered = Vec::with_capacity(1);
+    for id in [10, 11] {
+        let mut omissions = OmissionOptions {
+            missing_model: run::MissingModelPolicy::Reject,
+            missing_wmo: run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered,
+            missing_m2: &mut Vec::new(),
+            missing_m2_limit: 0,
+            missing_wmo_ids: &mut Vec::new(),
+            missing_wmo_limit: 0,
+            empty_wmo_ids: &mut Vec::new(),
+            empty_wmo_limit: 0,
+            unselected_wmo_ids: &mut Vec::new(),
+            unselected_wmo_limit: 0,
+            material_filtered_wmo_ids: &mut material_filtered,
+            material_filtered_wmo_limit: 1,
+        };
+        let result = extractor.extract_placement_with_omissions(wmo_request(id), &mut omissions);
+        if id == 10 {
+            result.unwrap();
+            assert_eq!(material_filtered, [10]);
+            assert_eq!(material_filtered.capacity(), 1);
+        } else {
+            assert_eq!(result, Err(Error::Limit));
+            assert_eq!(material_filtered, [10]);
+            assert_eq!(material_filtered.capacity(), 1);
+        }
+    }
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+    files.clear();
+}
+
+#[test]
+fn direct_wmo_doodad_limit_is_enforced_before_third_push() {
+    let fixture = CollisionFixture::new(&[
+        (10, None, root(&[30], &[20], true)),
+        (11, None, root(&[31], &[19], true)),
+        (12, None, root(&[32], &[18], true)),
+        (30, None, group(true, false, &[0])),
+        (31, None, group(true, false, &[0])),
+        (32, None, group(true, false, &[0])),
+    ]);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let mut missing_m2 = Vec::with_capacity(2);
+    let mut missing_wmo_ids = Vec::new();
+    for id in [10, 11] {
+        let mut empty_wmo_ids = Vec::new();
+        let mut omissions = OmissionOptions {
+            missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+            missing_wmo: run::MissingWmoPolicy::Reject,
+            missing_m2: &mut missing_m2,
+            missing_m2_limit: 2,
+            missing_wmo_ids: &mut missing_wmo_ids,
+            missing_wmo_limit: 0,
+            empty_wmo_ids: &mut empty_wmo_ids,
+            empty_wmo_limit: 0,
+            unselected_wmo_ids: &mut Vec::new(),
+            unselected_wmo_limit: 0,
+            material_filtered_wmo_ids: &mut Vec::new(),
+            material_filtered_wmo_limit: 0,
+        };
+        e.extract_placement_with_omissions(wmo_request(id), &mut omissions)
+            .unwrap();
+    }
+    assert_eq!(missing_m2, [20, 19]);
+    assert_eq!(missing_m2.capacity(), 2);
+
+    let mut omissions = OmissionOptions {
+        missing_model: run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+        missing_wmo: run::MissingWmoPolicy::Reject,
+        missing_m2: &mut missing_m2,
+        missing_m2_limit: 2,
+        missing_wmo_ids: &mut missing_wmo_ids,
+        missing_wmo_limit: 0,
+        empty_wmo_ids: &mut Vec::new(),
+        empty_wmo_limit: 0,
+        unselected_wmo_ids: &mut Vec::new(),
+        unselected_wmo_limit: 0,
+        material_filtered_wmo_ids: &mut Vec::new(),
+        material_filtered_wmo_limit: 0,
+    };
+    let error = match e.extract_placement_with_omissions(wmo_request(12), &mut omissions) {
+        Ok(_) => panic!("third omission exceeded the explicit limit"),
+        Err(error) => error,
+    };
+    assert_eq!(error, Error::Limit);
+    assert_eq!(missing_m2, [20, 19]);
+    assert_eq!(missing_m2.capacity(), 2);
+    assert_eq!(e.dependency_requests, 3);
+    assert_eq!(e.request_calls, 3);
+    assert_eq!(e.finish().err(), Some(Error::Limit));
+}
+#[test]
 fn empty_modn_name_is_not_silently_skipped() {
     assert_eq!(
         run(&[(10, None, named_root(&[], b"\0"))], wmo_request(10)).err(),
@@ -715,6 +919,9 @@ fn gameobject_model(outcome: GameObjectOutcome) -> ModelHandle {
     match outcome {
         GameObjectOutcome::Model(handle) => handle,
         GameObjectOutcome::Texture => panic!("synthetic model unexpectedly classified as texture"),
+        GameObjectOutcome::EncryptedUnavailable => {
+            panic!("synthetic model unexpectedly classified as encrypted-unavailable")
+        }
     }
 }
 
@@ -1208,6 +1415,73 @@ fn memory_partition_is_downward_and_survives_lookup_transition() {
 }
 
 #[test]
+fn wdt_root_absence_rejects_zero_before_any_source_read() {
+    let fixture = CollisionFixture::new(&[]);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let error = match e.read_wdt_with_root_absence(0, 4096) {
+        Ok(_) => panic!("WDT0 became a declarable ROOT absence"),
+        Err(error) => error,
+    };
+    assert_eq!(error, Error::Name);
+    assert_eq!(e.facts().reads, 0);
+    assert_eq!(e.finish().err(), Some(Error::Name));
+}
+
+#[test]
+fn wdt_root_absence_returns_no_source_facts_and_root_present_is_sticky_fatal() {
+    let fixture = CollisionFixture::new(&[]);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    match e.read_wdt_with_root_absence(999, 4096).unwrap() {
+        WdtRead::RootAbsent(999) => {}
+        _ => panic!("missing ROOT produced facts or a present WDT"),
+    }
+    assert_eq!(e.external_sources, 0);
+    assert_eq!(e.retained_bytes(), 0);
+    e.finish().unwrap();
+
+    let files = [(10, None, m2(true))];
+    let fixture = CollisionFixture::with_ineligible_root(&files, 70205, 10);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    let error = match e.read_wdt_with_root_absence(10, 4096) {
+        Ok(_) => panic!("ROOT-present ineligible WDT was omitted"),
+        Err(error) => error,
+    };
+    assert_eq!(error, Error::Store(local_store::Error::MissingFile));
+    let reads = e.facts().reads;
+    let second = match e.read_wdt_with_root_absence(10, 4096) {
+        Ok(_) => panic!("sticky failure allowed another read"),
+        Err(error) => error,
+    };
+    assert_eq!(second, error);
+    assert_eq!(e.facts().reads, reads);
+    assert_eq!(e.finish().err(), Some(error));
+}
+
+#[test]
+fn wdt_root_absence_guard_change_is_fatal_and_sticky() {
+    let fixture = CollisionFixture::new(&[]);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    fixture.change_metadata();
+    let error = match e.read_wdt_with_root_absence(999, 4096) {
+        Ok(_) => panic!("changed guards allowed a ROOT absence"),
+        Err(error) => error,
+    };
+    assert_eq!(error, Error::Store(local_store::Error::InputChanged));
+    let reads = e.facts().reads;
+    let second = match e.read_wdt_with_root_absence(1000, 4096) {
+        Ok(_) => panic!("sticky guard failure allowed another read"),
+        Err(error) => error,
+    };
+    assert_eq!(second, error);
+    assert_eq!(e.facts().reads, reads);
+    assert_eq!(e.finish().err(), Some(error));
+}
+
+#[test]
 fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure() {
     use std::{cell::RefCell, rc::Rc};
 
@@ -1219,6 +1493,7 @@ fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure
     }
     struct Observer {
         rows: Rc<RefCell<Vec<Observed>>>,
+        resources: Rc<RefCell<Vec<local_store::ProductDiagnosticResource>>>,
         phase: local_store::ProductDiagnosticPhase,
         ordinal: u32,
     }
@@ -1245,6 +1520,9 @@ fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure
             Some(request)
         }
         fn tolerated_absence(&mut self, _: local_store::ProductDiagnosticRequest) {}
+        fn resource_limit(&mut self, resource: local_store::ProductDiagnosticResource) {
+            self.resources.borrow_mut().push(resource);
+        }
 
         fn source_failure(
             &mut self,
@@ -1269,8 +1547,10 @@ fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure
     let mut store = fixture.open(false);
     fixture.truncate_archive();
     let rows = Rc::new(RefCell::new(Vec::new()));
+    let resources = Rc::new(RefCell::new(Vec::new()));
     store.set_product_diagnostic_observer(Some(Box::new(Observer {
         rows: rows.clone(),
+        resources: resources.clone(),
         phase: local_store::ProductDiagnosticPhase::Startup,
         ordinal: 0,
     })));
@@ -1297,7 +1577,74 @@ fn product_diagnostic_observer_receives_the_first_typed_synthetic_source_failure
         local_store::Error::NoLocalEncoding(failures)
     );
     assert!(!observations[0].guards_observed);
+    assert_eq!(resources.borrow().len(), 1);
 }
+
+#[test]
+fn abort_forwards_the_current_resource_snapshot_to_the_observer() {
+    use std::{cell::RefCell, rc::Rc};
+
+    struct Observer(Rc<RefCell<Vec<local_store::ProductDiagnosticResource>>>);
+    impl local_store::ProductDiagnosticObserver for Observer {
+        fn set_phase(&mut self, _: local_store::ProductDiagnosticPhase) {}
+        fn begin_request(
+            &mut self,
+            _: local_store::ProductDiagnosticRequestKind,
+            _: Option<u32>,
+        ) -> Option<local_store::ProductDiagnosticRequest> {
+            None
+        }
+        fn tolerated_absence(&mut self, _: local_store::ProductDiagnosticRequest) {}
+        fn resource_limit(&mut self, resource: local_store::ProductDiagnosticResource) {
+            self.0.borrow_mut().push(resource);
+        }
+        fn source_failure(
+            &mut self,
+            _: local_store::ProductDiagnosticRequest,
+            _: local_store::Error,
+            _: bool,
+        ) {
+        }
+        fn finish(&mut self, _: Option<&'static str>, _: bool) {}
+    }
+
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    let store_resident_bytes = store.stats().resident_bytes;
+    let resources = Rc::new(RefCell::new(Vec::new()));
+    store.set_product_diagnostic_observer(Some(Box::new(Observer(resources.clone()))));
+    let limits = Limits {
+        max_requests: 1,
+        ..Limits::default()
+    };
+    let mut extractor = Extractor::new(&mut store, &Lookup, limits).unwrap();
+    extractor.extract(request(10)).unwrap();
+    extractor.reserve_external(3).unwrap();
+    let (source, _) = extractor.read_source(10, 4096).unwrap();
+    let external_source_bytes = source.capacity();
+    assert_eq!(extractor.extract(request(10)), Err(Error::Limit));
+    let facts = extractor.facts();
+    let live = extractor.retained_bytes();
+    let memory_limit = extractor.memory_limit();
+    let expected = local_store::ProductDiagnosticResource {
+        request_calls: 1,
+        reads: facts.reads,
+        dependency_requests: facts.dependency_requests,
+        source_bytes: facts.source_bytes,
+        raw_bytes: facts.raw_bytes,
+        models: facts.models,
+        resident_bytes: live,
+        external_bytes: 3,
+        external_source_bytes,
+        store_resident_bytes,
+        memory_limit,
+    };
+    assert_eq!(*resources.borrow(), [expected]);
+    assert_eq!(extractor.abort(), Error::Limit);
+    assert_eq!(*resources.borrow(), [expected]);
+    assert_eq!(extractor.facts().reads, facts.reads);
+}
+
 #[test]
 fn memory_partition_includes_live_external_and_source_buffers() {
     let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
@@ -1347,6 +1694,650 @@ fn partition_preserves_first_failure_and_checks_store_identity() {
         e.finish().err(),
         Some(Error::Store(local_store::Error::InputChanged))
     );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn request_heavy_rejects_disk_world_before_acquisition() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    assert_eq!(
+        Extractor::new_with_resources(
+            &mut store,
+            &Lookup,
+            Limits::default(),
+            resources::Profile::DiskWorldV1,
+        )
+        .err(),
+        Some(Error::InvalidLimits)
+    );
+}
+
+#[test]
+fn historical_request_cap_still_rejects_request_4097() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    #[cfg(target_os = "linux")]
+    run::SharedLimits::default()
+        .validate_resources(resources::Profile::RequestHeavyV1)
+        .unwrap();
+    let mut e = Extractor::new(&mut store, &Lookup, Limits::default()).unwrap();
+    for _ in 0..4096 {
+        e.extract(request(10)).unwrap();
+    }
+    assert_eq!(e.extract(request(10)), Err(Error::Limit));
+    assert_eq!(e.facts().reads, 1);
+    assert_eq!(e.request_calls, 4096);
+    assert_eq!(e.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn request_heavy_reuses_one_source_beyond_4096_and_enforces_reduced_cap() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        resources::Profile::RequestHeavyV1.collector_limits(),
+        resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    for _ in 0..4097 {
+        e.extract(request(10)).unwrap();
+    }
+    assert_eq!(e.request_calls, 4097);
+    assert_eq!(e.facts().reads, 1);
+    assert_eq!(e.models.len(), 1);
+    let extraction = e.finish().unwrap();
+    assert_eq!(extraction.requests().len(), 4097);
+    assert_eq!(extraction.models().len(), 1);
+    assert_eq!(extraction.facts().reads, 1);
+
+    let mut store = fixture.open(false);
+    let mut e = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        Limits {
+            max_requests: 4097,
+            ..Limits::default()
+        },
+        resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    for _ in 0..4097 {
+        e.extract(request(10)).unwrap();
+    }
+    assert_eq!(e.extract(request(10)), Err(Error::Limit));
+    assert_eq!(e.facts().reads, 1);
+    assert_eq!(e.request_calls, 4097);
+    assert_eq!(e.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn dependency_heavy_constructor_accepts_only_its_declared_collector_capacity() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    let profile = resources::Profile::DependencyHeavyV1;
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, profile.collector_limits(), profile)
+            .unwrap();
+    extractor.extract(request(10)).unwrap();
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 1);
+    assert_eq!(completed.requests().len(), 1);
+
+    for limits in [
+        Limits {
+            max_requests: 16_000_001,
+            ..Limits::default()
+        },
+        Limits {
+            max_dependency_requests: 16_000_001,
+            ..Limits::default()
+        },
+    ] {
+        let mut store = fixture.open(false);
+        assert_eq!(
+            Extractor::new_with_resources(&mut store, &Lookup, limits, profile).err(),
+            Some(Error::InvalidLimits)
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn model_heavy_accepts_4097_distinct_model_identities_and_rejects_other_profiles() {
+    const MODEL_COUNT: usize = 4097;
+    let files: Vec<CollisionFile<'static>> = (0..MODEL_COUNT)
+        .map(|index| (100 + index as u32, None, m2(false)))
+        .collect();
+    let fixture = CollisionFixture::new(&files);
+    let profile = resources::Profile::ModelHeavyV1;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, profile.collector_limits(), profile)
+            .unwrap();
+    for id in 100..100 + MODEL_COUNT as u32 {
+        extractor.extract(request(id)).unwrap();
+    }
+    assert_eq!(extractor.facts().models, MODEL_COUNT);
+    assert_eq!(extractor.facts().reads, MODEL_COUNT);
+    let extraction = extractor.finish().unwrap();
+    assert_eq!(extraction.models().len(), MODEL_COUNT);
+
+    let mut limits = resources::Profile::ReadHeavyV1.collector_limits();
+    limits.max_models = MODEL_COUNT;
+    assert_eq!(
+        limits.validate_resources(resources::Profile::ReadHeavyV1),
+        Err(Error::InvalidLimits)
+    );
+    assert_eq!(
+        Limits {
+            max_models: MODEL_COUNT,
+            ..Limits::default()
+        }
+        .validate(),
+        Err(Error::InvalidLimits)
+    );
+    let mut excessive = profile.collector_limits();
+    excessive.max_models = 65_537;
+    assert_eq!(
+        excessive.validate_resources(profile),
+        Err(Error::InvalidLimits)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn dependency_heavy_source_budget_stays_charged_after_release() {
+    let fixture = CollisionFixture::new(&[(10, None, vec![b'x'; 8]), (20, None, vec![b'y'; 8])]);
+    let profile = resources::Profile::DependencyHeavyV1;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 8;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    let (source, _) = extractor.read_source(10, 8).unwrap();
+    assert_eq!(extractor.facts().source_bytes, 8);
+    extractor.release_source(source.capacity()).unwrap();
+    drop(source);
+
+    assert_eq!(extractor.read_source(20, 8).err(), Some(Error::Limit));
+    assert_eq!(extractor.facts().source_bytes, 8);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_expanded_accepts_model_capacity_and_expanded_source_cap() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let profile = resources::Profile::SourceExpandedV1;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 1024 * 1024 * 1024;
+    limits.max_models = 65_536;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+    extractor.extract(request(10)).unwrap();
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 1);
+    assert_eq!(completed.requests().len(), 1);
+
+    for limits in [
+        Limits {
+            max_source_bytes: 1024 * 1024 * 1024 + 1,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_models: 65_537,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_reads: 1_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_dependency_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_raw_bytes: 256 * 1024 * 1024 + 1,
+            ..profile.collector_limits()
+        },
+    ] {
+        let mut store = fixture.open(false);
+        assert_eq!(
+            Extractor::new_with_resources(&mut store, &Lookup, limits, profile).err(),
+            Some(Error::InvalidLimits)
+        );
+    }
+
+    let mut downward = profile.collector_limits();
+    downward.max_source_bytes = 128 * 1024 * 1024;
+    downward.max_models = 4096;
+    downward.max_reads = 4096;
+    downward.max_requests = 4096;
+    downward.max_dependency_requests = 4096;
+    downward.max_raw_bytes = 128 * 1024 * 1024;
+    let mut store = fixture.open(false);
+    Extractor::new_with_resources(&mut store, &Lookup, downward, profile).unwrap();
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn model_output_expanded_constructor_uses_source_expanded_casc_caps() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let profile = resources::Profile::ModelOutputExpandedV1;
+    let limits = profile.collector_limits();
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+    extractor.extract(request(10)).unwrap();
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 1);
+    assert_eq!(completed.requests().len(), 1);
+
+    let mut downward = limits;
+    downward.max_source_bytes = 128 * 1024 * 1024;
+    downward.max_models = 4096;
+    downward.max_reads = 4096;
+    downward.max_requests = 4096;
+    downward.max_dependency_requests = 4096;
+    downward.max_raw_bytes = 128 * 1024 * 1024;
+    let mut store = fixture.open(false);
+    Extractor::new_with_resources(&mut store, &Lookup, downward, profile).unwrap();
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_expanded_reduced_source_budget_is_terminal_without_refund() {
+    let fixture = CollisionFixture::new(&[(10, None, vec![b'x'; 8]), (20, None, vec![b'y'; 8])]);
+    let profile = resources::Profile::SourceExpandedV1;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 16;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    let (source, _) = extractor.read_source(10, 8).unwrap();
+    assert_eq!(extractor.facts().source_bytes, 8);
+    extractor.release_source(source.capacity()).unwrap();
+    drop(source);
+
+    let (source, _) = extractor.read_source(20, 8).unwrap();
+    assert_eq!(extractor.facts().source_bytes, 16);
+    extractor.release_source(source.capacity()).unwrap();
+    drop(source);
+
+    assert_eq!(extractor.read_source(10, 1).err(), Some(Error::Limit));
+    assert_eq!(extractor.facts().source_bytes, 16);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_expanded_v2_constructor_and_reduced_source_budget_accept_exact_total() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let profile = resources::Profile::SourceExpandedV2;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, profile.collector_limits(), profile)
+            .unwrap();
+    extractor.extract(request(10)).unwrap();
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 1);
+    assert_eq!(completed.requests().len(), 1);
+
+    let fixture = CollisionFixture::new(&[(10, None, vec![b'x'; 8]), (20, None, vec![b'y'; 8])]);
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 16;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    for (id, total) in [(10, 8), (20, 16)] {
+        let (source, _) = extractor.read_source(id, 8).unwrap();
+        assert_eq!(extractor.facts().source_bytes, total);
+        extractor.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 2);
+    assert_eq!(completed.facts().source_bytes, 16);
+
+    for limits in [
+        Limits {
+            max_source_bytes: 2 * 1024 * 1024 * 1024 + 1,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_models: 65_537,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_reads: 1_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_dependency_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_raw_bytes: 256 * 1024 * 1024 + 1,
+            ..profile.collector_limits()
+        },
+    ] {
+        let mut store = fixture.open(false);
+        assert_eq!(
+            Extractor::new_with_resources(&mut store, &Lookup, limits, profile).err(),
+            Some(Error::InvalidLimits)
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_expanded_v2_reduced_source_budget_rejects_first_excess_byte() {
+    let fixture = CollisionFixture::new(&[
+        (10, None, vec![b'x'; 8]),
+        (20, None, vec![b'y'; 8]),
+        (30, None, vec![b'z'; 1]),
+    ]);
+    let profile = resources::Profile::SourceExpandedV2;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 16;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    for id in [10, 20] {
+        let (source, _) = extractor.read_source(id, 8).unwrap();
+        extractor.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+    assert_eq!(extractor.facts().source_bytes, 16);
+    assert_eq!(extractor.read_source(30, 1).err(), Some(Error::Limit));
+    assert_eq!(extractor.facts().source_bytes, 16);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_heavy_reduced_source_budget_accepts_exact_total() {
+    let fixture = CollisionFixture::new(&[(10, None, vec![b'x'; 8]), (20, None, vec![b'y'; 8])]);
+    let profile = resources::Profile::SourceHeavyV1;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 16;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    for (id, total) in [(10, 8), (20, 16)] {
+        let (source, _) = extractor.read_source(id, 8).unwrap();
+        assert_eq!(extractor.facts().source_bytes, total);
+        extractor.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 2);
+    assert_eq!(completed.facts().source_bytes, 16);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_heavy_reduced_source_budget_rejects_additional_byte() {
+    let fixture = CollisionFixture::new(&[
+        (10, None, vec![b'x'; 8]),
+        (20, None, vec![b'y'; 8]),
+        (30, None, vec![b'z'; 1]),
+    ]);
+    let profile = resources::Profile::SourceHeavyV1;
+    let mut limits = profile.collector_limits();
+    limits.max_source_bytes = 16;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, limits, profile).unwrap();
+
+    for id in [10, 20] {
+        let (source, _) = extractor.read_source(id, 8).unwrap();
+        extractor.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+    assert_eq!(extractor.facts().source_bytes, 16);
+    assert_eq!(extractor.read_source(30, 1).err(), Some(Error::Limit));
+    assert_eq!(extractor.facts().source_bytes, 16);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn source_heavy_constructor_accepts_only_its_declared_capacities() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let profile = resources::Profile::SourceHeavyV1;
+    let mut store = fixture.open(false);
+    let mut extractor =
+        Extractor::new_with_resources(&mut store, &Lookup, profile.collector_limits(), profile)
+            .unwrap();
+    extractor.extract(request(10)).unwrap();
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().reads, 1);
+    assert_eq!(completed.requests().len(), 1);
+
+    for limits in [
+        Limits {
+            max_source_bytes: 512 * 1024 * 1024 + 1,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_dependency_requests: 16_000_001,
+            ..profile.collector_limits()
+        },
+        Limits {
+            max_reads: 4097,
+            ..profile.collector_limits()
+        },
+    ] {
+        let mut store = fixture.open(false);
+        assert_eq!(
+            Extractor::new_with_resources(&mut store, &Lookup, limits, profile).err(),
+            Some(Error::InvalidLimits)
+        );
+    }
+
+    let mut downward = profile.collector_limits();
+    downward.max_source_bytes = 128 * 1024 * 1024;
+    downward.max_requests = 4096;
+    downward.max_dependency_requests = 4096;
+    downward.max_raw_bytes = 128 * 1024 * 1024;
+    let mut store = fixture.open(false);
+    Extractor::new_with_resources(&mut store, &Lookup, downward, profile).unwrap();
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn read_heavy_constructor_accepts_only_its_declared_read_capacity() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let profile = resources::Profile::ReadHeavyV1;
+    let reads = 4097;
+    let mut store = fixture.open(false);
+    let mut extractor = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        Limits {
+            max_reads: reads,
+            ..profile.collector_limits()
+        },
+        profile,
+    )
+    .unwrap();
+    for _ in 0..reads {
+        let (source, _) = extractor.read_source(10, 4096).unwrap();
+        extractor.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+    assert_eq!(extractor.facts().reads, reads);
+
+    let mut terminal = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        Limits {
+            max_reads: reads,
+            ..profile.collector_limits()
+        },
+        profile,
+    )
+    .unwrap();
+    for _ in 0..reads {
+        let (source, _) = terminal.read_source(10, 4096).unwrap();
+        terminal.release_source(source.capacity()).unwrap();
+        drop(source);
+    }
+    assert_eq!(terminal.read_source(10, 4096).err(), Some(Error::Limit));
+    assert_eq!(terminal.facts().reads, reads);
+    assert_eq!(terminal.finish().err(), Some(Error::Limit));
+
+    let mut store = fixture.open(false);
+    assert_eq!(
+        Extractor::new_with_resources(
+            &mut store,
+            &Lookup,
+            Limits {
+                max_reads: 1_000_001,
+                ..profile.collector_limits()
+            },
+            profile,
+        )
+        .err(),
+        Some(Error::InvalidLimits)
+    );
+
+    let mut reduced = profile.collector_limits();
+    reduced.max_reads = reads;
+    reduced.max_source_bytes = 128 * 1024 * 1024;
+    reduced.max_requests = 4096;
+    reduced.max_dependency_requests = 4096;
+    reduced.max_raw_bytes = 128 * 1024 * 1024;
+    let mut store = fixture.open(false);
+    Extractor::new_with_resources(&mut store, &Lookup, reduced, profile).unwrap();
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn dependency_heavy_counts_repeated_wmo_doodads_beyond_request_heavy_cap() {
+    const DOODAD_REQUESTS: usize = 4097;
+    let doodads = vec![20; DOODAD_REQUESTS];
+    let fixture = CollisionFixture::new(&[
+        (10, None, root(&[30], &doodads, true)),
+        (20, None, m2(true)),
+        (30, None, group(true, false, &[0])),
+    ]);
+
+    let mut store = fixture.open(false);
+    let mut dependency_limits = Limits {
+        max_dependency_requests: DOODAD_REQUESTS,
+        ..Limits::default()
+    };
+    dependency_limits.max_requests = 2;
+    let mut extractor = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        dependency_limits,
+        resources::Profile::DependencyHeavyV1,
+    )
+    .unwrap();
+    extractor.extract(wmo_request(10)).unwrap();
+    assert_eq!(extractor.dependency_requests, DOODAD_REQUESTS);
+    assert_eq!(extractor.request_calls(), 1);
+    assert_eq!(extractor.reads, 3);
+    assert_eq!(extractor.models.len(), 2);
+    let completed = extractor.finish().unwrap();
+    assert_eq!(completed.facts().dependency_requests, DOODAD_REQUESTS);
+    assert_eq!(completed.facts().reads, 3);
+    assert_eq!(completed.requests().len(), 1);
+    assert_eq!(completed.models().len(), 2);
+    let wmo = completed.model(completed.requests()[0]).unwrap();
+    let bindings = wmo.wmo_metadata().unwrap().bindings();
+    assert_eq!(bindings.len(), DOODAD_REQUESTS);
+    let m2_handle = bindings[0].model;
+    assert!(bindings.iter().all(|binding| binding.model == m2_handle));
+    assert_eq!(completed.model(m2_handle).unwrap().class(), Class::M2);
+
+    let mut store = fixture.open(false);
+    let mut request_heavy_limits = Limits {
+        max_dependency_requests: 4096,
+        ..Limits::default()
+    };
+    request_heavy_limits.max_requests = 2;
+    let mut extractor = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        request_heavy_limits,
+        resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    assert_eq!(extractor.extract(wmo_request(10)), Err(Error::Limit));
+    assert_eq!(extractor.dependency_requests, 4096);
+    assert_eq!(extractor.request_calls(), 1);
+    assert_eq!(extractor.reads, 2);
+    assert_eq!(extractor.models.len(), 2);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+
+    let mut store = fixture.open(false);
+    let mut reduced_limits = Limits {
+        max_dependency_requests: 2048,
+        ..Limits::default()
+    };
+    reduced_limits.max_requests = 2;
+    let mut extractor = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        reduced_limits,
+        resources::Profile::DependencyHeavyV1,
+    )
+    .unwrap();
+    assert_eq!(extractor.extract(wmo_request(10)), Err(Error::Limit));
+    assert_eq!(extractor.dependency_requests, 2048);
+    assert_eq!(extractor.request_calls(), 1);
+    assert_eq!(extractor.reads, 2);
+    assert_eq!(extractor.models.len(), 2);
+    assert_eq!(extractor.finish().err(), Some(Error::Limit));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn request_heavy_request_growth_remains_memory_bounded() {
+    let fixture = CollisionFixture::new(&[(10, None, m2(true))]);
+    let mut store = fixture.open(false);
+    let store_bytes = store.stats().resident_bytes;
+    let mut e = Extractor::new_with_resources(
+        &mut store,
+        &Lookup,
+        resources::Profile::RequestHeavyV1.collector_limits(),
+        resources::Profile::RequestHeavyV1,
+    )
+    .unwrap();
+    e.extract(request(10)).unwrap();
+    let ceiling = store_bytes + e.retained_bytes();
+    e.constrain_memory(ceiling).unwrap();
+    assert_eq!(e.extract(request(10)), Err(Error::Limit));
+    assert_eq!(e.facts().reads, 1);
+    assert_eq!(e.finish().err(), Some(Error::Limit));
 }
 
 #[cfg(target_os = "linux")]

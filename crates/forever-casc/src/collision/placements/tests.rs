@@ -66,6 +66,50 @@ fn extraction(models: Vec<Model>, requests: &[usize]) -> Extraction {
 fn m2(id: u32, status: Status) -> Model {
     model(Class::M2, InputRef::FileDataId(id), status)
 }
+fn vacated_wmo() -> Model {
+    let mut header = [0; 64];
+    put(&mut header, 4, 1);
+    header[60] = 4;
+    let mut bytes = chunk(b"MOHD", &header);
+    bytes.extend(chunk(b"GFID", &30u32.to_le_bytes()));
+    bytes.extend(chunk(b"MODI", &20u32.to_le_bytes()));
+    bytes.extend(chunk(b"MODD", &[0; 40]));
+    let mut sets = [0; 32];
+    put(&mut sets, 24, 1);
+    bytes.extend(chunk(b"MODS", &sets));
+    let root = wmo::Root::parse(&bytes, wmo::Limits::default()).unwrap();
+    let mut group = vec![0; 68];
+    group.extend(chunk(b"MODR", &[0, 0]));
+    let group_bytes = chunk(b"MOGP", &group);
+    let parsed_group = wmo::Group::parse(&group_bytes, wmo::Limits::default()).unwrap();
+    let selection = wmo::doodads::resolve(
+        &root,
+        &[wmo::GroupInput {
+            file_data_id: 30,
+            group: &parsed_group,
+        }],
+        &[],
+        wmo::Limits::default(),
+    )
+    .unwrap();
+    let mut model = model(Class::Wmo, InputRef::FileDataId(10), Status::Vacated);
+    model.wmo = Some(WmoMetadata {
+        root_bytes: bytes,
+        bindings: Vec::new(),
+        selection,
+        groups: Vec::new(),
+        limits: wmo::Limits::default(),
+    });
+    model
+}
+fn invalid_vacated_wmo_with_binding() -> Model {
+    let mut model = vacated_wmo();
+    model.wmo.as_mut().unwrap().bindings.push(NameBinding {
+        name_index: 0,
+        model: ModelHandle(1),
+    });
+    model
+}
 fn parse(bytes: &[u8]) -> Objects<'_> {
     Objects::parse_adt(bytes, objects::Limits::default()).unwrap()
 }
@@ -130,6 +174,24 @@ fn wmo_fixture(status: Status, overlap: bool) -> Extraction {
         limits: wmo::Limits::default(),
     });
     extraction(vec![parent, m2(20, Status::Collision)], &[0])
+}
+fn clear_wmo_references(e: &mut Extraction) {
+    let metadata = e.models[0].wmo.as_mut().unwrap();
+    let root = metadata.root().unwrap();
+    let mut group = vec![0; 68];
+    group.extend(chunk(b"MODR", &[1, 0, 0, 0]));
+    let group_bytes = chunk(b"MOGP", &group);
+    let group = wmo::Group::parse(&group_bytes, wmo::Limits::default()).unwrap();
+    metadata.selection = wmo::doodads::resolve(
+        &root,
+        &[wmo::GroupInput {
+            file_data_id: 30,
+            group: &group,
+        }],
+        &[],
+        wmo::Limits::default(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -436,6 +498,94 @@ fn doodad_only_wmo_expands_without_direct_wmo_assignment() {
     assert_eq!(out.stats().ids.calls, 2);
 }
 #[test]
+fn vacated_wmo_with_root_absent_doodad_emits_no_placements_or_ids() {
+    let mut e = extraction(vec![vacated_wmo()], &[0]);
+    let bytes = chunk(b"MODF", &modf(10, 100, 0));
+    let objects = Objects::parse_wdt(&bytes, objects::Limits::default()).unwrap();
+    let root = e.models[0].wmo.as_ref().unwrap().root().unwrap();
+    let mut group = vec![0; 68];
+    group.extend(chunk(b"MODR", &[0, 0]));
+    let group_bytes = chunk(b"MOGP", &group);
+    let parsed_group = wmo::Group::parse(&group_bytes, wmo::Limits::default()).unwrap();
+    e.models[0].wmo.as_mut().unwrap().selection = wmo::doodads::resolve(
+        &root,
+        &[wmo::GroupInput {
+            file_data_id: 30,
+            group: &parsed_group,
+        }],
+        &[],
+        wmo::Limits::default(),
+    )
+    .unwrap();
+    let mut session = Session::new(Limits::default()).unwrap();
+    let projected = session
+        .project_view_with_omissions(e.view(), &[batch(&objects)], &[20])
+        .unwrap();
+    assert_eq!(projected.stats().records, 0);
+    assert!(projected.batches()[0].bytes().is_empty());
+    assert_eq!(session.id_stats().calls, 0);
+
+    let root = e.models[0].wmo.as_ref().unwrap().root().unwrap();
+    let selected = wmo::doodads::resolve(
+        &root,
+        &[wmo::GroupInput {
+            file_data_id: 30,
+            group: &parsed_group,
+        }],
+        &[0],
+        wmo::Limits::default(),
+    )
+    .unwrap();
+    e.models[0].wmo.as_mut().unwrap().selection = selected;
+    let mut session = Session::new(Limits::default()).unwrap();
+    let result = session.project_view_with_omissions(e.view(), &[batch(&objects)], &[20]);
+    assert!(matches!(result, Err(Error::Model)));
+}
+
+#[test]
+fn vacated_wmo_rejects_bindings_and_non_failed_selection() {
+    let mut invalid_selection = extraction(vec![vacated_wmo()], &[0]);
+    let invalid_root = invalid_selection.models[0]
+        .wmo
+        .as_ref()
+        .unwrap()
+        .root()
+        .unwrap();
+    let mut group = vec![0; 68];
+    group.extend(chunk(b"MODR", &[0, 0]));
+    let group_bytes = chunk(b"MOGP", &group);
+    let parsed_group = wmo::Group::parse(&group_bytes, wmo::Limits::default()).unwrap();
+    invalid_selection.models[0].wmo.as_mut().unwrap().selection = wmo::doodads::resolve(
+        &invalid_root,
+        &[wmo::GroupInput {
+            file_data_id: 30,
+            group: &parsed_group,
+        }],
+        &[0],
+        wmo::Limits::default(),
+    )
+    .unwrap();
+    let bytes = chunk(b"MODF", &modf(10, 100, 0));
+    let objects = Objects::parse_wdt(&bytes, objects::Limits::default()).unwrap();
+    assert_eq!(
+        build(&invalid_selection, &[batch(&objects)], Limits::default()).err(),
+        Some(Error::Model)
+    );
+
+    let bad = extraction(
+        vec![
+            invalid_vacated_wmo_with_binding(),
+            m2(20, Status::Collision),
+        ],
+        &[0],
+    );
+    assert_eq!(
+        build(&bad, &[batch(&objects)], Limits::default()).err(),
+        Some(Error::Model)
+    );
+}
+
+#[test]
 fn overlapping_sets_duplicate_occurrence_and_doodad_counter() {
     let e = wmo_fixture(Status::Collision, true);
     let bytes = chunk(b"MODF", &modf(10, 100, 1));
@@ -591,6 +741,82 @@ fn selected_bindings_must_exist_match_source_and_have_m2_collision() {
         }
         assert!(build(&e, &[batch(&objects)], Limits::default()).is_err());
     }
+}
+#[test]
+fn omitted_doodad_has_no_binding_and_projects_only_the_wmo_root() {
+    let mut e = wmo_fixture(Status::Collision, false);
+    clear_wmo_references(&mut e);
+    e.models[0].wmo.as_mut().unwrap().bindings.clear();
+    let bytes = chunk(b"MODF", &modf(10, 8, 0));
+    let objects = parse(&bytes);
+    let batches = [batch(&objects)];
+    let mut session = Session::new(Limits::default()).unwrap();
+    let out = session
+        .project_view_with_omissions(e.view(), &batches, &[20])
+        .unwrap();
+    assert_eq!(out.batches()[0].record_count(), 1);
+    assert_eq!(output_ids(&out.batches()[0]), [8]);
+}
+#[test]
+fn omission_lists_never_hide_missing_overlapping_or_wrong_bindings() {
+    for missing in [Vec::new(), vec![21], vec![0]] {
+        let mut e = wmo_fixture(Status::Collision, false);
+        clear_wmo_references(&mut e);
+        e.models[0].wmo.as_mut().unwrap().bindings.clear();
+        let metadata = e.models[0].wmo.as_ref().unwrap();
+        let root = metadata.root().unwrap();
+        assert_eq!(
+            check_bindings(e.view(), metadata, &root, &missing),
+            Err(Error::Binding)
+        );
+    }
+
+    let e = wmo_fixture(Status::Collision, false);
+    let metadata = e.models[0].wmo.as_ref().unwrap();
+    let root = metadata.root().unwrap();
+    assert_eq!(
+        check_bindings(e.view(), metadata, &root, &[20]),
+        Err(Error::Binding)
+    );
+
+    let mut e = wmo_fixture(Status::Collision, false);
+    e.models[0]
+        .wmo
+        .as_mut()
+        .unwrap()
+        .bindings
+        .push(NameBinding {
+            name_index: 0,
+            model: ModelHandle(1),
+        });
+    let metadata = e.models[0].wmo.as_ref().unwrap();
+    let root = metadata.root().unwrap();
+    assert_eq!(
+        check_bindings(e.view(), metadata, &root, &[20]),
+        Err(Error::Binding)
+    );
+}
+#[test]
+fn present_no_collision_doodad_still_requires_its_binding() {
+    let mut e = wmo_fixture(Status::Collision, false);
+    clear_wmo_references(&mut e);
+    e.models[1].status = Status::NoCollision;
+    e.models[1].raw = None;
+    let metadata = e.models[0].wmo.as_ref().unwrap();
+    let root = metadata.root().unwrap();
+    assert!(check_bindings(e.view(), metadata, &root, &[]).is_ok());
+
+    let mut e = wmo_fixture(Status::Collision, false);
+    clear_wmo_references(&mut e);
+    e.models[1].status = Status::NoCollision;
+    e.models[1].raw = None;
+    e.models[0].wmo.as_mut().unwrap().bindings.clear();
+    let metadata = e.models[0].wmo.as_ref().unwrap();
+    let root = metadata.root().unwrap();
+    assert_eq!(
+        check_bindings(e.view(), metadata, &root, &[]),
+        Err(Error::Binding)
+    );
 }
 #[test]
 fn late_projection_failure_discards_all_earlier_batch_outputs() {
@@ -950,6 +1176,89 @@ fn acquire_synthetic(fixture: &CollisionFixture, objects: &Objects<'_>) -> Extra
         extractor.extract(request).unwrap();
     }
     extractor.finish().unwrap()
+}
+#[cfg(target_os = "linux")]
+fn acquire_model_heavy_inventory(count: usize) -> (Extraction, Vec<u8>) {
+    use crate::collision::{Extractor, resources::Profile};
+
+    let source = source_m2(true);
+    let mut files = Vec::with_capacity(count);
+    let mut records = Vec::with_capacity(count * 36);
+    for index in 0..count {
+        let id = 10_000 + index as u32;
+        records.extend_from_slice(&mddf(id, index as u32 + 1, true));
+        files.push((id, None, source.clone()));
+    }
+    let fixture = CollisionFixture::new_with_shared_content(&files);
+    let objects_bytes = chunk(b"MDDF", &records);
+    let objects = parse(&objects_bytes);
+    let mut store = fixture.open(false);
+    let profile = Profile::ModelHeavyV1;
+    let mut extractor = Extractor::new_with_resources(
+        &mut store,
+        &SyntheticLookup,
+        profile.collector_limits(),
+        profile,
+    )
+    .unwrap();
+    for request in objects.requests() {
+        let input = match request.target() {
+            Target::FileDataId(id) => InputRef::FileDataId(id),
+            Target::Name(name) => InputRef::LogicalName(name),
+        };
+        extractor
+            .extract_placement(super::super::ModelRequest::M2(input))
+            .unwrap();
+    }
+    let extraction = extractor.finish().unwrap();
+    drop(objects);
+    (extraction, objects_bytes)
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn model_heavy_placements_accept_reduced_exact_inventory_and_reject_one_over() {
+    use crate::collision::resources::Profile;
+
+    const MODEL_COUNT: usize = 4100;
+    let profile = Profile::ModelHeavyV1;
+    let limits = Limits {
+        max_models: MODEL_COUNT,
+        ..Limits::default()
+    };
+    let (exact, objects_bytes) = acquire_model_heavy_inventory(MODEL_COUNT);
+    let objects = parse(&objects_bytes);
+    let mut session = Session::new_with_resources(limits, profile).unwrap();
+    let output = session.project(&exact, &[batch(&objects)]).unwrap();
+    assert_eq!(output.stats().maps, 1);
+    assert_eq!(output.stats().source_requests, MODEL_COUNT);
+    assert_eq!(output.stats().records, MODEL_COUNT);
+    assert_eq!(output_ids(&output.batches()[0]).len(), MODEL_COUNT);
+    assert_eq!(session.failed(), None);
+
+    let (excessive, _) = acquire_model_heavy_inventory(MODEL_COUNT + 1);
+    let mut session = Session::new_with_resources(limits, profile).unwrap();
+    assert_eq!(
+        session.project(&excessive, &[batch(&objects)]).err(),
+        Some(Error::Limit)
+    );
+    assert_eq!(session.failed(), Some(Error::Limit));
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn model_heavy_placements_reject_a_limit_above_profile_cap() {
+    use crate::collision::resources::Profile;
+
+    assert_eq!(
+        Session::new_with_resources(
+            Limits {
+                max_models: Profile::ModelHeavyV1.collector_limits().max_models + 1,
+                ..Limits::default()
+            },
+            Profile::ModelHeavyV1,
+        )
+        .err(),
+        Some(Error::InvalidLimits)
+    );
 }
 #[test]
 fn integrated_store_m2_collision_absence_and_repeated_requests_reach_dir_bin() {

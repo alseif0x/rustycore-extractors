@@ -272,6 +272,21 @@ pub struct ProductDiagnosticRequest {
     pub ordinal: u32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProductDiagnosticResource {
+    pub request_calls: usize,
+    pub reads: usize,
+    pub dependency_requests: usize,
+    pub source_bytes: usize,
+    pub raw_bytes: usize,
+    pub models: usize,
+    pub resident_bytes: usize,
+    pub external_bytes: usize,
+    pub external_source_bytes: usize,
+    pub store_resident_bytes: usize,
+    pub memory_limit: usize,
+}
+
 /// Optional product-owned observer. LocalStore does no diagnostic formatting or
 /// output when no observer is installed.
 pub trait ProductDiagnosticObserver {
@@ -282,6 +297,7 @@ pub trait ProductDiagnosticObserver {
         file_data_id: Option<u32>,
     ) -> Option<ProductDiagnosticRequest>;
     fn tolerated_absence(&mut self, request: ProductDiagnosticRequest);
+    fn resource_limit(&mut self, _resource: ProductDiagnosticResource) {}
     fn source_failure(
         &mut self,
         request: ProductDiagnosticRequest,
@@ -408,6 +424,11 @@ impl LocalStore {
     pub fn record_product_diagnostic_absence(&mut self, request: Option<ProductDiagnosticRequest>) {
         if let (Some(observer), Some(request)) = (&mut self.product_diagnostic, request) {
             observer.tolerated_absence(request);
+        }
+    }
+    pub fn record_product_diagnostic_resource(&mut self, resource: ProductDiagnosticResource) {
+        if let Some(observer) = &mut self.product_diagnostic {
+            observer.resource_limit(resource);
         }
     }
     pub fn finish_product_diagnostic(
@@ -602,8 +623,11 @@ impl LocalStore {
             encoding_reference.content_key,
             encoding_reference.content_size,
             encoding_reference.encoded_key.into_iter(),
-            limits.encoding.max_bytes,
-            false,
+            io::ReadPolicy {
+                max_decoded: limits.encoding.max_bytes,
+                capture_blte_code: false,
+                strict_encrypted_framing: false,
+            },
             &mut None,
         )?;
         let parser_rows = limits.encoding.max_entries.min(encoding_bytes.len() / 38);
@@ -642,8 +666,11 @@ impl LocalStore {
             root_reference.content_key,
             central.content_size(root_reference.content_key),
             central.encoded_keys(root_reference.content_key),
-            limits.root.max_bytes,
-            false,
+            io::ReadPolicy {
+                max_decoded: limits.root.max_bytes,
+                capture_blte_code: false,
+                strict_encrypted_framing: false,
+            },
             &mut None,
         )?;
         let parser_rows = limits.root.max_entries.min(root_bytes.len() / 20);
@@ -831,7 +858,21 @@ impl LocalStore {
             max_decoded_bytes,
             external_live_bytes,
             combined_cap,
+            false,
         )
+    }
+
+    /// Test raw ROOT absence without consulting central CKey eligibility or
+    /// acquiring any source. Guards bracket the owned-table lookup.
+    pub(crate) fn root_has_no_rows(&self, file_data_id: u32) -> Result<bool, Error> {
+        self.verify_unchanged()?;
+        let absent = self
+            .root
+            .matching_with_ordinals(file_data_id)
+            .next()
+            .is_none();
+        self.verify_unchanged()?;
+        Ok(absent)
     }
 
     /// Read one complete file using the store's configured per-file ceiling.
@@ -862,6 +903,23 @@ impl LocalStore {
         external_live_bytes: usize,
         combined_cap: usize,
     ) -> Result<VerifiedFile, Error> {
+        self.read_file_data_id_with_external_budget_policy(
+            file_data_id,
+            max_decoded_bytes,
+            external_live_bytes,
+            combined_cap,
+            false,
+        )
+    }
+
+    pub(crate) fn read_file_data_id_with_external_budget_policy(
+        &mut self,
+        file_data_id: u32,
+        max_decoded_bytes: u64,
+        external_live_bytes: usize,
+        combined_cap: usize,
+        strict_encrypted_framing: bool,
+    ) -> Result<VerifiedFile, Error> {
         if file_data_id == 0 || file_data_id == u32::MAX {
             return Err(Error::MissingFile);
         }
@@ -876,6 +934,7 @@ impl LocalStore {
             max_decoded_bytes,
             external_live_bytes,
             combined_cap,
+            strict_encrypted_framing,
         )
     }
 
@@ -896,6 +955,7 @@ impl LocalStore {
         max_decoded_bytes: u64,
         external_live_bytes: usize,
         combined_cap: usize,
+        strict_encrypted_framing: bool,
     ) -> Result<VerifiedFile, Error> {
         self.product_diagnostic_blte_code = None;
         let budget = Budget {
@@ -921,8 +981,11 @@ impl LocalStore {
             key,
             self.central.content_size(key),
             self.central.encoded_keys(key),
-            max_decoded_bytes.min(self.limits.max_decoded_file_bytes),
-            capture_blte_code,
+            io::ReadPolicy {
+                max_decoded: max_decoded_bytes.min(self.limits.max_decoded_file_bytes),
+                capture_blte_code,
+                strict_encrypted_framing,
+            },
             &mut blte_code,
         );
         io::check_guards(&self.guards)?;

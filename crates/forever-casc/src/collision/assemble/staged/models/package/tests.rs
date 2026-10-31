@@ -419,6 +419,13 @@ impl Private {
             _lease: lease,
         }
     }
+    #[cfg(target_os = "linux")]
+    fn model_heavy() -> Self {
+        let mut p = Self::new();
+        p.backend = spool::BackendProfile::LeasedAppendV1;
+        p.resources = crate::collision::resources::Profile::ModelHeavyV1;
+        p
+    }
     fn spool(&self, f: &CollisionFixture, name: &str, l: SpoolLimits) -> Spool {
         let spool = Spool::create_with_backend(
             &self.base.join(name),
@@ -481,6 +488,79 @@ fn prepared_selected(
         p.resources.model_limits(),
     )
     .unwrap()
+}
+#[cfg(target_os = "linux")]
+fn model_heavy_private() -> Private {
+    Private::model_heavy()
+}
+#[cfg(target_os = "linux")]
+fn model_heavy_archive(f: &CollisionFixture, p: &Private, name: &str) -> Spool {
+    p.spool(f, name, p.resources.spool_limits())
+}
+#[cfg(target_os = "linux")]
+fn model_heavy_fixture(model_count: usize) -> CollisionFixture {
+    let mut input = files(&[(1, 101, -1)]);
+    input.push((101, None, wdt(None, Some(111))));
+    let rows: Vec<_> = (0..model_count)
+        .map(|index| m2_adt(10_000 + index as u32, index as u32 + 1)[8..].to_vec())
+        .collect();
+    let mut adt = chunk(b"MVER", &18u32.to_le_bytes());
+    adt.extend(chunk(b"MDDF", &rows.concat()));
+    input.push((111, None, adt));
+    let model_source = m2(true);
+    for index in 0..model_count {
+        input.push((10_000 + index as u32, None, model_source.clone()));
+    }
+    CollisionFixture::new_with_shared_content(&input)
+}
+#[cfg(target_os = "linux")]
+fn staged_model_heavy(f: &CollisionFixture, p: &Private, prefix: &str) -> placements::Staged {
+    assert_eq!(
+        p.resources,
+        crate::collision::resources::Profile::ModelHeavyV1
+    );
+    let mut store = f.open(false);
+    let startup = gameobjects::spooled::extract_startup_fdid(
+        &mut store,
+        p.resources.startup_limits(),
+        p.spool(f, &format!("{prefix}-models"), p.resources.spool_limits()),
+    )
+    .unwrap();
+    let inv = |name| {
+        inventory::Inventory::new(
+            p.spool(f, &format!("{prefix}-{name}"), p.resources.spool_limits()),
+            inventory::Limits {
+                max_heap_bytes: 256 * 1024 * 1024,
+                ..p.resources.inventory_limits()
+            },
+        )
+        .unwrap()
+    };
+    let mut stage_limits = p.resources.stage_limits();
+    stage_limits.world.world.run.placements.ids.max_memory_bytes = 1024 * 1024;
+    placements::extract_selected(
+        startup,
+        inv("wdts"),
+        inv("caches"),
+        p.spool(
+            f,
+            &format!("{prefix}-placements"),
+            p.resources.spool_limits(),
+        ),
+        crate::collision::plan::MapSelection::All,
+        stage_limits,
+    )
+    .unwrap()
+}
+#[cfg(target_os = "linux")]
+fn prepare_model_heavy_stage(
+    staged: placements::Staged,
+    archive: Spool,
+    limit: usize,
+) -> Result<selected::Prepared, selected::Error> {
+    let mut limits = crate::collision::resources::Profile::ModelHeavyV1.model_limits();
+    limits.max_models = limit;
+    selected::prepare(staged, archive, limits)
 }
 fn perform(f: &CollisionFixture, limits: Limits) -> Result<(Completed, Private), Error> {
     let p = Private::new();
@@ -1522,6 +1602,81 @@ fn explicit_disk_resources_complete_small_package_matches_bounded_bytes() {
         c.prepared().repository.resources(),
         crate::collision::resources::Profile::DiskWorldV1
     );
+}
+#[cfg(target_os = "linux")]
+#[test]
+fn model_heavy_staging_models_and_package_accept_reduced_exact_limit() {
+    const MODEL_COUNT: usize = 4100;
+    let f = model_heavy_fixture(MODEL_COUNT);
+    let p = model_heavy_private();
+    let staged = staged_model_heavy(&f, &p, "exact");
+    let stage_stats = staged.stats().unwrap();
+    assert_eq!(stage_stats.maps, 1);
+    assert_eq!(stage_stats.callbacks, 2);
+    assert_eq!(stage_stats.records, MODEL_COUNT);
+    assert_eq!(stage_stats.placement_bytes, MODEL_COUNT * 54);
+
+    let prepared =
+        prepare_model_heavy_stage(staged, model_heavy_archive(&f, &p, "vmos"), MODEL_COUNT)
+            .unwrap();
+    assert_eq!(prepared.stats().unwrap().selected_models, MODEL_COUNT);
+    let mut limits = crate::collision::resources::Profile::ModelHeavyV1.package_limits();
+    limits.max_models = MODEL_COUNT;
+    let mut completed = assemble(prepared, model_heavy_archive(&f, &p, "maps"), limits).unwrap();
+    assert_eq!(completed.stats().unwrap().selected_models, MODEL_COUNT);
+    let artifacts: Vec<_> = completed
+        .artifacts()
+        .unwrap()
+        .map(|(name, _)| name.to_string())
+        .collect();
+    assert_eq!(artifacts.len(), MODEL_COUNT + 4);
+    assert!(artifacts.contains(&"GameObjectModels.dtree".to_owned()));
+    assert!(artifacts.contains(&"0001/0001.vmtree".to_owned()));
+    let mut visited = 0;
+    completed
+        .visit(64 * 1024 * 1024, |_| {
+            visited += 1;
+            Ok::<_, u8>(())
+        })
+        .unwrap();
+    assert_eq!(visited, artifacts.len());
+    drop(completed);
+    drop(p);
+
+    let f = model_heavy_fixture(MODEL_COUNT + 1);
+    let p = model_heavy_private();
+    let staged = staged_model_heavy(&f, &p, "over-selected");
+    let profile = crate::collision::resources::Profile::ModelHeavyV1;
+    let selected_cap = profile.model_limits().max_models;
+    let selected_over = prepare_model_heavy_stage(
+        staged,
+        model_heavy_archive(&f, &p, "selection-over"),
+        MODEL_COUNT,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(
+        selected_over.cause,
+        selected::Cause::Kind(selected::Kind::Limit)
+    );
+
+    let staged = staged_model_heavy(&f, &p, "over-package");
+    let prepared = prepare_model_heavy_stage(
+        staged,
+        model_heavy_archive(&f, &p, "package-vmos"),
+        selected_cap,
+    )
+    .unwrap();
+    let mut limits = crate::collision::resources::Profile::ModelHeavyV1.package_limits();
+    limits.max_models = MODEL_COUNT;
+    let error = assemble(
+        prepared,
+        model_heavy_archive(&f, &p, "package-maps"),
+        limits,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(error.cause, Cause::Kind(Kind::Limit));
 }
 #[test]
 fn resource_policy_mixing_rejects_world_before_map_acquisition() {

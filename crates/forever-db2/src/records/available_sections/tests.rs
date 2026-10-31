@@ -967,6 +967,64 @@ fn zero_tact_payloads(input: &mut Input) {
     }
 }
 
+fn sparse_catalog_fixture(tact: bool, parent_lookup: bool) -> Input {
+    let file_offset = 244 + usize::from(tact) * 4;
+    let catalog_offset = file_offset + 1;
+    let mut data = vec![0; 244];
+    data[..4].copy_from_slice(b"WDC5");
+    for (at, value) in [
+        (4, 5),
+        (136, 1),
+        (140, 0),
+        (144, 1),
+        (148, 0),
+        (176, 0),
+        (184, u32::from(parent_lookup)),
+        (200, 1),
+        (HEADER + 8, file_offset as u32),
+        (HEADER + 12, 1),
+        (HEADER + 20, catalog_offset as u32),
+        (HEADER + 24, 4),
+        (HEADER + 28, if parent_lookup { 20 } else { 0 }),
+        (HEADER + 32, 1),
+    ] {
+        put32(&mut data, at, value);
+    }
+    put16(&mut data, 172, super::super::SPARSE_FLAG);
+    if tact {
+        data[HEADER] = 1;
+        data.extend_from_slice(&0u32.to_le_bytes()); // zero encrypted-ID count
+    }
+    data.push(if tact { 0 } else { 0xA5 });
+    if parent_lookup {
+        if tact {
+            data.resize(data.len() + 10 + 4 + 20, 0);
+        } else {
+            data.extend_from_slice(&7u32.to_le_bytes()); // catalog IDs
+            data.extend_from_slice(&(file_offset as u32).to_le_bytes());
+            data.extend_from_slice(&1u16.to_le_bytes()); // one raw record byte
+            data.extend_from_slice(&7u32.to_le_bytes()); // trailing section ID table
+            data.extend_from_slice(&1u32.to_le_bytes()); // parent entry count
+            data.extend_from_slice(&1u32.to_le_bytes()); // minimum parent ID
+            data.extend_from_slice(&2u32.to_le_bytes()); // maximum parent ID
+            data.extend_from_slice(&2u32.to_le_bytes()); // parent ID
+            data.extend_from_slice(&0u32.to_le_bytes()); // record ordinal
+        }
+    } else if tact {
+        data.resize(data.len() + 10 + 4, 0);
+    } else {
+        data.extend_from_slice(&7u32.to_le_bytes()); // catalog IDs
+        data.extend_from_slice(&(file_offset as u32).to_le_bytes());
+        data.extend_from_slice(&1u16.to_le_bytes()); // one raw record byte
+        data.extend_from_slice(&7u32.to_le_bytes()); // trailing section ID table
+    }
+    Input {
+        data,
+        holes: Vec::new(),
+        reads: RefCell::new(Vec::new()),
+    }
+}
+
 #[test]
 fn structural_70450_reports_ordered_tact_payload_sizes_without_schema_decode() {
     let mut input = fixture(
@@ -987,6 +1045,13 @@ fn structural_70450_reports_ordered_tact_payload_sizes_without_schema_decode() {
 
     let facts = available::read_structure_70450(&input).unwrap();
     assert_eq!(facts.tact_payload_sizes, expected_sizes);
+    assert_eq!(
+        facts.tact_payload_offsets,
+        [
+            payload(&input, 1).start as u64,
+            payload(&input, 2).start as u64,
+        ]
+    );
     assert_eq!(facts.sections.len(), 3);
     assert_eq!(facts.sections[0].state, SectionState::Admitted);
     assert_eq!(facts.sections[1].state, SectionState::UnknownTact);
@@ -1003,6 +1068,142 @@ fn structural_70450_reports_ordered_tact_payload_sizes_without_schema_decode() {
         input.reads.borrow().iter().all(|read| {
             read.end <= admitted_payload.start || read.start >= admitted_payload.end
         })
+    );
+}
+
+#[test]
+fn structural_70450_item_section_budget_is_scoped_and_bounded() {
+    for section_count in [17usize, 18] {
+        let specs = (0..section_count)
+            .map(|index| source_spec("Map", &[index as u32], 1))
+            .collect();
+        let mut tact = vec![true; section_count];
+        tact[0] = false;
+        let mut input = fixture("Map", specs, &tact);
+        zero_tact_payloads(&mut input);
+        if section_count == 17 {
+            assert_eq!(
+                available::read_structure_70450(&input).err(),
+                Some(RecordError::Limit)
+            );
+            assert_eq!(
+                available::read_structure_70450_for_table(&input, "Map").err(),
+                Some(RecordError::Limit)
+            );
+            let facts = available::read_structure_70450_for_table(&input, "Item").unwrap();
+            assert_eq!(facts.sections.len(), 17);
+            assert_eq!(facts.tact_payload_sizes.len(), 16);
+        } else {
+            assert_eq!(
+                available::read_structure_70450_for_table(&input, "Item").err(),
+                Some(RecordError::Limit)
+            );
+        }
+    }
+}
+
+#[test]
+fn structural_70450_table_value_budgets_are_exact_and_scoped() {
+    fn value_fixture(records: usize, fields: usize) -> Input {
+        let file_offset = HEADER + SECTION + fields * 4;
+        let mut data = vec![0; file_offset];
+        data[..4].copy_from_slice(b"WDC5");
+        for (at, value) in [
+            (4, 5),
+            (136, records as u32),
+            (140, fields as u32),
+            (144, 1),
+            (176, fields as u32),
+            (200, 1),
+            (HEADER + 8, file_offset as u32),
+            (HEADER + 12, records as u32),
+        ] {
+            put32(&mut data, at, value);
+        }
+        data.resize(file_offset + records, 0);
+        Input {
+            data,
+            holes: Vec::new(),
+            reads: RefCell::new(Vec::new()),
+        }
+    }
+
+    for (table, records, fields) in [
+        ("ItemSparse", 19_263usize, 68usize),
+        ("SpellEffect", 44_027, 29),
+    ] {
+        for (extra, admitted) in [(0usize, true), (1, false)] {
+            let input = value_fixture(records + extra, fields);
+            assert_eq!(
+                available::read_structure_70450(&input).err(),
+                Some(RecordError::Limit)
+            );
+            assert_eq!(
+                available::read_structure_70450_for_table(&input, "Item").err(),
+                Some(RecordError::Limit)
+            );
+            let result = available::read_structure_70450_for_table(&input, table);
+            if admitted {
+                assert_eq!(result.unwrap().sections.len(), 1);
+            } else {
+                assert_eq!(result.err(), Some(RecordError::Limit));
+            }
+        }
+    }
+}
+
+#[test]
+fn structural_70450_admits_parent_lookup_and_preserves_tact_payload_size() {
+    let mut input = fixture("Map", vec![source_spec("Map", &[7], 1)], &[true]);
+    zero_tact_payloads(&mut input);
+    put32(&mut input.data, 184, 1);
+    put32(&mut input.data, HEADER + 28, 20);
+    input.data.resize(input.data.len() + 20, 0);
+    let expected_size = payload(&input, 0).len() as u64;
+
+    let facts = available::read_structure_70450(&input).unwrap();
+    assert_eq!(facts.tact_payload_sizes, [expected_size]);
+    assert_eq!(facts.sections[0].state, SectionState::UnknownTact);
+}
+
+#[test]
+fn structural_70450_admits_catalog_framing_and_bounds_raw_records_and_parent_data() {
+    let input = sparse_catalog_fixture(true, true);
+    let facts = available::read_structure_70450(&input).unwrap();
+    assert_eq!(facts.tact_payload_sizes, [35]);
+    assert_eq!(facts.sections[0].state, SectionState::UnknownTact);
+
+    let mut bad_catalog_offset = sparse_catalog_fixture(true, true);
+    let out_of_bounds_catalog = bad_catalog_offset.data.len() as u32 + 1;
+    put32(
+        &mut bad_catalog_offset.data,
+        HEADER + 20,
+        out_of_bounds_catalog,
+    );
+    assert_eq!(
+        available::read_structure_70450(&bad_catalog_offset).err(),
+        Some(RecordError::Bounds)
+    );
+
+    let mut bad_catalog_record = sparse_catalog_fixture(false, true);
+    let catalog = u32::from_le_bytes(
+        bad_catalog_record.data[HEADER + 20..HEADER + 24]
+            .try_into()
+            .unwrap(),
+    ) as usize;
+    put32(&mut bad_catalog_record.data, catalog + 4, catalog as u32);
+    assert_eq!(
+        available::read_structure_70450(&bad_catalog_record).err(),
+        Some(RecordError::Bounds)
+    );
+
+    let mut truncated_parent = sparse_catalog_fixture(true, true);
+    truncated_parent
+        .data
+        .truncate(truncated_parent.data.len() - 1);
+    assert_eq!(
+        available::read_structure_70450(&truncated_parent).err(),
+        Some(RecordError::Bounds)
     );
 }
 
@@ -1057,6 +1258,14 @@ fn structural_70450_rejects_noncontiguous_offsets_bad_id_size_wrong_rows_and_eof
 }
 
 #[test]
+fn structural_70450_admits_inline_ids_without_a_separate_id_table() {
+    let mut input = one("Map");
+    put32(&mut input.data, HEADER + 24, 0);
+    input.data.truncate(input.data.len() - 4);
+    assert!(available::read_structure_70450(&input).is_ok());
+}
+
+#[test]
 fn structural_70450_rejects_out_of_bounds_tact_encrypted_id_block() {
     let mut input = fixture("Map", vec![source_spec("Map", &[7], 1)], &[true]);
     let prefix = payload(&input, 0).start;
@@ -1098,14 +1307,14 @@ fn structural_70450_rejects_sparse_parent_and_policy_limit_shapes() {
     put16(&mut input.data, 172, 1);
     assert_eq!(
         available::read_structure_70450(&input).err(),
-        Some(RecordError::Unsupported)
+        Some(RecordError::Bounds)
     );
 
     let mut input = one("Map");
     put32(&mut input.data, 184, 1);
     assert_eq!(
         available::read_structure_70450(&input).err(),
-        Some(RecordError::Unsupported)
+        Some(RecordError::Bounds)
     );
 
     for (at, value) in [

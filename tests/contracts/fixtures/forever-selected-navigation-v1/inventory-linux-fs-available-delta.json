@@ -1,7 +1,7 @@
 {
   "baseline_revision": "6eb2f657e6ae90dc4db8de420353ffc042ebafad",
   "baseline_sha256": "dcfa037709d1b4f66ecee282e8effa7442a7e28787a9814e3cbca5603cb35f18",
-  "candidate_sha256": "4cc9e2ee32bfa25dd513841b87a06183c16da51e91237c800fa9e600c06fe3e8",
+  "candidate_sha256": "a361b41f94e2b79d33b6255d7708ca709f58a0de2c292fdb2cba6bff9012aa90",
   "hunks": [
     {
       "before_lines": [
@@ -584,9 +584,25 @@
         "// budgets.\n",
         "#[allow(clippy::too_many_arguments)]\n"
       ]
+    },
+    {
+      "before_lines": [
+        "    /// Internal pipeline access keeps the partial-coverage owner attached at\n",
+        "    /// the API boundary while reusing the established plan execution path.\n",
+        "    #[cfg(target_os = \"linux\")]\n",
+        "    pub(crate) fn inventory_plan(&self) -> &Plan {\n"
+      ],
+      "after_lines": [
+        "    /// Read-only plan access keeps the partial-coverage owner attached at the\n",
+        "    /// API boundary while reusing the established plan execution path.\n",
+        "    #[cfg(target_os = \"linux\")]\n",
+        "    pub fn inventory_plan(&self) -> &Plan {\n"
+      ],
+      "before_start_line": 621,
+      "after_start_line": 621
     }
   ],
   "path": "crates/forever-navigation/src/inventory.rs",
   "schema": "forever-selected-navigation-fs-inventory-source-delta-v1",
-  "scope": "Linux-only rooted available-selected closure preparation and shared bounded planning accounting; no Windows behavior or acceptance change"
+  "scope": "Linux-only rooted available-selected closure preparation, shared bounded planning accounting and read-only plan access; no Windows behavior or acceptance change"
 }

@@ -77,20 +77,21 @@
     "manifest": "forever-package.json with deterministic per-entry partial-section declarations",
     "component_order": ["db2"],
     "db2_path": "dbc/<locale>/<table-name>.db2",
-    "partial_encrypted_sections_by_entry": "For each selected DB2 table with TACT-declared available-source sections, emit deterministic declarations [{lookup, frame_ordinal, decoded_size}]; a complete table has no declaration. The table path binds each declaration to its containing DB2 entry.",
+    "partial_encrypted_sections_by_entry": "For each selected DB2 table with TACT-declared available-source sections, emit deterministic declarations [{lookup, frame_ordinal, decoded_size}]; a complete table has no declaration. The table path binds each declaration to its containing DB2 entry. One or more declarations may tile an extent; no one-frame-per-section assumption is made.",
     "declaration_boundary": "The plan phase does not add a package manifest field; the per-table package field is implemented by forever-casc and used by the v26 driver, which emits declarations only after 70450 WDC5 structure and zero-fill validation. Offline verification checks exact per-entry declaration coverage and decoded sizes; no decryption is performed."
   },
   "limits": {
     "max_db2_entries": 1161,
     "db2_file_bytes": 16777216,
     "db2_total_bytes": 17179869184,
-    "db2_sections": "At most 16 partial sections per table and 18,576 total, within existing DB2 structural ceilings.",
+    "db2_sections": "Structural validation admits 16 total WDC5 sections per table, except Item with 17 total WDC5 sections (one ordinary section plus up to 16 TACT-declared sections). E-frame declarations use the existing CASC max_blte_frames limit of 65,536 per table and 18,576 total; one or more E frames must exactly tile each TACT extent.",
+    "db2_structural_values": "At most 1,000,000 declared values per table, except ItemSparse at 1,309,884 (19,263 records * 68 fields) and SpellEffect at 1,276,783 (44,027 records * 29 fields); one additional declared record in either exception rejects and every other table retains the default.",
     "declaration_contents": ["redacted lookup", "frame ordinal", "decoded size"],
     "client_bytes_in_reports_or_repository": false
   },
   "source_policy": {
-    "db2": "Only the exact selected build-70450 catalog entries use the disabled-key available-source route. Each resulting DB2 is bounded and checked against build-70450 WDC5 structural rules before publication.",
-    "partial_sections": "Only authenticated available-source encrypted sections matching the containing selected DB2's ordered TACT-declared extents may be zero-filled and declared per table. The bounded WDC5 framing and zero-fill checks are mandatory; non-zero TACT-declared payload is product_partial_zerofill. No decryption or key material is admitted.",
+    "db2": "Only the exact selected build-70450 catalog entries use the disabled-key available-source route. Each resulting partial DB2 is bounded and checked against build-70450 WDC5 structural rules before publication. Complete tables without partial frames retain Metadata and intrinsic DB2 validation during offline verification instead of the partial structural reader.",
+    "partial_sections": "Only authenticated available-source encrypted frames whose decoded coverage exactly tiles the containing selected DB2's ordered TACT-declared extents may be zero-filled and declared per table. Multiple frames per extent are admitted; frame ordinals and sizes must match coverage. Bounded WDC5 framing and zero-fill checks are mandatory; non-zero TACT-declared payload is product_partial_zerofill. No decryption or key material is admitted.",
     "failure_policy": "A selected entry that fails source authentication, WDC5 framing, zero-fill validation, or a resource limit remains fatal; it is not silently omitted."
   },
   "verification": {
@@ -108,7 +109,13 @@
     {"case": "partial-plan-gate", "expect": "reject a missing or misdeclared partial_encrypted_sections field with product_plan_partial_encrypted_sections"},
     {"case": "scope-and-decryption", "expect": "reject provided-salsa20-v1 and db2+maps with product_plan_component_scope; reject other builds/catalogs and any non-DB2 option"},
     {"case": "catalog-limit", "expect": "accept at most 1161 selected catalog entries and reject entry 1162"},
-    {"case": "partial-source-and-verification", "expect": "synthetic driver publishes partial and complete tables with per-entry declarations; verification rejects non-zero TACT payload, missing/extra declarations, absent declared DB2 files, and missing selected DB2 files; no real-client acceptance or decryption"},
+    {"case": "partial-source-and-verification", "expect": "synthetic driver publishes partial and complete tables with per-entry declarations; verification rejects non-zero TACT payload, missing/extra declarations, absent declared DB2 files, and missing selected DB2 files; synthetic checks use no real client data and perform no decryption"},
+    {"case": "item-total-section-policy", "expect": "accept 17 total WDC5 sections only for Item with one ordinary section and at most 16 partial frames; 18 sections reject; other tables retain 16 total sections and no global ceiling changes"},
+    {"case": "item-sparse-value-policy", "expect": "accept ItemSparse at exactly 1,309,884 declared values; one additional declared record rejects; non-exception tables retain the 1,000,000 default and no global ceiling changes"},
+    {"case": "spell-effect-value-policy", "expect": "accept SpellEffect at exactly 1,276,783 declared values (44,027 records * 29 fields); one additional declared record rejects; non-exception tables retain the 1,000,000 default and no global ceiling changes"},
+    {"case": "multi-frame-tact-coverage", "expect": "allow multiple E frames per TACT extent with exact coverage and ordered offline sums; ItemSparse's 31 frames cover 15 extents; reject crossing, missing, extra or inconsistent frames; per-table limit 65,536 and total 18,576"},
+    {"case": "full-catalog-artifact-acceptance", "expect": "the exact matching producer passes real extract, offline verify and verify-links for all 1,161 selected esES DB2 artifacts: 1,055 complete and 106 declared partial tables with 478 zero-filled frames / 350,009 decoded bytes; no encrypted-section decoding, full-client, geometry, runtime or distribution acceptance"},
+    {"case": "bounded-real-five-table", "expect": "historical bounded evidence: the matching producer passed real extraction and offline verification for five selected esES tables with one declared partial table, then plan-only inspect and offline verify-links; this earlier evidence alone claimed no full-catalogue coverage or decryption"},
     {"case": "legacy-preservation", "expect": "v16 disabled DB2-only and v25 authenticated partial-Map identities, grammars, and contracts remain unchanged"}
   ],
   "legacy_preservation": {

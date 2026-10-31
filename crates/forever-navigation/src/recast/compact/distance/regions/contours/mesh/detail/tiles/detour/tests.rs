@@ -37,6 +37,9 @@ fn mesh() -> TileMesh {
         ],
         detail_triangles: vec![[0, 1, 2, 5], [0, 2, 3, 20]],
         discarded_faces: 0,
+        partial_triangulations: 0,
+        center_fallbacks: 0,
+        unset_height_samples: 0,
         processing_work: 0,
         merge_work: 0,
     }

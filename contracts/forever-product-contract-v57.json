@@ -1,0 +1,87 @@
+{
+  "contract": "forever-product-v57",
+  "build": 70450,
+  "platform": "linux",
+  "component": "mmaps",
+  "components": 32,
+  "navigation": "all-available-maps",
+  "source": {
+    "contract": "forever-product-v51",
+    "components": 25,
+    "package_count": 1,
+    "plan_count": 1,
+    "cli_package_option": "--terrain-package",
+    "cli_plan_option": "--terrain-plan",
+    "interface": "explicit-v57-reuse-of-terrain-options-for-the-combined-package",
+    "verification": "complete-v51-verify-links-and-locked-inventory-revalidation",
+    "client_reads": false,
+    "v25_v50_or_mixed_packages": "reject"
+  },
+  "execution": {
+    "order": "map-id-ascending-then-tile-row-column",
+    "scheduler": "sequential-selected-available-owner-per-map",
+    "resume": "replay-all-output-with-identical-plan-source-and-producer",
+    "partial_failure": "fatal-no-final-package",
+    "partial_triangulation_policy": "native-negative-ntris-preserved-and-counted; other-errors-fatal",
+    "detail_center_fallback_policy": "native-last-visited-node-on-exhausted-center-walk; counted-per-map; other-detail-errors-fatal",
+    "unset_detail_height_policy": "native-RC_UNSET_HEIGHT-return-preserved-and-counted; other-detail-errors-fatal",
+    "detour_vertical_bounds_policy": "expand-source-bounds-to-include-every-generated-detail-vertex; geometry-unchanged; v56-behavior-preserved",
+    "empty_map": "coverage-only-no-global",
+    "empty_tile": "coverage-only-no-tile-file",
+    "root_absent_map": "coverage-only-producer-reported-source-omission",
+    "offmesh_connections": 0,
+    "rebuild_maps_vmaps": false
+  },
+  "resources": {
+    "profile": "all-available-v57",
+    "maps_max": 4096,
+    "tiles_per_map_max": 4096,
+    "tiles_max": 16777216,
+    "vertices_max": 1000000,
+    "triangles_max": 500000,
+    "mesh_heap_bytes_max": 50331648,
+    "builder_work": "planned-tiles-times-existing-per-tile-builder-work",
+    "save_work": "planned-tiles-times-existing-per-tile-save-work",
+    "heap": "unchanged-selected-owner-plus-one-pipeline",
+    "geometry_v51_budgets": "unchanged",
+    "coverage_bytes_max": 134217728
+  },
+  "output": {
+    "format": "MMap16",
+    "coverage_path": "mmaps/available-navigation-v57.tsv",
+    "coverage_version": 57,
+    "coverage_derivation": "v23-global-tile-outcomes-with-v57-multi-map-inventory-and-sealed-source-identity",
+    "identity_domain": "rustycore-navigation-v57-sealed-v51",
+    "facts": ["source-context", "source-files", "source-bytes", "source-inventory-sha256", "map-id", "root-map-id", "map-disposition", "planned-tile-coordinates", "written-or-empty-tile", "output-bytes-sha256", "partial-triangulations-per-map", "detail-center-fallbacks-per-map", "unset-height-samples-per-map", "builder-work", "save-work"]
+  },
+  "verification": {
+    "verify": "offline-output-integrity-intrinsic-MMap-coverage-inventory-and-vertical-bounds",
+    "verify-links": "offline-verify-plus-complete-v51-source-and-rederived-navigation-inventory",
+    "client_reads": false
+  },
+  "claims": {
+    "full_world_complete": false,
+    "runtime_accepted": false,
+    "full_extractor_complete": false,
+    "native_parity": false,
+    "real_acceptance": true
+  },
+  "real_acceptance": {
+    "status": "accepted-available-navigation-v57-and-all-planned-map-native-queries",
+    "extraction_report": "reports/acceptance/v57-available-navigation-real-20261031.json",
+    "extraction_report_sha256": "ca188d075f56157ee1281c027f14b615fe5bcab6a8b9ef1674016f1708466cfe",
+    "native_worker_report": "reports/acceptance/v57-rustycore-real-20261031.json",
+    "native_worker_report_sha256": "32e39189ac30225ff033f7ac1ab076bb32894abd3c5e5b7d0487fac45492ce6d",
+    "native_world_report": "reports/acceptance/v57-rustycore-world-20261031.json",
+    "native_world_report_sha256": "5ec61a01e6ee951d9035cfa6b50c5941a304f446a128c06ec7b3cce6322c15af",
+    "files": 3137,
+    "bytes": 1589926833,
+    "inventory_sha256": "7bf0f9ae9c4d642375cfb37a5cfcd2ebe7d5e18e0e0a17947b44ce5cbd1a1dd2",
+    "vertical_bounds_tiles": 3067,
+    "vertical_bounds_invalid": 0,
+    "network_attempted": false,
+    "available_world_native_query_accepted": true,
+    "available_world_pathfinding_accepted": false,
+    "gameplay_accepted": false
+  }
+}

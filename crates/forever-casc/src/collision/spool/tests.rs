@@ -38,6 +38,20 @@ impl Paths {
         )
         .unwrap()
     }
+    fn create_with_resources(
+        &self,
+        limits: Limits,
+        resources: super::super::resources::Profile,
+    ) -> Spool {
+        Spool::create_with_policy(
+            &self.path,
+            ProtectedInputs::capture(&self.source, &[]).unwrap(),
+            limits,
+            Profile::SameMountV1,
+            resources,
+        )
+        .unwrap()
+    }
 }
 impl Drop for Paths {
     fn drop(&mut self) {
@@ -96,6 +110,41 @@ fn failed_write_keeps_created_partial_and_no_quota_refund() {
     assert_eq!(s.stats().unwrap().disk_bytes, 8);
     assert_eq!(s.verify_unchanged(), Err(Error::Callback));
 }
+#[test]
+fn model_heavy_spool_accepts_only_the_profiled_model_record_capacity() {
+    let p = Paths::new();
+    let profile = super::super::resources::Profile::ModelHeavyV1;
+    let mut limits = profile.spool_limits();
+    assert_eq!(limits.max_records, 65_536);
+    limits.max_records = 65_537;
+    assert_eq!(
+        Spool::create_with_policy(
+            &p.path,
+            ProtectedInputs::capture(&p.source, &[]).unwrap(),
+            limits,
+            Profile::SameMountV1,
+            profile,
+        )
+        .err(),
+        Some(Error::InvalidLimits)
+    );
+    assert!(!p.path.exists());
+
+    let mut spool = p.create_with_resources(profile.spool_limits(), profile);
+    for _ in 0..4097 {
+        write(&mut spool, b"");
+    }
+    assert_eq!(spool.stats().unwrap().records, 4097);
+    assert_eq!(
+        Limits {
+            max_records: 4097,
+            ..Limits::default()
+        }
+        .validate_resources(super::super::resources::Profile::ReadHeavyV1),
+        Err(Error::InvalidLimits)
+    );
+}
+
 #[test]
 fn short_writer_is_terminal_format_failure() {
     let p = Paths::new();

@@ -137,12 +137,16 @@ fn nearest_height_ring_wins_over_distant_better_height() {
         width: 5,
         height: 5,
         data: vec![NULL; 25],
+        center_fallback: false,
+        allow_center_fallback: false,
+        allow_unset_height: false,
+        unset_height_samples: 0,
     };
     patch.data[3 + 2 * 5] = 100;
     patch.data[4 + 2 * 5] = 7;
     assert_eq!(
         budget()
-            .sample_height([2.0, 7.0, 2.0], 1.0, 1.0, 2, &patch)
+            .sample_height([2.0, 7.0, 2.0], 1.0, 1.0, 2, &mut patch)
             .unwrap(),
         100
     );
@@ -154,28 +158,44 @@ fn equal_height_error_keeps_first_spiral_candidate() {
         width: 5,
         height: 5,
         data: vec![NULL; 25],
+        center_fallback: false,
+        allow_center_fallback: false,
+        allow_unset_height: false,
+        unset_height_samples: 0,
     };
     patch.data[3 + 2 * 5] = 5;
     patch.data[2 + 3 * 5] = 9;
     assert_eq!(
         budget()
-            .sample_height([2.0, 7.0, 2.0], 1.0, 1.0, 2, &patch)
+            .sample_height([2.0, 7.0, 2.0], 1.0, 1.0, 2, &mut patch)
             .unwrap(),
         5
     );
 }
 #[test]
 fn missing_sample_height_rejects_sentinel_output() {
-    let patch = Patch {
+    let mut patch = Patch {
         min: [0, 0],
         width: 3,
         height: 3,
         data: vec![NULL; 9],
+        center_fallback: false,
+        allow_center_fallback: false,
+        allow_unset_height: false,
+        unset_height_samples: 0,
     };
     assert!(matches!(
-        budget().sample_height([1.0, 0.0, 1.0], 1.0, 1.0, 1, &patch),
+        budget().sample_height([1.0, 0.0, 1.0], 1.0, 1.0, 1, &mut patch),
         Err(Error::DetailHeight)
     ));
+    patch.allow_unset_height = true;
+    assert_eq!(
+        budget()
+            .sample_height([1.0, 0.0, 1.0], 1.0, 1.0, 1, &mut patch)
+            .unwrap(),
+        NULL
+    );
+    assert_eq!(patch.unset_height_samples, 1);
 }
 #[test]
 fn mixed_and_missing_region_seeds_match_flat_heights() {
@@ -262,6 +282,27 @@ fn disconnected_center_walk_rejects_last_cell_fallback() {
         m.build_detail(options()),
         Err(Error::DetailHeight)
     ));
+}
+#[test]
+fn disconnected_center_walk_uses_last_cell_and_counts_fallback_v55() {
+    let mut m = mesh(0, 0);
+    for p in &mut m.polygons {
+        p.region = 0;
+    }
+    for s in &mut m.contours.regions.field.compact.spans {
+        s.connections = [NOT_CONNECTED; 4];
+    }
+    let patch = budget()
+        .height_patch(
+            &m.contours.regions.field.compact,
+            &m.vertices,
+            &m.polygons[0],
+            0,
+            true,
+            false,
+        )
+        .unwrap();
+    assert!(patch.center_fallback);
 }
 #[test]
 fn compact_height_cannot_alias_unset_patch_marker() {

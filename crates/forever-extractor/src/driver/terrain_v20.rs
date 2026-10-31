@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored 2026-10-19: Linux build-70450 compatible available-Map terrain product.
-//! Producer-reported coverage only. Partially readable Maps retain separate
-//! CKey and encoded-key facts; this envelope makes no whole-client coverage,
-//! build-format parity, real-extraction or runtime claim.
+//! V20 coverage is producer-reported; authenticated profiles bind Map facts to
+//! the sealed DB2 source. Partially readable Maps retain separate CKey and
+//! encoded-key facts, without whole-client coverage or runtime claims.
 
 use crate::{
     Error,
@@ -14,7 +14,7 @@ use forever_casc::{
     terrain::{available_70450 as available, plan, run, tilelist},
 };
 use forever_db2::availability::{SectionCoverage, SectionState};
-use std::fmt::Write;
+use std::{collections::BTreeSet, fmt::Write};
 
 pub const COVERAGE_PATH: &str = "maps/compatible-terrain-coverage-v2.tsv";
 pub const COVERAGE_PATH_V24: &str = "maps/compatible-terrain-coverage-v3.tsv";
@@ -33,6 +33,26 @@ pub fn package_limits() -> package::Limits {
 
 pub fn package_limits_v24() -> package::Limits {
     package_limits()
+}
+
+pub fn package_limits_v27() -> package::Limits {
+    let mut limits = package_limits_v24();
+    limits.total_bytes = limits
+        .total_bytes
+        .checked_add(super::DB2_TOTAL_BYTES)
+        .expect("v27 package byte budget must fit u64");
+    limits
+}
+
+pub fn package_limits_v51(budget: super::DiskBudget) -> package::Limits {
+    let mut limits = package_limits_v24();
+    limits.total_bytes = limits
+        .total_bytes
+        .checked_add(budget.output_bytes)
+        .and_then(|bytes| bytes.checked_add(super::DB2_TOTAL_BYTES))
+        .and_then(|bytes| bytes.checked_add(112))
+        .expect("v51 package byte budget must fit u64");
+    limits
 }
 
 fn require(ok: bool) -> Result<(), Error> {
@@ -131,7 +151,11 @@ impl Coverage {
         } else {
             Component::Terrain.bit()
         };
-        require(self.context.build == 70450 && self.context.components == component_mask)?;
+        require(
+            self.context.build == 70450
+                && (self.context.components == component_mask
+                    || (self.map_wdt_file_data_ids.is_some() && self.context.components == 25)),
+        )?;
         selection_text(self.selection)?;
         require(
             self.maps.len() <= MAX_MAPS
@@ -686,7 +710,7 @@ pub fn extract(
     run: &mut Run,
     context: Context,
 ) -> Result<(), Error> {
-    let producer_maps = if product.is_v24() || product.is_v25() {
+    let producer_maps = if product.has_authenticated_map_terrain() {
         Some(producer_map_identities(store, product.terrain)?)
     } else {
         None
@@ -816,7 +840,7 @@ pub fn extract(
     store
         .verify_unchanged()
         .map_err(|error| Error::from(error.code()))?;
-    let path = if product.is_v24() || product.is_v25() {
+    let path = if product.has_authenticated_map_terrain() {
         COVERAGE_PATH_V24
     } else {
         COVERAGE_PATH
@@ -835,13 +859,29 @@ pub fn extract_v24(
     run: &mut Run,
     context: Context,
 ) -> Result<(), Error> {
-    if !product.is_v24() && !product.is_v25() {
+    if !product.has_authenticated_map_terrain() {
         return Err("product_terrain_profile".into());
     }
     extract(product, store, run, context)
 }
 
-/// Independently decoded Map identity retained from the sealed v24 DB2 artifact.
+pub fn extract_v51(
+    product: &Plan,
+    store: &mut LocalStore,
+    run: &mut Run,
+    context: Context,
+) -> Result<(), Error> {
+    if !product.is_v51()
+        || context.build != 70450
+        || context.components != 25
+        || product.map_domain.is_some()
+    {
+        return Err("product_plan_component_scope".into());
+    }
+    extract(product, store, run, context)
+}
+
+/// Independently decoded Map identity retained from the sealed authenticated-terrain artifact.
 /// This is a source projection, not proof of whole-client Map completeness.
 pub(crate) struct AuthenticatedMap {
     declared_bytes: u64,
@@ -947,7 +987,7 @@ impl VerifyFacts {
         context: Context,
         map: &AuthenticatedMap,
     ) -> Result<(), Error> {
-        if !product.is_v24() && !product.is_v25() {
+        if !product.has_authenticated_map_terrain() {
             return Err("product_terrain_coverage_authentication".into());
         }
         self.finish_inner(product, context, Some(map))
@@ -960,7 +1000,7 @@ impl VerifyFacts {
         authenticated_map: Option<&AuthenticatedMap>,
     ) -> Result<(), Error> {
         let coverage = self.coverage.ok_or("product_terrain_coverage")?;
-        if (product.is_v24() || product.is_v25()) != coverage.map_wdt_file_data_ids.is_some() {
+        if (product.has_authenticated_map_terrain()) != coverage.map_wdt_file_data_ids.is_some() {
             return Err("product_terrain_coverage_authentication".into());
         }
         require(
@@ -981,7 +1021,7 @@ impl VerifyFacts {
                     && actual.count() as usize == outcome.converted_tiles,
             )?;
         }
-        if product.is_v24() || product.is_v25() {
+        if product.has_authenticated_map_terrain() {
             let map = authenticated_map.ok_or("product_terrain_coverage_authentication")?;
             authenticate_coverage_map(&coverage, map)?;
         } else if authenticated_map.is_some() {
@@ -1109,7 +1149,10 @@ fn admit_metadata_with_coverage_path(
 }
 
 pub fn admit_metadata_v24(product: &Plan, artifacts: &[Artifact]) -> Result<(), Error> {
-    if !product.is_v24() && !product.is_v25() {
+    if product.is_v51() {
+        return admit_metadata_v51(product, artifacts);
+    }
+    if !product.has_authenticated_map_terrain() {
         return Err("product_terrain_profile".into());
     }
     let map_path = format!("dbc/{}/Map.db2", product.locale.name());
@@ -1121,18 +1164,67 @@ pub fn admit_metadata_v24(product: &Plan, artifacts: &[Artifact]) -> Result<(), 
     for artifact in artifacts {
         match artifact.component {
             Component::Db2 => {
-                require(
-                    !map && artifact.path == map_path
-                        && artifact.bytes > 0
-                        && artifact.bytes <= 16 * 1024 * 1024,
-                )?;
-                map = true;
+                require(artifact.bytes > 0 && artifact.bytes <= 16 * 1024 * 1024)?;
+                if product.is_v27() {
+                    let prefix = format!("dbc/{}/", product.locale.name());
+                    let name = artifact
+                        .path
+                        .strip_prefix(&prefix)
+                        .and_then(|value| value.strip_suffix(".db2"))
+                        .ok_or("product_terrain_coverage")?;
+                    require(
+                        artifact.path == format!("{prefix}{name}.db2")
+                            && product.db2.iter().any(|entry| entry.name == name),
+                    )?;
+                } else {
+                    require(!map && artifact.path == map_path)?;
+                }
+                if artifact.path == map_path {
+                    require(!map)?;
+                    map = true;
+                }
             }
             Component::Terrain => terrain.push(artifact.clone()),
             _ => return Err("product_terrain_coverage".into()),
         }
     }
     require(map)?;
+    admit_metadata_with_coverage_path(product, &terrain, COVERAGE_PATH_V24)
+}
+
+fn admit_metadata_v51(product: &Plan, artifacts: &[Artifact]) -> Result<(), Error> {
+    if !product.is_v51() {
+        return Err("product_terrain_profile".into());
+    }
+    let prefix = format!("dbc/{}/", product.locale.name());
+    let mut names = BTreeSet::new();
+    let mut terrain = Vec::new();
+    terrain
+        .try_reserve_exact(artifacts.len())
+        .map_err(|_| Error::from("product_allocation"))?;
+    for artifact in artifacts {
+        match artifact.component {
+            Component::Db2 => {
+                require(artifact.bytes > 0 && artifact.bytes <= 16 * 1024 * 1024)?;
+                let name = artifact
+                    .path
+                    .strip_prefix(&prefix)
+                    .and_then(|path| path.strip_suffix(".db2"))
+                    .ok_or("product_terrain_coverage")?;
+                require(
+                    artifact.path == format!("{prefix}{name}.db2")
+                        && product.db2.iter().any(|entry| entry.name == name)
+                        && names.insert(name.to_owned()),
+                )?;
+            }
+            Component::Terrain => terrain.push(artifact.clone()),
+            _ => return Err("product_terrain_coverage".into()),
+        }
+    }
+    require(names.len() == product.db2.len())?;
+    for entry in &product.db2 {
+        require(names.contains(&entry.name))?;
+    }
     admit_metadata_with_coverage_path(product, &terrain, COVERAGE_PATH_V24)
 }
 
@@ -1148,6 +1240,24 @@ mod tests {
         path::PathBuf,
         sync::atomic::{AtomicU64, Ordering},
     };
+
+    #[test]
+    fn v51_package_limits_cover_terrain_db2_geometry_and_liquid_evidence() {
+        let plan = Plan::parse(include_str!(
+            "../../../../tests/contracts/fixtures/forever-product-v51/all.tsv"
+        ))
+        .unwrap();
+        let crate::plan::CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage else {
+            panic!("disk budget");
+        };
+        let limits = package_limits_v51(budget);
+        assert_eq!(
+            limits.total_bytes,
+            OUTPUT_BYTES + super::super::DB2_TOTAL_BYTES + budget.output_bytes + 112
+        );
+        assert_eq!(limits.files, package::Limits::default().files);
+        assert!(limits.validate().is_ok());
+    }
 
     const MAP_COLUMNS: &[(u16, u16)] = &[
         (32, 1),

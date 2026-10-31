@@ -26,8 +26,71 @@ impl CollisionFixture {
     pub(crate) fn new(files: &[CollisionFile<'_>]) -> Self {
         Self::for_build(files, 70205)
     }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn new_with_shared_content(files: &[CollisionFile<'_>]) -> Self {
+        let mut builder = Self::builder(files, 70205);
+        let mut seen = std::collections::BTreeSet::new();
+        let mut routes = Vec::new();
+        let mut records = Vec::new();
+        for (route, record) in builder.routes.iter().zip(&builder.records) {
+            if seen.insert(route.0) {
+                routes.push(route.clone());
+                records.push(record.clone());
+            }
+        }
+        builder.routes = routes;
+        builder.records = records;
+        Self(builder.write())
+    }
     pub(crate) fn for_build(files: &[CollisionFile<'_>], build: u32) -> Self {
         Self(Self::builder(files, build).write())
+    }
+    pub(crate) fn with_ineligible_root(
+        files: &[CollisionFile<'_>],
+        build: u32,
+        file_data_id: u32,
+    ) -> Self {
+        let mut builder = Self::builder(files, build);
+        let target = files
+            .iter()
+            .position(|file| file.0 == file_data_id)
+            .expect("fixture contains the requested FDID");
+        let root = builder.root_override.as_mut().unwrap();
+        let mut at = 20;
+        for (ordinal, (_, name, _)) in files.iter().enumerate() {
+            if ordinal == target {
+                root[at + 4..at + 8].copy_from_slice(&0x80_u32.to_le_bytes());
+                break;
+            }
+            at += 37 + usize::from(name.is_some()) * 8;
+        }
+        Self(builder.write())
+    }
+    pub(crate) fn with_central_absence(
+        files: &[CollisionFile<'_>],
+        build: u32,
+        file_data_id: u32,
+    ) -> Self {
+        let mut builder = Self::builder(files, build);
+        let target = files
+            .iter()
+            .position(|file| file.0 == file_data_id)
+            .expect("fixture contains the requested FDID");
+        builder.routes.remove(target);
+        Self(builder.write())
+    }
+    pub(crate) fn with_encoding_absence(
+        files: &[CollisionFile<'_>],
+        build: u32,
+        file_data_id: u32,
+    ) -> Self {
+        let mut builder = Self::builder(files, build);
+        let target = files
+            .iter()
+            .position(|file| file.0 == file_data_id)
+            .expect("fixture contains the requested FDID");
+        builder.routes[target].2 = vec![[0x99; 16]];
+        Self(builder.write())
     }
     #[cfg(target_os = "linux")]
     pub(crate) fn with_probe_root_and_later_encoding(
@@ -79,7 +142,8 @@ impl CollisionFixture {
         }
         for (ordinal, (id, name, bytes)) in files.iter().enumerate() {
             let key = md5::digest(bytes);
-            let ekey = [0x60 + ordinal as u8; 16];
+            let mut ekey = [0; 16];
+            ekey[..8].copy_from_slice(&(ordinal as u64 + 1).to_le_bytes());
             builder.routes.push((key, bytes.len() as u32, vec![ekey]));
             builder.records.push((ekey, b'N', bytes.clone()));
             for value in [1u32, 2, if name.is_some() { 0 } else { 0x1000_0000 }, 0] {
@@ -145,10 +209,12 @@ impl CollisionFixture {
                 encoded.extend((*decoded as u32).to_be_bytes());
                 encoded.extend(md5::digest(block));
             }
-            let ekey = md5::digest(&encoded);
-            for (block, _) in blocks {
+            let frames_offset = encoded.len();
+            for (block, _) in &blocks {
                 encoded.extend(block);
             }
+            let ekey = md5::digest(&encoded[..header_size]);
+            assert_eq!(frames_offset, header_size);
             builder.routes[at].2 = vec![ekey];
             builder.records[at] = (ekey, b'N', Vec::new());
             builder.framed_records.insert(ekey, encoded);
@@ -338,27 +404,51 @@ fn root_file(rows: &[RootRow]) -> Vec<u8> {
     bytes
 }
 fn encoding_file(rows: &[Route]) -> Vec<u8> {
+    const MIN_PAGE_BYTES: usize = 1024;
+    let records: Vec<Vec<u8>> = rows
+        .iter()
+        .map(|(key, size, ekeys)| {
+            let mut record = u16::try_from(ekeys.len()).unwrap().to_le_bytes().to_vec();
+            record.extend_from_slice(&size.to_be_bytes());
+            record.extend_from_slice(key);
+            for ekey in ekeys {
+                record.extend_from_slice(ekey);
+            }
+            record
+        })
+        .collect();
+    let largest = records.iter().map(Vec::len).max().unwrap_or(0);
+    let page_bytes = MIN_PAGE_BYTES.max(largest.div_ceil(MIN_PAGE_BYTES) * MIN_PAGE_BYTES);
+    let mut pages = Vec::new();
     let mut page = Vec::new();
-    for (key, size, ekeys) in rows {
-        page.extend_from_slice(&(ekeys.len() as u16).to_le_bytes());
-        page.extend_from_slice(&size.to_be_bytes());
-        page.extend_from_slice(key);
-        for ekey in ekeys {
-            page.extend_from_slice(ekey);
+    for record in records {
+        if page.len() + record.len() > page_bytes {
+            page.resize(page_bytes, 0);
+            pages.push(page);
+            page = Vec::new();
         }
+        page.extend_from_slice(&record);
     }
-    assert!(page.len() < 1024);
-    page.resize(1024, 0);
+    if !page.is_empty() {
+        page.resize(page_bytes, 0);
+        pages.push(page);
+    }
+
+    let page_kib = u16::try_from(page_bytes / MIN_PAGE_BYTES).unwrap();
     let mut bytes = b"EN\x01\x10\x10".to_vec();
+    bytes.extend_from_slice(&page_kib.to_be_bytes());
     bytes.extend_from_slice(&1_u16.to_be_bytes());
-    bytes.extend_from_slice(&1_u16.to_be_bytes());
-    bytes.extend_from_slice(&1_u32.to_be_bytes());
+    bytes.extend_from_slice(&u32::try_from(pages.len()).unwrap().to_be_bytes());
     bytes.extend_from_slice(&0_u32.to_be_bytes());
     bytes.push(0);
     bytes.extend_from_slice(&0_u32.to_be_bytes());
-    bytes.extend_from_slice(&rows[0].0);
-    bytes.extend_from_slice(&md5::digest(&page));
-    bytes.extend_from_slice(&page);
+    for page in &pages {
+        bytes.extend_from_slice(&page[6..22]);
+        bytes.extend_from_slice(&md5::digest(page));
+    }
+    for page in pages {
+        bytes.extend_from_slice(&page);
+    }
     bytes
 }
 fn index_entry(key: [u8; 16], offset: u64, size: u32) -> [u8; 18] {

@@ -74,6 +74,16 @@ fn put32(bytes: &mut [u8], offset: usize, value: u32) {
     bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
 }
 
+fn complete_db2_with_unadmitted_framing() -> Vec<u8> {
+    let mut bytes = db2(false);
+    put32(&mut bytes, 204 + 8, 245);
+    assert_eq!(
+        forever_db2::availability::read_structure_70450(&CompleteDb2Source(&bytes)).err(),
+        Some(forever_db2::RecordError::Bounds)
+    );
+    bytes
+}
+
 /// A bounded one-section WDC5 structure, either TACT zero-filled or complete.
 fn db2(tact: bool) -> Vec<u8> {
     let file_offset = 244 + usize::from(tact) * 4;
@@ -130,6 +140,21 @@ fn partial_table(path: String) -> package::PartialEncryptedTable {
     }
 }
 
+fn partial_table_with_sizes(path: String, sizes: &[u64]) -> package::PartialEncryptedTable {
+    package::PartialEncryptedTable {
+        path,
+        sections: sizes
+            .iter()
+            .enumerate()
+            .map(|(ordinal, decoded_size)| package::PartialEncryptedSection {
+                lookup: "0123456789abcdef".into(),
+                frame_ordinal: ordinal as u32,
+                decoded_size: *decoded_size,
+            })
+            .collect(),
+    }
+}
+
 fn valid_tables(plan: &Plan) -> Vec<package::PartialEncryptedTable> {
     vec![partial_table(format!(
         "dbc/{}/{}.db2",
@@ -143,6 +168,48 @@ fn v26_verification_accepts_table_scoped_partial_and_complete_db2() {
     let lab = Lab::new();
     let plan = plan();
     let files = files(&plan, db2(true), db2(false));
+    lab.publish(&plan, &files, &valid_tables(&plan));
+
+    let summary = verify(&plan, &lab.output(), Some(context(&plan))).unwrap();
+    assert_eq!(summary.files, 2);
+}
+
+#[test]
+fn v26_verification_accepts_multiple_frames_for_one_tact_extent() {
+    let lab = Lab::new();
+    let plan = plan();
+    let tables = vec![partial_table_with_sizes(
+        format!("dbc/{}/{}.db2", plan.locale.name(), plan.db2[0].name),
+        &[2, 3],
+    )];
+    lab.publish(&plan, &files(&plan, db2(true), db2(false)), &tables);
+
+    let summary = verify(&plan, &lab.output(), Some(context(&plan))).unwrap();
+    assert_eq!(summary.files, 2);
+}
+
+#[test]
+fn v26_verification_rejects_incomplete_crossing_and_extra_frames() {
+    for sizes in [vec![2, 2], vec![2, 4], vec![2, 3, 1]] {
+        let lab = Lab::new();
+        let plan = plan();
+        let tables = vec![partial_table_with_sizes(
+            format!("dbc/{}/{}.db2", plan.locale.name(), plan.db2[0].name),
+            &sizes,
+        )];
+        lab.publish(&plan, &files(&plan, db2(true), db2(false)), &tables);
+        assert_eq!(
+            verify(&plan, &lab.output(), None).unwrap_err().code,
+            "product_partial_section_count"
+        );
+    }
+}
+
+#[test]
+fn v26_verification_skips_partial_reader_for_complete_table_framing() {
+    let lab = Lab::new();
+    let plan = plan();
+    let files = files(&plan, db2(true), complete_db2_with_unadmitted_framing());
     lab.publish(&plan, &files, &valid_tables(&plan));
 
     let summary = verify(&plan, &lab.output(), Some(context(&plan))).unwrap();

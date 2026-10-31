@@ -203,6 +203,7 @@ fn polygon_ids_cannot_collide_with_portal_bit() {
         vertices: Vec::new(),
         polygons: vec![Polygon::new(1, 11); 32768],
         nvp: 6,
+        partial_triangulations: 0,
         maximum_polygons: 65533,
     };
     assert!(matches!(
@@ -218,6 +219,7 @@ fn adjacency_edge_list_cannot_collide_with_null_index() {
         vertices: vec![[0, 0, 0]; 6],
         polygons: vec![p; 14000],
         nvp: 6,
+        partial_triangulations: 0,
         maximum_polygons: 14000,
     };
     assert!(matches!(budget().adjacency(&mut data), Err(Error::Mesh)));
@@ -231,6 +233,15 @@ fn reversed_contour_rejects_native_partial_triangulation() {
         supplied(vec![c]).build_mesh(6),
         Err(Error::Triangulation)
     ));
+}
+
+#[test]
+fn reversed_contour_returns_native_partial_triangles_v53() {
+    let mut c = contour(&[[0, 0], [0, 8], [4, 8], [4, 4], [8, 4], [8, 0]], 1, 11);
+    c.vertices.reverse();
+    let mesh = supplied(vec![c]).build_mesh_v53(6).unwrap();
+    assert_eq!(mesh.partial_triangulations(), 1);
+    assert!(!mesh.polygons().is_empty());
 }
 
 #[test]
@@ -315,6 +326,7 @@ fn disconnected_removal_boundaries_reject_incomplete_repair() {
         vertices,
         polygons,
         nvp: 6,
+        partial_triangulations: 0,
         maximum_polygons: 8,
     };
     let mut b = budget();

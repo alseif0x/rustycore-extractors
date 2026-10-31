@@ -183,7 +183,8 @@ impl Default for Limits {
 impl Limits {
     fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
         let cap = profile.spool_limits();
-        if !profile.supported()
+        if self.max_active_bytes > Limits::default().max_active_bytes
+            || !profile.supported()
             || self.max_records > cap.max_records
             || self.max_disk_bytes > cap.max_disk_bytes
             || self.max_descriptor_bytes > cap.max_descriptor_bytes
@@ -194,16 +195,18 @@ impl Limits {
         }
         let mut bounded = self;
         let d = Self::default();
-        bounded.max_records = bounded.max_records.min(d.max_records);
+        if !profile.model_heavy() {
+            bounded.max_records = bounded.max_records.min(d.max_records);
+        }
         bounded.max_disk_bytes = bounded.max_disk_bytes.min(d.max_disk_bytes);
         bounded.max_descriptor_bytes = bounded.max_descriptor_bytes.min(d.max_descriptor_bytes);
         bounded.max_reloads = bounded.max_reloads.min(d.max_reloads);
         bounded.max_reload_bytes = bounded.max_reload_bytes.min(d.max_reload_bytes);
-        bounded.validate()
+        bounded.validate_for_resources(profile)
     }
-    fn validate(self) -> Result<(), Error> {
+    fn validate_for_resources(self, resources: super::resources::Profile) -> Result<(), Error> {
         let d = Self::default();
-        if self.max_records > d.max_records
+        if (!resources.model_heavy() && self.max_records > d.max_records)
             || self.max_disk_bytes > d.max_disk_bytes
             || self.max_active_bytes > d.max_active_bytes
             || self.max_descriptor_bytes > d.max_descriptor_bytes

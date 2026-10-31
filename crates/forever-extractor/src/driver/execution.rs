@@ -23,6 +23,9 @@ pub(super) trait Adapter {
     fn verify_before_producer(&self) -> Result<(), Error> {
         Ok(())
     }
+    fn extract_db2(&self, plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+        super::db2(plan, store, run, self.map_domain(), None)
+    }
     fn verify_inputs(&self) -> Result<(), Error>;
     fn extract_collision(
         &self,
@@ -99,12 +102,8 @@ impl<A: Adapter> Work for Production<'_, A> {
         self.adapter.verify_before_producer()
     }
     fn db2(&mut self) -> Result<(), Error> {
-        super::db2(
-            self.plan,
-            self.store,
-            &mut self.run,
-            self.adapter.map_domain(),
-        )
+        self.adapter
+            .extract_db2(self.plan, self.store, &mut self.run)
     }
     fn game_tables(&mut self) -> Result<(), Error> {
         super::game_tables(self.plan, self.store, &mut self.run)

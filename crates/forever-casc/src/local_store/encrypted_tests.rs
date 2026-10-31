@@ -111,6 +111,163 @@ fn resident_keys_are_charged_before_store_io_and_default_limits_are_not_raised()
         Err(Error::Limit)
     ));
 }
+#[cfg(target_os = "linux")]
+#[test]
+fn strict_keyless_encrypted_framing_validates_wrappers_and_rejects_mixed_failures() {
+    fn fixture_with_encoded_candidates(encoded_candidates: Vec<Vec<u8>>) -> Fixture {
+        let mut builder = Builder::new(CONTENT);
+        let mut ekeys = Vec::new();
+        for (index, encoded) in encoded_candidates.into_iter().enumerate() {
+            let ekey = md5::digest(&encoded);
+            if index == 0 {
+                builder.records[0] = (ekey, b'N', Vec::new());
+            } else {
+                builder.records.push((ekey, b'N', Vec::new()));
+            }
+            builder.framed_records.insert(ekey, encoded);
+            ekeys.push(ekey);
+        }
+        builder.routes[0].2 = ekeys;
+        builder.write()
+    }
+
+    let mut valid = b"BLTE\0\0\0\0".to_vec();
+    valid.push(b'E');
+    valid.extend_from_slice(&encrypted(&[b'N', 1]));
+    let fixture = fixture_with_encoded_candidates(vec![valid]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.encrypted == 1));
+
+    let mut malformed = b"BLTE\0\0\0\0".to_vec();
+    malformed.extend_from_slice(&[b'E', 8, 0, 0, 0]);
+    let fixture = fixture_with_encoded_candidates(vec![malformed]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.corrupt == 1));
+
+    let mut unsupported_cipher = b"BLTE\0\0\0\0".to_vec();
+    unsupported_cipher.extend_from_slice(&[b'E', 0, 4, 0, 0, 0, 0, b'A', 0x55]);
+    let fixture = fixture_with_encoded_candidates(vec![unsupported_cipher]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.unsupported == 1));
+
+    let mut later_corrupt = b"BLTE".to_vec();
+    later_corrupt.extend_from_slice(&60_u32.to_be_bytes());
+    later_corrupt.extend_from_slice(&[15, 0, 0, 2]);
+    let encrypted_frame = [b'E', 0, 4, 0, 0, 0, 0, b'S', 0x55];
+    let normal_frame = b"Nabc";
+    for (frame, decoded) in [(&encrypted_frame[..], 1_u32), (&normal_frame[..], 3)] {
+        later_corrupt.extend_from_slice(&(frame.len() as u32).to_be_bytes());
+        later_corrupt.extend_from_slice(&decoded.to_be_bytes());
+        let mut digest = md5::digest(frame);
+        if frame[0] == b'N' {
+            digest[0] ^= 1;
+        }
+        later_corrupt.extend_from_slice(&digest);
+    }
+    later_corrupt.extend_from_slice(&encrypted_frame);
+    later_corrupt.extend_from_slice(normal_frame);
+    assert_eq!(
+        later_corrupt.len(),
+        60 + encrypted_frame.len() + normal_frame.len()
+    );
+    let fixture = fixture_with_encoded_candidates(vec![later_corrupt]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(
+        matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.corrupt == 1 && failures.encrypted == 0)
+    );
+
+    let mut mixed = b"BLTE\0\0\0\0".to_vec();
+    mixed.push(b'E');
+    mixed.extend_from_slice(&encrypted(&[b'N', 1]));
+    let unsupported = {
+        let mut frame = vec![b'E', 0, 4, 0, 0, 0, 0, b'A', 0x55];
+        let mut encoded = b"BLTE\0\0\0\0".to_vec();
+        encoded.append(&mut frame);
+        encoded
+    };
+    let fixture = fixture_with_encoded_candidates(vec![mixed, unsupported]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(
+        matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.encrypted == 1 && failures.unsupported == 1)
+    );
+
+    let mut corrupt_wrapper = b"BLTE\0\0\0\0".to_vec();
+    corrupt_wrapper.extend_from_slice(&[b'E', 8, 1]);
+    let mut valid_encrypted = b"BLTE\0\0\0\0".to_vec();
+    valid_encrypted.push(b'E');
+    valid_encrypted.extend_from_slice(&encrypted(&[b'N', 1]));
+    let fixture = fixture_with_encoded_candidates(vec![corrupt_wrapper, valid_encrypted]);
+    let mut store = fixture.open();
+    let result = store.read_file_data_id_with_external_budget_policy(
+        FILE_ID,
+        4096,
+        0,
+        store.limits.max_memory_bytes,
+        true,
+    );
+    assert!(
+        matches!(result, Err(Error::NoLocalEncoding(failures)) if failures.encrypted == 1 && failures.corrupt == 1)
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn strict_encrypted_inspection_rejects_symlinked_archive_without_following() {
+    use std::os::unix::fs::symlink;
+
+    let fixture = builder().write();
+    let archive = fixture.path.join("Data/data/data.000");
+    let target = fixture.path.join("Data/data/target.000");
+    fs::rename(&archive, &target).unwrap();
+    symlink("target.000", archive).unwrap();
+    let mut store = fixture.open();
+    assert!(matches!(
+        store.read_file_data_id_with_external_budget_policy(
+            FILE_ID,
+            4096,
+            0,
+            store.limits.max_memory_bytes,
+            true,
+        ),
+        Err(Error::Input)
+    ));
+}
+
 #[test]
 fn extra_encoded_scratch_is_reserved_for_opt_in_without_changing_default_profile() {
     let fixture = builder().write();

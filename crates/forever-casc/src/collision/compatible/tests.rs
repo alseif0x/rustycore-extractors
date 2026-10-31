@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Authored GNU15-v2 integration controls. SOURCE ONLY until fresh qualification.
 use super::*;
-use crate::{Locale, local_index, local_store, local_store::tests::CollisionFixture};
+use crate::{
+    Locale, local_index, local_store,
+    local_store::{
+        ProductDiagnosticObserver, ProductDiagnosticPhase, ProductDiagnosticRequest,
+        ProductDiagnosticRequestKind, ProductDiagnosticResource, tests::CollisionFixture,
+    },
+};
 use forever_vmap::{
     objects::{self, Objects},
     placement::{self, DirBin},
 };
 use std::{
+    cell::RefCell,
     fs,
     os::unix::fs::DirBuilderExt,
     path::PathBuf,
+    rc::Rc,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -478,6 +486,25 @@ fn complete_no_collision_group(references: &[u16]) -> Vec<u8> {
     ));
     chunk(b"MOGP", &header)
 }
+#[derive(Default)]
+struct ResourceObserver(Rc<RefCell<Vec<ProductDiagnosticResource>>>);
+impl ProductDiagnosticObserver for ResourceObserver {
+    fn set_phase(&mut self, _: ProductDiagnosticPhase) {}
+    fn begin_request(
+        &mut self,
+        _: ProductDiagnosticRequestKind,
+        _: Option<u32>,
+    ) -> Option<ProductDiagnosticRequest> {
+        None
+    }
+    fn tolerated_absence(&mut self, _: ProductDiagnosticRequest) {}
+    fn resource_limit(&mut self, resource: ProductDiagnosticResource) {
+        self.0.borrow_mut().push(resource);
+    }
+    fn source_failure(&mut self, _: ProductDiagnosticRequest, _: local_store::Error, _: bool) {}
+    fn finish(&mut self, _: Option<&'static str>, _: bool) {}
+}
+
 fn complete_no_collision_collector<'s>(
     store: &'s mut LocalStore,
     private: &Private,
@@ -499,6 +526,58 @@ fn complete_no_collision_collector<'s>(
     }
     .unwrap()
 }
+#[test]
+fn request_limit_in_spooled_compatible_collector_records_one_resource_snapshot() {
+    let fixture = CollisionFixture::for_build(&[(10, None, m2(true))], 70425);
+    let private = Private::new();
+    let mut store = open(&fixture, 70425);
+    let store_resident_bytes = store.stats().resident_bytes;
+    let resources = Rc::new(RefCell::new(Vec::new()));
+    store.set_product_diagnostic_observer(Some(Box::new(ResourceObserver(resources.clone()))));
+    let mut collector = Collector::new_70425(
+        &mut store,
+        &Lookup,
+        Limits {
+            max_requests: 1,
+            ..Limits::default()
+        },
+        private.spool(&fixture),
+    )
+    .unwrap();
+
+    assert!(matches!(
+        collector.extract(ModelRequest::M2(InputRef::FileDataId(10))),
+        Ok(Outcome::Present(_))
+    ));
+    assert_eq!(
+        collector.extract(ModelRequest::M2(InputRef::FileDataId(10))),
+        Err(payload::CollectorError::Collision(Error::Limit))
+    );
+    assert_eq!(resources.borrow().len(), 1);
+    let facts = collector.inner.inner.facts();
+    assert_eq!(facts.reads, 1);
+    assert_eq!(facts.models, 1);
+    assert_eq!(collector.inner.inner.request_calls, 1);
+    let expected = ProductDiagnosticResource {
+        request_calls: collector.inner.inner.request_calls,
+        reads: facts.reads,
+        dependency_requests: facts.dependency_requests,
+        source_bytes: facts.source_bytes,
+        raw_bytes: facts.raw_bytes,
+        models: facts.models,
+        resident_bytes: collector.inner.inner.live,
+        external_bytes: collector.inner.inner.external,
+        external_source_bytes: collector.inner.inner.external_sources,
+        store_resident_bytes,
+        memory_limit: collector.inner.inner.limits.max_memory_bytes,
+    };
+    assert_eq!(*resources.borrow(), [expected]);
+    assert!(collector.inner.inner.diagnostic_resource_recorded);
+    assert!(collector.finish().is_err());
+    store.finish_product_diagnostic(Some("collision_policy_limit"), false);
+    assert_eq!(*resources.borrow(), [expected]);
+}
+
 #[test]
 fn native_gnu15_v2_complete_no_collision_is_cached_without_handle_raw_or_temp_charge() {
     for build in [70374, 70425] {

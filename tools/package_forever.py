@@ -24,7 +24,7 @@ import tomllib
 import zlib
 
 SCHEMA = "forever-distribution-v1"
-SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13"
+SOURCE_PROFILE = "forever-seven-crate-linux-product-db2-gt-cameras-available-navigation57-consumer-source-v15"
 CONTRACT_MARKDOWN = "contracts/WOWDBDEFS-LICENSE.md"
 CRATES = ("forever-casc", "forever-db2", "forever-extractor", "forever-navigation", "forever-platform", "forever-terrain", "forever-vmap")
 DEPENDENCIES = {
@@ -194,9 +194,41 @@ NAVIGATION_CONSUMER_SOURCE = (
     "tests/contracts/test_forever_navigation_consumer_contract.py",
     "docs/forever-rustycore-navigation-consumer.md",
 )
-# Unlike optional QA additions, the current profile always requires the v23
-# source closure. Removing its contract cannot silently skip this admission.
-REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE + PRODUCT_V23_SOURCE + NAVIGATION_CONSUMER_SOURCE
+NAVIGATION56_SOURCE = (
+    "crates/forever-navigation/src/package_v56.rs",
+    "crates/forever-navigation/src/package_v56/schema.rs",
+    "crates/forever-navigation/src/package_v56/verify.rs",
+    "crates/forever-navigation/src/package_v56/tests.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/v56.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/v56/tests.rs",
+    "crates/forever-extractor/tests/v56_available_navigation_cli.rs",
+    "contracts/forever-product-contract-v56.json",
+    "tests/contracts/test_forever_product_v56_contract.py",
+    "tests/contracts/fixtures/forever-product-v56/all.tsv",
+    "docs/forever-product-v56.md",
+    "reports/acceptance/v56-available-navigation-real-20261031.json",
+    "reports/acceptance/v56-rustycore-real-20261031.json",
+)
+NAVIGATION57_SOURCE = (
+    "crates/forever-navigation/src/package_v57.rs",
+    "crates/forever-navigation/src/package_v57/schema.rs",
+    "crates/forever-navigation/src/package_v57/verify.rs",
+    "crates/forever-navigation/src/package_v57/tests.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/v57.rs",
+    "crates/forever-extractor/src/driver/navigation_v23/v57/tests.rs",
+    "crates/forever-extractor/tests/v57_available_navigation_cli.rs",
+    "contracts/forever-product-contract-v57.json",
+    "tests/contracts/test_forever_product_v57_contract.py",
+    "tests/contracts/fixtures/forever-product-v57/all.tsv",
+    "docs/forever-product-v57.md",
+    "reports/acceptance/v57-vertical-bounds-20261031.json",
+    "reports/acceptance/v57-available-navigation-real-20261031.json",
+    "reports/acceptance/v57-rustycore-real-20261031.json",
+    "reports/acceptance/v57-rustycore-world-20261031.json",
+)
+# Unlike optional QA additions, the current profile always requires the v23/v56/v57
+# source closures. Removing a contract cannot silently skip this admission.
+REQUIRED = ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md", "AUTHORS", "tools/package_forever.py", "tests/distribution/test_package_forever.py", "docs/licensing/forever-rust-casc.md", "licensing/import-manifest.json", "licensing/inventory.json", "licensing/source-files.json", ".github/workflows/forever-rust.yml", "tests/contracts/test_forever_ci_contract.py") + DOCS + WINDOWS_INPUT_SOURCE + WINDOWS_PRODUCER_SOURCE + WINDOWS_VMAP_SOURCE + INPUT_DIAGNOSTICS_SOURCE + REQUIRED_FRAMING_SOURCE + WINDOWS_NAVIGATION_SOURCE + LINUX_COLLISION_ARCHIVE_SOURCE + PRODUCT_COLLISION_DISK_SOURCE + PRODUCT_DB2_CATALOG_SOURCE + PRODUCT_70374_GT_CAMERAS_SOURCE + PRODUCT_V23_SOURCE + NAVIGATION_CONSUMER_SOURCE + NAVIGATION56_SOURCE + NAVIGATION57_SOURCE
 MAX_FILES = 8192
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 256 * 1024 * 1024

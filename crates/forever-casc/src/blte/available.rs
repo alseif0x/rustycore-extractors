@@ -90,6 +90,13 @@ impl AvailableBytes {
     pub fn into_zerofilled(self) -> (Vec<u8>, Vec<PartialSection>) {
         (self.backing, self.partial_sections)
     }
+    /// Preserve the decoded frame ranges for products that validate exact
+    /// encrypted coverage instead of assuming one frame per DB2 section.
+    pub fn into_zerofilled_with_coverage(
+        self,
+    ) -> (Vec<u8>, Vec<PartialSection>, Vec<CoverageRange>) {
+        (self.backing, self.partial_sections, self.coverage)
+    }
     #[cfg(target_os = "linux")]
     pub(crate) fn resident_bytes(&self) -> Result<usize, Error> {
         let ranges = self
@@ -351,12 +358,32 @@ mod partial_section_tests {
         assert_eq!(available.range(0, 7), Ok(&b"abcdefg"[..]));
         assert_eq!(available.range(7, 1), Err(RangeError::Unavailable));
         assert!(!available.full_ckey_verified());
-        let (bytes, declarations) = available.into_zerofilled();
+        let (bytes, declarations, coverage) = available.into_zerofilled_with_coverage();
         assert_eq!(bytes.len(), 145);
         assert_eq!(&bytes[..7], b"abcdefg");
         assert!(bytes[7..].iter().all(|byte| *byte == 0));
         assert_eq!(declarations.len(), 1);
         assert_eq!(declarations[0].decoded_size, 138);
+        assert_eq!(
+            coverage,
+            [
+                CoverageRange {
+                    offset: 0,
+                    bytes: 3,
+                    state: RangeState::Available,
+                },
+                CoverageRange {
+                    offset: 3,
+                    bytes: 4,
+                    state: RangeState::Available,
+                },
+                CoverageRange {
+                    offset: 7,
+                    bytes: 138,
+                    state: RangeState::EncryptedUnavailable,
+                },
+            ]
+        );
     }
 
     #[test]

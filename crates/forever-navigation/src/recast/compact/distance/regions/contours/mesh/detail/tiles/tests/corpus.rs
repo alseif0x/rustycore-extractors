@@ -85,6 +85,9 @@ impl Input {
             detail_vertices,
             detail_triangles,
             discarded_faces,
+            partial_triangulations: 0,
+            center_fallbacks: 0,
+            unset_height_samples: 0,
             processing_work: 0,
             merge_work: 0,
         }

@@ -78,6 +78,7 @@ impl Default for Limits {
 /// are bounded by the selected tile count; this is not a universal work sum.
 #[derive(Clone, Copy, Debug)]
 pub struct AvailableLimits {
+    pub profile: AvailableProfile,
     pub run: Limits,
     /// Retained rooted owner plus one pipeline-owned tile context. Terrain and
     /// static-store providers keep their existing independent ceilings.
@@ -94,6 +95,7 @@ impl Default for AvailableLimits {
         };
         let max_tiles = 4096u64;
         Self {
+            profile: AvailableProfile::SelectedV23,
             run,
             heap_bytes: 64 * 1024 * 1024 + pipeline::Limits::default().heap_bytes,
             builder_work: max_tiles * pipeline::Limits::default().builder.work,
@@ -101,16 +103,102 @@ impl Default for AvailableLimits {
         }
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AvailableProfile {
+    SelectedV23,
+    AllAvailableV52,
+    AllAvailableV53,
+    AllAvailableV54,
+    AllAvailableV55,
+    AllAvailableV56,
+    AllAvailableV57,
+}
+
 impl AvailableLimits {
+    pub fn all_available_v52(maps: usize, tiles: usize) -> Result<Self, Error> {
+        if maps > 4096 || tiles > 4096 * 4096 || tiles > maps.saturating_mul(4096) {
+            return Err(Error::Limit);
+        }
+        let mut limits = Self {
+            profile: AvailableProfile::AllAvailableV52,
+            ..Self::default()
+        };
+        limits.run.maps = maps;
+        limits.run.tiles = tiles;
+        limits.run.pipeline.models.mesh.vertices = 500_000;
+        limits.run.pipeline.compact.vertices = 500_000;
+        limits.builder_work = (tiles as u64)
+            .checked_mul(limits.run.pipeline.builder.work)
+            .ok_or(Error::Limit)?;
+        limits.save_work = (tiles as u64)
+            .checked_mul(limits.run.pipeline.save.work)
+            .ok_or(Error::Limit)?;
+        Ok(limits)
+    }
+
+    pub fn all_available_v53(maps: usize, tiles: usize) -> Result<Self, Error> {
+        let mut limits = Self::all_available_v52(maps, tiles)?;
+        limits.profile = AvailableProfile::AllAvailableV53;
+        limits.run.pipeline.builder.allow_partial_triangulation = true;
+        Ok(limits)
+    }
+
+    pub fn all_available_v54(maps: usize, tiles: usize) -> Result<Self, Error> {
+        let mut limits = Self::all_available_v53(maps, tiles)?;
+        limits.profile = AvailableProfile::AllAvailableV54;
+        limits.run.pipeline.models.mesh.vertices = 1_000_000;
+        limits.run.pipeline.models.mesh.heap_bytes = 48 * 1024 * 1024;
+        limits.run.pipeline.compact.vertices = 1_000_000;
+        limits.run.pipeline.compact.heap_bytes = 48 * 1024 * 1024;
+        Ok(limits)
+    }
+
+    pub fn all_available_v55(maps: usize, tiles: usize) -> Result<Self, Error> {
+        let mut limits = Self::all_available_v54(maps, tiles)?;
+        limits.profile = AvailableProfile::AllAvailableV55;
+        limits.run.pipeline.builder.allow_detail_center_fallback = true;
+        Ok(limits)
+    }
+
+    pub fn all_available_v56(maps: usize, tiles: usize) -> Result<Self, Error> {
+        let mut limits = Self::all_available_v55(maps, tiles)?;
+        limits.profile = AvailableProfile::AllAvailableV56;
+        limits.run.pipeline.builder.allow_unset_detail_height = true;
+        Ok(limits)
+    }
+
+    pub fn all_available_v57(maps: usize, tiles: usize) -> Result<Self, Error> {
+        let mut limits = Self::all_available_v56(maps, tiles)?;
+        limits.profile = AvailableProfile::AllAvailableV57;
+        limits.run.pipeline.builder.expand_detour_vertical_bounds = true;
+        Ok(limits)
+    }
+
     fn validate(self) -> Result<(), Error> {
-        const MAX_TILES: u64 = 4096;
-        let max = Self::default();
+        let max = match self.profile {
+            AvailableProfile::SelectedV23 => Self::default(),
+            AvailableProfile::AllAvailableV52 | AvailableProfile::AllAvailableV53 => {
+                Self::all_available_v52(self.run.maps, self.run.tiles)?
+            }
+            AvailableProfile::AllAvailableV54 => {
+                Self::all_available_v54(self.run.maps, self.run.tiles)?
+            }
+            AvailableProfile::AllAvailableV55 => {
+                Self::all_available_v55(self.run.maps, self.run.tiles)?
+            }
+            AvailableProfile::AllAvailableV56 => {
+                Self::all_available_v56(self.run.maps, self.run.tiles)?
+            }
+            AvailableProfile::AllAvailableV57 => {
+                Self::all_available_v57(self.run.maps, self.run.tiles)?
+            }
+        };
         self.run.validate()?;
         if self.run.maps > max.run.maps
+            || self.run.tiles > max.run.tiles
             || self.heap_bytes > max.heap_bytes
             || self.builder_work > max.builder_work
             || self.save_work > max.save_work
-            || self.run.tiles > MAX_TILES as usize
         {
             return Err(Error::Limit);
         }

@@ -279,23 +279,29 @@ impl Limits {
         }
         let d = Self::default();
         let mut bounded = self;
-        bounded.max_models = bounded.max_models.min(d.max_models);
+        if !profile.model_heavy() {
+            bounded.max_models = bounded.max_models.min(d.max_models);
+        }
         bounded.max_output_bytes = bounded.max_output_bytes.min(d.max_output_bytes);
         bounded.max_vertices = bounded.max_vertices.min(d.max_vertices);
         bounded.max_triangles = bounded.max_triangles.min(d.max_triangles);
         bounded.max_raw_visit_bytes = bounded.max_raw_visit_bytes.min(d.max_raw_visit_bytes);
         bounded.max_bih_work = bounded.max_bih_work.min(d.max_bih_work);
         bounded.max_validation_bytes = bounded.max_validation_bytes.min(d.max_validation_bytes);
-        bounded.validate()
+        bounded.validate_with_model_limit(cap.max_models)
     }
+    #[cfg(test)]
     fn validate(self) -> Result<(), Kind> {
+        self.validate_with_model_limit(super::super::MAX_MODELS)
+    }
+    fn validate_with_model_limit(self, max_models: usize) -> Result<(), Kind> {
         let d = Self::default();
         let c = self.conversion;
         let v = vmo::Limits::default();
         let b = c.bih;
         let db = v.bih;
         if self.max_memory_bytes > d.max_memory_bytes
-            || self.max_models > d.max_models
+            || self.max_models > max_models
             || self.max_output_bytes > d.max_output_bytes
             || self.max_vertices > d.max_vertices
             || self.max_triangles > d.max_triangles

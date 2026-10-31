@@ -79,7 +79,10 @@ impl Default for Limits {
 }
 impl Limits {
     #[cfg(target_os = "linux")]
-    fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
+    pub(super) fn validate_resources(
+        self,
+        profile: super::resources::Profile,
+    ) -> Result<(), Error> {
         self.run.validate_resources(profile).map_err(Error::Run)?;
         let mut bounded = self;
         bounded.run.placements.max_models = bounded

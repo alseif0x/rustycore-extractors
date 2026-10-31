@@ -1,0 +1,64 @@
+{
+  "contract": "forever-product-v53",
+  "build": 70450,
+  "platform": "linux",
+  "component": "mmaps",
+  "components": 32,
+  "navigation": "all-available-maps",
+  "source": {
+    "contract": "forever-product-v51",
+    "components": 25,
+    "package_count": 1,
+    "plan_count": 1,
+    "cli_package_option": "--terrain-package",
+    "cli_plan_option": "--terrain-plan",
+    "interface": "explicit-v53-reuse-of-terrain-options-for-the-combined-package",
+    "verification": "complete-v51-verify-links-and-locked-inventory-revalidation",
+    "client_reads": false,
+    "v25_v50_or_mixed_packages": "reject"
+  },
+  "execution": {
+    "order": "map-id-ascending-then-tile-row-column",
+    "scheduler": "sequential-selected-available-owner-per-map",
+    "resume": "replay-all-output-with-identical-plan-source-and-producer",
+    "partial_failure": "fatal-no-final-package",
+    "partial_triangulation_policy": "native-negative-ntris-preserved-and-counted; other-errors-fatal",
+    "empty_map": "coverage-only-no-global",
+    "empty_tile": "coverage-only-no-tile-file",
+    "root_absent_map": "coverage-only-producer-reported-source-omission",
+    "offmesh_connections": 0,
+    "rebuild_maps_vmaps": false
+  },
+  "resources": {
+    "profile": "all-available-v53",
+    "maps_max": 4096,
+    "tiles_per_map_max": 4096,
+    "tiles_max": 16777216,
+    "builder_work": "planned-tiles-times-existing-per-tile-builder-work",
+    "save_work": "planned-tiles-times-existing-per-tile-save-work",
+    "heap": "unchanged-selected-owner-plus-one-pipeline",
+    "geometry_v51_budgets": "unchanged",
+    "coverage_bytes_max": 134217728
+  },
+  "output": {
+    "format": "MMap16",
+    "coverage_path": "mmaps/available-navigation-v53.tsv",
+    "coverage_version": 53,
+    "coverage_derivation": "v23-global-tile-outcomes-with-v53-multi-map-inventory-and-sealed-source-identity",
+    "identity_domain": "rustycore-navigation-v53-sealed-v51",
+    "facts": ["source-context", "source-files", "source-bytes", "source-inventory-sha256", "map-id", "root-map-id", "map-disposition", "planned-tile-coordinates", "written-or-empty-tile", "output-bytes-sha256", "partial-triangulations-per-map", "builder-work", "save-work"]
+  },
+  "verification": {
+    "verify": "offline-output-integrity-intrinsic-MMap-and-coverage-inventory",
+    "verify-links": "offline-verify-plus-complete-v51-source-and-rederived-navigation-inventory",
+    "client_reads": false
+  },
+  "claims": {
+    "full_world_complete": false,
+    "runtime_accepted": false,
+    "full_extractor_complete": false,
+    "native_parity": false,
+    "real_acceptance": false
+  },
+  "real_acceptance": "deferred-long-running-persistent-user-service-or-tmux-from-existing-sealed-v51-package"
+}

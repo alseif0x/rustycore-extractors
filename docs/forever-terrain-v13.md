@@ -21,7 +21,7 @@ new, outside both Git and the read-only client. Run long extraction in a
 persistent user service or tmux. These commands produce terrain only.
 
 ```bash
-source .opencode/environment.sh
+source tools/environment.sh
 cargo build --offline --locked --release -p forever-extractor
 BIN="$CARGO_TARGET_DIR/release/forever-extractor"
 PLAN="$PWD/tests/contracts/fixtures/forever-product-v13/available.tsv"

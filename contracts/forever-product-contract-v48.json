@@ -1,0 +1,179 @@
+{
+  "contract": "forever-product-v48",
+  "version": 48,
+  "status": "synthetic-validation-passed; real-target-attempt-failed-unaccepted",
+  "synthetic_validation_status": "passed",
+  "real_target_attempted": true,
+  "real_extraction_accepted": false,
+  "full_real_target_acceptance": false,
+  "full_extractor_complete": false,
+  "publication_profile": "Build70450GameObjectMissingRootMaterialFilteredWmoGeometryV1",
+  "builds": [70450],
+  "platform": "linux",
+  "backend": "rust-local",
+  "offline": true,
+  "commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "implemented_commands": ["inspect", "extract", "resume", "verify", "verify-links"],
+  "implemented_command_scope": "synthetic and admitted offline build-70450 profile; not complete real-target support",
+  "unavailable_command_error": null,
+  "synthetic_validation": {
+    "plan_admission_tests": {
+      "status": "passed",
+      "command": "source tools/environment.sh && cargo test --offline --locked -p forever-extractor --lib plan::v48_tests",
+      "tests": 4
+    },
+    "cli_build_and_execution": {
+      "status": "passed",
+      "command": "source tools/environment.sh && cargo test --offline --locked -p forever-extractor --test v48_gameobject_missing_root_material_filtered_wmo_geometry_cli",
+      "tests": 11,
+      "product_scenarios": [
+        "extract_verify_resume_determinism_and_v47_cross_rejection",
+        "raw_root_absent_vs_root_present_without_body",
+        "repeated_missing_root_fdid_across_two_displays",
+        "authenticated_partial_godi_published_and_geometry_continued",
+        "authenticated_partial_godi_resume_and_geometry_continuation",
+        "initial_db2_acquisition_failure_finishes_redacted_diagnostic_with_db2_component",
+        "root_present_model_failure_finishes_redacted_startup_diagnostic_with_vmaps_component",
+        "4096_missing_root_ceiling_and_resealed_codec_attacks"
+      ]
+    },
+    "v47_cli_regression": {
+      "status": "passed",
+      "command": "source tools/environment.sh && cargo test --offline --locked -p forever-extractor --test v47_gameobject_expanded_material_filtered_wmo_geometry_cli",
+      "tests": 7
+    },
+    "software_qualification": {
+      "status": "workspace-suite-clippy-and-release-build-passed",
+      "workspace_suite": true,
+      "workspace_suite_targets": 92,
+      "workspace_suite_tests": 4735,
+      "workspace_suite_ignored": 26,
+      "workspace_suite_command": "source tools/environment.sh && tools/checks rust",
+      "clippy": true,
+      "release_build": true
+    }
+  },
+  "source_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-v1",
+  "plan_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-vmap-product-v1",
+  "plan_coverage_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-coverage-v21",
+  "codec_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-v1",
+  "domain_profile": "gameobject-missing-root-material-filtered-wmo-v1",
+  "resource_profile": {
+    "id": "linux-collision-gameobject-missing-root-expanded-resources-v1",
+    "basis": "GameObjectExpandedV1",
+    "resource_limits_changed_vs_v47": false,
+    "gameobject_missing_root_max": 4096,
+    "gameobject_missing_root_max_basis": "maximum direct nonzero GODI candidate requests admitted by the profile",
+    "disk_world_profile_implicit": false
+  },
+  "completion": "linux70450-available-gameobject-missing-root-material-filtered-wmo-collision-v1",
+  "verification_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-verification-v1",
+  "verification_scope": "artifact_integrity_gameobject_missing_root_material_filtered_wmo_and_independently_derived_map_godi_vmap_domain_coverage",
+  "component_mask": 17,
+  "plan": {
+    "source_fixture": "tests/contracts/fixtures/forever-product-v48/all.tsv",
+    "line_count": 31,
+    "build": 70450,
+    "locale": "esES",
+    "required_db2_entries": [
+      {"name": "GameObjectDisplayInfo", "file_data_id": 1266277, "count": 1},
+      {"name": "Map", "file_data_id": 1349477, "count": 1}
+    ],
+    "collision_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-vmap-product-v1",
+    "collision_domain": "all-available-maps",
+    "coverage_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-coverage-v21",
+    "gameobject_scope": "available-fdid-direct-missing-root-v1",
+    "model_scope": "placement-and-gameobject-with-missing-root-v1",
+    "components": ["db2", "vmaps"],
+    "component_mask": 17,
+    "storage_budgets_downward_only": true
+  },
+  "gameobject_missing_root": {
+    "source_table": "GameObjectDisplayInfo",
+    "scope": "available-fdid-direct-missing-root-v1",
+    "model_scope": "placement-and-gameobject-with-missing-root-v1",
+    "declaration_condition": "the producer reports a missing body only after a raw ROOT lookup finds no rows for the FDID",
+    "root_absence_authentication": "producer_reported",
+    "maximum_direct_nonzero_godi_candidate_rows": 4096,
+    "maximum_unique_fdids": 4096,
+    "maximum_basis": "profile candidate-request ceiling applies to direct nonzero rows; the canonical FDID list deduplicates repeated rows",
+    "row_count_is_unique_fdid_count": false,
+    "candidate_row_count_is_capped_at": 4096,
+    "unique_fdid_count_is_capped_at": 4096,
+    "repeated_missing_root_fdids_across_rows": "allowed; counted once in the canonical FDID list",
+    "root_present_without_body": "fatal; never declared as missing-root",
+    "missing_models_published": false,
+    "copy_rows_reexecuted": false
+  },
+  "coverage_codec": {
+    "path": "vmaps/available-gameobject-missing-root-material-filtered-wmo-geometry-coverage-v21.bin",
+    "magic": "RCVGEO1",
+    "encoded_magic": "RCVGEO1\\0",
+    "layout_version": 21,
+    "profile": "linux70450-gameobject-missing-root-material-filtered-wmo-v1",
+    "coverage_profile": "linux70450-gameobject-missing-root-material-filtered-wmo-coverage-v21",
+    "domain_profile": "gameobject-missing-root-material-filtered-wmo-v1",
+    "resource_profile": "linux-collision-gameobject-missing-root-expanded-resources-v1",
+    "missing_root_list_max": 4096,
+    "missing_root_list_canonical": true,
+    "row_count_must_match_list_count": false,
+    "row_count_counts_missing_root_outcomes": true,
+    "list_contains_sorted_unique_missing_root_fdids": true,
+    "cross_profile_rejection": "v47 and v48 plans/packages/coverage reject crossing; v48 requires v21 identities"
+  },
+  "verification": {
+    "map_and_godi_authentication": "physical_rows_order_display_ids_and_fdids_independently_derived_from_sealed_db2",
+    "gameobject_disposition_authentication": "producer_reported_consistency_checked_against_sealed_db2_physical_rows",
+    "gameobject_root_absence_authentication": "producer_reported",
+    "map_domain_authentication": "independently_derived",
+    "placement_and_assembly_authentication": "independently_derived",
+    "bounds_and_transformed_raw_geometry_authentication": "producer_reported",
+    "rejects_root_present_unavailable_bodies": true,
+    "rejects_missing_root_list_over_4096": true,
+    "rejects_missing_root_candidate_rows_over_4096": true,
+    "requires_list_to_equal_unique_missing_root_outcome_fdids": true,
+    "synthetic_replay_attack_tests": [
+      "4097_missing_root_rows_with_one_unique_fdid_are_rejected_by_candidate_ceiling"
+    ],
+    "full_world_coverage": false,
+    "complete_vmap_component": false,
+    "runtime_claim": false,
+    "full_extractor_complete": false
+  },
+  "fixtures": {
+    "classification": "synthetic plan, client and package fixtures only; no real client",
+    "source_plan": "tests/contracts/fixtures/forever-product-v48/all.tsv",
+    "contains_client_data": false,
+    "real_extraction_evidence": false
+  },
+  "boundaries": {
+    "target_status": "attempted-failed-unaccepted",
+    "real_target_attempted": true,
+    "real_target_attempt": {
+      "run_id": "v48-gameobject-missing-root-wmo-20261028T153819Z",
+      "report": "/home/joe/projects/dream/wow/rustycore-extractor-work/reports/acceptance/v48-gameobject-missing-root-wmo-20261028T153819Z-acceptance.json",
+      "extract_exit": 9,
+      "component": "db2",
+      "code": "local_store_no_verified_encoding",
+      "source_diagnostic": null,
+      "accepted_prefix": false,
+      "package_published": false
+    },
+    "real_extraction_accepted": false,
+    "synthetic_validation_status": "passed",
+    "plan_admission_tests": 4,
+    "synthetic_v48_cli_tests": 11,
+    "synthetic_v47_cli_regression_tests": 7,
+    "full_real_target_acceptance": false,
+    "full_world_coverage": false,
+    "complete_vmap_component": false,
+    "liquidobject": false,
+    "mmaps": false,
+    "runtime_acceptance": false,
+    "windows": false,
+    "distribution": false,
+    "release_publication": false,
+    "full_extractor_complete": false,
+    "client_bytes_in_reports_or_repository": false
+  }
+}

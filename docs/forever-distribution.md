@@ -14,7 +14,7 @@ selected existing Cargo cache. It performs no downloads or native-reference
 build. Start from the project environment for external build/run locations:
 
 ```bash
-source .opencode/environment.sh
+source tools/environment.sh
 python3 tools/package_forever.py build \
   --source "$PWD" \
   --output /absolute/external/new-distribution-run \
@@ -1176,3 +1176,77 @@ general publication gate still rejects inherited architecture/session baselines;
 server gameplay, full geometry/world, Windows and release remain open. The
 ordinary validation campaign exceeded its 600-second target; failed attempts
 were retained. See the [consumer evidence and limits](forever-rustycore-navigation-consumer.md).
+
+## Available-navigation56 consumer source profile v14 — 2026-10-31
+
+The current recipe defines
+`forever-seven-crate-linux-product-db2-gt-cameras-available-navigation56-consumer-source-v14`.
+It retains the v13 closure and additionally requires the shared v56 producer
+codec, complete-package reader, v56 CLI/contract fixtures and redacted real
+extraction/native-worker evidence. The seven workspace crates, two pinned
+registry packages and explicit Linux navigation-to-CASC edge are unchanged.
+
+V56 has completed its scoped real extraction and bounded real RustyCore native
+worker lifecycle, documented in
+[the consumer guide](forever-rustycore-navigation-consumer.md). The frozen v14
+source snapshot `ef7eb11f6abfe4a03adbef72b7fcc6a42f05311caa77fc2b9b760493588a4d80`
+produced two identical fresh archives and binaries and an identical moved
+offline rebuild. Archive SHA-256:
+`bf7b861bf3a779fd574aa7772e5a909e625760e9e07ac8a8d2da170c6dd8169a`;
+binary: `360c541c6c8d9882917475e40230b1718e23127263efd93ffa5cb0adaeac042d`.
+The archive has 1,196 inventoried files and retains the earlier pending-status
+prose; these final acceptance updates are documentation-only.
+
+The packaged executable passed `inspect`, `verify` and `verify-links` against
+the unchanged real v56 package in 489.928 seconds, with byte-identical output
+to the original acceptance and empty network traces. Distribution tests pass
+90/90. The redacted receipt is
+[acceptance/forever-v14-distribution-20261031.json](acceptance/forever-v14-distribution-20261031.json),
+SHA-256 `489fd682b911a16e0f2b3676a8793cc355e63c056e085fd93bbf4b64aa176b1b`.
+The final integrated closeout exited0 with 100 suites, 4,849 passed tests, 28
+explicit ignores and 610 contracts; log SHA-256 is
+`575b6c09de063392ab1216c12ce75fd7f9fd96900d3949fae0dc12bb505e69d0`.
+Initial destination, missing-parent, incorrect bundle-invocation and retained
+closeout type-complexity/profile-pin failures are documented; all final
+candidates were rebuilt after those corrections. Server/gameplay, full-world and release authorization remain
+open. V13 and earlier profiles retain their frozen inputs and historical
+evidence.
+
+## Available-navigation57 consumer source profile v15 — 2026-10-31
+
+The current recipe defines
+`forever-seven-crate-linux-product-db2-gt-cameras-available-navigation57-consumer-source-v15`.
+It retains the v14 closure and additionally requires the v57 producer/consumer
+codec, CLI/contract fixtures and redacted real extraction, native-worker and
+all-planned-map query evidence. The seven workspace crates, two pinned registry
+packages and explicit Linux navigation-to-CASC edge are unchanged.
+
+V57 has completed its available-map real extraction and 69 real native queries
+in 69 planned maps, including cross-tile queries in maps 25, 29 and 42. The
+frozen v15 source snapshot
+`e68c183823cde62bee72e5ac0412cb74d169bd7a34c25a628d6c6fe61defe94c`
+produced two identical fresh archives and binaries and an identical moved
+offline rebuild. Archive SHA-256:
+`4c88833ddef4f31671794cbc4d90e5d8d7a2fb7319ca06ef4c6ee83f271bb931`;
+binary: `ebcca9b454f3953154b8827b3172e5e39bfe37b7be6983aad3bc74cd0a3b2db4`.
+The archive has 1,211 inventoried files. Distribution discovery passes 171
+tests with one explicit skip.
+
+The rebuilt packaged executable passed real v57 `inspect`, `verify` and
+`verify-links` in 473.805 seconds with output identical to the original
+acceptance and empty network traces. The final integrated closeout passed 101
+suites, 4,867 tests, zero failures, 31 explicit ignores and 613 contracts; log
+SHA-256 is `f3fcbb882c50523507b8d6aeb9509fd87cc5cd2b6421235d43f00cd029756bad`.
+The ordinary release binary is
+`08654fa118024e25a3cbc3c5d95f05d509a09e8d0c7a2e5cdc4b89aed6fdb836`.
+The redacted receipt is
+[acceptance/forever-v15-distribution-20261031.json](acceptance/forever-v15-distribution-20261031.json),
+SHA-256 `a3d93f1ffed6a1ea7ea27aa3be2e17c465b807a94272d900dbc2704e1ef12a60`.
+The initial inside-Git destination and two rebuild-invocation failures were
+retained; the accepted candidates used fresh external destinations. A 30-minute
+closeout caller timeout and stale v14 profile pins were also retained and
+corrected before the final passing run. Final acceptance updates are
+documentation-only relative to the frozen archive.
+Full server bootstrap, per-tile pathfinding, gameplay, full-world and release
+authorization remain open. V14 and earlier profiles retain their frozen inputs
+and historical evidence.

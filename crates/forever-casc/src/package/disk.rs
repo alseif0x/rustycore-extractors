@@ -655,9 +655,9 @@ impl Run {
         }
         result
     }
-    /// Attach per-table redacted declarations for the supported DB2 profiles.
-    /// Repeating the same path and declarations is idempotent; conflicting
-    /// declarations for a path permanently poison this writer.
+    /// Attach per-table redacted declarations for supported DB2, terrain and
+    /// selected-collision profiles. Repeating the same path and declarations is
+    /// idempotent; conflicting declarations for a path permanently poison this writer.
     pub fn set_partial_encrypted_table(
         &mut self,
         path: &str,
@@ -670,7 +670,10 @@ impl Run {
             self.state()?;
             let db2 = Component::Db2.bit();
             let db2_terrain = db2 | Component::Terrain.bit();
-            if self.context.build != 70450 || ![db2, db2_terrain].contains(&self.context.components)
+            let db2_collision = db2 | Component::Collision.bit();
+            if self.context.build != 70450
+                || ![db2, db2_terrain, db2_collision, db2_terrain | db2_collision]
+                    .contains(&self.context.components)
             {
                 return Err(Error::Component);
             }
@@ -729,6 +732,39 @@ impl Run {
             retained.sort_unstable_by(|left, right| left.path.cmp(&right.path));
             validate_partial_encrypted_tables(&retained)?;
             self.partial_encrypted_tables = Some(retained);
+            Ok(())
+        })();
+        if result.is_err() {
+            self.failed = true;
+        }
+        result
+    }
+    /// Reject recovered declarations outside the selected product scope before
+    /// any producer replay or final manifest publication.
+    pub fn admit_partial_encrypted_scope(
+        &mut self,
+        allow_global: bool,
+        allowed_table_paths: &[String],
+    ) -> Result<(), Error> {
+        let result = (|| {
+            if self.failed {
+                return Err(Error::Incomplete);
+            }
+            self.state()?;
+            let globals = self
+                .partial_encrypted_sections
+                .as_deref()
+                .unwrap_or_default();
+            let tables = self.partial_encrypted_tables.as_deref().unwrap_or_default();
+            if (!allow_global && !globals.is_empty())
+                || tables.iter().any(|table| {
+                    !allowed_table_paths
+                        .iter()
+                        .any(|allowed| allowed.as_str() == table.path.as_str())
+                })
+            {
+                return Err(Error::Inventory);
+            }
             Ok(())
         })();
         if result.is_err() {

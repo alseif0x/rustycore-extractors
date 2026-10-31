@@ -204,7 +204,7 @@ fn append_models<'a>(
     types: LiquidTypes<'_>,
     limits: Limits,
 ) -> Result<Mesh, Error> {
-    limits.mesh.validate()?;
+    limits.mesh.validate_available_v54()?;
     if limits.models > 4096 || limits.groups > 65_536 {
         return Err(Error::Limit);
     }
@@ -221,12 +221,24 @@ fn append_models<'a>(
     for model in models.clone() {
         model_count += 1;
         if model_count > limits.models {
+            if std::env::var_os("RCE_V52_DEBUG").is_some() {
+                eprintln!(
+                    "{{\"models\":{},\"model_limit\":{}}}",
+                    model_count, limits.models
+                );
+            }
             return Err(Error::Limit);
         }
         groups = groups
             .checked_add(model.geometry.group_count())
             .ok_or(Error::Limit)?;
         if groups > limits.groups {
+            if std::env::var_os("RCE_V52_DEBUG").is_some() {
+                eprintln!(
+                    "{{\"groups\":{},\"group_limit\":{}}}",
+                    groups, limits.groups
+                );
+            }
             return Err(Error::Limit);
         }
         for group in model.geometry.groups() {
@@ -357,6 +369,12 @@ fn check_counts(counts: [usize; 5], limits: crate::Limits) -> Result<(), Error> 
     if counts[0].checked_add(counts[2]).ok_or(Error::Limit)? > limits.vertices
         || counts[1].checked_add(counts[3]).ok_or(Error::Limit)? > limits.triangles
     {
+        if std::env::var_os("RCE_V52_DEBUG").is_some() {
+            eprintln!(
+                "{{\"solid_vertices\":{},\"liquid_vertices\":{},\"solid_triangles\":{},\"liquid_triangles\":{},\"vertex_limit\":{},\"triangle_limit\":{}}}",
+                counts[0], counts[2], counts[1], counts[3], limits.vertices, limits.triangles
+            );
+        }
         return Err(Error::Limit);
     }
     Ok(())

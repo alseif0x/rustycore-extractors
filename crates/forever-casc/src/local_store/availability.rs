@@ -116,6 +116,16 @@ impl AvailableSource {
     pub fn into_zerofilled(self) -> (Vec<u8>, Vec<blte::available::PartialSection>) {
         self.data.into_zerofilled()
     }
+    /// Preserve decoded coverage for exact multi-frame TACT extent validation.
+    pub fn into_zerofilled_with_coverage(
+        self,
+    ) -> (
+        Vec<u8>,
+        Vec<blte::available::PartialSection>,
+        Vec<blte::available::CoverageRange>,
+    ) {
+        self.data.into_zerofilled_with_coverage()
+    }
     /// A strict complete return authenticates plaintext by CKey. Only the new
     /// partial pass additionally authenticates the full independently selected
     /// EKey/header and every encoded frame; these claims remain distinct.

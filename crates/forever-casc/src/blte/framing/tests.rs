@@ -33,6 +33,16 @@ fn headerless(frame: &[u8]) -> Vec<u8> {
     bytes
 }
 
+fn expected_ekey(encoded: &[u8]) -> [u8; 16] {
+    let header_size = u32::from_be_bytes(encoded[4..8].try_into().unwrap()) as usize;
+    let authenticated = if header_size == 0 {
+        encoded
+    } else {
+        &encoded[..header_size]
+    };
+    md5::digest(authenticated)
+}
+
 fn encrypted(name: u8, nonce: u8, cipher: u8, ciphertext: &[u8]) -> Vec<u8> {
     let mut frame = vec![b'E', name];
     frame.extend(std::iter::repeat_n(0xa1, usize::from(name)));
@@ -82,6 +92,70 @@ fn encrypted_first_does_not_hide_later_truncation() {
     let mut bytes = framed(&[(&e, 11), (b"Nabc", 3)]);
     bytes.pop();
     assert_eq!(inspect(&bytes, 14, limits()), Err(Error::Truncated));
+}
+
+#[test]
+fn strict_encrypted_inspection_authenticates_encoded_key_and_validates_observable_frames() {
+    let e = encrypted(8, 8, b'S', &[7]);
+    let bytes = framed(&[(&e, 11), (b"Nabc", 3)]);
+    let ekey = expected_ekey(&bytes);
+    let evidence = inspect_encrypted_unavailable(&bytes, 14, ekey, limits()).unwrap();
+    assert_eq!(evidence.encrypted_frames, 1);
+    assert_eq!(evidence.form, Form::FramedMd5);
+
+    let mut corrupt = framed(&[(&e, 11), (b"Nabc", 3)]);
+    *corrupt.last_mut().unwrap() ^= 1;
+    let ekey = expected_ekey(&corrupt);
+    assert_eq!(
+        inspect_encrypted_unavailable(&corrupt, 14, ekey, limits()),
+        Err(Error::Checksum)
+    );
+
+    let bad_cipher = encrypted(0, 4, b'A', &[1]);
+    let bad = framed(&[(&bad_cipher, 1)]);
+    let ekey = expected_ekey(&bad);
+    assert_eq!(
+        inspect_encrypted_unavailable(&bad, 1, ekey, limits()),
+        Err(Error::EncryptionUnsupported)
+    );
+
+    let truncated_wrapper = b"E\x08\x01";
+    let bad = framed(&[(truncated_wrapper, 1)]);
+    let ekey = expected_ekey(&bad);
+    assert_eq!(
+        inspect_encrypted_unavailable(&bad, 1, ekey, limits()),
+        Err(Error::EncryptionHeader)
+    );
+}
+
+#[test]
+fn strict_encrypted_inspection_decodes_observable_zlib_and_rejects_plaintext_only_object() {
+    let encrypted = encrypted(0, 4, b'S', &[1]);
+    let valid_z = b"Z\x78\x9c\x4b\x4c\x4a\x06\x00\x02\x4d\x01\x27";
+    let bytes = framed(&[(&encrypted, 1), (valid_z, 3)]);
+    let ekey = expected_ekey(&bytes);
+    let evidence = inspect_encrypted_unavailable(&bytes, 4, ekey, limits()).unwrap();
+    assert_eq!(evidence.encrypted_frames, 1);
+    assert_eq!(evidence.zlib_frames, 1);
+
+    let invalid_z = b"Znot-zlib";
+    let bytes = framed(&[(&encrypted, 1), (invalid_z, 3)]);
+    let ekey = expected_ekey(&bytes);
+    assert!(matches!(
+        inspect_encrypted_unavailable(&bytes, 4, ekey, limits()),
+        Err(Error::Truncated | Error::Compression | Error::Checksum)
+    ));
+
+    let plain = framed(&[(b"Nabc", 3)]);
+    let ekey = expected_ekey(&plain);
+    let evidence = inspect_encrypted_unavailable(&plain, 3, ekey, limits()).unwrap();
+    assert_eq!(evidence.encrypted_frames, 0);
+
+    let mixed = framed(&[(b"Nabc", 3), (&encrypted, 1)]);
+    let ekey = expected_ekey(&mixed);
+    let evidence = inspect_encrypted_unavailable(&mixed, 4, ekey, limits()).unwrap();
+    assert_eq!(evidence.uncompressed_frames, 1);
+    assert_eq!(evidence.encrypted_frames, 1);
 }
 
 #[test]

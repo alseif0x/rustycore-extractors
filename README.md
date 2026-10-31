@@ -64,7 +64,15 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review the build-70450 selected-filesystem navigation API and related evidence | [Navigation scope and evidence](docs/forever-navigation.md#2026-10-19-rooted-filesystem-api-for-available-selected-navigation) |
 | Use the build-70450 selected-navigation Linux CLI | [Product v23 guide](docs/forever-product-v23.md) and [real ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain) |
 | Review build-70450 v24 | [Product v24 scope](docs/forever-product-v24.md): synthetic/software only; the real esES Map attempt fails at DB2 encoding verification |
-| Review build-70450 v25 | [Product v25 scope](docs/forever-product-v25.md): authenticated Map with declared TACT-section skipping; synthetic/software gates only |
+| Review build-70450 v25 | [Product v25 scope](docs/forever-product-v25.md): authenticated partial Map and real terrain acceptance for map:48 and all-available-maps |
+| Review build-70450 v26 | [Product v26 scope](docs/forever-product-v26.md): DB2-only declared partial sections and real acceptance for all 1,161 selected catalog artifacts |
+| Review build-70450 v27 | [Product v27 scope](docs/forever-product-v27.md): real selected DB2 catalog and available-terrain acceptance with exclusively per-table declarations |
+| Review build-70450 v28 | [Product v28 scope](docs/forever-product-v28.md): real selected VMap geometry with independently derived Map/domain coverage |
+| Review build-70450 v29 | [Product v29 scope](docs/forever-product-v29.md): all-active available VMap geometry; initial real attempt retained as failed, not accepted |
+| Review build-70450 v30 | [Product v30 scope](docs/forever-product-v30.md): declared root-absent WDT omissions; real run retained as failed at an M2 dependency, not accepted |
+| Review build-70450 v31 | [Product v31 scope](docs/forever-product-v31.md): declared WMO-doodad M2 ROOT omissions with the parent WMO retained; real run failed at the 4096-request ceiling, not accepted |
+| Review build-70450 v32 | [Product v32 scope](docs/forever-product-v32.md): only the resident request-call ceiling raised; real run failed on a WMO left without geometry or usable doodads, not accepted |
+| Review build-70450 v33 | [Product v33 scope](docs/forever-product-v33.md): declared vacated-WMO omission; real run failed on an intrinsically empty WMO, not accepted |
 | Use the preserved 3.4.3 extractors | [C++ build](#build-the-existing-suite) and [standalone guide](docs/standalone-cpp-suite.md) |
 | Help develop the Forever pipeline | [Contributing](#contributing) and [operating guide](AGENTS.md) |
 
@@ -78,9 +86,9 @@ source of truth; the table below summarizes the boundaries.
 | Component | Implemented and evidenced scope | Still required for complete Forever delivery |
 | --- | --- | --- |
 | Local acquisition | Bounded Rust CASC reads, metadata authentication and explicit available-section APIs | Complete required client resources for each admitted collection |
-| DB2 | Build-specific catalogs, decoding, batch extraction and verification; a real v16 esES package extracted and verified 1,055 keylessly readable declarations out of 1,161 | Complete catalog acquisition and required server consumers; the other 106 esES declarations are encrypted without an available key |
+| DB2 | Build-specific catalogs, decoding, batch extraction and verification; a real v16 esES package extracted and verified 1,055 keylessly readable declarations out of 1,161. V26 separately passed real extraction and offline verification for all 1,161 selected esES catalog artifacts (1,055 complete, 106 explicitly partial with 478 declared zero-filled frames), followed by offline `verify-links` with the matching producer | Complete decoded content and required server consumers; v26 zero-fill does not decrypt or validate omitted encrypted records, and does not establish full-client, full-world or runtime acceptance |
 | Game tables & cameras | A real v19 package extracted and verified 20 GameTables, ten raw camera files and its selected `CinematicCamera` DB2; the runtime GameTable loader accepted the 20 tables | Full target coverage; cameras remain opaque raw files and playback is outside extraction |
-| Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; a bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
+| Terrain / MAPS | ADT conversion, assembly and readers; real 70374/v13 and 70450/v20 available-map packages are verified. V20 contains 3,322 MAPS tiles and 71 tilelists; v25 separately verifies 3,394 terrain artifacts against its sealed partial Map (3,322 tiles, 71 lists and coverage v3). A bounded runtime check against reproducible package `ad7f115d…` (commit `35a4a14`) parsed 1,724 tiles / 43,100 points: 988 tiles / 24,700 points for map 1 and 736 tiles / 18,400 points for map 0 | Whole-client map coverage and full world/runtime acceptance; the 70450 ADT/MAPS wire-format assumption is unproven |
 | Collision / VMaps | Linux v22 has bounded real selected-map extraction and verification. The latest esES geometry input contains 149 artifacts / 2,199,694 bytes and feeds the [ground-navigation checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). Placement-only models, available Map coverage and excluded GameObject globals remain explicit. | Complete geometry, C++/TrinityCore parity, RustyCore runtime and full-world/whole-client coverage remain open |
 | Navigation / MMaps | Linux v23 generated and verified navigation with six real terrain tiles: eight nonempty MMap tiles, three empty outcomes, a 40-byte global and coverage (ten artifacts / 3,787,736 bytes). [Ground checkpoint](docs/forever-navigation.md#2026-10-20-bounded-real-v23-navigation-with-nonempty-terrain). The optional RustyCore library worker, merged in PR #1454, admits the original eight containers, resolves 98 proximity queries and preserves all 256 raw SDK route outcomes: six complete and 250 partial. It unloads all tiles and instance queries; the packaged executable reproduces the payloads. The earlier empty-terrain package separately passed ten CLI lifecycle cases. | Complete-source/geometry, movement/path execution, off-mesh/full-world, Trinity parity, runtime/server, Windows and release acceptance remain open |
 | Packaging | Local Linux v13 candidate: two identical fresh archives/binaries, a matching moved-source offline rebuild, 47 synthetic CLI/fixture cases and nine real navigation payloads identical to the baseline ([qualification](docs/forever-distribution.md)) | Complete extractor release and distribution |
@@ -120,6 +128,14 @@ follow-up pending the required GitHub OAuth workflow scope.
 | v23 | 32 | Selected navigation from sealed v20/v22 packages |
 | v24 | 9 | Authenticated sealed Map + available-map terrain |
 | v25 | 9 | Authenticated Map with explicitly declared partial encrypted-section skips + available-map terrain |
+| v26 | 1 | DB2-only with per-table declared partial encrypted-section skips |
+| v27 | 9 | Selected DB2 catalog including Map + authenticated available-map terrain; exclusively per-table partial declarations |
+| v28 | 17 | Sealed Map + selected VMap geometry with independently derived Map/domain coverage |
+| v29 | 17 | Sealed Map + all-active available VMap geometry with RCVGEO1 v2 and independently derived Map/domain coverage |
+| v30 | 17 | Sealed Map + available VMap geometry with declared root-absent WDT omissions and RCVGEO1 v3 |
+| v31 | 17 | Sealed Map + available VMap geometry with declared WDT and WMO-doodad M2 ROOT omissions and RCVGEO1 v4 |
+| v32 | 17 | V31 geometry and omissions with RequestHeavyV1 and RCVGEO1 v5; only max_requests is raised |
+| v33 | 17 | V32 resource profile with declared vacated-WMO omission and RCVGEO1 v6; real run failed on an intrinsically empty WMO |
 
 ### Current build-specific scope
 
@@ -127,7 +143,69 @@ follow-up pending the required GitHub OAuth workflow scope.
 | --- | --- | --- |
 | **70374** | Linux v10 selects DB2; v11 adds game tables and raw cameras. Terrain v12/v13 has separate real extraction evidence, including the available-map run linked below. Bounded lifecycle and local packaging checks exist. | Full catalog, whole-client coverage, complete collision/navigation and runtime support remain open. |
 | **70425** | Explicit disabled-key bootstrap, a separate catalog, available-section readers and complete liquid reader APIs. Compatible world traversal joins Map/liquids, WDTs, object ADTs and parent replay, with synthetic library checks. A bounded real Map/GameObject probe is recorded. | Final compatible VMaps, complete real world resources, a 70425 product profile and runtime acceptance remain open. |
-| **70450** | Linux product revisions v15–v24 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57, v22=16, v23=32, v24=9. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. V22 has bounded real esES map-48 acceptance with the post-audit binary `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`: verified package, 66 files / 2,079,754 bytes, inventory `aa9d5cee…`; 65 of 66 published artifacts are byte-identical to the preceding binary; only the coverage record and the context-bearing package manifest/seal differ. Its selected-map/ancestor geometry uses available Map, excludes GameObject globals by profile and omits LiquidObject, MMaps and full-world output. Separate bounded native probes used the typed v16 payload adapter: the first accepted one tile, and a later probe loaded/unloaded four tiles and found complete paths across the loaded set. These probes do not change any product revision's scope. The Linux available-selected filesystem library owner has separate bounded real acceptance: one map, four nonempty tiles and one global, with all five artifact hashes matching the preceding manual outputs; v23 subsequently adds a separately validated selected-navigation CLI using sealed v20/v22 packages. Its bounded real run passed ten lifecycle cases and produced six artifacts, with the five navigation payloads matching these filesystem-owner outputs. V24 combines one sealed Map DB2 artifact with v20 terrain and independently re-derives Map identity/order/counts during offline verification. Its synthetic/software checks are the only qualification: a real esES plan (mask 9, terrain map 48, one sealed Map entry) passed `inspect`, but `extract` exited 9 before package creation with `local_store_no_verified_encoding` for `db2`. | The other 106 esES DB2 declarations are encrypted. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; v22 coverage is also producer-reported, and verification does not reread Map to authenticate source coverage. V24 remains synthetic-only; no real package, full-world, format-parity, runtime or release acceptance is established. No C++/TrinityCore format parity, complete navigation product/coverage, legacy-v15 container/MMapManager acceptance, full-world/whole-client, complete RustyCore runtime or release acceptance is established. |
+| **70450** | Linux product revisions v15–v33 are separately gated: masks v15=16, v16/v17=1, v18=16, v19=7, v20=8, v21=57, v22=16, v23=32, v24=9, v25=9, v26=1, v27=9, v28=17, v29=17, v30=17, v31=17, v32=17, v33=17. V33 adds the vacated-WMO omission policy and RCVGEO1 v6; its real run failed on an intrinsically empty WMO and is not accepted. Real v16 DB2 (1,055 esES declarations), v19 GameTables/cameras and v20 available-map terrain packages were extracted and verified. V21 has a real failure diagnostic, not a package. V22 has bounded real esES map-48 acceptance with the post-audit binary `d75acb087b49bdd759c25ff64904085f7909f7e5b2536ddcfc593123b66cce89`: verified package, 66 files / 2,079,754 bytes, inventory `aa9d5cee…`; 65 of 66 published artifacts are byte-identical to the preceding binary; only the coverage record and the context-bearing package manifest/seal differ. Its selected-map/ancestor geometry uses available Map, excludes GameObject globals by profile and omits LiquidObject, MMaps and full-world output. Separate bounded native probes used the typed v16 payload adapter: the first accepted one tile, and a later probe loaded/unloaded four tiles and found complete paths across the loaded set. These probes do not change any product revision's scope. The Linux available-selected filesystem library owner has separate bounded real acceptance: one map, four nonempty tiles and one global, with all five artifact hashes matching the preceding manual outputs; v23 subsequently adds a separately validated selected-navigation CLI using sealed v20/v22 packages. Its bounded real run passed ten lifecycle cases and produced six artifacts, with the five navigation payloads matching these filesystem-owner outputs. V24 combines one sealed Map DB2 artifact with v20 terrain and independently re-derives Map identity/order/counts during offline verification. Its synthetic/software checks are the only qualification: a real esES plan (mask 9, terrain map 48, one sealed Map entry) passed `inspect`, but `extract` exited 9 before package creation with `local_store_no_verified_encoding` for `db2`. | The other 106 esES DB2 declarations are encrypted. V20 coverage is producer-reported and its ADT/MAPS wire assumption is unproven; v22 coverage is also producer-reported, and verification does not reread Map to authenticate source coverage. V24 remains synthetic-only; no real package, full-world, format-parity, runtime or release acceptance is established. No C++/TrinityCore format parity, complete navigation product/coverage, legacy-v15 container/MMapManager acceptance, full-world/whole-client, complete RustyCore runtime or release acceptance is established. |
+
+Product v25 passed real esES extraction, offline verification and verify-links
+for partial Map plus terrain at `map:48` and `all-available-maps`. The expanded
+package contains 3,395 artifacts / 215,670,284 bytes and retains three declared
+Map frames / 575 zero-filled bytes. Coverage v3 is independently derived from
+the sealed available Map projection; this is not complete decoded Map content
+or full-world acceptance. Product v26 separately passed real extraction and
+offline verification for all 1,161 selected esES catalog artifacts: 1,055
+complete tables and 106 explicitly partial tables, with 478 declared
+zero-filled frames. Offline `verify-links` also passed with the matching
+producer. This does not decode encrypted sections or establish full-client
+coverage. See the [v25 scope and evidence](docs/forever-product-v25.md) and
+[v26 scope and evidence](docs/forever-product-v26.md).
+
+Product v27 combines those selected tables with authenticated available terrain
+and exclusively per-table declarations. Its expanded real package contains
+4,555 artifacts / 271,392,871 bytes; every DB2 payload matches v26 and every
+non-coverage terrain payload matches v25. The selected `map:48` package has
+1,163 artifacts / 55,737,931 bytes. Both passed extraction and both offline
+verifications without decoding omitted encrypted sections or establishing
+full-world/runtime acceptance. See [v27 scope and evidence](docs/forever-product-v27.md).
+
+Product v28 passed real map:48 extraction and both offline verifications with
+67 artifacts / 2,090,335 bytes. It independently authenticates the sealed Map's
+VMap sections, materialization and active-ancestor graph. All 65 non-coverage
+geometry payloads match v22, and the Map retains three per-table frames / 575
+zero-filled bytes with no global declaration. GODI/global GameObjects,
+LiquidObject, all-available geometry, full-world and runtime remain open. See
+[v28 scope and evidence](docs/forever-product-v28.md).
+
+Product v29 adds all-active available VMap geometry, RCVGEO1 v2 and independently
+derived Map/domain coverage. Both real attempts failed with `file_unavailable`
+during VMap acquisition and are retained without a final package or accepted
+prefix. The offline census found 71 active maps with two root-missing WDTs;
+strict v29 cannot complete against this collection and needs a separate
+omission profile. Complete acquisition, full-world and runtime remain open.
+See [v29 scope and retained failure](docs/forever-product-v29.md).
+
+Product v30 declares root-absent WDT omissions with RCVGEO1 v3 and publishes
+only geometry for present maps, with mandatory trees/proofs and no invented
+artifacts for missing maps. Map/domain and associations are independently
+verified; root absence is producer-reported. Synthetic lifecycle, resume,
+inheritance and source-failure checks pass. Its real run passed inspect and
+tolerated two WDT absences, but extract failed on M2 child FDID 970793; verify
+and verify-links did not run and no prefix was accepted. See
+[v30 scope and retained failure](docs/forever-product-v30.md).
+
+Product v31 adds RCVGEO1 v4 and a separate policy limited to WMO-doodad M2
+FDIDs whose raw ROOT has no rows. The absent child has no VMO/binding/spawn;
+the WMO root, its placement and present children remain. Direct ADT M2 and
+other sources stay fatal. Its real run passed inspect but failed at exactly
+`request_calls=4096` with `collision_policy_limit`; extract exited 9, the probe
+and both verifications did not run, and no package or prefix was accepted. See
+[v31 scope and retained failure](docs/forever-product-v31.md).
+
+Product v32 adds RCVGEO1 v5 and RequestHeavyV1, raising only `max_requests` to
+16,000,000; reads, dependencies, sources, models, RAW, memory and all other
+limits stay unchanged. Its real run crossed the former request ceiling but
+failed on WMO FDID 462695 with no geometry or usable doodad selection after the
+declared M2 omission. Extract exited 9 and neither verification ran; no package
+or prefix was accepted. Full-world, complete-component, runtime and distribution
+remain open. See [v32 scope and retained failure](docs/forever-product-v32.md).
 
 The 70425 row above preserves its earlier checkpoint. Since then, product v14
 adds an explicit Linux 70425 compatible-VMaps admission contract and plan; this

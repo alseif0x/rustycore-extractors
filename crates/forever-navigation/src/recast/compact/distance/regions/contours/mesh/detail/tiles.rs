@@ -77,6 +77,9 @@ pub struct TileMesh {
     detail_vertices: Vec<Point>,
     detail_triangles: Vec<[u8; 4]>,
     discarded_faces: u32,
+    partial_triangulations: u64,
+    center_fallbacks: u64,
+    unset_height_samples: u64,
     processing_work: u64,
     merge_work: u64,
 }
@@ -103,6 +106,9 @@ impl DetailMesh {
             detail_vertices: self.vertices,
             detail_triangles: self.triangles,
             discarded_faces: self.discarded_faces,
+            partial_triangulations: m.partial_triangulations as u64,
+            center_fallbacks: self.center_fallbacks,
+            unset_height_samples: self.unset_height_samples,
             processing_work: c.regions.field.compact.work,
             merge_work: 0,
         }
@@ -130,6 +136,15 @@ impl TileMesh {
     /// Sum of detail-stage recovery warnings in the supplied meshes.
     pub const fn discarded_faces(&self) -> u32 {
         self.discarded_faces
+    }
+    pub const fn partial_triangulations(&self) -> u64 {
+        self.partial_triangulations
+    }
+    pub const fn center_fallbacks(&self) -> u64 {
+        self.center_fallbacks
+    }
+    pub const fn unset_height_samples(&self) -> u64 {
+        self.unset_height_samples
     }
     /// Total logical work from all supplied stages, including this merge.
     pub const fn processing_work(&self) -> u64 {
@@ -222,6 +237,7 @@ impl TileMesh {
             polygons: Vec::new(),
             nvp: usize::from(header.vertices_per_polygon),
             maximum_polygons,
+            partial_triangulations: 0,
         };
         let mut submeshes = Vec::new();
         let mut detail_vertices = Vec::new();
@@ -298,6 +314,15 @@ impl TileMesh {
             b.adjacency(&mut data)?;
         }
         processing_work = processing_work.checked_add(b.work).ok_or(Error::Limit)?;
+        let partial_triangulations = subtiles.iter().map(|m| m.partial_triangulations).sum();
+        let center_fallbacks = subtiles.iter().try_fold(0u64, |total, mesh| {
+            total.checked_add(mesh.center_fallbacks).ok_or(Error::Limit)
+        })?;
+        let unset_height_samples = subtiles.iter().try_fold(0u64, |total, mesh| {
+            total
+                .checked_add(mesh.unset_height_samples)
+                .ok_or(Error::Limit)
+        })?;
         Ok(Self {
             header,
             vertices: data.vertices,
@@ -306,6 +331,9 @@ impl TileMesh {
             detail_vertices,
             detail_triangles,
             discarded_faces,
+            partial_triangulations,
+            center_fallbacks,
+            unset_height_samples,
             processing_work,
             merge_work: b.work,
         })

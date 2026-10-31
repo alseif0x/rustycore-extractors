@@ -77,6 +77,7 @@ pub struct PolyMesh {
     polygons: Vec<Polygon>,
     nvp: u8,
     maximum_polygons: usize,
+    partial_triangulations: usize,
 }
 impl PolyMesh {
     pub fn contours(&self) -> &ContourSet {
@@ -94,6 +95,9 @@ impl PolyMesh {
     /// Native maxpolys metadata: sum of (contour vertices - 2), not Vec capacity.
     pub const fn maximum_polygons(&self) -> usize {
         self.maximum_polygons
+    }
+    pub const fn partial_triangulations(&self) -> usize {
+        self.partial_triangulations
     }
     pub fn capacity_bytes(&self) -> usize {
         self.contours.capacity_bytes()
@@ -165,11 +169,24 @@ struct Data {
     polygons: Vec<Polygon>,
     nvp: usize,
     maximum_polygons: usize,
+    partial_triangulations: usize,
 }
 impl ContourSet {
     /// Builds the original polygon stage with an explicit Detour-compatible
     /// vertex count (3..=6). Does not build detail triangles or Detour bytes.
-    pub fn build_mesh(mut self, vertices_per_polygon: u8) -> Result<PolyMesh, Error> {
+    pub fn build_mesh(self, vertices_per_polygon: u8) -> Result<PolyMesh, Error> {
+        self.build_mesh_impl(vertices_per_polygon, false)
+    }
+
+    pub fn build_mesh_v53(self, vertices_per_polygon: u8) -> Result<PolyMesh, Error> {
+        self.build_mesh_impl(vertices_per_polygon, true)
+    }
+
+    fn build_mesh_impl(
+        mut self,
+        vertices_per_polygon: u8,
+        allow_partial: bool,
+    ) -> Result<PolyMesh, Error> {
         if !(3..=6).contains(&vertices_per_polygon) {
             return Err(Error::Mesh);
         }
@@ -209,6 +226,7 @@ impl ContourSet {
             polygons: Vec::new(),
             nvp: usize::from(vertices_per_polygon),
             maximum_polygons,
+            partial_triangulations: 0,
         };
         let mut first = b.filled(4096, NULL)?;
         let mut next = Vec::new();
@@ -218,7 +236,11 @@ impl ContourSet {
             if c.vertices.len() < 3 {
                 continue;
             }
-            let tris = b.triangulate(&c.vertices)?;
+            let (tris, partial) = b.triangulate_v53(&c.vertices)?;
+            if partial && !allow_partial {
+                return Err(Error::Triangulation);
+            }
+            data.partial_triangulations += usize::from(partial);
             let mut indices = Vec::new();
             for v in &c.vertices {
                 let id = b.add_vertex(
@@ -301,6 +323,7 @@ impl ContourSet {
             polygons: data.polygons,
             nvp: vertices_per_polygon,
             maximum_polygons,
+            partial_triangulations: data.partial_triangulations,
         })
     }
 }

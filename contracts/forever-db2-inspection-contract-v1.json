@@ -30,7 +30,8 @@
       "retained_values": 1250000
     },
     "other_declarations_and_builds": "retain the 100000 direct-record, 100000 copy-pair, 100000 parent-entry, and 1000000 retained-value defaults unless another build-specific profile independently admits them",
-    "default_limits_changed": false
+    "default_limits_changed": false,
+    "v26_available_source": "For v26 only, use the authenticated build-70450 available-source route and zero-filled declared encrypted frames; classify partial inputs with structural WDC5/zero-fill validation and exact multi-frame coverage of each TACT extent without decoding rows. Other plans retain complete-file reads."
   },
   "report": {
     "schema": "forever-db2-inspection-contract-v1",
@@ -85,6 +86,7 @@
       "1": "sparse WDC5 record variant; Header.Flags bit 0 set"
     },
     "section_flags": "numeric 0/1 indicating whether the section declares a nonzero TACT key lookup; the TACT value is not emitted",
+    "v26_partial_reason": "For v26 only, classification reason may include partial frame ordinals, partial/TACT section counts, decoded (not archive) offsets and decoded/structural extent sizes; lookups and payload bytes are never emitted",
     "compression_kinds": "sorted unique numeric ColumnMeta CompressionType codes in the strict decoder's accepted range 0..5; each value is read only from the u32 at byte offset +8 of its 24-byte ColumnMeta entry; unknown values are omitted and remain a reader rejection, so this field cannot contain arbitrary payload words",
     "classification_outcomes": [
       "accepted",

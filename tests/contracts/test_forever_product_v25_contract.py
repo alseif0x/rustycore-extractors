@@ -74,6 +74,31 @@ class ProductV25Contract(unittest.TestCase):
         self.assertIn("undeclared partial data", cases["partial-verification"])
         self.assertIn("verify-links", cases["synthetic-map-and-terrain"])
 
+    def test_real_acceptance_is_bounded_and_preserves_open_gates(self):
+        c = self.contract
+        cases = {case["case"]: case["expect"] for case in c["acceptance_matrix"]}
+        self.assertIn("three artifacts / 15,344 bytes", cases["bounded-real-map48"])
+        self.assertIn("3,395 artifacts / 215,670,284 bytes", cases["real-available-terrain"])
+        self.assertIn("3,322 MAPS tiles, 71 tilelists", cases["real-available-terrain"])
+        evidence = c["real_acceptance"]
+        self.assertEqual(evidence["map48"]["files"], 3)
+        self.assertEqual(evidence["map48"]["bytes"], 15344)
+        self.assertEqual(evidence["all_available"]["files"], 3395)
+        self.assertEqual(evidence["all_available"]["bytes"], 215670284)
+        self.assertEqual(evidence["all_available"]["terrain_map_tiles"], 3322)
+        self.assertEqual(evidence["all_available"]["terrain_tile_lists"], 71)
+        self.assertEqual(evidence["partial_map_frames"], 3)
+        self.assertEqual(evidence["partial_map_frame_bytes"], 575)
+        self.assertFalse(evidence["network_attempted"])
+        self.assertTrue(evidence["client_metadata_unchanged"])
+        self.assertTrue(evidence["inputs_unchanged"])
+        self.assertFalse(evidence["decrypted_sections"])
+        self.assertNotIn("real_extraction", c["unqualified_status"])
+        self.assertIn("whole-client extraction or acceptance", c["excluded"])
+        self.assertFalse(c["unqualified_status"]["full_world_coverage"])
+        self.assertFalse(c["unqualified_status"]["runtime_acceptance"])
+        self.assertFalse(c["full_extractor_complete"])
+
 
 if __name__ == "__main__":
     unittest.main()

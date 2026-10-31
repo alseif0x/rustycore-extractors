@@ -8,7 +8,7 @@ use forever_casc::{
     integrity,
     local_store::{
         Error as StoreError, ProductDiagnosticObserver, ProductDiagnosticPhase,
-        ProductDiagnosticRequest, ProductDiagnosticRequestKind,
+        ProductDiagnosticRequest, ProductDiagnosticRequestKind, ProductDiagnosticResource,
     },
     package::Context,
 };
@@ -56,6 +56,7 @@ struct ProductDiagnosticSink {
         Option<&'static str>,
     )>,
     tolerated_absences: [u32; ProductDiagnosticRequestKind::COUNT],
+    resource: Option<ProductDiagnosticResource>,
     finished: bool,
 }
 impl ProductDiagnosticSink {
@@ -131,6 +132,7 @@ impl ProductDiagnosticSink {
             next_ordinal: 0,
             pending: None,
             tolerated_absences: [0; ProductDiagnosticRequestKind::COUNT],
+            resource: None,
             finished: false,
         })
     }
@@ -224,6 +226,94 @@ impl ProductDiagnosticSink {
         let _ = file.flush();
     }
 
+    fn write_resource_limit_once(
+        &mut self,
+        resource: ProductDiagnosticResource,
+        guards_observed: bool,
+    ) {
+        if self.parent.check().is_err() {
+            return;
+        }
+        let json = format!(
+            "{{\"kind\":\"resource_limit\",\"code\":\"collision_policy_limit\",\"guards_observed\":{},\"request_calls\":{},\"reads\":{},\"dependency_requests\":{},\"source_bytes\":{},\"raw_bytes\":{},\"models\":{},\"resident_bytes\":{},\"external_bytes\":{},\"external_source_bytes\":{},\"store_resident_bytes\":{},\"memory_limit\":{},\"tolerated_absences\":{}}}",
+            guards_observed,
+            resource.request_calls,
+            resource.reads,
+            resource.dependency_requests,
+            resource.source_bytes,
+            resource.raw_bytes,
+            resource.models,
+            resource.resident_bytes,
+            resource.external_bytes,
+            resource.external_source_bytes,
+            resource.store_resident_bytes,
+            resource.memory_limit,
+            self.tolerated_absences_json(),
+        );
+        let target = anchors::anchor(self.parent.file()).join(&self.leaf);
+        let Ok(mut file) = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(target)
+        else {
+            return;
+        };
+        let _ = file.write_all(json.as_bytes());
+        let _ = file.write_all(b"\n");
+        let _ = file.flush();
+    }
+
+    fn write_policy_resource_limit_once(
+        &mut self,
+        request: ProductDiagnosticRequest,
+        cause: StoreError,
+        guards_observed: bool,
+        blte_code: Option<&'static str>,
+        resource: ProductDiagnosticResource,
+    ) {
+        if self.parent.check().is_err() {
+            return;
+        }
+        let file_data_id = request
+            .file_data_id
+            .map_or_else(|| "null".to_owned(), |id| id.to_string());
+        let json = format!(
+            "{{\"kind\":\"resource_limit\",\"phase\":\"{}\",\"request_kind\":\"{}\",\"file_data_id\":{},\"ordinal\":{},\"typed_cause\":{},\"code\":\"{}\",\"guards_observed\":{},\"request_calls\":{},\"reads\":{},\"dependency_requests\":{},\"source_bytes\":{},\"raw_bytes\":{},\"models\":{},\"resident_bytes\":{},\"external_bytes\":{},\"external_source_bytes\":{},\"store_resident_bytes\":{},\"memory_limit\":{},\"tolerated_absences\":{}}}",
+            request.phase.name(),
+            request.request_kind.name(),
+            file_data_id,
+            request.ordinal,
+            Self::cause_json(cause, blte_code),
+            cause.code(),
+            guards_observed || matches!(cause, StoreError::InputChanged),
+            resource.request_calls,
+            resource.reads,
+            resource.dependency_requests,
+            resource.source_bytes,
+            resource.raw_bytes,
+            resource.models,
+            resource.resident_bytes,
+            resource.external_bytes,
+            resource.external_source_bytes,
+            resource.store_resident_bytes,
+            resource.memory_limit,
+            self.tolerated_absences_json(),
+        );
+        let target = anchors::anchor(self.parent.file()).join(&self.leaf);
+        let Ok(mut file) = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(target)
+        else {
+            return;
+        };
+        let _ = file.write_all(json.as_bytes());
+        let _ = file.write_all(b"\n");
+        let _ = file.flush();
+    }
+
     fn tolerated_absences_json(&self) -> String {
         let mut json = String::from("{");
         for (index, request_kind) in ProductDiagnosticRequestKind::ALL.iter().enumerate() {
@@ -274,6 +364,12 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
         *count = count.saturating_add(1);
     }
 
+    fn resource_limit(&mut self, resource: ProductDiagnosticResource) {
+        if !self.finished {
+            self.resource = Some(resource);
+        }
+    }
+
     fn source_failure(
         &mut self,
         request: ProductDiagnosticRequest,
@@ -300,16 +396,33 @@ impl ProductDiagnosticObserver for ProductDiagnosticSink {
             return;
         }
         self.finished = true;
-        let Some((request, cause, guards_observed, blte_code)) = self.pending else {
+        if let Some((request, cause, guards_observed, blte_code)) = self.pending
+            && terminal_code == Some(cause.code())
+        {
+            if terminal_code == Some("local_store_policy_limit")
+                && let Some(resource) = self.resource
+            {
+                self.write_policy_resource_limit_once(
+                    request,
+                    cause,
+                    guards_observed || source_guard_changed,
+                    blte_code,
+                    resource,
+                );
+            } else {
+                self.write_once(
+                    request,
+                    cause,
+                    guards_observed || source_guard_changed,
+                    blte_code,
+                );
+            }
             return;
-        };
-        if terminal_code == Some(cause.code()) {
-            self.write_once(
-                request,
-                cause,
-                guards_observed || source_guard_changed,
-                blte_code,
-            );
+        }
+        if terminal_code == Some("collision_policy_limit")
+            && let Some(resource) = self.resource
+        {
+            self.write_resource_limit_once(resource, source_guard_changed);
         }
     }
 }
@@ -622,6 +735,19 @@ mod diagnostic_tests {
             .begin_request(ProductDiagnosticRequestKind::Wdt, Some(1349477))
             .unwrap();
         assert_eq!(request.ordinal, 0);
+        sink.resource_limit(ProductDiagnosticResource {
+            request_calls: 1,
+            reads: 2,
+            dependency_requests: 3,
+            source_bytes: 4,
+            raw_bytes: 5,
+            models: 6,
+            resident_bytes: 7,
+            external_bytes: 8,
+            external_source_bytes: 9,
+            store_resident_bytes: 10,
+            memory_limit: 11,
+        });
         sink.source_failure(
             request,
             StoreError::NoLocalEncoding(CandidateFailures {
@@ -648,6 +774,7 @@ mod diagnostic_tests {
             first,
             "{\"phase\":\"placements\",\"request_kind\":\"wdt\",\"file_data_id\":1349477,\"ordinal\":0,\"typed_cause\":{\"variant\":\"NoLocalEncoding\",\"candidate_failures\":{\"missing\":1,\"incomplete\":2,\"encrypted\":3,\"corrupt\":4,\"unsupported\":5}},\"code\":\"local_store_no_verified_encoding\",\"guards_observed\":false,\"tolerated_absences\":{\"db2_table\":0,\"wdt\":0,\"tile_adt\":0,\"root_m2\":0,\"wmo_root\":0,\"wmo_group\":0,\"child\":0,\"gameobject_model\":1,\"other\":0}}\n"
         );
+        assert!(!first.contains("resource_limit"));
         for forbidden in [
             "client-root",
             "path",
@@ -661,6 +788,108 @@ mod diagnostic_tests {
                 "unexpected diagnostic field {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn resource_limit_finishes_as_a_single_numeric_record() {
+        let lab = Lab::new();
+        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output(), None).unwrap();
+        let request = sink
+            .begin_request(ProductDiagnosticRequestKind::WmoGroup, Some(42))
+            .unwrap();
+        sink.tolerated_absence(request);
+        let resource = ProductDiagnosticResource {
+            request_calls: 11,
+            reads: 12,
+            dependency_requests: 13,
+            source_bytes: 14,
+            raw_bytes: 15,
+            models: 16,
+            resident_bytes: 17,
+            external_bytes: 18,
+            external_source_bytes: 19,
+            store_resident_bytes: 20,
+            memory_limit: 21,
+        };
+        sink.resource_limit(resource);
+        sink.finish(Some("collision_policy_limit"), true);
+        let first = fs::read_to_string(lab.output()).unwrap();
+        assert_eq!(first.lines().count(), 1);
+        assert_eq!(
+            first,
+            concat!(
+                r#"{"kind":"resource_limit","code":"collision_policy_limit","guards_observed":true,"request_calls":11,"reads":12,"dependency_requests":13,"source_bytes":14,"raw_bytes":15,"models":16,"resident_bytes":17,"external_bytes":18,"external_source_bytes":19,"store_resident_bytes":20,"memory_limit":21,"tolerated_absences":{"db2_table":0,"wdt":0,"tile_adt":0,"root_m2":0,"wmo_root":0,"wmo_group":1,"child":0,"gameobject_model":0,"other":0}}"#,
+                "\n"
+            )
+        );
+        for forbidden in ["path", "client", "payload", "source_failure"] {
+            assert!(!first.contains(forbidden));
+        }
+        sink.finish(Some("collision_policy_limit"), true);
+        assert_eq!(fs::read_to_string(lab.output()).unwrap(), first);
+    }
+
+    #[test]
+    fn store_policy_limit_writes_source_and_resource_snapshot_once() {
+        let lab = Lab::new();
+        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output(), None).unwrap();
+        sink.set_phase(ProductDiagnosticPhase::Models);
+        sink.next_ordinal = 7029;
+        let request = sink
+            .begin_request(ProductDiagnosticRequestKind::WmoGroup, Some(7964744))
+            .unwrap();
+        assert_eq!(request.ordinal, 7029);
+        sink.resource_limit(ProductDiagnosticResource {
+            request_calls: 101,
+            reads: 102,
+            dependency_requests: 103,
+            source_bytes: 104,
+            raw_bytes: 105,
+            models: 106,
+            resident_bytes: 107,
+            external_bytes: 108,
+            external_source_bytes: 109,
+            store_resident_bytes: 110,
+            memory_limit: 111,
+        });
+        sink.source_failure(request, StoreError::Limit, true);
+        sink.finish(Some("local_store_policy_limit"), false);
+
+        let first = fs::read_to_string(lab.output()).unwrap();
+        assert_eq!(first.lines().count(), 1);
+        assert_eq!(
+            first,
+            concat!(
+                r#"{"kind":"resource_limit","phase":"models","request_kind":"wmo_group","file_data_id":7964744,"ordinal":7029,"typed_cause":{"variant":"Limit"},"code":"local_store_policy_limit","guards_observed":true,"request_calls":101,"reads":102,"dependency_requests":103,"source_bytes":104,"raw_bytes":105,"models":106,"resident_bytes":107,"external_bytes":108,"external_source_bytes":109,"store_resident_bytes":110,"memory_limit":111,"tolerated_absences":{"db2_table":0,"wdt":0,"tile_adt":0,"root_m2":0,"wmo_root":0,"wmo_group":0,"child":0,"gameobject_model":0,"other":0}}"#,
+                "\n"
+            )
+        );
+        for forbidden in ["path", "client", "payload", "content_key", "encoded_key"] {
+            assert!(!first.contains(forbidden));
+        }
+        sink.finish(Some("local_store_policy_limit"), false);
+        assert_eq!(fs::read_to_string(lab.output()).unwrap(), first);
+    }
+
+    #[test]
+    fn resource_limit_is_not_written_for_other_terminal_codes() {
+        let lab = Lab::new();
+        let mut sink = ProductDiagnosticSink::at_path(&lab.client(), &lab.output(), None).unwrap();
+        sink.resource_limit(ProductDiagnosticResource {
+            request_calls: 1,
+            reads: 2,
+            dependency_requests: 3,
+            source_bytes: 4,
+            raw_bytes: 5,
+            models: 6,
+            resident_bytes: 7,
+            external_bytes: 8,
+            external_source_bytes: 9,
+            store_resident_bytes: 10,
+            memory_limit: 11,
+        });
+        sink.finish(Some("collision_allocation"), false);
+        assert!(!lab.output().exists());
     }
 
     #[test]

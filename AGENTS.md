@@ -71,12 +71,13 @@ The candidate must also retain `THIRD_PARTY_NOTICES.md` and the exact pinned
 Rust standard-library copyright index/license texts under toolchain-notices;
 these are notice documents, without a claim that every listed component links.
 The current source profile is
-`forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13`;
-its explicit v23/shared-consumer source/test/contract/document closure is mandatory.
-V13 has bounded component/real-worker acceptance and matching fresh/offline-rebuild
-archives, 47 packaged CLI cases and a real nine-payload parity run. The selected-navigation
-consumer is merged into RustyCore, but this does not qualify a new extractor archive or establish
-server/full-world acceptance. V12 retains its frozen inputs.
+`forever-seven-crate-linux-product-db2-gt-cameras-available-navigation57-consumer-source-v15`;
+its explicit v23/v56/v57 producer/consumer source, test, contract and redacted-evidence closure is mandatory.
+V15 has available real v57 extraction, 69 planned-map native queries, matching fresh/offline-rebuild
+archives and packaged real `inspect`/`verify`/`verify-links` acceptance. Its frozen archive
+retains earlier pending-status prose. V14 retains its frozen inputs and scoped v56 acceptance.
+V13 retains its frozen inputs, matching fresh/offline-rebuild archives, 47 packaged CLI cases and real nine-payload parity run.
+No profile establishes full server/full-world acceptance. V12 retains its frozen inputs.
 The build
 environment fixes one Cargo job. Qualification belongs to each frozen source
 snapshot, archive and executable; recorded earlier test counts and artifact
@@ -188,59 +189,78 @@ supersedes it. Clean only explicit tool-owned directories.
 - Existing `/home/server/woltk-server-core/Data` is convenient reference material, not final
   proof until its producing extractor version and options are recorded.
 
-## OpenCode orchestration on Joe's workstation (2026-10-04)
+## Kimi Code orchestration on Joe's workstation
 
 The local checkout is `/home/joe/projects/dream/wow/rustycore-extractors`.
 The `/home/server/...` paths above describe the reference-server layout; they are
 not local paths to invent or automatically remap. Workstation generated files
 belong in `/home/joe/projects/dream/wow/rustycore-extractor-work/`.
 
-The project-local OpenCode configuration is `opencode.json`, with profiles in
-`.opencode/agents/`. Start through `.opencode/start` so a private server inherits
-the external Cargo build and temporary paths. See `docs/opencode-orchestration.md`.
+The user-level Kimi model pool is available in this checkout without storing
+provider credentials in the repository. K3.1 Pro High performs all implementation,
+validation and closeout directly with the operator; no subagents or orchestrated
+workers are used. There is one writer for the active version and no project
+launcher; source `tools/environment.sh` and use `tools/checks` for bounded
+validation.
 
-- `orchestrator`: DeepSeek V4.1 Flash; plans and delegates, never implements.
-- `general`: DeepSeek V4 Pro; architecture and compatibility contracts, read-only.
-- `scout`: DeepSeek V4.1 Flash; focused source discovery, read-only.
-- `builder`: GPT-6 Luna max (OpenAI/Codex account); implementation worker, owns assigned files.
-- `explore`: DeepSeek V4.1 Flash high; independent audit and checks, never implements.
-- `local-coder`: disabled (its Strata provider was removed).
+Use one active product version and one bounded real failure per development
+session. Before implementation, record the dirty files, preserve existing work,
+assign ownership and write down the scope, focused checks, real acceptance gate
+and closeout requirements. Do not change the active branch merely to initialize
+Kimi. Native checks require an explicitly configured, already pinned local
+reference. Formatting unrelated dirty files is prohibited. An explicit
+permission rejection is final for that attempt: report it rather than seek
+another command to bypass it.
 
-DeepSeek agents use OpenCode Go by default. When the Go quota is exhausted the
-operator may switch them to the direct DeepSeek API with
-`.opencode/model-route api` (and back with `go`); no other automatic fallback.
+The development circuit is mandatory:
+
+1. Implement the scoped change with focused tests. Use `tools/checks test`
+   for Cargo test selection and keep iteration out of the full workspace suite.
+2. Run the authorized bounded real attempt as soon as the focused checks pass.
+   Record its actual result, including a new blocker; synthetic success is not
+   real acceptance.
+3. Correct only failures demonstrated within the current scope. Adjacent cases
+   belong to a later version, not to an expanding implementation or review.
+4. When focused and real-attempt evidence is complete, run
+   `tools/checks closeout` once. Any later code change invalidates that run.
+5. Review the final diff directly. Only demonstrated correctness, security,
+   data-integrity or false-acceptance defects reopen the circuit; record minor
+   observations as follow-ups without expanding scope.
+6. Integrate the validated increment under the existing Git authorization and
+   record changed files, checks, real result, omissions and the next concrete
+   blocker. Start the next version with a fresh session.
+
+If the same real blocker shows no new real progress after two complete
+correction cycles, stop the autonomous circuit and report the evidence,
+attempted fixes and remaining decision to the operator. Do not continue with
+more versions, reviews or autonomous goal turns until the operator chooses the
+next scope. A new diagnostic or a later real failure is progress; another
+synthetic-only pass is not.
+
+Do not start the next version until the current real attempt or its blocker is
+documented, closeout is complete and integration is done. Continue directly on
+only the current defect, not across a series of product versions.
+
 Cloud-agent input is restricted to source code, synthetic fixtures and reviewed
-redacted reports. Never place real client assets, keys or secret environment
-values in model context. Starting a session does not automatically start extraction. Explicit bounded live acceptance for the already authorized 70170/70205 task may run through the configured helpers.
-
-Before any task, record the current dirty files, assign non-overlapping ownership,
-and preserve existing work. Do not change the active branch merely to initialize
-these profiles. Use `.opencode/checks` for bounded validation; native checks require
-an explicitly configured, already pinned local reference. Formatting unrelated
-dirty files is prohibited. An explicit permission rejection is final for that
-attempt: report it rather than seek another command to bypass it.
-
-Persistent goal mode is installed globally through OpenCode Goal Plugin 0.1.64.
-The orchestrator owns its lifecycle tools and must create/replace goals only
-when explicitly requested by the user. Preserve the goal across delegation;
-wait for active children, then require concrete acceptance evidence before
-completion. Honor pause/stop and retain every project/data/license boundary.
+redacted reports. Never place real client assets, keys, secret environment values
+or unredacted laboratory data in model context. Starting a session does not
+automatically start extraction. Only explicitly authorized bounded live
+acceptance for the selected build/profile may run through configured helpers.
 
 ### Authorized agent autonomy and local acceptance
 
 The operator explicitly authorized the agents to run the task circuit and the
 commands required for inspection, compilation, testing and local acceptance.
-All profiles now permit task-relevant shell execution and scoped external
-reference/laboratory access. The coordinator may validate directly and still
-delegates implementation; do not ask the operator to execute available
-commands or paste reference metadata. This does not authorize publishing,
-client-data exposure, changing the task scope or discarding other work.
+The coordinator may validate directly and delegates substantial implementation;
+do not ask the operator to execute available commands or paste reference
+metadata. This does not authorize publishing, client-data exposure, changing
+the task scope or discarding other work.
 
-The helpers automatically select the pinned local reference and existing
-OpenSSL development headers. `checks live` enables the local CLI tests;
-`checks live-extract` executes the bounded two-table default plan offline and
-returns only redacted structured evidence. Neither is full extraction.
-Raw real-client outputs and live temporaries use RCE_OPENCODE_RUN_ROOT under
+The helpers automatically select the pinned local reference and existing OpenSSL
+development headers. `tools/checks live` enables the local CLI tests;
+`tools/checks live-extract` executes the bounded two-table default plan offline
+and returns only redacted structured evidence. Neither is full extraction.
+Raw real-client outputs and live temporaries use `RCE_KIMI_RUN_ROOT` under
 `/home/joe/.local/share/rustycore-extractor-work/runs/candidate`, because the
 neighboring laboratory is itself beneath the enclosing wow Git repository.
 Retain previous outputs; reports remain in the usual external laboratory.

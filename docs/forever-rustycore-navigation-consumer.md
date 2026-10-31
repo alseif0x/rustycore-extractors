@@ -232,3 +232,112 @@ the current implementation scope above. The original candidate remains in its
 old detached checkout and receipts. The rebased follow-up needs its own
 committed-candidate qualification; the historical receipts do not automatically
 qualify it. The CI bootstrap remains unpublished.
+
+## V56 multi-map consumer and real native lifecycle — 2026-10-31
+
+`forever_navigation::package_v56` now owns the producer's canonical v56 coverage
+codec and complete-package `verify`/`read_batch` APIs. Verification covers every
+artifact while retaining only the selected global and requested tiles. The
+RustyCore owner has explicit v23/v56 backends with a shared normalized coverage
+view; existing v23 admission is preserved. `spawn_forever_navigation56` uses
+the same checked native ingress, tile lifecycle, query owner and limits.
+
+The public worker suite passes 10/10: nine retained v23 cases plus a v56 case
+with a real Detour fixture, native tile load, complete corridor and clean
+instance/tile unload. The complete navigation library passes 368 tests with 20
+explicit ignores. `read_batch` also verified all 3,137 real package artifacts
+and returned the selected map-0 tile of 102,364 bytes.
+
+The actual RustyCore worker then admitted the unchanged real v56 package,
+loaded that map-0 tile natively and unloaded it with zero final tiles or
+queries. This is bounded real native-worker acceptance, not server activation,
+gameplay, full-world or complete runtime acceptance. The redacted report is
+[acceptance/v56-rustycore-real-20261031.json](acceptance/v56-rustycore-real-20261031.json),
+SHA-256 `79853abdfa0411870d24534fa46fe06aafa581da3f6af77a4d7e4f1ae19159d7`.
+The initial external-harness offline resolution failures are retained; the
+final call used the RustyCore lockfile and no downloads. Clippy attempts remain
+blocked by pre-existing errors in `wow-packet` and `session/mod.rs`; the new
+large-enum warning was corrected and the combined public tests pass afterward.
+
+## All-available-map native lifecycle — 2026-10-31
+
+Four nonoverlapping release shards completed all 69 planned v56 maps with one
+real native tile load and clean unload per map. All returned exit0 with no
+network attempt, covering 69 unique IDs in 1,500.701 seconds. The final binary
+SHA-256 is `8fe3fc893a3844a94c35f4ba1ce19a1150cf4f5c0aa0c1784438530d6178f232`.
+The initial serial attempt was stopped before producing results and retained.
+This accepts native resource lifecycle for the complete available planned-map
+set. It does not accept the two ROOT-absent maps, prior source/geometry
+omissions, server activation, gameplay or full-world completion. Report:
+[acceptance/v56-rustycore-world-20261031.json](acceptance/v56-rustycore-world-20261031.json),
+SHA-256 `1af43203b63dc710b62fc2dfe6243c9f7b3324305ea7e22f666e8e457d254c24`.
+
+## Forever server resource admission — 2026-10-31
+
+`forever-world-server` now admits an explicit v56 package and PLAN into its
+`Runtime`, preserving the native worker without enabling gameplay. The
+synthetic PLAN-binding test passes and the real package admission completed in
+207.86 seconds. Compiling SFMT.c into its consumer's static library resolved
+the retained native-link failure. The broader suite passed 98 tests, with one
+pre-existing NaN comparison failure in `spells/tests/dependencies.rs` and one
+explicit ignore. Report:
+[acceptance/v56-forever-runtime-20261031.json](acceptance/v56-forever-runtime-20261031.json),
+SHA-256 `80222c7f93177610b51d9f4d341772767dd2bace32ccbb961bc7f77269db65e0`.
+This accepts verified server-resource startup only, not gameplay or complete
+world/runtime.
+
+## Real Detour corridors and vertical-bounds limit — 2026-10-31
+
+The real RustyCore worker completed a ground query on map-0 tile 25/43 with
+Detour success status `1073741824`, a two-polygon corridor and clean unload;
+the network trace is empty. This goes beyond resource admission but remains a
+bounded query, not gameplay or available-world pathfinding acceptance.
+
+The initial water tile 20/35 exposed a producer limit: all 677 vertices were
+above its zero vertical header, so ordinary nearest-poly queries returned no
+endpoint. A map-0 audit found 270 invalid tiles among 736, including 253 with
+all vertices outside and 246 zero-range headers. V57's explicit generated-
+detail bounds option fixed that tile without changing vertex bytes; its native
+water query then succeeded with a two-polygon corridor. V56 behavior and its
+accepted package are unchanged. An independent audit found 1,309 invalid
+tiles among 3,067 in that package. At that bounded checkpoint, full v57
+extraction and verification remained open. The amended runtime report is
+[acceptance/v56-forever-runtime-20261031.json](acceptance/v56-forever-runtime-20261031.json),
+SHA-256 `80222c7f93177610b51d9f4d341772767dd2bace32ccbb961bc7f77269db65e0`.
+The bounded v57 generation/query report is
+[acceptance/v57-vertical-bounds-20261031.json](acceptance/v57-vertical-bounds-20261031.json),
+SHA-256 `1db450c2a469d29acd9919f4892d78551b86e8ecb1b55e17765c2f697b23d253`.
+
+## V57 consumer backend and runtime selection — 2026-10-31
+
+RustyCore now has an explicit v57 backend using the new `package_v57` reader.
+It covers verified startup, selected-map identity, bounded tile reads, native
+load/query/unload and rejection of a v56 expected identity against a v57
+package. The complete worker suite passes 11/11, preserving v23 and v56 cases.
+
+`forever-world-server` selects v56 or v57 only from the exact first PLAN line;
+`--ack-available-navigation57` is an explicit opt-in alongside the retained
+v56 option. Synthetic runtime admission passes 2/2. The real v57 package now
+passes complete extraction verification, including zero vertical-bounds
+failures across 3,067 tiles, and a bounded native worker query with clean
+unload. Reports:
+[acceptance/v57-available-navigation-real-20261031.json](acceptance/v57-available-navigation-real-20261031.json),
+SHA-256 `ca188d075f56157ee1281c027f14b615fe5bcab6a8b9ef1674016f1708466cfe`, and
+[acceptance/v57-rustycore-real-20261031.json](acceptance/v57-rustycore-real-20261031.json),
+SHA-256 `32e39189ac30225ff033f7ac1ab076bb32894abd3c5e5b7d0487fac45492ce6d`.
+The all-planned-map campaign now completes 69 real native queries in 69 unique
+maps with 78 tile load/unload cycles and empty final workers. Maps 25, 29 and 42
+require four-tile cross-boundary queries; the other 66 use internal polygon
+pairs. Report:
+[acceptance/v57-rustycore-world-20261031.json](acceptance/v57-rustycore-world-20261031.json),
+SHA-256 `5ec61a01e6ee951d9035cfa6b50c5941a304f446a128c06ec7b3cce6322c15af`.
+This accepts one real Detour query per available planned map, not every-tile
+pathfinding, full-world or gameplay completion. The world-server navigation
+loader also accepts the real package in 215.13 seconds. Report:
+[acceptance/v57-forever-runtime-20261031.json](acceptance/v57-forever-runtime-20261031.json),
+SHA-256 `12db752453b8d9dbfd745066a28456e02039ccf743fb70209d7a9b748b01d6ee`.
+This is resource admission, not a listener/full server bootstrap. A separate
+full-bootstrap attempt rejected the incomplete item-resource directory and did
+not enable gameplay. The reproducible v15 distribution and its real packaged
+CLI verification are recorded in
+[the distribution guide](forever-distribution.md#available-navigation57-consumer-source-profile-v15--2026-10-31).

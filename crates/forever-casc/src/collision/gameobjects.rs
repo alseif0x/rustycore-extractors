@@ -7,13 +7,16 @@
 //! This explicit-FDID profile reads the whole GameObjectDisplayInfo table, then
 //! visits its direct rows in physical order. Zero FDIDs cause no acquisition;
 //! copies are validated but never replayed. Only models with collision RAW enter
-//! both complete lists. Texture, M2 NoCollision and WMO DoodadOnly remain
-//! per-ordinal outcomes. Every acquisition/decoding/limit error rejects startup.
-//! Native FILE-name-first routing, model publication and runtime are not implied.
+//! both complete lists. Texture, M2 NoCollision, WMO DoodadOnly and a Linux-only
+//! encrypted-unavailable outcome remain per-ordinal. That outcome requires strict
+//! complete-span framing, outer-wrapper checks and a matching EKey; encrypted
+//! plaintext is not authenticated. Other acquisition, decoding and limit errors
+//! reject startup. Native FILE-name-first routing, model publication and runtime
+//! are not implied.
 //!
 //! Startup keeps its collector tied to the same LocalStore. A consuming lookup
-//! transition retains the existing cache, including geometry and omission
-//! outcomes made with empty liquid tables. Later lookups affect only new models.
+//! transition retains the existing cache, including geometry and declared-outcome
+//! facts made with empty liquid tables. Later lookups affect only new models.
 //! The caller's lookup storage is excluded from the collector's budget, as in
 //! the collector API; caller-owned allocations must be budgeted separately.
 //!
@@ -28,6 +31,8 @@
 //! not instrumented by the DB2 decoder. No end-to-end hard-heap or RSS claim is
 //! made. On return the allowance becomes actual snapshot capacities; capacities
 //! are released only after their owned buffers are dropped or transferred.
+//! Missing-root and encrypted-unavailable ID lists are independent, sorted,
+//! unique sets; their row counters continue to count every physical GODI row.
 
 use super::{
     Class, Extraction, Extractor, Facts, GameObjectOutcome, Model, ModelHandle, SourceFacts, Status,
@@ -78,7 +83,10 @@ impl Default for Limits {
 }
 impl Limits {
     #[cfg(target_os = "linux")]
-    fn validate_resources(self, profile: super::resources::Profile) -> Result<(), Error> {
+    pub(in crate::collision) fn validate_resources(
+        self,
+        profile: super::resources::Profile,
+    ) -> Result<(), Error> {
         let cap = profile.startup_limits();
         if self.max_candidate_requests > cap.max_candidate_requests {
             return Err(Error::InvalidLimits);
@@ -175,6 +183,8 @@ pub enum Outcome {
     Collision(ModelHandle),
     M2NoCollision(ModelHandle),
     WmoDoodadOnly(ModelHandle),
+    MissingRoot,
+    EncryptedUnavailable,
 }
 pub struct RowOutcome {
     ordinal: usize,
@@ -221,7 +231,8 @@ pub struct Stats {
     pub m2_no_collision: usize,
     pub wmo_doodad_only: usize,
     pub collision_rows: usize,
-    /// Actual capacities of the returned outcome vector and both lists.
+    pub encrypted_unavailable_rows: usize,
+    /// Actual capacities of returned GameObject outcomes, omission lists, and generated lists.
     pub resident_bytes: usize,
     /// Collector storage plus this Data's heap at successful startup; excludes
     /// the LocalStore resident index and caller-owned later lookup storage.
@@ -234,6 +245,7 @@ pub struct Data {
     lists: gameobject_models::Lists,
     stats: Stats,
     startup_facts: Facts,
+    encrypted_unavailable: Vec<u32>,
 }
 impl Data {
     pub const fn source(&self) -> &SourceFacts {
@@ -241,6 +253,9 @@ impl Data {
     }
     pub fn outcomes(&self) -> &[RowOutcome] {
         &self.outcomes
+    }
+    pub fn encrypted_unavailable(&self) -> &[u32] {
+        &self.encrypted_unavailable
     }
     pub const fn lists(&self) -> &gameobject_models::Lists {
         &self.lists
@@ -256,11 +271,18 @@ impl Data {
 pub type Startup<'store> = Context<'store, 'static, EmptyLookup>;
 pub struct Context<'store, 'lookup, L: LiquidLookup + ?Sized> {
     data: Data,
+    missing_root: Vec<u32>,
     collector: Extractor<'store, 'lookup, L>,
 }
 impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
     pub const fn data(&self) -> &Data {
         &self.data
+    }
+    pub fn missing_root(&self) -> &[u32] {
+        &self.missing_root
+    }
+    pub fn encrypted_unavailable(&self) -> &[u32] {
+        self.data.encrypted_unavailable()
     }
     pub fn model(&self, handle: ModelHandle) -> Option<&Model> {
         self.collector.model(handle)
@@ -270,13 +292,14 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
         &mut self.collector
     }
     #[cfg(target_os = "linux")]
-    pub(super) fn into_engine_parts(self) -> (EngineData, Extractor<'store, 'lookup, L>) {
+    pub(super) fn into_engine_parts(self) -> (EngineData, Vec<u32>, Extractor<'store, 'lookup, L>) {
         let Data {
             source: _,
             outcomes,
             lists,
             stats,
             startup_facts,
+            encrypted_unavailable,
         } = self.data;
         (
             EngineData {
@@ -284,7 +307,9 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
                 lists,
                 stats,
                 startup_facts,
+                encrypted_unavailable,
             },
+            self.missing_root,
             self.collector,
         )
     }
@@ -294,6 +319,7 @@ impl<'store, 'lookup, L: LiquidLookup + ?Sized> Context<'store, 'lookup, L> {
     ) -> Result<Context<'store, 'next, N>, Error> {
         Ok(Context {
             data: self.data,
+            missing_root: self.missing_root,
             collector: self
                 .collector
                 .with_lookup(lookup)
@@ -373,15 +399,39 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
     collector
         .release_external(copy_capacity)
         .map_err(Error::Collision)?;
-    let (outcomes, stats) =
-        collect_direct(&mut collector, &direct, copy_records, allowance, limits)?;
+    let DirectRows {
+        outcomes,
+        stats,
+        missing_root,
+        encrypted_unavailable,
+    } = collect_direct(
+        &mut collector,
+        &direct,
+        copy_records,
+        allowance,
+        limits,
+        false,
+        false,
+    )?;
     let direct_capacity = capacity(&direct)?;
     drop(direct);
     collector
         .release_external(direct_capacity)
         .map_err(Error::Collision)?;
 
-    let engine = finish_lists(&mut collector, outcomes, stats, limits)?;
+    let missing_root_capacity = capacity(&missing_root)?;
+    let mut engine = finish_lists(
+        &mut collector,
+        outcomes,
+        stats,
+        limits,
+        encrypted_unavailable,
+    )?;
+    engine.stats.resident_bytes = engine
+        .stats
+        .resident_bytes
+        .checked_add(missing_root_capacity)
+        .ok_or(Error::Limit)?;
     Ok(Context {
         data: Data {
             source,
@@ -389,7 +439,9 @@ pub fn extract_startup_fdid(store: &mut LocalStore, limits: Limits) -> Result<St
             lists: engine.lists,
             stats: engine.stats,
             startup_facts: engine.startup_facts,
+            encrypted_unavailable: engine.encrypted_unavailable,
         },
+        missing_root,
         collector,
     })
 }
@@ -406,7 +458,13 @@ pub fn extract_startup_without_godi(
     limits.validate()?;
     let mut collector =
         Extractor::new(store, &EMPTY_LOOKUP, limits.collision).map_err(Error::Collision)?;
-    let engine = finish_lists(&mut collector, Vec::new(), Stats::default(), limits)?;
+    let engine = finish_lists(
+        &mut collector,
+        Vec::new(),
+        Stats::default(),
+        limits,
+        Vec::new(),
+    )?;
     Ok(Context {
         data: Data {
             source: SourceFacts {
@@ -419,7 +477,45 @@ pub fn extract_startup_without_godi(
             lists: engine.lists,
             stats: engine.stats,
             startup_facts: engine.startup_facts,
+            encrypted_unavailable: engine.encrypted_unavailable,
         },
+        missing_root: Vec::new(),
+        collector,
+    })
+}
+
+#[cfg(target_os = "linux")]
+pub fn extract_startup_without_godi_with_resources(
+    store: &mut LocalStore,
+    limits: Limits,
+    profile: super::resources::Profile,
+) -> Result<Startup<'_>, Error> {
+    limits.validate_resources(profile)?;
+    let mut collector =
+        Extractor::new_with_resources(store, &EMPTY_LOOKUP, limits.collision, profile)
+            .map_err(Error::Collision)?;
+    let engine = finish_lists(
+        &mut collector,
+        Vec::new(),
+        Stats::default(),
+        limits,
+        Vec::new(),
+    )?;
+    Ok(Context {
+        data: Data {
+            source: SourceFacts {
+                id: 0,
+                key: [0; 16],
+                bytes: 0,
+                first_magic: None,
+            },
+            outcomes: engine.outcomes,
+            lists: engine.lists,
+            stats: engine.stats,
+            startup_facts: engine.startup_facts,
+            encrypted_unavailable: engine.encrypted_unavailable,
+        },
+        missing_root: Vec::new(),
         collector,
     })
 }
@@ -429,6 +525,13 @@ pub(super) struct EngineData {
     pub(super) lists: gameobject_models::Lists,
     pub(super) stats: Stats,
     pub(super) startup_facts: Facts,
+    pub(super) encrypted_unavailable: Vec<u32>,
+}
+pub(super) struct DirectRows {
+    pub(super) outcomes: Vec<RowOutcome>,
+    pub(super) stats: Stats,
+    pub(super) missing_root: Vec<u32>,
+    pub(super) encrypted_unavailable: Vec<u32>,
 }
 pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
     collector: &mut Extractor<'_, '_, L>,
@@ -436,7 +539,9 @@ pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
     copy_records: usize,
     allowance: usize,
     limits: Limits,
-) -> Result<(Vec<RowOutcome>, Stats), Error> {
+    prove_root_absent: bool,
+    encrypted_unavailable_profile: bool,
+) -> Result<DirectRows, Error> {
     if direct.len() > limits.max_direct_rows || copy_records > limits.max_copy_records {
         return Err(Error::Limit);
     }
@@ -448,6 +553,12 @@ pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
         return Err(Error::Limit);
     }
     let mut outcomes = reserved_vec(collector, direct.len())?;
+    let mut missing_root = if prove_root_absent {
+        reserved_vec(collector, limits.max_candidate_requests)?
+    } else {
+        Vec::new()
+    };
+    let mut encrypted_unavailable = Vec::new();
     let mut stats = Stats {
         direct_rows: direct.len(),
         copy_records,
@@ -460,15 +571,82 @@ pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
             stats.zero_fdids += 1;
             Outcome::ZeroFileDataId
         } else {
-            match collector
-                .extract_gameobject_fdid(row.fields.file_data_id)
-                .map_err(Error::Collision)?
-            {
-                GameObjectOutcome::Texture => {
+            let acquired = if encrypted_unavailable_profile {
+                #[cfg(target_os = "linux")]
+                {
+                    collector
+                        .extract_gameobject_fdid_with_root_or_encrypted_unavailable(
+                            row.fields.file_data_id,
+                        )
+                        .map_err(Error::Collision)?
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    return Err(Error::State);
+                }
+            } else if prove_root_absent {
+                collector
+                    .extract_gameobject_fdid_with_root_absence(row.fields.file_data_id)
+                    .map_err(Error::Collision)?
+            } else {
+                Some(
+                    collector
+                        .extract_gameobject_fdid(row.fields.file_data_id)
+                        .map_err(Error::Collision)?,
+                )
+            };
+            match acquired {
+                None => {
+                    if missing_root.len() >= limits.max_candidate_requests {
+                        return Err(Error::Limit);
+                    }
+                    missing_root.try_reserve(1).map_err(|_| Error::Allocation)?;
+                    missing_root.push(row.fields.file_data_id);
+                    Outcome::MissingRoot
+                }
+                Some(GameObjectOutcome::Texture) => {
                     stats.textures += 1;
                     Outcome::Texture
                 }
-                GameObjectOutcome::Model(handle) => {
+                Some(GameObjectOutcome::EncryptedUnavailable) => {
+                    if !encrypted_unavailable_profile
+                        || encrypted_unavailable.len() >= limits.max_candidate_requests
+                    {
+                        return Err(Error::State);
+                    }
+                    if encrypted_unavailable.len() == encrypted_unavailable.capacity() {
+                        let required = encrypted_unavailable
+                            .len()
+                            .checked_add(1)
+                            .ok_or(Error::Limit)?;
+                        let old_capacity = capacity(&encrypted_unavailable)?;
+                        let requested =
+                            required.checked_mul(size_of::<u32>()).ok_or(Error::Limit)?;
+                        collector
+                            .reserve_external(
+                                requested.checked_sub(old_capacity).ok_or(Error::State)?,
+                            )
+                            .map_err(Error::Collision)?;
+                        encrypted_unavailable
+                            .try_reserve_exact(1)
+                            .map_err(|_| Error::Allocation)?;
+                        let actual = capacity(&encrypted_unavailable)?;
+                        if let Err(error) = collector
+                            .reserve_external(actual.checked_sub(requested).ok_or(Error::State)?)
+                        {
+                            collector
+                                .release_external(
+                                    requested.checked_sub(old_capacity).ok_or(Error::State)?,
+                                )
+                                .map_err(Error::Collision)?;
+                            return Err(Error::Collision(error));
+                        }
+                    }
+                    encrypted_unavailable.push(row.fields.file_data_id);
+                    stats.encrypted_unavailable_rows += 1;
+                    Outcome::EncryptedUnavailable
+                }
+                Some(GameObjectOutcome::Model(handle)) => {
                     let model = collector.model(handle).ok_or(Error::State)?;
                     match (model.class(), model.status(), model.raw().is_some()) {
                         (_, Status::Collision, true) => {
@@ -495,13 +673,21 @@ pub(super) fn collect_direct<L: LiquidLookup + ?Sized>(
             outcome,
         });
     }
-    Ok((outcomes, stats))
+    encrypted_unavailable.sort_unstable();
+    encrypted_unavailable.dedup();
+    Ok(DirectRows {
+        outcomes,
+        stats,
+        missing_root,
+        encrypted_unavailable,
+    })
 }
 pub(super) fn finish_lists<L: LiquidLookup + ?Sized>(
     collector: &mut Extractor<'_, '_, L>,
     outcomes: Vec<RowOutcome>,
     mut stats: Stats,
     limits: Limits,
+    encrypted_unavailable: Vec<u32>,
 ) -> Result<EngineData, Error> {
     // Charge descriptor storage before borrowing models, then delegate both
     // list allocations and bounds scratch under the remaining admitted budget.
@@ -541,6 +727,7 @@ pub(super) fn finish_lists<L: LiquidLookup + ?Sized>(
         .release_external(row_capacity)
         .map_err(Error::Collision)?;
     let lists_capacity = lists.stats().resident_bytes;
+    let encrypted_unavailable_capacity = capacity(&encrypted_unavailable)?;
     if lists_capacity > list_allowance {
         return Err(Error::State);
     }
@@ -549,6 +736,7 @@ pub(super) fn finish_lists<L: LiquidLookup + ?Sized>(
         .map_err(Error::Collision)?;
     stats.resident_bytes = capacity(&outcomes)?
         .checked_add(lists_capacity)
+        .and_then(|bytes| bytes.checked_add(encrypted_unavailable_capacity))
         .ok_or(Error::Limit)?;
     stats.collector_retained_bytes = collector.retained_bytes();
     collector.verify().map_err(Error::Collision)?;
@@ -558,6 +746,7 @@ pub(super) fn finish_lists<L: LiquidLookup + ?Sized>(
         lists,
         stats,
         startup_facts,
+        encrypted_unavailable,
     })
 }
 

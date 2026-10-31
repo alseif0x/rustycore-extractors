@@ -4,8 +4,14 @@
 //! Reads complete local files and converts them now; no files are published.
 //! All outputs stay owned until successful finish. Names require the existing
 //! explicit LocalStore opt-in, and the legacy acquisition profile is unchanged.
-//! Every source acquisition is complete and verified; missing doodads, groups,
+//! Source acquisitions are complete and verified; missing doodads, groups,
 //! malformed data, ambiguous basename aliases and budgets fail the collector.
+//! Only opt-in WDT and WMO-doodad paths can instead declare a guarded raw ROOT
+//! absence. Versioned WMO policies can additionally declare intrinsically empty
+//! geometry, valid source geometry skipped by selection, or FDID-backed geometry
+//! whose triangles are all filtered. V49 can declare a root-present FDID only after
+//! strict complete-span BLTE framing and E-wrapper validation; plaintext remains
+//! unavailable and unauthenticated. These declarations are distinct and opt-in.
 //! An M2 without collision is retained explicitly but cannot validate a doodad.
 //! A WMO without raw geometry requires both sets and valid group references.
 //! The caller supplies liquid lookups; this module never loads DB2 implicitly.
@@ -55,6 +61,10 @@ pub enum InputRef<'a> {
     FileDataId(u32),
     LogicalName(&'a [u8]),
 }
+pub(in crate::collision) enum WdtRead {
+    Present(Vec<u8>, SourceFacts),
+    RootAbsent(u32),
+}
 fn diagnostic_kind_for_input(input: InputRef<'_>) -> local_store::ProductDiagnosticRequestKind {
     match input {
         InputRef::FileDataId(id)
@@ -81,11 +91,14 @@ impl ModelHandle {
         self.0
     }
 }
-/// Classification of a complete GameObject source. Textures create no model.
+/// Classification of an acquired GameObject source. Missing-root and
+/// encrypted-unavailable inputs are reported separately by startup outcomes.
+/// Textures create no model.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GameObjectOutcome {
     Model(ModelHandle),
     Texture,
+    EncryptedUnavailable,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,6 +106,22 @@ pub enum Status {
     Collision,
     NoCollision,
     DoodadOnly,
+    Vacated,
+}
+
+pub(in crate::collision) struct OmissionOptions<'a> {
+    pub missing_model: run::MissingModelPolicy,
+    pub missing_wmo: run::MissingWmoPolicy,
+    pub missing_m2: &'a mut Vec<u32>,
+    pub missing_m2_limit: usize,
+    pub missing_wmo_ids: &'a mut Vec<u32>,
+    pub missing_wmo_limit: usize,
+    pub empty_wmo_ids: &'a mut Vec<u32>,
+    pub empty_wmo_limit: usize,
+    pub unselected_wmo_ids: &'a mut Vec<u32>,
+    pub unselected_wmo_limit: usize,
+    pub material_filtered_wmo_ids: &'a mut Vec<u32>,
+    pub material_filtered_wmo_limit: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,23 +177,34 @@ impl Limits {
         let d = Self::default();
         let mut bounded = self;
         bounded.max_reads = bounded.max_reads.min(d.max_reads);
-        bounded.max_models = bounded.max_models.min(d.max_models);
+        if !profile.model_heavy() {
+            bounded.max_models = bounded.max_models.min(d.max_models);
+        }
         bounded.max_requests = bounded.max_requests.min(d.max_requests);
         bounded.max_dependency_requests = bounded
             .max_dependency_requests
             .min(d.max_dependency_requests);
-        bounded.max_source_bytes = bounded.max_source_bytes.min(d.max_source_bytes);
+        if !profile.model_heavy() {
+            bounded.max_source_bytes = bounded.max_source_bytes.min(d.max_source_bytes);
+        }
         bounded.max_raw_bytes = bounded.max_raw_bytes.min(d.max_raw_bytes);
-        bounded.validate()
+        if profile.model_heavy() {
+            bounded.validate_with_limits(cap.max_models, cap.max_source_bytes)
+        } else {
+            bounded.validate()
+        }
     }
     fn validate(self) -> Result<(), Error> {
+        self.validate_with_limits(Self::default().max_models, Self::default().max_source_bytes)
+    }
+    fn validate_with_limits(self, max_models: usize, max_source_bytes: usize) -> Result<(), Error> {
         let d = Self::default();
         if self.max_file_bytes > d.max_file_bytes
             || self.max_reads > d.max_reads
-            || self.max_models > d.max_models
+            || self.max_models > max_models
             || self.max_requests > d.max_requests
             || self.max_dependency_requests > d.max_dependency_requests
-            || self.max_source_bytes > d.max_source_bytes
+            || self.max_source_bytes > max_source_bytes
             || self.max_raw_bytes > d.max_raw_bytes
             || self.max_memory_bytes > d.max_memory_bytes
             || self.m2.max_input_bytes > d.m2.max_input_bytes
@@ -313,6 +353,15 @@ pub struct NameBinding {
     pub name_index: u32,
     pub model: ModelHandle,
 }
+type WmoGeometry = (doodads::Selection, Option<Vec<u8>>, bool, bool, bool);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(in crate::collision) enum GeometryInspection {
+    None,
+    Unselected,
+    MaterialFiltered,
+}
+
 pub struct WmoMetadata {
     root_bytes: Vec<u8>,
     bindings: Vec<NameBinding>,
@@ -430,6 +479,8 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
     store: &'s mut LocalStore,
     lookup: &'l L,
     limits: Limits,
+    #[cfg(target_os = "linux")]
+    resource_profile: resources::Profile,
     models: Vec<Model>,
     requests: Vec<ModelHandle>,
     live: usize,
@@ -442,6 +493,7 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
     source_bytes: usize,
     raw_bytes: usize,
     failed: Option<Error>,
+    diagnostic_resource_recorded: bool,
     #[cfg(target_os = "linux")]
     payloads: Option<payload::Repository>,
     // Compatible cache lives in its separate owner but participates in this
@@ -452,12 +504,67 @@ pub struct Extractor<'s, 'l, L: LiquidLookup + ?Sized> {
 impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub fn new(store: &'s mut LocalStore, lookup: &'l L, limits: Limits) -> Result<Self, Error> {
         limits.validate()?;
-        Self::new_validated(store, lookup, limits)
+        #[cfg(target_os = "linux")]
+        {
+            Self::new_validated(store, lookup, limits, resources::Profile::BoundedV1)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            Self::new_validated(store, lookup, limits)
+        }
     }
+    #[cfg(target_os = "linux")]
+    pub fn new_with_resources(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        profile: resources::Profile,
+    ) -> Result<Self, Error> {
+        if !matches!(
+            profile,
+            resources::Profile::BoundedV1
+                | resources::Profile::RequestHeavyV1
+                | resources::Profile::DependencyHeavyV1
+                | resources::Profile::SourceHeavyV1
+                | resources::Profile::ReadHeavyV1
+                | resources::Profile::ModelHeavyV1
+                | resources::Profile::SourceExpandedV1
+                | resources::Profile::ModelOutputExpandedV1
+                | resources::Profile::ModelBytesExpandedV1
+                | resources::Profile::SourceExpandedV2
+                | resources::Profile::PlacementExpandedV1
+                | resources::Profile::AssemblyExpandedV1
+                | resources::Profile::GameObjectExpandedV1
+                | resources::Profile::GameObjectMissingRootExpandedV1
+                | resources::Profile::GameObjectRootAndEncryptedUnavailableExpandedV1
+        ) {
+            return Err(Error::InvalidLimits);
+        }
+        limits.validate_resources(profile)?;
+        Self::new_validated(store, lookup, limits, profile)
+    }
+    #[cfg(target_os = "linux")]
     fn new_validated(
         store: &'s mut LocalStore,
         lookup: &'l L,
         limits: Limits,
+        resource_profile: resources::Profile,
+    ) -> Result<Self, Error> {
+        Self::new_validated_inner(store, lookup, limits, resource_profile)
+    }
+    #[cfg(not(target_os = "linux"))]
+    fn new_validated(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+    ) -> Result<Self, Error> {
+        Self::new_validated_inner(store, lookup, limits)
+    }
+    fn new_validated_inner(
+        store: &'s mut LocalStore,
+        lookup: &'l L,
+        limits: Limits,
+        #[cfg(target_os = "linux")] resource_profile: resources::Profile,
     ) -> Result<Self, Error> {
         if store.stats().resident_bytes > limits.max_memory_bytes {
             return Err(Error::Limit);
@@ -467,6 +574,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             store,
             lookup,
             limits,
+            #[cfg(target_os = "linux")]
+            resource_profile,
             models: Vec::new(),
             requests: Vec::new(),
             live: 0,
@@ -479,6 +588,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: 0,
             raw_bytes: 0,
             failed: None,
+            diagnostic_resource_recorded: false,
             #[cfg(target_os = "linux")]
             payloads: None,
             #[cfg(target_os = "linux")]
@@ -488,13 +598,84 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     /// Acquire and convert now, retaining everything internally. After any
     /// error, subsequent calls return that same error without further reads.
     pub fn extract(&mut self, request: ModelRequest<'_>) -> Result<ModelHandle, Error> {
+        let diagnostic_kind = match request {
+            ModelRequest::M2(input) | ModelRequest::Wmo(input) => diagnostic_kind_for_input(input),
+        };
+        self.extract_with_request_kind(request, diagnostic_kind)
+    }
+    pub(in crate::collision) fn extract_placement(
+        &mut self,
+        request: ModelRequest<'_>,
+    ) -> Result<ModelHandle, Error> {
+        let diagnostic_kind = match request {
+            ModelRequest::M2(_) => local_store::ProductDiagnosticRequestKind::RootM2,
+            ModelRequest::Wmo(_) => local_store::ProductDiagnosticRequestKind::WmoRoot,
+        };
+        self.extract_with_request_kind(request, diagnostic_kind)
+    }
+    pub(in crate::collision) fn extract_placement_with_omissions(
+        &mut self,
+        request: ModelRequest<'_>,
+        omissions: &mut OmissionOptions<'_>,
+    ) -> Result<ModelHandle, Error> {
+        let diagnostic_kind = match request {
+            ModelRequest::M2(_) => local_store::ProductDiagnosticRequestKind::RootM2,
+            ModelRequest::Wmo(_) => local_store::ProductDiagnosticRequestKind::WmoRoot,
+        };
         let result = (|| {
             self.begin_request()?;
             let (class, input) = match request {
                 ModelRequest::M2(r) => (Class::M2, r),
                 ModelRequest::Wmo(r) => (Class::Wmo, r),
             };
-            let handle = self.obtain(class, input)?;
+            let handle = self.obtain_with_omissions(class, input, diagnostic_kind, omissions)?;
+            self.record_request(handle)?;
+            Ok(handle)
+        })();
+        self.remember(result)
+    }
+    pub(in crate::collision) fn declare_root_absent_wmo_doodad_m2(
+        &mut self,
+        id: u32,
+    ) -> Result<bool, Error> {
+        let result = (|| {
+            self.ready()?;
+            names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
+            let diagnostic_request = self.store.begin_product_diagnostic_request(
+                local_store::ProductDiagnosticRequestKind::Child,
+                Some(id),
+            );
+            let absent = match self.store.root_has_no_rows(id) {
+                Ok(absent) => absent,
+                Err(error) => {
+                    self.store.record_product_diagnostic_failure(
+                        diagnostic_request,
+                        error,
+                        matches!(error, local_store::Error::InputChanged),
+                    );
+                    return Err(Error::Store(error));
+                }
+            };
+            if absent {
+                self.store
+                    .record_product_diagnostic_absence(diagnostic_request);
+            }
+            Ok(absent)
+        })();
+        self.remember(result)
+    }
+    fn extract_with_request_kind(
+        &mut self,
+        request: ModelRequest<'_>,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+    ) -> Result<ModelHandle, Error> {
+        let result = (|| {
+            self.begin_request()?;
+            let (class, input) = match request {
+                ModelRequest::M2(r) => (Class::M2, r),
+                ModelRequest::Wmo(r) => (Class::Wmo, r),
+            };
+            let handle = self.obtain(class, input, diagnostic_kind)?;
             self.record_request(handle)?;
             Ok(handle)
         })();
@@ -508,8 +689,39 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     pub fn extract_gameobject_fdid(&mut self, id: u32) -> Result<GameObjectOutcome, Error> {
         let result = (|| {
             self.begin_request()?;
-            let outcome = self.obtain_gameobject(id)?;
+            let outcome = self
+                .obtain_gameobject(id, false, false)?
+                .ok_or(Error::State)?;
             if let GameObjectOutcome::Model(handle) = outcome {
+                self.record_request(handle)?;
+            }
+            Ok(outcome)
+        })();
+        self.remember(result)
+    }
+    pub(in crate::collision) fn extract_gameobject_fdid_with_root_absence(
+        &mut self,
+        id: u32,
+    ) -> Result<Option<GameObjectOutcome>, Error> {
+        let result = (|| {
+            self.begin_request()?;
+            let outcome = self.obtain_gameobject(id, true, false)?;
+            if let Some(GameObjectOutcome::Model(handle)) = outcome {
+                self.record_request(handle)?;
+            }
+            Ok(outcome)
+        })();
+        self.remember(result)
+    }
+    #[cfg(target_os = "linux")]
+    pub(in crate::collision) fn extract_gameobject_fdid_with_root_or_encrypted_unavailable(
+        &mut self,
+        id: u32,
+    ) -> Result<Option<GameObjectOutcome>, Error> {
+        let result = (|| {
+            self.begin_request()?;
+            let outcome = self.obtain_gameobject(id, true, true)?;
+            if let Some(GameObjectOutcome::Model(handle)) = outcome {
                 self.record_request(handle)?;
             }
             Ok(outcome)
@@ -520,6 +732,13 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     /// Dependency requests have their own counter and do not consume this cap.
     pub const fn request_calls(&self) -> usize {
         self.request_calls
+    }
+    pub(crate) const fn model_limit(&self) -> usize {
+        self.limits.max_models
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) const fn resources(&self) -> resources::Profile {
+        self.resource_profile
     }
     #[cfg(target_os = "linux")]
     pub(in crate::collision) fn set_product_diagnostic_phase(
@@ -555,10 +774,33 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         self.failed.map_or(Ok(()), Err)
     }
     fn remember<T>(&mut self, result: Result<T, Error>) -> Result<T, Error> {
-        if let Err(error) = result {
+        if let Err(error) = result
+            && self.failed.is_none()
+        {
+            self.record_product_diagnostic_resource();
             self.failed = Some(error);
         }
         result
+    }
+    pub(in crate::collision) fn record_product_diagnostic_resource(&mut self) {
+        if self.diagnostic_resource_recorded {
+            return;
+        }
+        self.diagnostic_resource_recorded = true;
+        self.store
+            .record_product_diagnostic_resource(local_store::ProductDiagnosticResource {
+                request_calls: self.request_calls,
+                reads: self.reads,
+                dependency_requests: self.dependency_requests,
+                source_bytes: self.source_bytes,
+                raw_bytes: self.raw_bytes,
+                models: self.models.len(),
+                resident_bytes: self.live,
+                external_bytes: self.external,
+                external_source_bytes: self.external_sources,
+                store_resident_bytes: self.store.stats().resident_bytes,
+                memory_limit: self.limits.max_memory_bytes,
+            });
     }
     /// Change only the lookup borrowed for future uncached conversions. The
     /// store borrow, existing raw bytes, handles, budgets and reservations move
@@ -572,6 +814,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             store: self.store,
             lookup,
             limits: self.limits,
+            #[cfg(target_os = "linux")]
+            resource_profile: self.resource_profile,
             models: self.models,
             requests: self.requests,
             live: self.live,
@@ -584,6 +828,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             source_bytes: self.source_bytes,
             raw_bytes: self.raw_bytes,
             failed: self.failed,
+            diagnostic_resource_recorded: self.diagnostic_resource_recorded,
             #[cfg(target_os = "linux")]
             payloads: self.payloads,
             #[cfg(target_os = "linux")]
@@ -609,6 +854,7 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     }
     /// Abort an enclosing operation without replacing an earlier read failure.
     pub(crate) fn abort(&mut self) -> Error {
+        self.record_product_diagnostic_resource();
         *self.failed.get_or_insert(Error::Aborted)
     }
     pub(crate) fn begin_shared_run(&mut self) -> Result<(), Error> {
@@ -725,14 +971,50 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         input: InputRef<'_>,
         cap: usize,
     ) -> Result<(Vec<u8>, SourceFacts), Error> {
+        self.read_source_ref_with_diagnostic(input, cap, diagnostic_kind_for_input(input))
+    }
+    pub(in crate::collision) fn read_source_ref_with_diagnostic(
+        &mut self,
+        input: InputRef<'_>,
+        cap: usize,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+    ) -> Result<(Vec<u8>, SourceFacts), Error> {
         let result = (|| {
             self.ready()?;
             if let InputRef::FileDataId(id) = input {
                 names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
             }
-            let read = self.read_capped(input, cap)?;
+            let read = self
+                .read_capped_policy(input, cap, false, diagnostic_kind)?
+                .ok_or(Error::Store(local_store::Error::MissingFile))?;
             self.external_sources = add(self.external_sources, read.0.capacity())?;
             Ok(read)
+        })();
+        self.remember(result)
+    }
+    pub(in crate::collision) fn read_wdt_with_root_absence(
+        &mut self,
+        id: u32,
+        cap: usize,
+    ) -> Result<WdtRead, Error> {
+        let result = (|| {
+            self.ready()?;
+            names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
+            let read = self.read_capped_policy_impl(
+                InputRef::FileDataId(id),
+                cap,
+                false,
+                local_store::ProductDiagnosticRequestKind::Wdt,
+                true,
+                false,
+            )?;
+            match read {
+                Some((bytes, facts)) => {
+                    self.external_sources = add(self.external_sources, bytes.capacity())?;
+                    Ok(WdtRead::Present(bytes, facts))
+                }
+                None => Ok(WdtRead::RootAbsent(id)),
+            }
         })();
         self.remember(result)
     }
@@ -921,7 +1203,39 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     fn release(&mut self, bytes: usize) {
         self.live -= bytes;
     }
-    fn obtain(&mut self, class: Class, input: InputRef<'_>) -> Result<ModelHandle, Error> {
+    fn obtain(
+        &mut self,
+        class: Class,
+        input: InputRef<'_>,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+    ) -> Result<ModelHandle, Error> {
+        self.obtain_with_omissions(
+            class,
+            input,
+            diagnostic_kind,
+            &mut OmissionOptions {
+                missing_model: run::MissingModelPolicy::Reject,
+                missing_wmo: run::MissingWmoPolicy::Reject,
+                missing_m2: &mut Vec::new(),
+                missing_m2_limit: 0,
+                missing_wmo_ids: &mut Vec::new(),
+                missing_wmo_limit: 0,
+                empty_wmo_ids: &mut Vec::new(),
+                empty_wmo_limit: 0,
+                unselected_wmo_ids: &mut Vec::new(),
+                unselected_wmo_limit: 0,
+                material_filtered_wmo_ids: &mut Vec::new(),
+                material_filtered_wmo_limit: 0,
+            },
+        )
+    }
+    fn obtain_with_omissions(
+        &mut self,
+        class: Class,
+        input: InputRef<'_>,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+        omissions: &mut OmissionOptions<'_>,
+    ) -> Result<ModelHandle, Error> {
         let prepared = names::Prepared::new(input, class)?;
         self.store.verify_unchanged().map_err(Error::Store)?;
         if let Some((index, model)) = self
@@ -948,8 +1262,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             InputRef::LogicalName(prepared.source()),
             InputRef::FileDataId,
         );
-        let (bytes, facts) = self.read(route)?;
-        self.complete_model(handle, bytes, facts)?;
+        let (bytes, facts) = self.read_with_diagnostic(route, diagnostic_kind)?;
+        self.complete_model_with_omissions(handle, bytes, facts, omissions)?;
         Ok(handle)
     }
     fn insert_model(
@@ -1025,16 +1339,54 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         }
         Ok(handle)
     }
+    fn discard_provisional_model(&mut self, handle: ModelHandle) -> Result<(), Error> {
+        if handle.index() + 1 != self.models.len() {
+            return Err(Error::State);
+        }
+        let model = self.models.pop().ok_or(Error::State)?;
+        self.release(model.name.capacity());
+        if let Origin::Name(name) = model.origin {
+            self.release(name.capacity());
+        }
+        Ok(())
+    }
     fn complete_model(
         &mut self,
         handle: ModelHandle,
         bytes: Vec<u8>,
         facts: SourceFacts,
     ) -> Result<(), Error> {
+        self.complete_model_with_omissions(
+            handle,
+            bytes,
+            facts,
+            &mut OmissionOptions {
+                missing_model: run::MissingModelPolicy::Reject,
+                missing_wmo: run::MissingWmoPolicy::Reject,
+                missing_m2: &mut Vec::new(),
+                missing_m2_limit: 0,
+                missing_wmo_ids: &mut Vec::new(),
+                missing_wmo_limit: 0,
+                empty_wmo_ids: &mut Vec::new(),
+                empty_wmo_limit: 0,
+                unselected_wmo_ids: &mut Vec::new(),
+                unselected_wmo_limit: 0,
+                material_filtered_wmo_ids: &mut Vec::new(),
+                material_filtered_wmo_limit: 0,
+            },
+        )
+    }
+    fn complete_model_with_omissions(
+        &mut self,
+        handle: ModelHandle,
+        bytes: Vec<u8>,
+        facts: SourceFacts,
+        omissions: &mut OmissionOptions<'_>,
+    ) -> Result<(), Error> {
         self.models[handle.0].source = Some(facts);
         match self.models[handle.0].class {
             Class::M2 => self.convert_m2(handle, bytes)?,
-            Class::Wmo => self.convert_wmo(handle, bytes)?,
+            Class::Wmo => self.convert_wmo(handle, bytes, omissions)?,
         }
         self.models[handle.0].pending = false;
         #[cfg(target_os = "linux")]
@@ -1051,7 +1403,12 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         }
         Ok(())
     }
-    fn obtain_gameobject(&mut self, id: u32) -> Result<GameObjectOutcome, Error> {
+    fn obtain_gameobject(
+        &mut self,
+        id: u32,
+        prove_root_absent: bool,
+        tolerate_encrypted_unavailable: bool,
+    ) -> Result<Option<GameObjectOutcome>, Error> {
         // FDID names are class-independent; this also applies the existing
         // zero/MAX policy without inventing a logical-name fallback.
         let prepared = names::Prepared::new(InputRef::FileDataId(id), Class::M2)?;
@@ -1069,13 +1426,11 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 return Err(Error::Alias);
             }
             let kind = classify(model.source.as_ref().ok_or(Error::State)?.first_magic)?;
-            return match kind {
-                None => Ok(GameObjectOutcome::Texture),
-                Some(class) if class == model.class => {
-                    Ok(GameObjectOutcome::Model(ModelHandle(index)))
-                }
-                Some(_) => Err(Error::Alias),
-            };
+            return Ok(Some(match kind {
+                None => GameObjectOutcome::Texture,
+                Some(class) if class == model.class => GameObjectOutcome::Model(ModelHandle(index)),
+                Some(_) => return Err(Error::Alias),
+            }));
         }
         #[cfg(target_os = "linux")]
         let provisional = if self.payloads.is_some() {
@@ -1085,22 +1440,38 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         };
         #[cfg(not(target_os = "linux"))]
         let provisional: Option<ModelHandle> = None;
-        let (bytes, facts) = self.read(InputRef::FileDataId(id))?;
+        let acquired = if prove_root_absent {
+            self.read_capped_policy_impl(
+                InputRef::FileDataId(id),
+                self.limits.max_file_bytes,
+                false,
+                local_store::ProductDiagnosticRequestKind::GameObjectModel,
+                true,
+                tolerate_encrypted_unavailable,
+            )?
+        } else {
+            Some(self.read(InputRef::FileDataId(id))?)
+        };
+        let Some((bytes, facts)) = acquired else {
+            if let Some(handle) = provisional {
+                self.discard_provisional_model(handle)?;
+            }
+            return Ok(None);
+        };
+        if tolerate_encrypted_unavailable && facts.id == 0 {
+            if let Some(handle) = provisional {
+                self.discard_provisional_model(handle)?;
+            }
+            return Ok(Some(GameObjectOutcome::EncryptedUnavailable));
+        }
         let Some(class) = classify(facts.first_magic)? else {
             self.release(bytes.capacity());
             if let Some(handle) = provisional {
-                if handle.index() + 1 != self.models.len() {
-                    return Err(Error::State);
-                }
-                let model = self.models.pop().ok_or(Error::State)?;
-                self.release(model.name.capacity());
-                if let Origin::Name(name) = model.origin {
-                    self.release(name.capacity());
-                }
+                self.discard_provisional_model(handle)?;
                 // Slot capacities remain reserved. Read/request/source work is
                 // never refunded; a texture does not create a model handle.
             }
-            return Ok(GameObjectOutcome::Texture);
+            return Ok(Some(GameObjectOutcome::Texture));
         };
         let handle = if let Some(handle) = provisional {
             self.models[handle.index()].class = class;
@@ -1109,10 +1480,18 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             self.insert_model(class, &prepared)?
         };
         self.complete_model(handle, bytes, facts)?;
-        Ok(GameObjectOutcome::Model(handle))
+        Ok(Some(GameObjectOutcome::Model(handle)))
     }
     fn read(&mut self, input: InputRef<'_>) -> Result<(Vec<u8>, SourceFacts), Error> {
         self.read_capped(input, self.limits.max_file_bytes)
+    }
+    fn read_with_diagnostic(
+        &mut self,
+        input: InputRef<'_>,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+    ) -> Result<(Vec<u8>, SourceFacts), Error> {
+        self.read_capped_policy(input, self.limits.max_file_bytes, false, diagnostic_kind)?
+            .ok_or(Error::Store(local_store::Error::MissingFile))
     }
     fn read_capped(
         &mut self,
@@ -1129,12 +1508,31 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
     }
     // Only compatible model requests and its closed WDT/own-ADT world seam
     // select allow_missing; required sources retain the strict sticky adapter.
+    // The separate WDT opt-in tolerates absence only after a raw ROOT proof.
     fn read_capped_policy(
         &mut self,
         input: InputRef<'_>,
         requested_cap: usize,
         allow_missing: bool,
         diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+    ) -> Result<Option<(Vec<u8>, SourceFacts)>, Error> {
+        self.read_capped_policy_impl(
+            input,
+            requested_cap,
+            allow_missing,
+            diagnostic_kind,
+            false,
+            false,
+        )
+    }
+    fn read_capped_policy_impl(
+        &mut self,
+        input: InputRef<'_>,
+        requested_cap: usize,
+        allow_missing: bool,
+        diagnostic_kind: local_store::ProductDiagnosticRequestKind,
+        prove_root_absent: bool,
+        tolerate_encrypted_unavailable: bool,
     ) -> Result<Option<(Vec<u8>, SourceFacts)>, Error> {
         if self.reads >= self.limits.max_reads {
             return Err(Error::Limit);
@@ -1160,11 +1558,12 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             },
         );
         let file = match input {
-            InputRef::FileDataId(id) => self.store.read_file_data_id_with_external_budget(
+            InputRef::FileDataId(id) => self.store.read_file_data_id_with_external_budget_policy(
                 id,
                 cap as u64,
                 self.live,
                 memory_limit,
+                tolerate_encrypted_unavailable,
             ),
             InputRef::LogicalName(name) => {
                 self.store
@@ -1181,6 +1580,77 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 self.store
                     .record_product_diagnostic_absence(diagnostic_request);
                 return Ok(None);
+            }
+            Err(local_store::Error::MissingFile) if prove_root_absent => {
+                let proof = match input {
+                    InputRef::FileDataId(id) => self.store.root_has_no_rows(id),
+                    InputRef::LogicalName(_) => Ok(false),
+                };
+                match proof {
+                    Ok(true) => {
+                        self.store
+                            .record_product_diagnostic_absence(diagnostic_request);
+                        return Ok(None);
+                    }
+                    Ok(false) => {
+                        self.store.record_product_diagnostic_failure(
+                            diagnostic_request,
+                            local_store::Error::MissingFile,
+                            false,
+                        );
+                        return Err(Error::Store(local_store::Error::MissingFile));
+                    }
+                    Err(error) => {
+                        self.store.record_product_diagnostic_failure(
+                            diagnostic_request,
+                            error,
+                            matches!(error, local_store::Error::InputChanged),
+                        );
+                        return Err(Error::Store(error));
+                    }
+                }
+            }
+            #[cfg(target_os = "linux")]
+            Err(local_store::Error::NoLocalEncoding(failures))
+                if tolerate_encrypted_unavailable && only_encrypted_failures(failures) =>
+            {
+                let proof = match input {
+                    InputRef::FileDataId(id) => self.store.root_has_no_rows(id),
+                    InputRef::LogicalName(_) => Ok(false),
+                };
+                match proof {
+                    Ok(true) => {
+                        self.store
+                            .record_product_diagnostic_absence(diagnostic_request);
+                        return Ok(None);
+                    }
+                    Ok(false) => {
+                        return Ok(Some((
+                            Vec::new(),
+                            SourceFacts {
+                                id: 0,
+                                key: [0; 16],
+                                bytes: 0,
+                                first_magic: None,
+                            },
+                        )));
+                    }
+                    Err(error) => {
+                        self.store.record_product_diagnostic_failure(
+                            diagnostic_request,
+                            error,
+                            matches!(error, local_store::Error::InputChanged),
+                        );
+                        return Err(Error::Store(error));
+                    }
+                }
+            }
+            #[cfg(not(target_os = "linux"))]
+            Err(local_store::Error::NoLocalEncoding(_)) if tolerate_encrypted_unavailable => {
+                let error = local_store::Error::Integrity;
+                self.store
+                    .record_product_diagnostic_failure(diagnostic_request, error, false);
+                return Err(Error::Store(error));
             }
             Err(error) => {
                 self.store.record_product_diagnostic_failure(
@@ -1230,10 +1700,17 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             Ok(None)
         }
     }
-    fn convert_wmo(&mut self, handle: ModelHandle, bytes: Vec<u8>) -> Result<(), Error> {
+    fn convert_wmo(
+        &mut self,
+        handle: ModelHandle,
+        bytes: Vec<u8>,
+        omissions: &mut OmissionOptions<'_>,
+    ) -> Result<(), Error> {
         let root = wmo::Root::parse(&bytes, self.limits.wmo).map_err(Error::Wmo)?;
         let mut bindings = Vec::new();
         let mut valid = Vec::new();
+        let mut local_missing_m2 = 0usize;
+        let mut local_missing_names = Vec::new();
         for request in doodads::requests(&root) {
             if self.dependency_requests >= self.limits.max_dependency_requests {
                 return Err(Error::Limit);
@@ -1243,7 +1720,40 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
                 doodads::Target::FileDataId(id) => InputRef::FileDataId(id),
                 doodads::Target::Name(name) => InputRef::LogicalName(name),
             };
-            let child = self.obtain(Class::M2, input)?;
+            let child = match (omissions.missing_model, request.target) {
+                (
+                    run::MissingModelPolicy::DeclareRootAbsentWmoDoodadM2,
+                    doodads::Target::FileDataId(id),
+                ) => {
+                    if self.declare_root_absent_wmo_doodad_m2(id)? {
+                        if !omissions.missing_m2.contains(&id) {
+                            if omissions.missing_m2.len()
+                                >= omissions.missing_m2_limit.min(self.limits.max_models)
+                            {
+                                return Err(Error::Limit);
+                            }
+                            omissions.missing_m2.push(id);
+                        }
+                        let cap = self.available_total()?;
+                        let reservation =
+                            cap.min(self.vector_reservation_cap(&local_missing_names, 1, false)?);
+                        reserve(&mut local_missing_names, 1, &mut self.live, reservation)?;
+                        local_missing_names.push(request.name_index);
+                        local_missing_m2 = local_missing_m2.checked_add(1).ok_or(Error::Limit)?;
+                        continue;
+                    }
+                    self.obtain(
+                        Class::M2,
+                        input,
+                        local_store::ProductDiagnosticRequestKind::Child,
+                    )?
+                }
+                _ => self.obtain(
+                    Class::M2,
+                    input,
+                    local_store::ProductDiagnosticRequestKind::Child,
+                )?,
+            };
             let cap = self.available_total()?;
             let reservation = cap.min(self.vector_reservation_cap(&bindings, 1, false)?);
             reserve(&mut bindings, 1, &mut self.live, reservation)?;
@@ -1260,7 +1770,10 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         let mut group_bytes = Vec::new();
         let mut group_facts = Vec::new();
         for id in root.detailed_group_ids() {
-            let (source, facts) = self.read(InputRef::FileDataId(id))?;
+            let (source, facts) = self.read_with_diagnostic(
+                InputRef::FileDataId(id),
+                local_store::ProductDiagnosticRequestKind::WmoGroup,
+            )?;
             let cap = self.available_total()?;
             let reservation = cap.min(self.vector_reservation_cap(&group_bytes, 1, false)?);
             reserve(&mut group_bytes, 1, &mut self.live, reservation)?;
@@ -1269,11 +1782,244 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
             reserve(&mut group_facts, 1, &mut self.live, reservation)?;
             group_facts.push(facts);
         }
-        let (selection, output, _) =
-            self.convert_wmo_geometry(&root, &group_bytes, &group_facts, &valid, &[])?;
+        local_missing_names.sort_unstable();
+        local_missing_names.dedup();
+        let geometry_inspection = match omissions.missing_wmo {
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselected => {
+                GeometryInspection::Unselected
+            }
+            run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered => {
+                GeometryInspection::MaterialFiltered
+            }
+            _ => GeometryInspection::None,
+        };
+        let (
+            selection,
+            output,
+            omitted_usable,
+            skipped_source_geometry,
+            material_filtered_geometry,
+        ) = self.convert_wmo_geometry(
+            &root,
+            &group_bytes,
+            &group_facts,
+            &valid,
+            &local_missing_names,
+            geometry_inspection,
+        )?;
+        self.release(capacity(&local_missing_names)?);
+        drop(local_missing_names);
+        let intrinsic_source = group_bytes.iter().all(|source| {
+            wmo::Group::parse(source, self.limits.wmo).is_ok_and(|group| {
+                group.triangle_count() == 0
+                    && group.index_count() == 0
+                    && group.vertex_count() == 0
+                    && group.batch_count() == 0
+                    && group.liquid().is_none()
+            })
+        });
+        let intrinsically_empty = local_missing_m2 == 0
+            && !omitted_usable
+            && intrinsic_source
+            && output.is_none()
+            && bindings.is_empty()
+            && selection.set_count() != 0
+            && selection.references().is_empty();
+        let material_filtered = local_missing_m2 == 0
+            && !omitted_usable
+            && matches!(self.models[handle.0].origin, Origin::Id(_))
+            && omissions.missing_wmo
+                == run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered
+            && material_filtered_geometry
+            && output.is_none()
+            && bindings.is_empty()
+            && selection.set_count() != 0
+            && selection.references().is_empty();
+        let unselected_geometry = local_missing_m2 == 0
+            && !omitted_usable
+            && skipped_source_geometry
+            && output.is_none()
+            && bindings.is_empty()
+            && selection.set_count() != 0
+            && selection.references().is_empty();
+        let omission_vacated = local_missing_m2 != 0
+            && omitted_usable
+            && output.is_none()
+            && bindings.is_empty()
+            && selection.set_count() != 0
+            && selection.references().is_empty();
         let status = match selection.outcome(output.is_some()) {
             doodads::Outcome::Ok => Status::Collision,
             doodads::Outcome::OkNoCollision => Status::DoodadOnly,
+            doodads::Outcome::FailedNoCollision
+                if matches!(self.models[handle.0].origin, Origin::Id(_))
+                    && omissions.missing_wmo
+                        == run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2
+                    && omission_vacated =>
+            {
+                let id = match self.models[handle.0].origin {
+                    Origin::Id(id) => id,
+                    Origin::Name(_) => return Err(Error::State),
+                };
+                if !omissions.missing_wmo_ids.contains(&id) {
+                    if omissions.missing_wmo_ids.len()
+                        >= omissions.missing_wmo_limit.min(self.limits.max_models)
+                        || omissions.missing_wmo_ids.len() == omissions.missing_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.missing_wmo_ids.push(id);
+                }
+                Status::Vacated
+            }
+            doodads::Outcome::FailedNoCollision
+                if matches!(self.models[handle.0].origin, Origin::Id(_))
+                    && omissions.missing_wmo
+                        == run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmpty
+                    && (omission_vacated || intrinsically_empty) =>
+            {
+                let id = match self.models[handle.0].origin {
+                    Origin::Id(id) => id,
+                    Origin::Name(_) => return Err(Error::State),
+                };
+                if omission_vacated {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.missing_wmo_ids.len()
+                            >= omissions.missing_wmo_limit.min(self.limits.max_models)
+                        || omissions.missing_wmo_ids.len() == omissions.missing_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.missing_wmo_ids.push(id);
+                } else {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.len()
+                            >= omissions.empty_wmo_limit.min(self.limits.max_models)
+                        || omissions.empty_wmo_ids.len() == omissions.empty_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.empty_wmo_ids.push(id);
+                }
+                Status::Vacated
+            }
+            doodads::Outcome::FailedNoCollision
+                if matches!(self.models[handle.0].origin, Origin::Id(_))
+                    && omissions.missing_wmo
+                        == run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselected
+                    && (omission_vacated || intrinsically_empty || unselected_geometry) =>
+            {
+                let id = match self.models[handle.0].origin {
+                    Origin::Id(id) => id,
+                    Origin::Name(_) => return Err(Error::State),
+                };
+                if omission_vacated {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.missing_wmo_ids.len()
+                            >= omissions.missing_wmo_limit.min(self.limits.max_models)
+                        || omissions.missing_wmo_ids.len() == omissions.missing_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.missing_wmo_ids.push(id);
+                } else if intrinsically_empty {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.len()
+                            >= omissions.empty_wmo_limit.min(self.limits.max_models)
+                        || omissions.empty_wmo_ids.len() == omissions.empty_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.empty_wmo_ids.push(id);
+                } else {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.len()
+                            >= omissions.unselected_wmo_limit.min(self.limits.max_models)
+                        || omissions.unselected_wmo_ids.len()
+                            == omissions.unselected_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.unselected_wmo_ids.push(id);
+                }
+                Status::Vacated
+            }
+            doodads::Outcome::FailedNoCollision
+                if matches!(self.models[handle.0].origin, Origin::Id(_))
+                    && omissions.missing_wmo
+                        == run::MissingWmoPolicy::DeclareVacatedAfterRootAbsentM2OrEmptyOrUnselectedOrMaterialFiltered
+                    && (omission_vacated
+                        || intrinsically_empty
+                        || unselected_geometry
+                        || material_filtered) =>
+            {
+                let id = match self.models[handle.0].origin {
+                    Origin::Id(id) => id,
+                    Origin::Name(_) => return Err(Error::State),
+                };
+                if omission_vacated {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.material_filtered_wmo_ids.contains(&id)
+                        || omissions.missing_wmo_ids.len()
+                            >= omissions.missing_wmo_limit.min(self.limits.max_models)
+                        || omissions.missing_wmo_ids.len() == omissions.missing_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.missing_wmo_ids.push(id);
+                } else if intrinsically_empty {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.material_filtered_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.len()
+                            >= omissions.empty_wmo_limit.min(self.limits.max_models)
+                        || omissions.empty_wmo_ids.len() == omissions.empty_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.empty_wmo_ids.push(id);
+                } else if unselected_geometry {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.material_filtered_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.len()
+                            >= omissions.unselected_wmo_limit.min(self.limits.max_models)
+                        || omissions.unselected_wmo_ids.len()
+                            == omissions.unselected_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.unselected_wmo_ids.push(id);
+                } else {
+                    if omissions.missing_wmo_ids.contains(&id)
+                        || omissions.empty_wmo_ids.contains(&id)
+                        || omissions.unselected_wmo_ids.contains(&id)
+                        || omissions.material_filtered_wmo_ids.contains(&id)
+                        || omissions.material_filtered_wmo_ids.len()
+                            >= omissions
+                                .material_filtered_wmo_limit
+                                .min(self.limits.max_models)
+                        || omissions.material_filtered_wmo_ids.len()
+                            == omissions.material_filtered_wmo_ids.capacity()
+                    {
+                        return Err(Error::Limit);
+                    }
+                    omissions.material_filtered_wmo_ids.push(id);
+                }
+                Status::Vacated
+            }
             doodads::Outcome::FailedNoCollision => return Err(Error::NoCollision),
         };
         self.models[handle.0].raw = output;
@@ -1302,7 +2048,8 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         group_facts: &[SourceFacts],
         valid: &[u32],
         omitted: &[u32],
-    ) -> Result<(doodads::Selection, Option<Vec<u8>>, bool), Error> {
+        geometry_inspection: GeometryInspection,
+    ) -> Result<WmoGeometry, Error> {
         let mut groups = Vec::new();
         let mut inputs = Vec::new();
         let cap = self.available_total()?;
@@ -1335,36 +2082,106 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         // resolve(). Inspect only actual non-skipped group references to tell
         // omission-derived emptiness from an intrinsically empty model. This
         // makes no claim about geometry in an unavailable dependency.
-        let omitted_usable = if omitted.is_empty() || root.doodad_set_count() == 0 {
-            false
-        } else {
-            let contexts = wmo::resolve_contexts(
-                root,
-                &inputs,
-                wmo::Limits {
-                    max_projection_bytes: self.limits.wmo.max_projection_bytes.min(self.free()?),
-                    ..self.limits.wmo
-                },
+        let inspect_unselected_geometry = matches!(
+            geometry_inspection,
+            GeometryInspection::Unselected | GeometryInspection::MaterialFiltered
+        );
+        let inspect_material_filtered_geometry =
+            geometry_inspection == GeometryInspection::MaterialFiltered;
+        let inspect_contexts =
+            inspect_unselected_geometry || (!omitted.is_empty() && root.doodad_set_count() != 0);
+        let contexts = if inspect_contexts {
+            Some(
+                wmo::resolve_contexts(
+                    root,
+                    &inputs,
+                    wmo::Limits {
+                        max_projection_bytes: self
+                            .limits
+                            .wmo
+                            .max_projection_bytes
+                            .min(self.free()?),
+                        ..self.limits.wmo
+                    },
+                )
+                .map_err(Error::Wmo)?,
             )
-            .map_err(Error::Wmo)?;
-            let context_bytes = capacity(&contexts)?;
-            self.charge(context_bytes)?;
-            let referenced = contexts
-                .iter()
-                .filter(|c| c.skip_reason().is_none())
-                .any(|context| {
-                    let group = context.group();
-                    (0..group.doodad_reference_count()).any(|i| {
-                        group
-                            .doodad_reference(i)
-                            .and_then(|r| root.doodad_spawn(usize::from(r)))
-                            .is_some_and(|spawn| omitted.binary_search(&spawn.name_index).is_ok())
-                    })
-                });
-            drop(contexts);
-            self.release(context_bytes);
-            referenced
+        } else {
+            None
         };
+        let context_bytes = contexts.as_ref().map(capacity).transpose()?.unwrap_or(0);
+        self.charge(context_bytes)?;
+        let omitted_usable = contexts.as_ref().is_some_and(|contexts| {
+            !omitted.is_empty()
+                && root.doodad_set_count() != 0
+                && contexts
+                    .iter()
+                    .filter(|context| context.skip_reason().is_none())
+                    .any(|context| {
+                        let group = context.group();
+                        (0..group.doodad_reference_count()).any(|i| {
+                            group
+                                .doodad_reference(i)
+                                .and_then(|r| root.doodad_spawn(usize::from(r)))
+                                .is_some_and(|spawn| {
+                                    omitted.binary_search(&spawn.name_index).is_ok()
+                                })
+                        })
+                    })
+        });
+        let source_geometry = |context: &&wmo::GroupContext<'_, '_>| {
+            let group = context.group();
+            group.triangle_count() != 0 && group.index_count() != 0 && group.vertex_count() != 0
+        };
+        let skipped_source_geometry = inspect_unselected_geometry
+            && contexts.as_ref().is_some_and(|contexts| {
+                let skipped = contexts
+                    .iter()
+                    .filter(source_geometry)
+                    .any(|context| context.skip_reason().is_some());
+                let selected = contexts
+                    .iter()
+                    .filter(source_geometry)
+                    .any(|context| context.skip_reason().is_none());
+                skipped && !selected
+            });
+        let material_filtered_geometry = inspect_material_filtered_geometry
+            && contexts.as_ref().is_some_and(|contexts| {
+                let mut has_selected_source_geometry = false;
+                let mut skipped_source_geometry = false;
+                let mut no_liquid = true;
+                let mut all_triangles_filtered = true;
+                for context in contexts {
+                    let group = context.group();
+                    if group.liquid().is_some() {
+                        no_liquid = false;
+                    }
+                    if !source_geometry(&context) {
+                        continue;
+                    }
+                    if context.skip_reason().is_some() {
+                        skipped_source_geometry = true;
+                        continue;
+                    }
+                    has_selected_source_geometry = true;
+                    for index in 0..group.triangle_count() {
+                        let Some(material) = group.triangle_material(index) else {
+                            all_triangles_filtered = false;
+                            break;
+                        };
+                        if !material_filtered(material.flags) {
+                            all_triangles_filtered = false;
+                            break;
+                        }
+                    }
+                }
+                has_selected_source_geometry
+                    && !skipped_source_geometry
+                    && no_liquid
+                    && all_triangles_filtered
+            });
+        drop(contexts);
+        self.release(context_bytes);
         let converted = raw::convert(
             root,
             &inputs,
@@ -1390,8 +2207,27 @@ impl<'s, 'l, L: LiquidLookup + ?Sized> Extractor<'s, 'l, L> {
         drop(inputs);
         self.release(capacity(&groups)?);
         drop(groups);
-        Ok((selection, output, omitted_usable))
+        Ok((
+            selection,
+            output,
+            omitted_usable,
+            skipped_source_geometry,
+            material_filtered_geometry,
+        ))
     }
+}
+
+#[cfg(target_os = "linux")]
+fn only_encrypted_failures(failures: local_store::CandidateFailures) -> bool {
+    failures.encrypted > 0
+        && failures.missing == 0
+        && failures.incomplete == 0
+        && failures.corrupt == 0
+        && failures.unsupported == 0
+}
+
+fn material_filtered(flags: u16) -> bool {
+    flags & 0x08 == 0 && (flags & 0x20 == 0 || flags & 0x04 != 0)
 }
 
 fn classify(magic: Option<[u8; 4]>) -> Result<Option<Class>, Error> {

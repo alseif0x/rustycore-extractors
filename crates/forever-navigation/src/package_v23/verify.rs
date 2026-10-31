@@ -165,6 +165,15 @@ impl ReadBatch {
     pub fn tiles(&self) -> &[RequestedTile] {
         &self.tiles
     }
+
+    pub fn into_byte_parts(self) -> super::ByteParts {
+        let tiles = self
+            .tiles
+            .into_iter()
+            .map(|requested| (requested.tile, requested.bytes))
+            .collect();
+        (self.global, tiles)
+    }
 }
 
 struct ReadState {

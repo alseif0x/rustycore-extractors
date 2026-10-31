@@ -25,7 +25,7 @@
 //! collision collector, one placement call with lifetime IDs, one replay, and
 //! LocalStore's own policy. Caller Maps/rows/lookups and Sink retention are
 //! excluded. Components can overlap; the ceilings must not be read as one total.
-use super::{Extractor, InputRef, Model, ModelRequest, Status, placements, plan};
+use super::{Extractor, InputRef, Model, ModelRequest, OmissionOptions, Status, placements, plan};
 use crate::local_store::{self, LocalStore};
 use forever_vmap::{
     objects::{self, Objects, Source, Target},
@@ -34,7 +34,13 @@ use forever_vmap::{
 };
 
 pub(super) mod shared;
-pub use shared::{SharedLimits, SharedReport, extract_shared};
+pub use shared::{
+    MaterialFilteredWmoResult, MissingModelPolicy, MissingWdtPolicy, MissingWmoPolicy, RootAbsent,
+    SharedLimits, SharedReport, UnselectedWmoResult, VacatedWmoResult, extract_shared,
+    extract_shared_with_omissions, extract_shared_with_policy, extract_shared_with_vacated_wmo,
+};
+#[cfg(target_os = "linux")]
+pub use shared::{extract_shared_with_material_filtered_wmo, extract_shared_with_unselected_wmo};
 #[cfg(target_os = "linux")]
 pub mod compatible_inventory;
 #[cfg(target_os = "linux")]
@@ -470,7 +476,7 @@ fn project<L: LiquidLookup + ?Sized, S: Sink + ?Sized>(
         bump(&mut report.model_raw_bytes, size)?;
         let count = match model.status() {
             Status::Collision => &mut report.collision_models,
-            Status::NoCollision => &mut report.no_collision_models,
+            Status::NoCollision | Status::Vacated => &mut report.no_collision_models,
             Status::DoodadOnly => &mut report.doodad_only_models,
         };
         bump(count, 1)?;

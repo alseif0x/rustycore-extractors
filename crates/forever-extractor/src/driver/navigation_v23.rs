@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Modified 2026-10-20: add selected-input v23 navigation publication.
 //! Linux-only selected navigation from sealed v20 terrain and v22 VMap packages.
+//! The v52-v57 submodules consume one sealed v51 package without opening a client.
 //! Input coverage remains producer-reported; this profile adds no whole-world,
 //! format-parity, runtime, or client-completeness claim.
 #![cfg(target_os = "linux")]
@@ -44,6 +45,13 @@ use std::{
 const DB2_LIMIT: u64 = 16 * 1024 * 1024;
 const MAP_DOMAIN: &[u8] = b"rustycore-v23-map-available-snapshot-v2\0";
 const MAP_DECODED_FACTS_DOMAIN: &[u8] = b"rustycore-v23-map-decoded-facts-v2\0";
+
+pub(crate) mod v52;
+pub(crate) mod v53;
+pub(crate) mod v54;
+pub(crate) mod v55;
+pub(crate) mod v56;
+pub(crate) mod v57;
 
 #[cfg(test)]
 #[path = "navigation_v23/coverage_tests.rs"]
@@ -965,7 +973,7 @@ fn validate_input_coverage(input: InputCoverage<'_>) -> Result<Vec<TerrainMap>, 
         vmap_plan,
         vmap,
     } = input;
-    if vmap.requested_map != selected_map
+    if vmap.selection != forever_casc::collision::plan::MapSelection::MapAndAncestors(selected_map)
         || vmap_plan.map_domain != Some(selected_map)
         || terrain.context.build != 70450
         || vmap.context.build != 70450
@@ -1164,7 +1172,8 @@ fn verify_input_binding(
         || vmap.identity.plan_sha256 != vmap_plan.sha256
         || terrain.coverage.context != terrain.identity.context
         || vmap.coverage.context != vmap.identity.context
-        || vmap.coverage.requested_map != selected
+        || vmap.coverage.selection
+            != forever_casc::collision::plan::MapSelection::MapAndAncestors(selected)
         || vmap.coverage.map.file_data_id != identity.map.file_data_id
         || vmap.coverage.map.declared_bytes != identity.map.declared_bytes
         || vmap.coverage.map.available_bytes != identity.map.available_bytes
@@ -1392,6 +1401,9 @@ struct NavigationSink<'a> {
     selected_map: u32,
     global: Option<TileOutput>,
     tiles: Vec<TileOutput>,
+    partial_triangulations: u64,
+    detail_center_fallbacks: u64,
+    unset_height_samples: u64,
 }
 impl navigation_input::run::Sink for NavigationSink<'_> {
     type Error = Error;
@@ -1428,6 +1440,26 @@ impl navigation_input::run::Sink for NavigationSink<'_> {
                 {
                     return Err("product_navigation_output".into());
                 }
+                let (partial, center_fallback, unset_height) = match &outcome {
+                    forever_navigation::pipeline::Outcome::Empty { statistics, .. }
+                    | forever_navigation::pipeline::Outcome::Tile { statistics, .. } => (
+                        statistics.builder.partial_triangulations,
+                        statistics.builder.detail_center_fallbacks,
+                        statistics.builder.unset_height_samples,
+                    ),
+                };
+                self.partial_triangulations = self
+                    .partial_triangulations
+                    .checked_add(partial)
+                    .ok_or("product_navigation_output")?;
+                self.detail_center_fallbacks = self
+                    .detail_center_fallbacks
+                    .checked_add(center_fallback)
+                    .ok_or("product_navigation_output")?;
+                self.unset_height_samples = self
+                    .unset_height_samples
+                    .checked_add(unset_height)
+                    .ok_or("product_navigation_output")?;
                 match outcome {
                     forever_navigation::pipeline::Outcome::Empty { .. } => {
                         self.tiles.push(TileOutput {
@@ -1484,6 +1516,9 @@ fn run_selected(
         selected_map,
         global: None,
         tiles,
+        partial_triangulations: 0,
+        detail_center_fallbacks: 0,
+        unset_height_samples: 0,
     };
     let completed = navigation_input::run::execute_available_selected(
         owner,

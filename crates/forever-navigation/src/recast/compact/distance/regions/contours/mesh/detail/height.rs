@@ -24,6 +24,10 @@ pub(super) struct Patch {
     pub width: usize,
     pub height: usize,
     pub data: Vec<u16>,
+    pub center_fallback: bool,
+    pub allow_center_fallback: bool,
+    pub allow_unset_height: bool,
+    pub unset_height_samples: u64,
 }
 impl Patch {
     fn index(&self, x: i32, z: i32) -> Option<usize> {
@@ -89,6 +93,8 @@ impl Budget {
         vertices: &[[u16; 3]],
         poly: &Polygon,
         border: u16,
+        allow_center_fallback: bool,
+        allow_unset_height: bool,
     ) -> Result<Patch, Error> {
         let (mut xmin, mut xmax, mut zmin, mut zmax) = (
             i32::from(field.grid.width),
@@ -122,6 +128,10 @@ impl Budget {
             width: w,
             height: h,
             data: self.filled(w * h, NULL)?,
+            center_fallback: false,
+            allow_center_fallback,
+            allow_unset_height,
+            unset_height_samples: 0,
         };
         let mut queue = Vec::new();
         let mut empty = true;
@@ -158,7 +168,7 @@ impl Budget {
             }
         }
         if empty {
-            self.seed(field, vertices, poly, bs, &mut patch, &mut queue)?;
+            patch.center_fallback = self.seed(field, vertices, poly, bs, &mut patch, &mut queue)?;
         }
         let mut head = 0;
         while head < queue.len() {
@@ -196,7 +206,7 @@ impl Budget {
         bs: i32,
         patch: &mut Patch,
         queue: &mut Vec<Node>,
-    ) -> Result<(), Error> {
+    ) -> Result<bool, Error> {
         let offsets = [
             [0, 0],
             [-1, -1],
@@ -257,11 +267,14 @@ impl Budget {
         self.push(queue, start)?;
         self.charge(patch.data.len() as u64)?;
         patch.data.fill(0);
-        let seed = loop {
+        let mut center_reached = false;
+        let mut last = None;
+        while let Some(node) = queue.pop() {
             self.charge(1)?;
-            let node = queue.pop().ok_or(Error::DetailHeight)?;
+            last = Some(node);
             if [node.x, node.z] == center {
-                break node;
+                center_reached = true;
+                break;
             }
             let direct = if node.x == center[0] {
                 if center[1] > node.z { 1 } else { 3 }
@@ -284,7 +297,14 @@ impl Budget {
                     self.push(queue, n)?;
                 }
             }
-        };
+        }
+        if !center_reached && !patch.allow_center_fallback {
+            return Err(Error::DetailHeight);
+        }
+        if !center_reached && std::env::var_os("RCE_V52_DEBUG").is_some() {
+            eprintln!("{{\"stage\":\"center_walk_fallback\"}}");
+        }
+        let seed = last.ok_or(Error::DetailHeight)?;
         queue.clear();
         self.push(queue, seed)?;
         self.charge(patch.data.len() as u64)?;
@@ -292,7 +312,8 @@ impl Budget {
         let at = patch
             .index(seed.x - bs, seed.z - bs)
             .ok_or(Error::DetailHeight)?;
-        store(patch, at, field.spans[seed.index].y)
+        store(patch, at, field.spans[seed.index].y)?;
+        Ok(!center_reached)
     }
     pub(super) fn sample_height(
         &mut self,
@@ -300,7 +321,7 @@ impl Budget {
         inverse_cell: f32,
         cell_height: f32,
         radius: i32,
-        patch: &Patch,
+        patch: &mut Patch,
     ) -> Result<u16, Error> {
         let ix = integer((p[0] * inverse_cell + 0.01).floor())?
             .checked_sub(patch.min[0])
@@ -348,10 +369,15 @@ impl Budget {
                 z += dz;
             }
         }
-        if h == NULL {
-            Err(Error::DetailHeight)
-        } else {
-            Ok(h)
+        if h == NULL && !patch.allow_unset_height {
+            return Err(Error::DetailHeight);
         }
+        if h == NULL {
+            patch.unset_height_samples = patch
+                .unset_height_samples
+                .checked_add(1)
+                .ok_or(Error::Limit)?;
+        }
+        Ok(h)
     }
 }

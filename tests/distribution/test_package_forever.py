@@ -248,7 +248,7 @@ class DistributionTests(unittest.TestCase):
         for name in ("/absolute", "a/../b", "a\\b", "a//b"):
             self.assertFailure("unsafe_path", m.bundle_path_allowed, name)
         self.assertFalse(m.bundle_path_allowed("source/client/asset.db2"))
-        self.assertFalse(m.bundle_path_allowed("source/.opencode/environment.sh"))
+        self.assertFalse(m.bundle_path_allowed("source/.kimi-code/local.toml"))
 
 
     def test_duplicate_json_and_missing_source_rejected(self):
@@ -915,11 +915,7 @@ class DistributionTests(unittest.TestCase):
         manifest["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-collision-disk-source-v9"
         self.assertFailure("manifest_snapshot", m.validate_manifest, manifest)
 
-    def test_v13_retains_and_ships_exact_v23_source_closure(self):
-        self.assertEqual(
-            m.SOURCE_PROFILE,
-            "forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13",
-        )
+    def test_v15_retains_and_ships_exact_v23_source_closure(self):
         self.assertTrue(set(m.PRODUCT_V23_SOURCE) <= set(m.REQUIRED))
         self.build()
         manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
@@ -977,6 +973,39 @@ class DistributionTests(unittest.TestCase):
                          {"forever-navigation": ["forever-casc"]})
         self.assertTrue(contract["source"]["navigation_consumer_acceptance"]["bundle_built"])
         self.assertFalse(contract["source"]["qualified_navigation_consumer_candidate"]["release_authorized"])
+
+    def test_v15_requires_and_ships_navigation57_source_and_evidence(self):
+        self.assertEqual(
+            m.SOURCE_PROFILE,
+            "forever-seven-crate-linux-product-db2-gt-cameras-available-navigation57-consumer-source-v15",
+        )
+        self.assertTrue(set(m.NAVIGATION56_SOURCE) <= set(m.REQUIRED))
+        self.assertTrue(set(m.NAVIGATION57_SOURCE) <= set(m.REQUIRED))
+        self.build()
+        manifest = json.loads((self.root / "output/distribution-manifest.json").read_bytes())
+        for name in m.NAVIGATION57_SOURCE:
+            with self.subTest(name=name):
+                self.assertIn(name, manifest["source_snapshot"]["files"])
+                self.assertEqual(
+                    (self.root / "output/source" / name).read_bytes(),
+                    (self.source / name).read_bytes(),
+                )
+                incomplete = copy.deepcopy(manifest)
+                incomplete["inventory"].pop("source/" + name)
+                self.assertFailure("manifest_missing", m.validate_manifest, incomplete)
+        historical = copy.deepcopy(manifest)
+        historical["source_snapshot"]["profile"] = "forever-seven-crate-linux-product-db2-gt-cameras-available-navigation56-consumer-source-v14"
+        self.assertFailure("manifest_snapshot", m.validate_manifest, historical)
+        contract = json.loads((REPO / "contracts/forever-distribution-contract-v1.json").read_bytes())
+        self.assertTrue(set(m.NAVIGATION57_SOURCE) <= set(contract["source"]["required"]))
+        self.assertTrue(contract["source"]["navigation56_consumer_acceptance"]["bundle_built"])
+        self.assertTrue(contract["source"]["navigation56_consumer_acceptance"]["packaged_v56_cli_accepted"])
+        self.assertFalse(contract["source"]["navigation56_consumer_acceptance"]["release_authorized"])
+        self.assertTrue(contract["source"]["navigation57_consumer_acceptance"]["bundle_built"])
+        self.assertTrue(contract["source"]["navigation57_consumer_acceptance"]["packaged_v57_cli_accepted"])
+        self.assertTrue(contract["source"]["navigation57_consumer_acceptance"]["available_world_native_query_accepted"])
+        self.assertFalse(contract["source"]["navigation57_consumer_acceptance"]["server_listener_started"])
+        self.assertFalse(contract["source"]["qualified_navigation57_consumer_candidate"]["release_authorized"])
 
     def test_navigation_to_casc_edge_is_mandatory_with_existing_registry_closure(self):
         lock = synthetic_lock()

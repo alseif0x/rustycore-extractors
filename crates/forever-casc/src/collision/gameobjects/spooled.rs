@@ -259,6 +259,7 @@ fn extract_data(
         lists: engine.lists,
         stats: engine.stats,
         startup_facts: engine.startup_facts,
+        encrypted_unavailable: engine.encrypted_unavailable,
     })
 }
 // Private policy seam: retain exact profile validation for available startup.
@@ -301,6 +302,7 @@ pub(in crate::collision) fn collect_direct<L: LiquidLookup + ?Sized>(
                     stats.textures += 1;
                     Outcome::Texture
                 }
+                GameObjectOutcome::EncryptedUnavailable => return Err(super::Error::State.into()),
                 GameObjectOutcome::Model(handle) => model_outcome(collector, handle, &mut stats)?,
             }
         };
@@ -361,6 +363,7 @@ pub(in crate::collision) fn finish_lists<L: LiquidLookup + ?Sized>(
         lists,
         stats,
         startup_facts: collector.facts()?,
+        encrypted_unavailable: Vec::new(),
     })
 }
 

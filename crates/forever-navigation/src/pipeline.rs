@@ -55,8 +55,13 @@ impl Limits {
     pub(crate) fn validate(self) -> Result<(), Error> {
         let d = Self::default();
         self.terrain.validate().map_err(Error::Terrain)?;
-        self.models.mesh.validate().map_err(Error::Geometry)?;
-        self.compact.validate().map_err(Error::Geometry)?;
+        self.models
+            .mesh
+            .validate_available_v54()
+            .map_err(Error::Geometry)?;
+        self.compact
+            .validate_available_v54()
+            .map_err(Error::Geometry)?;
         self.output.validate().map_err(Error::Output)?;
         if self.heap_bytes > d.heap_bytes
             || self.models.models > d.models.models
@@ -300,13 +305,40 @@ fn run_inner<T: terrain::load::Source, V: store::Source>(
         .map_err(Error::Store)?;
     let mesh = projected?;
     verify(sources)?;
+    if std::env::var_os("RCE_V56_DEBUG_MESH").is_some() {
+        let bounds = tilebuilder::bounds(r.tile, &mesh).map_err(Error::Builder)?;
+        eprintln!(
+            "{{\"stage\":\"pre_compact\",\"solid_vertices\":{},\"solid_triangles\":{},\"liquid_vertices\":{},\"liquid_triangles\":{},\"zero_vertical_bounds\":{}}}",
+            mesh.solid_vertices().len(),
+            mesh.solid_triangles().len(),
+            mesh.liquid_vertices().len(),
+            mesh.liquid_triangles().len(),
+            bounds.min[1] == 0.0 && bounds.max[1] == 0.0,
+        );
+    }
     if no_vertices(&mesh) {
         return Ok(Outcome::Empty {
             reason: EmptyReason::NoVertices,
             statistics,
         });
     }
-    let mesh = mesh.compact(limits.compact).map_err(Error::Geometry)?;
+    let mesh = mesh.compact(limits.compact).map_err(|e| {
+        if std::env::var_os("RCE_V52_DEBUG").is_some() {
+            eprintln!("{{\"stage\":\"compact\",\"error\":{:?}}}", e);
+        }
+        Error::Geometry(e)
+    })?;
+    if std::env::var_os("RCE_V56_DEBUG_MESH").is_some() {
+        let bounds = tilebuilder::bounds(r.tile, &mesh).map_err(Error::Builder)?;
+        eprintln!(
+            "{{\"stage\":\"post_compact\",\"solid_vertices\":{},\"solid_triangles\":{},\"liquid_vertices\":{},\"liquid_triangles\":{},\"zero_vertical_bounds\":{}}}",
+            mesh.solid_vertices().len(),
+            mesh.solid_triangles().len(),
+            mesh.liquid_vertices().len(),
+            mesh.liquid_triangles().len(),
+            bounds.min[1] == 0.0 && bounds.max[1] == 0.0,
+        );
+    }
     statistics.geometry = [
         mesh.solid_vertices().len(),
         mesh.solid_triangles().len(),
@@ -335,7 +367,12 @@ fn run_inner<T: terrain::load::Source, V: store::Source>(
         connections,
         limits.connections,
     )
-    .map_err(Error::Geometry)?;
+    .map_err(|e| {
+        if std::env::var_os("RCE_V52_DEBUG").is_some() {
+            eprintln!("{{\"stage\":\"offmesh\",\"error\":{:?}}}", e);
+        }
+        Error::Geometry(e)
+    })?;
     statistics.connections = selected.values().len();
     let borrowed = mesh
         .capacity_bytes()

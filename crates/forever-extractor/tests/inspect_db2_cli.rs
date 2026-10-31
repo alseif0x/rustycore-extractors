@@ -19,12 +19,22 @@ mod synthetic_fixture {
     include!("../../forever-db2/src/records/sparse/synthetic_fixture.rs");
     define_synthetic_sparse_fixture!(forever_db2);
 }
+// Share test-only fixtures without cloning their checksum implementations.
+#[allow(dead_code, clippy::duplicate_mod)]
+#[path = "v25_partial_map_cli/fixture.rs"]
+mod partial_client;
+#[allow(clippy::duplicate_mod)]
+mod db2_fixture {
+    include!("v25_partial_map_db2.rs");
+}
 
 const V16: &str =
     include_str!("../../../tests/contracts/fixtures/forever-product-v16/disabled.tsv");
 const V10: &str =
     include_str!("../../../tests/contracts/fixtures/forever-product-v10/disabled.tsv");
 const V20: &str = include_str!("../../../tests/contracts/fixtures/forever-product-v20/map2.tsv");
+const V26: &str =
+    include_str!("../../../tests/contracts/fixtures/forever-product-v26/multiple.tsv");
 static NEXT: AtomicU64 = AtomicU64::new(0);
 const ROOT_EKEY: [u8; 16] = [0x33; 16];
 const ENCODING_EKEY: [u8; 16] = [0x44; 16];
@@ -278,6 +288,63 @@ fn inspect_db2_synthetic_store_writes_only_the_exact_redacted_report() {
         .map(|entry| entry.unwrap().file_name())
         .collect::<BTreeSet<_>>();
     assert_eq!(written, ["inspection.json".into()].into_iter().collect());
+    assert!(!client.join("dbc").exists());
+}
+
+#[test]
+fn inspect_db2_v26_complete_source_preserves_the_redacted_report() {
+    let lab = Lab::new();
+    let plan = lab.plan("v26.tsv", V26);
+    let client = lab.synthetic_client();
+    let report_dir = lab.0.join("v26-complete-reports");
+    fs::create_dir(&report_dir).unwrap();
+    let report_path = report_dir.join("inspection.json");
+
+    let result = inspect(&plan, &client, &report_path, &["--file-data-id", "5152908"]);
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let report = fs::read_to_string(&report_path).unwrap();
+    assert!(report.contains("\"table_name\":\"CollectableSourceEncounterSparse\""));
+    assert!(report.contains("\"classification\":{\"outcome\":\"accepted_raw_only\""));
+    assert!(!client.join("dbc").exists());
+}
+
+#[test]
+fn inspect_db2_v26_partial_source_uses_structure_without_decoding_rows() {
+    let lab = Lab::new();
+    let plan = lab.plan("v26-partial.tsv", V26);
+    let client = lab.0.join("partial-client");
+    fs::create_dir(&client).unwrap();
+    let _wdt_offset = partial_client::write_partial_client(&client, b'S');
+    let report_dir = lab.0.join("v26-partial-reports");
+    fs::create_dir(&report_dir).unwrap();
+    let report_path = report_dir.join("inspection.json");
+
+    let result = inspect(&plan, &client, &report_path, &["--file-data-id", "1349477"]);
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let report = fs::read_to_string(&report_path).unwrap();
+    assert!(report.contains("\"table_name\":\"Map\""));
+    assert!(report.contains("\"flags\":1"));
+    assert!(report.contains(
+        "\"classification\":{\"outcome\":\"accepted_raw_only\",\"reason_code\":null,\"reason\":\"partial WDC5 structure and zero-fill validation succeeded; rows were not decoded\"}"
+    ));
+    for forbidden in [
+        "content_key",
+        "encoding_key",
+        "payload",
+        "record_values",
+        "hash",
+        "index_prefix",
+    ] {
+        assert!(!report.contains(forbidden), "report contains {forbidden}");
+    }
     assert!(!client.join("dbc").exists());
 }
 

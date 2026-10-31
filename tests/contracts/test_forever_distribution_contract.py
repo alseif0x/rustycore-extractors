@@ -42,7 +42,7 @@ class DistributionContract(unittest.TestCase):
     def test_v13_profile_retains_v23_closure_without_packaging_claims(self):
         self.assertEqual(
             self.c['source']['profile'],
-            'forever-seven-crate-linux-product-db2-gt-cameras-selected-navigation-consumer-source-v13',
+            'forever-seven-crate-linux-product-db2-gt-cameras-available-navigation57-consumer-source-v15',
         )
         required_v23 = {
             'crates/forever-extractor/src/driver/navigation_v23.rs',

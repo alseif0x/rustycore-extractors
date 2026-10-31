@@ -53,14 +53,14 @@ class CommonExecutionContract(unittest.TestCase):
 
     def test_six_concrete_producers_keep_the_existing_implementations(self):
         s = self.s['execution']
-        for call in ('super::db2(self.plan, self.store, &mut self.run, self.adapter.map_domain())',
-                     'super::game_tables(self.plan, self.store, &mut self.run)',
+        self.assertIn(compact('super::db2(plan, store, run, self.map_domain(), None)'), compact(s))
+        for call in ('super::game_tables(self.plan, self.store, &mut self.run)',
                      'super::cameras(self.plan, self.store, &mut self.run)',
                      'self.adapter.extract_terrain(self.plan, self.store, &mut self.run)',
                      'self.adapter.extract_collision(self.plan, self.store, &mut self.run)',
                      'super::mmaps(self.plan, self.store, self.output, &mut self.run, self.adapter.map_domain())'):
             self.assertIn(compact(call), compact(s))
-        self.assertEqual(s.count('self.adapter.map_domain()'), 2)
+        self.assertEqual(s.count('self.adapter.map_domain()'), 1)
         self.assertIn(compact('super::maps(plan, store, run, self.map_domain())'), compact(s))
         self.assertIn(compact('fn map_domain(&self) -> Option<&crate::map_domain::Domain> { None }'), compact(s))
         components = re.findall(r'Component::(\w+) => work\.', s)
@@ -83,12 +83,13 @@ class CommonExecutionContract(unittest.TestCase):
 
     def test_linux_owns_scratch_without_moving_platform_io_into_core(self):
         s = self.s['linux']
-        self.assertIn(compact('execution::execute(plan, &mut store, output, run, LinuxExecution { preflight, domain, context })'), compact(s))
+        self.assertIn(compact('execution::execute(plan, &mut store, output, run, LinuxExecution { preflight, domain, context, liquid_object_evidence })'), compact(s))
         adapter = s.split('struct LinuxExecution', 1)[1].split('fn read(', 1)[0]
         for marker in ('preflight: Option<disk::Preflight>', 'impl execution::Adapter for LinuxExecution',
                        'disk.verify_unchanged()?', 'None => disk.run(store, run)',
                        'Some(domain) => disk.run_selected(store, run, domain)',
-                       'None => vmaps(store, run)', 'self.domain.as_ref()'):
+                       'None => vmaps(store, run)', 'self.domain.as_ref()',
+                       'liquid_object_evidence: Option<liquid_object_v23::Evidence>'):
             self.assertIn(marker, adapter)
         self.assertNotIn('fn verify_before_producer', adapter)
         self.assertIn('terrain_v12::extract(plan, store, run, self.context)', adapter)

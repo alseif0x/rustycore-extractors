@@ -3,7 +3,7 @@
 // Authored 2026-10-11: serial Rust-local producers behind the common package.
 use crate::{
     Error,
-    plan::{CollisionStorage, Plan, Selection},
+    plan::{CollisionStorage, DiskBudget, Plan, Selection},
 };
 #[cfg(target_os = "linux")]
 use forever_casc::local_store::{ProductDiagnosticPhase, ProductDiagnosticRequestKind};
@@ -54,6 +54,8 @@ mod execution;
 #[cfg(target_os = "linux")]
 pub(crate) mod inspect_db2;
 #[cfg(target_os = "linux")]
+pub(crate) mod liquid_object_v23;
+#[cfg(target_os = "linux")]
 pub(crate) mod navigation_v23;
 #[cfg(target_os = "linux")]
 pub(crate) mod probe_encoding;
@@ -71,9 +73,7 @@ use windows::extract_inner;
 const DB2_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const DB2_TOTAL_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 #[cfg(target_os = "linux")]
-const DB2_PARTIAL_SECTIONS_PER_TABLE: usize = 16;
-#[cfg(target_os = "linux")]
-const DB2_PARTIAL_SECTIONS_TOTAL: usize = 1161 * DB2_PARTIAL_SECTIONS_PER_TABLE;
+const DB2_PARTIAL_SECTIONS_TOTAL: usize = 18_576;
 
 #[cfg(target_os = "linux")]
 pub(crate) struct CompleteDb2Source<'a>(pub(crate) &'a [u8]);
@@ -203,7 +203,14 @@ pub(crate) fn validate_partial_map(bytes: &[u8]) -> Result<Vec<u64>, Error> {
 /// Admit the exact explicitly selected physical profile, offline. Opening alone
 /// does not prove that the selected files are present or decodable.
 pub fn open(plan: &Plan, client: &Path) -> Result<LocalStore, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     open_inner(plan, client, None)
@@ -249,7 +256,14 @@ pub fn open_with_keys(
     client: &Path,
     keys: forever_casc::keys::Keyring,
 ) -> Result<LocalStore, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     open_inner(plan, client, Some(keys))
@@ -280,9 +294,34 @@ fn open_inner(
         || plan.is_v20()
         || plan.is_v21()
         || plan.is_v22()
+        || plan.is_v28()
         || plan.is_v24()
         || plan.is_v25()
         || plan.is_v26()
+        || plan.is_v27()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
+        || plan.is_v50()
+        || plan.is_v51()
     {
         #[cfg(target_os = "linux")]
         {
@@ -361,7 +400,16 @@ fn open_inner(
 pub fn admit(plan: &Plan) -> Result<(), Error> {
     plan.validate()?;
     #[cfg(not(target_os = "linux"))]
-    if plan.is_v23()
+    if plan.is_v56()
+        || plan.is_v55()
+        || plan.is_v54()
+        || plan.is_v53()
+        || plan.is_v52()
+        || plan.is_v51()
+        || plan.is_v49()
+        || plan.is_v48()
+        || plan.is_v47()
+        || plan.is_v23()
         || plan.map_domain.is_some()
         || plan.is_gt_cameras()
         || plan.is_v10()
@@ -392,7 +440,14 @@ pub fn inspect(
     producer: [u8; 32],
     keys: Option<crate::input::SuppliedKeys>,
 ) -> Result<Context, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     admit(plan)?;
@@ -420,7 +475,14 @@ fn validate_keys(plan: &Plan, present: bool) -> Result<(), Error> {
 }
 
 pub fn context(plan: &Plan, store: &LocalStore, producer: [u8; 32]) -> Result<Context, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     plan.validate()?;
@@ -449,15 +511,43 @@ pub fn extract(
     producer: [u8; 32],
     resume: bool,
 ) -> Result<package::Summary, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     extract_inner(plan, client, output, producer, resume, None, None)
 }
 
-/// Inputs required by the additive Linux selected-navigation profile. The
-/// package roots and their canonical producer plans are verified while held
-/// under the package readers' shared locks.
+#[cfg(target_os = "linux")]
+pub fn extract_available_navigation(
+    plan: &Plan,
+    source: &Path,
+    source_plan: &Path,
+    output: &Path,
+    producer: [u8; 32],
+    resume: bool,
+) -> Result<package::Summary, Error> {
+    if plan.is_v57() {
+        navigation_v23::v57::extract(plan, source, source_plan, output, producer, resume)
+    } else if plan.is_v56() {
+        navigation_v23::v56::extract(plan, source, source_plan, output, producer, resume)
+    } else if plan.is_v55() {
+        navigation_v23::v55::extract(plan, source, source_plan, output, producer, resume)
+    } else if plan.is_v54() {
+        navigation_v23::v54::extract(plan, source, source_plan, output, producer, resume)
+    } else if plan.is_v53() {
+        navigation_v23::v53::extract(plan, source, source_plan, output, producer, resume)
+    } else {
+        navigation_v23::v52::extract(plan, source, source_plan, output, producer, resume)
+    }
+}
+
 pub struct SelectedNavigationInputs<'a> {
     pub terrain_package: &'a Path,
     pub terrain_plan: &'a Path,
@@ -494,7 +584,14 @@ pub fn extract_with_keys(
     resume: bool,
     keys: crate::input::SuppliedKeys,
 ) -> Result<package::Summary, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     extract_inner(plan, client, output, producer, resume, Some(keys), None)
@@ -513,10 +610,59 @@ pub fn extract_disk(
     keys: Option<crate::input::SuppliedKeys>,
     scratch: &Path,
 ) -> Result<package::Summary, Error> {
-    if plan.is_v23() {
+    if plan.is_v23()
+        || plan.is_v52()
+        || plan.is_v53()
+        || plan.is_v54()
+        || plan.is_v55()
+        || plan.is_v56()
+        || plan.is_v57()
+    {
         return Err("product_navigation_inputs_required".into());
     }
     extract_inner(plan, client, output, producer, resume, keys, Some(scratch))
+}
+
+#[cfg(target_os = "linux")]
+fn leased_package_limits(
+    plan: &Plan,
+    mut package_limits: package::Limits,
+    budget: DiskBudget,
+) -> package::Limits {
+    if plan.is_v51() {
+        terrain_v20::package_limits_v51(budget)
+    } else if plan.is_v50()
+        || plan.is_v28()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
+    {
+        collision_geometry_v22::package_limits_v28_with_extra_files(
+            budget,
+            usize::from(plan.is_v50()),
+        )
+    } else {
+        package_limits.total_bytes = budget.output_bytes;
+        package_limits
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -551,7 +697,33 @@ fn extract_inner(
         }
     };
     let product_diagnostic = if product_diagnostic_supported(plan) {
-        let package_output = (plan.is_v18() || plan.is_v19() || plan.is_v21()).then_some(output);
+        let package_output = (plan.is_v18()
+            || plan.is_v19()
+            || plan.is_v21()
+            || plan.is_v29()
+            || plan.is_v30()
+            || plan.is_v31()
+            || plan.is_v32()
+            || plan.is_v33()
+            || plan.is_v34()
+            || plan.is_v35()
+            || plan.is_v36()
+            || plan.is_v37()
+            || plan.is_v38()
+            || plan.is_v39()
+            || plan.is_v40()
+            || plan.is_v41()
+            || plan.is_v43()
+            || plan.is_v44()
+            || plan.is_v45()
+            || plan.is_v46()
+            || plan.is_v42()
+            || plan.is_v47()
+            || plan.is_v48()
+            || plan.is_v49()
+            || plan.is_v50()
+            || plan.is_v51())
+        .then_some(output);
         disk::product_diagnostic_for_db2(client, diagnostic_output, package_output)?
     } else {
         None
@@ -593,7 +765,22 @@ fn extract_inner(
     ];
     let protected = &protected[..if key_source.is_some() { 5 } else { 4 }];
     let mut package_limits = package::Limits::default();
-    if plan.is_v24() || plan.is_v25() {
+    let mut liquid_object_evidence = None;
+    if plan.is_v51() {
+        let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage else {
+            return Err("product_scratch_required".into());
+        };
+        liquid_object_evidence = Some(preflight_liquid_object(plan, &mut store)?);
+        package_limits = terrain_v20::package_limits_v51(budget);
+    } else if plan.is_v50() {
+        let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage else {
+            return Err("product_scratch_required".into());
+        };
+        liquid_object_evidence = Some(preflight_liquid_object(plan, &mut store)?);
+        package_limits = collision_geometry_v22::package_limits_v28_with_extra_files(budget, 1);
+    } else if plan.is_v27() {
+        package_limits = terrain_v20::package_limits_v27();
+    } else if plan.has_authenticated_map_terrain() {
         package_limits = terrain_v20::package_limits_v24();
     } else if plan.is_v20() {
         package_limits = terrain_v20::package_limits();
@@ -603,18 +790,55 @@ fn extract_inner(
     if let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage {
         // Physical output admission covers all selected producers, not only
         // vmaps. The canonical v3 output budget also bounds common replay.
-        package_limits.total_bytes = budget.output_bytes;
+        package_limits = leased_package_limits(plan, package_limits, budget);
     }
     let mut run = if resume {
         Run::resume(output, context, protected, package_limits)?
     } else {
         Run::create(output, context, protected, package_limits)?
     };
-    if plan.is_v25() {
-        // Re-admit Map on resume even when Db2 was already sealed so its
-        // manifest-only partial declarations are reconstructed before finish.
-        db2(plan, &mut store, &mut run, None)?;
-        run.finish_component(Component::Db2)?;
+    admit_partial_manifest_scope(plan, &mut run)?;
+    if plan.is_v51()
+        || plan.is_v50()
+        || plan.is_v25()
+        || plan.is_v27()
+        || plan.is_v28()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
+    {
+        // Re-admit selected DB2 sources on resume so manifest-only partial
+        // declarations are reconstructed before finish.
+        let db2_result = (|| {
+            db2(plan, &mut store, &mut run, None, liquid_object_evidence)?;
+            run.finish_component(Component::Db2)?;
+            Ok::<(), Error>(())
+        })();
+        if let Err(mut error) = db2_result {
+            error.component = Some(Component::Db2);
+            if diagnostic_enabled {
+                store.finish_product_diagnostic(Some(error.code), false);
+            }
+            return Err(error);
+        }
     }
     let result = execution::execute(
         plan,
@@ -625,6 +849,7 @@ fn extract_inner(
             preflight,
             domain,
             context,
+            liquid_object_evidence,
         },
     );
     if diagnostic_enabled {
@@ -635,7 +860,33 @@ fn extract_inner(
 
 #[cfg(target_os = "linux")]
 fn product_diagnostic_supported(plan: &Plan) -> bool {
-    plan.is_v16() || plan.is_v17() || plan.is_v18() || plan.is_v19() || plan.is_v21()
+    plan.is_v16()
+        || plan.is_v17()
+        || plan.is_v18()
+        || plan.is_v19()
+        || plan.is_v21()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
+        || plan.is_v51()
 }
 
 #[cfg(target_os = "linux")]
@@ -651,6 +902,28 @@ fn prepare_domain(
         || plan.is_v17()
         || plan.is_v18()
         || plan.is_v22()
+        || plan.is_v28()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
     {
         return Ok(None);
     }
@@ -728,6 +1001,48 @@ fn prepare_domain(
     Ok(Some(domain))
 }
 
+#[cfg(target_os = "linux")]
+fn preflight_liquid_object(
+    plan: &Plan,
+    store: &mut LocalStore,
+) -> Result<liquid_object_v23::Evidence, Error> {
+    let entry = plan
+        .db2
+        .iter()
+        .find(|entry| entry.name == "LiquidObject" && entry.id == 1_308_058)
+        .ok_or("product_plan_dependencies")?;
+    let diagnostic_request = if plan.is_v51() {
+        store.begin_product_diagnostic_request(
+            ProductDiagnosticRequestKind::Db2Table,
+            Some(entry.id),
+        )
+    } else {
+        None
+    };
+    let file = match store.read_file_data_id_with_limit(entry.id, DB2_FILE_BYTES) {
+        Ok(file) => file,
+        Err(error) => {
+            if plan.is_v51() {
+                store.record_product_diagnostic_failure(
+                    diagnostic_request,
+                    error,
+                    matches!(error, forever_casc::local_store::Error::InputChanged),
+                );
+                store.finish_product_diagnostic(Some(error.code()), false);
+            }
+            return Err(error.code().into());
+        }
+    };
+    if file.bytes.is_empty() || file.bytes.len() as u64 > DB2_FILE_BYTES {
+        return Err("product_liquid_object_source_limit".into());
+    }
+    let evidence = liquid_object_v23::Evidence::from_source(&file.bytes)?;
+    store
+        .verify_unchanged()
+        .map_err(|error| Error::from(error.code()))?;
+    Ok(evidence)
+}
+
 #[cfg(test)]
 mod keys_tests;
 
@@ -738,6 +1053,7 @@ struct LinuxExecution {
     context: Context,
     preflight: Option<disk::Preflight>,
     domain: Option<crate::map_domain::Domain>,
+    liquid_object_evidence: Option<liquid_object_v23::Evidence>,
 }
 
 #[cfg(target_os = "linux")]
@@ -748,7 +1064,9 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
-        if plan.is_v24() || plan.is_v25() {
+        if plan.is_v51() {
+            terrain_v20::extract_v51(plan, store, run, self.context)
+        } else if plan.has_authenticated_map_terrain() {
             terrain_v20::extract_v24(plan, store, run, self.context)
         } else if plan.is_v20() {
             terrain_v20::extract(plan, store, run, self.context)
@@ -769,6 +1087,15 @@ impl execution::Adapter for LinuxExecution {
         }
         Ok(())
     }
+    fn extract_db2(&self, plan: &Plan, store: &mut LocalStore, run: &mut Run) -> Result<(), Error> {
+        db2(
+            plan,
+            store,
+            run,
+            self.domain.as_ref(),
+            self.liquid_object_evidence,
+        )
+    }
 
     fn extract_collision(
         &self,
@@ -776,11 +1103,88 @@ impl execution::Adapter for LinuxExecution {
         store: &mut LocalStore,
         run: &mut Run,
     ) -> Result<(), Error> {
-        if plan.is_v22() {
+        if plan.is_v51()
+            || plan.is_v50()
+            || plan.has_selected_geometry()
+            || plan.is_v29()
+            || plan.is_v30()
+            || plan.is_v31()
+            || plan.is_v32()
+            || plan.is_v33()
+            || plan.is_v34()
+            || plan.is_v35()
+            || plan.is_v36()
+            || plan.is_v37()
+            || plan.is_v38()
+            || plan.is_v39()
+            || plan.is_v40()
+            || plan.is_v41()
+            || plan.is_v43()
+            || plan.is_v44()
+            || plan.is_v45()
+            || plan.is_v46()
+            || plan.is_v42()
+            || plan.is_v47()
+            || plan.is_v48()
+            || plan.is_v49()
+        {
             let CollisionStorage::LeasedDiskV1(budget) = plan.collision_storage else {
                 return Err("product_scratch_required".into());
             };
-            return collision_geometry_v22::extract(
+            #[cfg(target_os = "linux")]
+            if plan.is_v48() || plan.is_v49() || plan.is_v50() || plan.is_v51() {
+                store.set_product_diagnostic_phase(ProductDiagnosticPhase::Startup);
+            }
+            let extract = if plan.is_v51() {
+                collision_geometry_v22::extract_v51
+            } else if plan.is_v50() || plan.is_v49() {
+                collision_geometry_v22::extract_v49
+            } else if plan.is_v48() {
+                collision_geometry_v22::extract_v48
+            } else if plan.is_v47() {
+                collision_geometry_v22::extract_v47
+            } else if plan.is_v46() {
+                collision_geometry_v22::extract_v46
+            } else if plan.is_v45() {
+                collision_geometry_v22::extract_v45
+            } else if plan.is_v44() {
+                collision_geometry_v22::extract_v44
+            } else if plan.is_v43() {
+                collision_geometry_v22::extract_v43
+            } else if plan.is_v42() {
+                collision_geometry_v22::extract_v42
+            } else if plan.is_v41() {
+                collision_geometry_v22::extract_v41
+            } else if plan.is_v40() {
+                collision_geometry_v22::extract_v40
+            } else if plan.is_v39() {
+                collision_geometry_v22::extract_v39
+            } else if plan.is_v38() {
+                collision_geometry_v22::extract_v38
+            } else if plan.is_v37() {
+                collision_geometry_v22::extract_v37
+            } else if plan.is_v36() {
+                collision_geometry_v22::extract_v36
+            } else if plan.is_v35() {
+                collision_geometry_v22::extract_v35
+            } else if plan.is_v34() {
+                collision_geometry_v22::extract_v34
+            } else if plan.is_v33() {
+                collision_geometry_v22::extract_v33
+            } else if plan.is_v32() {
+                collision_geometry_v22::extract_v32
+            } else if plan.is_v31() {
+                collision_geometry_v22::extract_v31
+            } else if plan.is_v30() {
+                collision_geometry_v22::extract_v30
+            } else if plan.is_v29() {
+                collision_geometry_v22::extract_v29
+            } else if plan.is_v28() {
+                collision_geometry_v22::extract_v28
+            } else {
+                collision_geometry_v22::extract
+            };
+            return extract(
                 plan,
                 store,
                 run,
@@ -901,18 +1305,151 @@ pub(crate) fn validate_db2(plan: &Plan, name: &str, bytes: &[u8]) -> Result<(), 
     }
 }
 #[cfg(target_os = "linux")]
+pub(crate) fn validate_v26_partial_coverage(
+    facts: &forever_db2::availability::StructuralFacts,
+    coverage: &[forever_casc::blte::available::CoverageRange],
+    frames: &[forever_casc::blte::available::PartialSection],
+) -> Result<(), String> {
+    fn next_encrypted(
+        coverage: &[forever_casc::blte::available::CoverageRange],
+        index: &mut usize,
+    ) -> Option<(usize, forever_casc::blte::available::CoverageRange)> {
+        while let Some(range) = coverage.get(*index) {
+            let ordinal = *index;
+            *index += 1;
+            if range.state == forever_casc::blte::available::RangeState::EncryptedUnavailable {
+                return Some((ordinal, *range));
+            }
+        }
+        None
+    }
+
+    fn check_declaration(
+        frames: &[forever_casc::blte::available::PartialSection],
+        declaration_index: &mut usize,
+        ordinal: usize,
+        range: forever_casc::blte::available::CoverageRange,
+    ) -> Result<(), String> {
+        let frame = frames.get(*declaration_index).ok_or_else(|| {
+            format!("partial coverage frame ordinal {ordinal} has no declaration")
+        })?;
+        if frame.frame_ordinal as usize != ordinal || frame.decoded_size != range.bytes {
+            return Err(format!(
+                "partial frame ordinal {} decoded size {} does not match coverage ordinal {} size {}",
+                frame.frame_ordinal, frame.decoded_size, ordinal, range.bytes
+            ));
+        }
+        *declaration_index += 1;
+        Ok(())
+    }
+
+    if facts.tact_payload_offsets.len() != facts.tact_payload_sizes.len() {
+        return Err(format!(
+            "structural offset count {} does not match payload count {}",
+            facts.tact_payload_offsets.len(),
+            facts.tact_payload_sizes.len()
+        ));
+    }
+    let max_frames = forever_casc::local_store::Limits::default().max_blte_frames as usize;
+    if frames.len() > max_frames {
+        return Err(format!(
+            "partial frame count {} exceeds CASC limit {max_frames}",
+            frames.len()
+        ));
+    }
+
+    let mut coverage_index = 0usize;
+    let mut declaration_index = 0usize;
+    for (extent_offset, extent_size) in facts
+        .tact_payload_offsets
+        .iter()
+        .zip(&facts.tact_payload_sizes)
+    {
+        let extent_end = extent_offset
+            .checked_add(*extent_size)
+            .ok_or_else(|| "structural extent overflow".to_owned())?;
+        if *extent_size == 0 {
+            while let Some((ordinal, range)) = next_encrypted(coverage, &mut coverage_index) {
+                if range.offset != *extent_offset || range.bytes != 0 {
+                    return Err(format!(
+                        "partial frame ordinal {ordinal} offset {} size {} does not match empty TACT extent at {extent_offset}",
+                        range.offset, range.bytes
+                    ));
+                }
+                check_declaration(frames, &mut declaration_index, ordinal, range)?;
+            }
+            continue;
+        }
+
+        let mut position = *extent_offset;
+        while position < extent_end {
+            let Some((ordinal, range)) = next_encrypted(coverage, &mut coverage_index) else {
+                return Err(format!(
+                    "missing encrypted coverage at decoded offset {position} with {} bytes remaining",
+                    extent_end - position
+                ));
+            };
+            if range.offset != position {
+                return Err(format!(
+                    "partial frame ordinal {ordinal} offset {} does not match required offset {position}",
+                    range.offset
+                ));
+            }
+            if range.bytes == 0 || range.bytes > extent_end - position {
+                return Err(format!(
+                    "partial frame ordinal {ordinal} decoded size {} exceeds remaining TACT extent {}",
+                    range.bytes,
+                    extent_end - position
+                ));
+            }
+            check_declaration(frames, &mut declaration_index, ordinal, range)?;
+            position += range.bytes;
+        }
+    }
+
+    if let Some((ordinal, range)) = next_encrypted(coverage, &mut coverage_index) {
+        return Err(format!(
+            "partial frame ordinal {ordinal} offset {} size {} is outside TACT payloads",
+            range.offset, range.bytes
+        ));
+    }
+    if declaration_index != frames.len() {
+        return Err(format!(
+            "partial declaration count {} does not match encrypted coverage count {declaration_index}",
+            frames.len()
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn partial_db2_table_admitted(plan: &Plan, table_name: &str) -> bool {
+    if plan.is_v51() {
+        matches!(table_name, "GameObjectDisplayInfo" | "Map")
+    } else {
+        !plan.is_v50() || table_name != "LiquidObject"
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn partial_db2_declarations(
+    plan: &Plan,
     bytes: &[u8],
+    table_name: &str,
+    coverage: &[forever_casc::blte::available::CoverageRange],
     frames: Vec<forever_casc::blte::available::PartialSection>,
     section_total: &mut usize,
 ) -> Result<Vec<PartialEncryptedSection>, Error> {
-    let facts = forever_db2::availability::read_structure_70450(&CompleteDb2Source(bytes))
-        .map_err(|error| Error::from(error.code()))?;
-    if frames.len() > DB2_PARTIAL_SECTIONS_PER_TABLE
-        || frames.len() != facts.tact_payload_sizes.len()
-    {
-        return Err("product_partial_section_count".into());
+    if !partial_db2_table_admitted(plan, table_name) {
+        return Err("product_partial_profile".into());
     }
+    let facts = forever_db2::availability::read_structure_70450_for_table(
+        &CompleteDb2Source(bytes),
+        table_name,
+    )
+    .map_err(|error| Error::from(error.code()))?;
+    validate_v26_partial_coverage(&facts, coverage, &frames)
+        .map_err(|_| Error::from("product_partial_section_count"))?;
     let new_total = section_total
         .checked_add(frames.len())
         .filter(|total| *total <= DB2_PARTIAL_SECTIONS_TOTAL)
@@ -921,10 +1458,7 @@ fn partial_db2_declarations(
     declarations
         .try_reserve_exact(frames.len())
         .map_err(|_| Error::from("product_allocation"))?;
-    for (frame, decoded_size) in frames.into_iter().zip(facts.tact_payload_sizes) {
-        if frame.decoded_size != decoded_size {
-            return Err("product_partial_section_count".into());
-        }
+    for frame in frames {
         declarations.push(PartialEncryptedSection {
             lookup: frame.lookup_hex,
             frame_ordinal: frame.frame_ordinal,
@@ -940,23 +1474,107 @@ fn publish_v26_db2_table(
     plan: &Plan,
     entry: &crate::plan::Entry,
     bytes: &[u8],
+    coverage: &[forever_casc::blte::available::CoverageRange],
     frames: Vec<forever_casc::blte::available::PartialSection>,
     run: &mut Run,
     section_total: &mut usize,
 ) -> Result<(), Error> {
-    if !plan.is_v26() {
+    if !plan.is_v26()
+        && !plan.is_v27()
+        && !plan.is_v28()
+        && !plan.is_v29()
+        && !plan.is_v30()
+        && !plan.is_v31()
+        && !plan.is_v32()
+        && !plan.is_v33()
+        && !plan.is_v34()
+        && !plan.is_v35()
+        && !plan.is_v36()
+        && !plan.is_v37()
+        && !plan.is_v38()
+        && !plan.is_v39()
+        && !plan.is_v40()
+        && !plan.is_v41()
+        && !plan.is_v42()
+        && !plan.is_v43()
+        && !plan.is_v44()
+        && !plan.is_v45()
+        && !plan.is_v46()
+        && !plan.is_v47()
+        && !plan.is_v48()
+        && !plan.is_v49()
+        && !plan.is_v50()
+        && !plan.is_v51()
+    {
         return Err("product_partial_profile".into());
     }
     if bytes.is_empty() || bytes.len() as u64 > DB2_FILE_BYTES {
         return Err("product_file_limit".into());
     }
-    let declarations = partial_db2_declarations(bytes, frames, section_total)?;
     let path = format!("dbc/{}/{}.db2", plan.locale.name(), entry.name);
-    if !declarations.is_empty() {
-        run.set_partial_encrypted_table(&path, &declarations)?;
+    if frames.is_empty() {
+        run.put(Component::Db2, &path, bytes)?;
+        return Ok(());
     }
+    let declarations =
+        partial_db2_declarations(plan, bytes, &entry.name, coverage, frames, section_total)?;
+    run.set_partial_encrypted_table(&path, &declarations)?;
     run.put(Component::Db2, &path, bytes)?;
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn admit_partial_manifest_scope(plan: &Plan, run: &mut Run) -> Result<(), Error> {
+    if !plan.is_v25()
+        && !plan.is_v26()
+        && !plan.is_v27()
+        && !plan.is_v28()
+        && !plan.is_v29()
+        && !plan.is_v30()
+        && !plan.is_v31()
+        && !plan.is_v32()
+        && !plan.is_v33()
+        && !plan.is_v34()
+        && !plan.is_v35()
+        && !plan.is_v36()
+        && !plan.is_v37()
+        && !plan.is_v38()
+        && !plan.is_v39()
+        && !plan.is_v40()
+        && !plan.is_v41()
+        && !plan.is_v42()
+        && !plan.is_v43()
+        && !plan.is_v44()
+        && !plan.is_v45()
+        && !plan.is_v46()
+        && !plan.is_v47()
+        && !plan.is_v48()
+        && !plan.is_v49()
+        && !plan.is_v50()
+        && !plan.is_v51()
+    {
+        return Ok(());
+    }
+    let mut tables = Vec::new();
+    if !plan.is_v25() {
+        tables
+            .try_reserve_exact(plan.db2.len())
+            .map_err(|_| Error::from("product_allocation"))?;
+        tables.extend(
+            plan.db2
+                .iter()
+                .map(|entry| format!("dbc/{}/{}.db2", plan.locale.name(), entry.name)),
+        );
+    }
+    if plan.is_v50() {
+        tables.retain(|path| !path.ends_with("/LiquidObject.db2"));
+    } else if plan.is_v51() {
+        tables.retain(|path| {
+            path.ends_with("/GameObjectDisplayInfo.db2") || path.ends_with("/Map.db2")
+        });
+    }
+    run.admit_partial_encrypted_scope(plan.is_v25(), &tables)
+        .map_err(|_| Error::from("product_partial_manifest_scope"))
 }
 
 fn db2(
@@ -964,10 +1582,12 @@ fn db2(
     store: &mut LocalStore,
     run: &mut Run,
     domain: Option<&crate::map_domain::Domain>,
+    liquid_object_evidence: Option<liquid_object_v23::Evidence>,
 ) -> Result<(), Error> {
     let mut total = 0u64;
     #[cfg(target_os = "linux")]
     let mut partial_section_total = 0usize;
+    let mut liquid_object_evidence = liquid_object_evidence;
     for entry in &plan.db2 {
         let cap = db2_read_limit(plan, total)?;
         #[cfg(target_os = "linux")]
@@ -979,19 +1599,61 @@ fn db2(
         } else {
             None
         };
-        if plan.is_v26() {
+        if ((plan.is_v50() || plan.is_v51()) && partial_db2_table_admitted(plan, &entry.name))
+            || plan.is_v26()
+            || plan.is_v27()
+            || plan.is_v28()
+            || plan.is_v29()
+            || plan.is_v30()
+            || plan.is_v31()
+            || plan.is_v32()
+            || plan.is_v33()
+            || plan.is_v34()
+            || plan.is_v35()
+            || plan.is_v36()
+            || plan.is_v37()
+            || plan.is_v38()
+            || plan.is_v39()
+            || plan.is_v40()
+            || plan.is_v41()
+            || plan.is_v43()
+            || plan.is_v44()
+            || plan.is_v45()
+            || plan.is_v46()
+            || plan.is_v42()
+            || plan.is_v47()
+            || plan.is_v48()
+            || plan.is_v49()
+            || (plan.is_v50() && entry.name != "LiquidObject")
+        {
             #[cfg(target_os = "linux")]
             {
-                let source = store
-                    .read_file_data_id_available_70450_with_limit(entry.id, cap)
-                    .map_err(|error| Error::from(error.code()))?;
+                let source = match store.read_file_data_id_available_70450_with_limit(entry.id, cap)
+                {
+                    Ok(source) => source,
+                    Err(error) => {
+                        if let forever_casc::local_store::availability::Error::Store(store_error) =
+                            error
+                        {
+                            store.record_product_diagnostic_failure(
+                                diagnostic_request,
+                                store_error,
+                                matches!(
+                                    store_error,
+                                    forever_casc::local_store::Error::InputChanged
+                                ),
+                            );
+                        }
+                        return Err(Error::from(error.code()));
+                    }
+                };
                 if source.declared_bytes() == 0
                     || source.declared_bytes() > cap
                     || (!source.full_ckey_verified() && !source.encoded_key_authenticated())
                 {
                     return Err("product_partial_db2_authentication".into());
                 }
-                let (bytes, frames) = source.into_zerofilled();
+                let (bytes, frames, coverage) = source.into_zerofilled_with_coverage();
                 if bytes.is_empty() || bytes.len() as u64 > cap {
                     return Err("product_file_limit".into());
                 }
@@ -1003,6 +1665,7 @@ fn db2(
                     plan,
                     entry,
                     &bytes,
+                    &coverage,
                     frames,
                     run,
                     &mut partial_section_total,
@@ -1014,6 +1677,7 @@ fn db2(
                 return Err("product_platform".into());
             }
         }
+        let is_liquid_object = (plan.is_v50() || plan.is_v51()) && entry.name == "LiquidObject";
         let (bytes, _partial_sections) = if plan.is_v25() && entry.name == "Map" {
             #[cfg(target_os = "linux")]
             {
@@ -1078,9 +1742,20 @@ fn db2(
             .checked_add(bytes.len() as u64)
             .filter(|n| *n <= DB2_TOTAL_BYTES)
             .ok_or_else(|| Error::from("product_db2_total_limit"))?;
-        if !(plan.is_v25() && entry.name == "Map") {
+        if !(plan.is_v25() && entry.name == "Map") && !is_liquid_object {
             validate_db2(plan, &entry.name, &bytes)?;
         }
+        let liquid_object_evidence_for_table = if is_liquid_object {
+            let evidence = liquid_object_evidence
+                .take()
+                .ok_or("product_liquid_object_evidence")?;
+            if !evidence.matches_source(&bytes)? {
+                return Err("product_liquid_object_evidence".into());
+            }
+            Some(evidence)
+        } else {
+            None
+        };
         #[cfg(target_os = "linux")]
         if plan.is_v25() && entry.name == "Map" {
             run.set_partial_encrypted_sections(&_partial_sections)?;
@@ -1095,6 +1770,16 @@ fn db2(
             &format!("dbc/{}/{}.db2", plan.locale.name(), entry.name),
             &bytes,
         )?;
+        if let Some(evidence) = liquid_object_evidence_for_table {
+            run.put(
+                Component::Collision,
+                liquid_object_v23::PATH,
+                &evidence.encode()?,
+            )?;
+        }
+    }
+    if (plan.is_v50() || plan.is_v51()) && liquid_object_evidence.is_some() {
+        return Err("product_liquid_object_evidence".into());
     }
     Ok(())
 }
@@ -1177,7 +1862,32 @@ fn db2_read_limit(plan: &Plan, total: u64) -> Result<u64, Error> {
     {
         return db2_remaining(total);
     }
-    if plan.is_v26() {
+    if plan.is_v26()
+        || plan.is_v27()
+        || plan.is_v28()
+        || plan.is_v29()
+        || plan.is_v30()
+        || plan.is_v31()
+        || plan.is_v32()
+        || plan.is_v33()
+        || plan.is_v34()
+        || plan.is_v35()
+        || plan.is_v36()
+        || plan.is_v37()
+        || plan.is_v38()
+        || plan.is_v39()
+        || plan.is_v40()
+        || plan.is_v41()
+        || plan.is_v43()
+        || plan.is_v44()
+        || plan.is_v45()
+        || plan.is_v46()
+        || plan.is_v42()
+        || plan.is_v47()
+        || plan.is_v48()
+        || plan.is_v49()
+        || plan.is_v50()
+    {
         return db2_remaining(total);
     }
     Ok(DB2_FILE_BYTES)
@@ -1530,6 +2240,41 @@ mod disk_admission_tests {
             output_bytes: 1024,
         });
         plan
+    }
+    #[test]
+    fn v49_and_v50_select_shared_disk_package_limits_with_versioned_file_extra() {
+        let v49 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v49/all.tsv"
+        ))
+        .unwrap();
+        let v50 = Plan::parse(include_str!(
+            "../../../tests/contracts/fixtures/forever-product-v50/all.tsv"
+        ))
+        .unwrap();
+        let CollisionStorage::LeasedDiskV1(v49_budget) = v49.collision_storage else {
+            panic!("v49 fixture must use leased disk storage");
+        };
+        let CollisionStorage::LeasedDiskV1(v50_budget) = v50.collision_storage else {
+            panic!("v50 fixture must use leased disk storage");
+        };
+        assert!(v49.is_v49());
+        assert!(v50.is_v50());
+
+        let v49_limits = leased_package_limits(&v49, package::Limits::default(), v49_budget);
+        let v50_limits = leased_package_limits(&v50, package::Limits::default(), v50_budget);
+        assert_eq!(
+            v49_limits.total_bytes,
+            v49_budget.output_bytes + DB2_TOTAL_BYTES
+        );
+        assert_eq!(
+            v50_limits.total_bytes,
+            v50_budget.output_bytes + DB2_TOTAL_BYTES
+        );
+        assert_eq!(v49_limits.files, collision_geometry_v22::PACKAGE_MAX_FILES);
+        assert_eq!(
+            v50_limits.files,
+            collision_geometry_v22::PACKAGE_MAX_FILES + 1
+        );
     }
     #[test]
     fn original_extract_entries_reject_disk_without_scratch_before_client_io() {
