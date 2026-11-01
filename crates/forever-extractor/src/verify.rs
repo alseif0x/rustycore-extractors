@@ -25,6 +25,10 @@ use std::{
 
 #[cfg(target_os = "linux")]
 mod compatible_vmaps;
+#[cfg(target_os = "linux")]
+mod trinity_compat;
+#[cfg(target_os = "linux")]
+pub use trinity_compat::verify_trinity_compat;
 #[cfg(test)]
 mod tests;
 #[cfg(target_os = "linux")]

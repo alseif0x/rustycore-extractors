@@ -66,6 +66,9 @@ fn main() {
                     "Linux v46 uses AssemblyExpandedV1 and RCVGEO1 v19: it preserves the v45 resource limits and adds an independent 256 MiB assembled-domain guard. The prior generic v45 failure and 128 MiB internal cap do not confirm cause or sufficiency; no real target acceptance, full-world, complete-component, runtime or parity claim is made."
                 );
                 println!(
+                    "forever-extractor verify-trinity-compat --terrain-package V51_PACKAGE --terrain-plan V51_PLAN --navigation-package V57_PACKAGE --navigation-plan V57_PLAN (Linux only; verifies compatible-partial omissions without reextraction)"
+                );
+                println!(
                     "forever-extractor census-db2 --plan PLAN --client CLIENT --output NEW_REPORT (Linux only; build 70450 wowdbdefs-70450-v1, revisions 16+; --keys is forbidden)"
                 );
                 println!(
@@ -132,6 +135,7 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         "resume",
         "verify",
         "verify-links",
+        "verify-trinity-compat",
         "probe-encoding",
         "census-db2",
         "inspect-db2",
@@ -145,6 +149,12 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
     let allowed = match command {
         "inspect" => &["--plan", "--client", "--keys"][..],
         "verify" => &["--plan", "--output", "--expect-context"][..],
+        "verify-trinity-compat" => &[
+            "--terrain-package",
+            "--terrain-plan",
+            "--navigation-package",
+            "--navigation-plan",
+        ][..],
         "verify-links" => &[
             "--plan",
             "--output",
@@ -200,6 +210,13 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
             .map(PathBuf::as_path)
             .ok_or_else(|| Error::from("product_usage"))
     };
+    if command == "verify-trinity-compat" {
+        *contract = "forever-trinity-compat-v1";
+        #[cfg(target_os = "linux")]
+        return trinity_compat_command(&options);
+        #[cfg(not(target_os = "linux"))]
+        return Err("product_platform".into());
+    }
     if matches!(command, "probe-encoding" | "inspect-db2") {
         let error = if command == "inspect-db2" {
             "product_db2_inspection_file_data_id"
@@ -1152,6 +1169,30 @@ fn run(contract: &mut &'static str) -> Result<String, Error> {
         let _ = path;
         Err("product_platform".into())
     }
+}
+
+#[cfg(target_os = "linux")]
+fn trinity_compat_command(options: &BTreeMap<&str, PathBuf>) -> Result<String, Error> {
+    if options.len() != 4 {
+        return Err("product_navigation_inputs_required".into());
+    }
+    let read_plan = |key| {
+        let bytes = input::bytes(options[key].as_path(), forever_extractor::MAX_PLAN_BYTES)?;
+        Plan::parse(std::str::from_utf8(&bytes).map_err(|_| Error::from("product_plan_format"))?)
+            .map_err(Error::from)
+    };
+    let terrain_plan = read_plan("--terrain-plan")?;
+    let navigation_plan = read_plan("--navigation-plan")?;
+    forever_extractor::driver::admit(&terrain_plan)?;
+    forever_extractor::driver::admit(&navigation_plan)?;
+    let report = forever_extractor::verify::verify_trinity_compat(
+        &terrain_plan,
+        &options["--terrain-package"],
+        &options["--terrain-plan"],
+        &navigation_plan,
+        &options["--navigation-package"],
+    )?;
+    Ok(report.json())
 }
 
 fn available_navigation_command(

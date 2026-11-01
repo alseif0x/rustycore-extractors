@@ -7,6 +7,22 @@ the OpenCode section. Add new dated entries here.
 
 ## Part 1 — project-section checkpoints
 
+### 2026-11-01 — Trinity-compatible available-map verification accepted
+
+`verify-trinity-compat` now certifies the existing v51/v57 omission behavior
+without reextraction or output changes. Complete source verification and exact
+omission-set comparison pass for 71 maps: 69 planned and two ROOT-absent. Both
+omissions have 4,096 absent coordinates and no present coordinate, no global,
+no tile and zero fallback counters. Real acceptance finished in 567.564 seconds
+with no network. Report SHA-256 is
+`d3e013f2d14e77e05d61a1ab0decdb2eb87ffe6f2d433aa4a91709cdb5ff6c20`.
+A timed-out debug attempt and an initial source-PLAN argument error were
+retained and corrected before acceptance. The final closeout passes 101 suites,
+4,870 tests, zero failures, 31 ignores and 616 contracts; log SHA-256 is
+`763c55a9b037f01ce729496efa320a101899049cc45a2eda8995402a4aeb33e3`.
+This is `compatible-partial`, not full-world, runtime or complete-extractor
+acceptance. No publication is authorized.
+
 ### 2026-10-31 — v57 all-map queries, navigation loader and reproducible v15
 
 All 69 planned maps now complete one real native Detour query with clean unload:

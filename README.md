@@ -70,6 +70,7 @@ output formats. The Rust product is the separate `forever-extractor` binary.
 | Review build-70450 v28 | [Product v28 scope](docs/forever-product-v28.md): real selected VMap geometry with independently derived Map/domain coverage |
 | Review build-70450 v29 | [Product v29 scope](docs/forever-product-v29.md): all-active available VMap geometry; initial real attempt retained as failed, not accepted |
 | Review build-70450 v30 | [Product v30 scope](docs/forever-product-v30.md): declared root-absent WDT omissions; real run retained as failed at an M2 dependency, not accepted |
+| Verify Trinity-compatible available-map omissions | [Compatibility guide](docs/forever-trinity-compatibility.md): existing v51/v57 packages, exact empty tilelists and no full-world claim |
 | Review build-70450 v31 | [Product v31 scope](docs/forever-product-v31.md): declared WMO-doodad M2 ROOT omissions with the parent WMO retained; real run failed at the 4096-request ceiling, not accepted |
 | Review build-70450 v32 | [Product v32 scope](docs/forever-product-v32.md): only the resident request-call ceiling raised; real run failed on a WMO left without geometry or usable doodads, not accepted |
 | Review build-70450 v33 | [Product v33 scope](docs/forever-product-v33.md): declared vacated-WMO omission; real run failed on an intrinsically empty WMO, not accepted |

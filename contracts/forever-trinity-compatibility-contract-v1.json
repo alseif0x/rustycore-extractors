@@ -1,0 +1,51 @@
+{
+  "contract": "forever-trinity-compat-v1",
+  "platform": "linux",
+  "scope": "verify TrinityCore-compatible omissions in existing available terrain and navigation packages",
+  "command": "forever-extractor verify-trinity-compat --terrain-package V51_PACKAGE --terrain-plan V51_PLAN --navigation-package V57_PACKAGE --navigation-plan V57_PLAN",
+  "source_profiles": {
+    "terrain": "forever-product-v51",
+    "navigation": "forever-product-v57",
+    "navigation_source": "the same v51 package and PLAN"
+  },
+  "verification": {
+    "terrain": "complete v51 verify-links",
+    "navigation": "complete v57 verify-links against the same v51 source",
+    "omission_identity": "the unavailable-WDT set equals the navigation ROOT-absent set and is nonempty",
+    "tilelist": "every ROOT-absent map has a 4108-byte tilelist with 4096 absent coordinates and zero present coordinates",
+    "navigation_artifacts": "every ROOT-absent map has no global, no tile and zero native fallback counters",
+    "reextraction": false,
+    "output_bytes_modified": false,
+    "network": false
+  },
+  "status": "compatible-partial",
+  "real_acceptance": {
+    "status": "accepted",
+    "maps": 71,
+    "planned": 69,
+    "root_absent": 2,
+    "compatible_partial": true,
+    "report": "reports/acceptance/trinity-compat-v1-20261101.json",
+    "report_sha256": "d3e013f2d14e77e05d61a1ab0decdb2eb87ffe6f2d433aa4a91709cdb5ff6c20",
+    "wall_seconds": 567.564,
+    "network_attempted": false
+  },
+  "closeout": {
+    "status": "passed",
+    "suites": 101,
+    "passed": 4870,
+    "failed": 0,
+    "ignored": 31,
+    "contracts": 616,
+    "log_sha256": "763c55a9b037f01ce729496efa320a101899049cc45a2eda8995402a4aeb33e3",
+    "release_binary_sha256": "6ff7f913809b78cc0f49d2178effd3bb8bec2008ba26fef5f283a39cc1fd3d3d"
+  },
+  "claims": {
+    "compatible_partial": true,
+    "full_world_complete": false,
+    "runtime_accepted": false,
+    "full_extractor_complete": false,
+    "release_authorized": false,
+    "publication_authorized": false
+  }
+}
